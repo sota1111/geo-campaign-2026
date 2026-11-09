@@ -70,7 +70,7 @@ note(s, "※地区名・結果は説明用の架空の例。実際の画面は�
 s = base("住民向け無償アプリと、担当者向け事業の分担", 5);
 s.addShape(p.ShapeType.roundRect, { x: 0.4, y: 1.3, w: 4.4, h: 2.9, fill: { color: LIGHT }, line: { color: ACC, width: 1.5 }, rectRadius: 0.1 });
 s.addText("住民向け（無償）\n「生活アクセス診断マップ」", { x: 0.5, y: 1.4, w: 4.2, h: 0.9, fontFace: F, fontSize: 15, bold: true, color: NAVY, align: "center" });
-s.addText("地区ごとに病院・買い物・学校への到達性を診断\n同じGTFSから動く\n開発中の実証（実現可能性の根拠）", { x: 0.5, y: 2.3, w: 4.2, h: 1.8, fontFace: F, fontSize: 13, color: "222222", valign: "top" });
+s.addText("地区ごとに病院・買い物・学校への到達性を診断\n同じGTFSと同じ計算を使う\n開発中（公開状況は下の欄に提出時の事実を記入）",{ x: 0.5, y: 2.3, w: 4.2, h: 1.8, fontFace: F, fontSize: 13, color: "222222", valign: "top" });
 s.addShape(p.ShapeType.roundRect, { x: 5.2, y: 1.3, w: 4.4, h: 2.9, fill: { color: "FFF6E5" }, line: { color: WARN, width: 1.5 }, rectRadius: 0.1 });
 s.addText("担当者向け（事業）\nシナリオ比較サービス", { x: 5.3, y: 1.4, w: 4.2, h: 0.9, fontFace: F, fontSize: 15, bold: true, color: NAVY, align: "center" });
 s.addText("路線・ダイヤの変更案を作って比較\n説明資料を出力\n年額ライセンス＋導入・整備支援", { x: 5.3, y: 2.3, w: 4.2, h: 1.8, fontFace: F, fontSize: 13, color: "222222", valign: "top" });
