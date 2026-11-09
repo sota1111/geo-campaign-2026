@@ -35,16 +35,22 @@
     return thresholds.length - k;
   }
 
-  /* cell = [code, pop, pop65, levels, walkBits]。戻り値 'walk' | 'transit' | 'none' */
+  /* cell = [code, pop, pop65, levels, walkLevels, rail]。
+     walkLevels は施設ごと1桁の文字列（徒歩だけで着ける水準。公共交通の水準と同じ尺度で、徒歩モデルと許容時間から求めたもの）。
+     rail は 1 なら「GTFS未収録の鉄道駅から徒歩圏」。
+     戻り値 'walk'（許容時間内に歩いて着く）| 'transit'（公共交通で着く）| 'rail'（着けないが鉄道駅が近く、鉄道は未評価）| 'none'（着けない） */
   function cellStatus(cell, fi, day, per, need) {
-    if (cell[4] & (1 << fi)) return 'walk';
+    if (+String(cell[4]).charAt(fi) >= need) return 'walk';
     var lv = +cell[3][condIndex(fi, day, per)];
-    return lv >= need ? 'transit' : 'none';
+    if (lv >= need) return 'transit';
+    return cell[5] ? 'rail' : 'none';
   }
+
+  function reachable(st) { return st === 'walk' || st === 'transit'; }
 
   /* 人口と65歳以上人口を状態別に集計 */
   function summarize(cells, fi, day, per, need) {
-    var out = { pop: 0, walk: 0, transit: 0, none: 0, pop65: 0, walk65: 0, transit65: 0, none65: 0 };
+    var out = { pop: 0, walk: 0, transit: 0, rail: 0, none: 0, pop65: 0, walk65: 0, transit65: 0, rail65: 0, none65: 0 };
     for (var i = 0; i < cells.length; i++) {
       var c = cells[i];
       var st = cellStatus(c, fi, day, per, need);
@@ -57,14 +63,14 @@
   }
 
   /* 路線を止めた場合の差分。diffs=[[セル番号, 新しい水準文字列], ...]。
-     徒歩圏（公共交通に依らない）は変化しない。「行けていたのに行けなくなる」人口を数える */
+     徒歩で着く地区は変化しない。「行けていたのに行けなくなる」人口を数える */
   function lostPopulation(cells, diffs, fi, day, per, need) {
     var out = { lost: 0, lost65: 0, idx: {} };
     for (var i = 0; i < diffs.length; i++) {
       var k = diffs[i][0], c = cells[k];
-      var after = [c[0], c[1], c[2], diffs[i][1], c[4]];
-      var was = cellStatus(c, fi, day, per, need) !== 'none';
-      var now = cellStatus(after, fi, day, per, need) !== 'none';
+      var after = [c[0], c[1], c[2], diffs[i][1], c[4], c[5]];
+      var was = reachable(cellStatus(c, fi, day, per, need));
+      var now = reachable(cellStatus(after, fi, day, per, need));
       if (was && !now) {
         out.lost += c[1];
         out.lost65 += c[2];
@@ -155,7 +161,7 @@
   return {
     DAYS: DAYS, PERIODS: PERIODS, DAY_LABEL: DAY_LABEL, PERIOD_LABEL: PERIOD_LABEL,
     meshBounds: meshBounds, condIndex: condIndex, needLevel: needLevel,
-    cellStatus: cellStatus, summarize: summarize, lostPopulation: lostPopulation, pct: pct, levelLabel: levelLabel,
+    cellStatus: cellStatus, reachable: reachable, summarize: summarize, lostPopulation: lostPopulation, pct: pct, levelLabel: levelLabel,
     fmtMin: fmtMin, distM: distM, nearbyNodes: nearbyNodes, indexCells: indexCells,
     meshCodeAt: meshCodeAt, nodeFacts: nodeFacts
   };

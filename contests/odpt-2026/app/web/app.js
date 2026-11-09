@@ -2,8 +2,9 @@
 (function () {
   'use strict';
   var L = window.Lib;
-  var COLORS = { walk: '#4a90d9', transit: '#2e9e5b', none: '#e0533d', lost: '#6a1b9a' };
-  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 60, marker: null, lost: null };
+  /* 色覚に配慮: 赤と緑の対比を避け、青（行ける）とオレンジ（行けない）の明暗差で区別する（Okabe-Ito配色を基にした） */
+  var COLORS = { walk: '#56B4E9', transit: '#0072B2', none: '#D55E00', rail: '#8c8c8c', lost: '#CC79A7' };
+  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, lost: null, req: 0 };
   var map;
 
   function $(id) { return document.getElementById(id); }
@@ -41,6 +42,10 @@
   }
 
   function init() {
+    if (typeof maplibregl === 'undefined') {
+      $('summary').innerHTML = '<p class="note">地図の部品（MapLibre GL JS）を読み込めませんでした。ネットワーク（unpkg.com への接続）を確認して、ページを再読み込みしてください。</p>';
+      return;
+    }
     getJSON('data/index.json').then(function (idx) {
       STATE.index = idx;
       var sel = $('region');
@@ -51,6 +56,10 @@
       var start = m && idx.regions.some(function (r) { return r.id === m[1]; }) ? m[1] : idx.regions[0].id;
       sel.value = start;
       sel.addEventListener('change', function () { loadRegion(sel.value); });
+      window.addEventListener('hashchange', function () {
+        var h = /region=([a-z0-9_-]+)/.exec(location.hash);
+        if (h && h[1] !== sel.value && idx.regions.some(function (r) { return r.id === h[1]; })) { sel.value = h[1]; loadRegion(h[1]); }
+      });
       initMap(function () { loadRegion(start); });
     }).catch(function (e) {
       $('summary').innerHTML = '<p class="note">データを読み込めませんでした: ' + esc(e.message) + '</p>';
@@ -65,7 +74,7 @@
       document.body.classList.toggle('sheet-closed', closed);
       $('sheet-toggle').setAttribute('aria-expanded', String(!closed));
     });
-    ['cells', 'nodes', 'routes', 'fac'].forEach(function (k) {
+    ['cells', 'nodes', 'routes', 'fac', 'rail'].forEach(function (k) {
       $('lyr-' + k).addEventListener('change', applyLayerVisibility);
     });
   }
@@ -89,21 +98,27 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.on('load', function () {
       var empty = { type: 'FeatureCollection', features: [] };
-      ['cells', 'routes', 'routes-hl', 'routes-wi', 'nodes', 'fac'].forEach(function (s) {
+      ['cells', 'routes', 'routes-hl', 'routes-wi', 'nodes', 'fac', 'rail'].forEach(function (s) {
         map.addSource(s, { type: 'geojson', data: empty });
       });
       map.addLayer({ id: 'cells', type: 'fill', source: 'cells', paint: {
-        'fill-color': ['match', ['get', 'st'], 'walk', COLORS.walk, 'transit', COLORS.transit, 'lost', COLORS.lost, COLORS.none],
-        'fill-opacity': 0.55, 'fill-outline-color': 'rgba(255,255,255,0.35)' } });
+        'fill-color': ['match', ['get', 'st'], 'walk', COLORS.walk, 'transit', COLORS.transit, 'lost', COLORS.lost,
+          'rail', COLORS.rail, COLORS.none],
+        /* 人口の少ないメッシュは薄く、多いメッシュは濃く（面積の広い無人に近い地区が目立ちすぎないように） */
+        'fill-opacity': ['interpolate', ['linear'], ['get', 'pop'], 0, 0.3, 50, 0.45, 300, 0.65],
+        'fill-outline-color': 'rgba(255,255,255,0.35)' } });
       map.addLayer({ id: 'routes', type: 'line', source: 'routes', paint: {
         'line-color': '#444', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 1.8], 'line-opacity': 0.5 } });
       map.addLayer({ id: 'routes-hl', type: 'line', source: 'routes-hl', paint: {
         'line-color': '#1b4f8a', 'line-width': 3.5, 'line-opacity': 0.9 } });
       map.addLayer({ id: 'routes-wi', type: 'line', source: 'routes-wi', paint: {
-        'line-color': '#6a1b9a', 'line-width': 4, 'line-opacity': 0.9, 'line-dasharray': [2, 1.5] } });
+        'line-color': '#B03A8C', 'line-width': 4, 'line-opacity': 0.9, 'line-dasharray': [2, 1.5] } });
       map.addLayer({ id: 'nodes', type: 'circle', source: 'nodes', paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 13, 3.5, 16, 7],
         'circle-color': '#999', 'circle-stroke-color': '#fff', 'circle-stroke-width': 0.8 } });
+      map.addLayer({ id: 'rail', type: 'circle', source: 'rail', paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2, 14, 5],
+        'circle-color': '#fff', 'circle-stroke-color': '#555', 'circle-stroke-width': 1.6 } });
       map.addLayer({ id: 'fac', type: 'circle', source: 'fac', paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3, 14, 7],
         'circle-color': ['match', ['get', 't'], 'hospital', '#8e24aa', '#f9a825'],
@@ -115,7 +130,7 @@
 
   function applyLayerVisibility() {
     if (!map || !map.getLayer('cells')) return;
-    var v = { cells: 'lyr-cells', nodes: 'lyr-nodes', routes: 'lyr-routes', fac: 'lyr-fac' };
+    var v = { cells: 'lyr-cells', nodes: 'lyr-nodes', routes: 'lyr-routes', fac: 'lyr-fac', rail: 'lyr-rail' };
     Object.keys(v).forEach(function (k) {
       map.setLayoutProperty(k, 'visibility', $(v[k]).checked ? 'visible' : 'none');
     });
@@ -124,8 +139,11 @@
   }
 
   function loadRegion(id) {
+    var req = ++STATE.req;   // 地域を素早く切り替えたとき、遅れて届いた古い応答を捨てるための通し番号
     $('summary').innerHTML = '<p class="note">読み込み中…</p>';
+    $('headline').innerHTML = '';
     getJSON('data/' + id + '.json').then(function (d) {
+      if (req !== STATE.req) return;
       STATE.data = d;
       STATE.cellIdx = L.indexCells(d.cells);
       STATE.fi = 0;
@@ -143,9 +161,11 @@
       STATE.lost = null;
       $('detail').innerHTML = '<h2>地点の診断</h2><p class="note">地図をタップすると、その地点の診断と近くの停留所を表示します。</p>';
       $('region-note').textContent = d.reason;
+      renderCoverage();
       if (window.WhatIf) window.WhatIf.onRegion(STATE, d, refresh);
       refresh();
     }).catch(function (e) {
+      if (req !== STATE.req) return;
       $('summary').innerHTML = '<p class="note">地域データを読み込めませんでした: ' + esc(e.message) + '</p>';
     });
   }
@@ -175,6 +195,9 @@
       return { type: 'Feature', properties: { r: p[0] },
         geometry: { type: 'LineString', coordinates: p[1].map(function (i) { return lonlat(d.nodes[i]); }) } };
     }) });
+    map.getSource('rail').setData({ type: 'FeatureCollection', features: (d.rail || []).map(function (r) {
+      return { type: 'Feature', properties: { name: r[2], op: r[3] }, geometry: { type: 'Point', coordinates: [r[0], r[1]] } };
+    }) });
     applyLayerVisibility();
   }
 
@@ -189,7 +212,7 @@
     var lost = STATE.lost;
     var feats = d.cells.map(function (c, k) {
       var b = L.meshBounds(c[0]);
-      return { type: 'Feature', properties: { st: lost && lost[k] ? 'lost' : L.cellStatus(c, STATE.fi, STATE.day, STATE.per, nd) },
+      return { type: 'Feature', properties: { st: lost && lost[k] ? 'lost' : L.cellStatus(c, STATE.fi, STATE.day, STATE.per, nd), pop: c[1] },
         geometry: { type: 'Polygon', coordinates: [[[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [b[0], b[1]]]] } };
     });
     map.getSource('cells').setData({ type: 'FeatureCollection', features: feats });
@@ -205,12 +228,57 @@
     renderLegend();
   }
 
+  function sw(color, label, extra) {
+    return '<span class="lg"><span class="sw" style="background:' + color + (extra || '') + '"></span>' + label + '</span>';
+  }
+
   function renderLegend() {
-    $('legend').innerHTML = '停留所の色（1日の発車本数）:' +
+    var d = STATE.data;
+    var fl = d.facility_labels[d.facility_order[STATE.fi]];
+    $('legend').innerHTML = '<b>メッシュ（500m四方）の色</b><br>' +
+      sw(COLORS.walk, '歩いて行ける') + sw(COLORS.transit, '公共交通で行ける') + sw(COLORS.none, '行けない') +
+      sw(COLORS.rail, '鉄道駅が近い（鉄道は未評価）') + (STATE.lost ? sw(COLORS.lost, '路線を止めると行けなくなる') : '') +
+      '<br><span class="note">濃いほど人口が多いメッシュです。</span><br>' +
+      '<b>停留所の色（1日の発車本数）</b><br>' +
       [['#9e9e9e', '0'], ['#fdd49e', '1-5'], ['#fdbb84', '6-15'], ['#fc8d59', '16-40'], ['#e34a33', '41-100'], ['#b30000', '101+']]
-        .map(function (c) { return '<span class="sw" style="background:' + c[0] + '"></span>' + c[1]; }).join('') +
-      '<br>施設: <span class="sw" style="background:' + (STATE.fi === 0 ? '#8e24aa' : '#f9a825') + '"></span>' +
-      esc(STATE.data.facility_labels[STATE.data.facility_order[STATE.fi]]);
+        .map(function (c) { return sw(c[0], c[1]); }).join('') +
+      '<br>' + sw(STATE.fi === 0 ? '#8e24aa' : '#f9a825', esc(fl), ';border-radius:50%') +
+      sw('#fff', '鉄道駅（未収録）', ';border-radius:50%;border:1.6px solid #555');
+  }
+
+  /* 収録範囲の注記（主要画面に常時表示）。「データなし」を「行けない」と誤読させないため */
+  function coverageText(d) {
+    var c = d.coverage || {};
+    var railModes = (c.modes || []).filter(function (m) { return m !== 'バス'; });
+    var t = '収録しているのは' + esc((c.sources || []).join('・')) + 'のGTFS ' + c.feeds + '件（' + esc((c.modes || []).join('・')) + '）のみ。';
+    t += railModes.length ? '鉄道は' + esc(railModes.join('・')) + 'のみ収録し、JR等そのほかの鉄道は未収録です。'
+      : '鉄道（JR等）は未収録です。';
+    t += 'デマンド交通・予約制の便も未収録です。';
+    if (c.rail_checked) {
+      t += '<br>未収録の鉄道の駅から徒歩' + d.params.rail_walk_min + '分圏で行けない地区は、赤ではなく灰色「鉄道駅が近い（未評価）」にしています。';
+    }
+    return t;
+  }
+
+  function renderCoverage() {
+    var d = STATE.data;
+    $('coverage').innerHTML = '<b>診断の範囲</b>　' + coverageText(d);
+    // フィードの有効期限（今この画面を開いた日で判定する）
+    var today = new Date();
+    var iso = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
+    var expiredNow = d.feeds.filter(function (f) { return f.valid[1] && f.valid[1] < iso; });
+    var soon = d.feeds.filter(function (f) { return f.valid[1] && f.valid[1] >= iso && f.valid[1] < d.public_until; });
+    var msg = '';
+    if (expiredNow.length) {
+      msg += '有効期間が切れたデータが' + expiredNow.length + '件あります（' + esc(expiredNow.map(function (f) { return f.org + ' ' + f.valid[1]; }).slice(0, 3).join('、')) +
+        (expiredNow.length > 3 ? ' ほか' : '') + '）。ダイヤが変わっている可能性があり、この診断は現在の運行を示しません。';
+    } else if (soon.length) {
+      var first = soon.map(function (f) { return f.valid[1]; }).sort()[0];
+      msg += soon.length + '件のデータは' + first + 'から順に有効期間が終わります。切れた後は最新のGTFSで作り直す必要があります。';
+    }
+    var el = $('data-warn');
+    el.hidden = !msg;
+    el.innerHTML = msg ? '<b>データの期限</b>　' + msg : '';
   }
 
   /* ---------- 集計 ---------- */
@@ -220,19 +288,20 @@
     var okp = L.pct(s.walk + s.transit, s.pop);
     var ok65 = L.pct(s.walk65 + s.transit65, s.pop65);
     var fl = d.facility_labels[d.facility_order[STATE.fi]];
-    var h = '<p class="big">' + esc(L.DAY_LABEL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] +
-      '時に出発して<b>' + STATE.w + '分以内</b>に' + esc(fl) + 'へ行ける人は<br><b>' + okp + '%</b>' +
+    var cond = esc(L.DAY_LABEL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] + '時に出発して<b>' + STATE.w + '分以内</b>に' + esc(fl) + 'へ';
+    var h = '<p class="big">' + cond + '歩くか収録した公共交通で行ける人は<br><b>' + okp + '%</b>' +
       '（診断範囲の人口 ' + man(s.pop) + '）</p>';
-    h += '<div class="bar" role="img" aria-label="徒歩圏 ' + L.pct(s.walk, s.pop) + '%、公共交通で到達 ' + L.pct(s.transit, s.pop) +
-      '%、到達できない ' + L.pct(s.none, s.pop) + '%">' +
+    h += '<div class="bar" role="img" aria-label="歩いて行ける ' + L.pct(s.walk, s.pop) + '%、公共交通で行ける ' + L.pct(s.transit, s.pop) +
+      '%、鉄道駅が近い（未評価） ' + L.pct(s.rail, s.pop) + '%、行けない ' + L.pct(s.none, s.pop) + '%">' +
       '<i class="w" style="width:' + L.pct(s.walk, s.pop) + '%"></i><i class="t" style="width:' + L.pct(s.transit, s.pop) + '%"></i>' +
-      '<i class="n" style="width:' + L.pct(s.none, s.pop) + '%"></i></div>';
-    h += '<div class="keys"><span style="--c:' + COLORS.walk + '">徒歩圏 ' + L.pct(s.walk, s.pop) + '%</span>' +
-      '<span style="--c:' + COLORS.transit + '">公共交通で到達 ' + L.pct(s.transit, s.pop) + '%</span>' +
-      '<span style="--c:' + COLORS.none + '">到達できない ' + L.pct(s.none, s.pop) + '%</span></div>';
-    h += '<p class="note">65歳以上では ' + ok65 + '%（' + man(s.pop65) + '）が到達可。</p>';
+      '<i class="r" style="width:' + L.pct(s.rail, s.pop) + '%"></i><i class="n" style="width:' + L.pct(s.none, s.pop) + '%"></i></div>';
+    h += '<div class="keys"><span style="--c:' + COLORS.walk + '">歩いて ' + L.pct(s.walk, s.pop) + '%</span>' +
+      '<span style="--c:' + COLORS.transit + '">公共交通で ' + L.pct(s.transit, s.pop) + '%</span>' +
+      '<span style="--c:' + COLORS.rail + '">鉄道駅が近い（未評価） ' + L.pct(s.rail, s.pop) + '%</span>' +
+      '<span style="--c:' + COLORS.none + '">行けない ' + L.pct(s.none, s.pop) + '%</span></div>';
+    h += '<p class="note">「行けない」は、' + STATE.w + '分以内に歩いても、収録した公共交通を使っても着けない場合だけです。65歳以上では ' + ok65 + '%（' + man(s.pop65) + '）が行ける。</p>';
     // 平日/休日 × 朝昼夕の比較
-    h += '<table><caption class="note">到達できる人の割合（' + STATE.w + '分以内・' + esc(fl) + '）</caption><tr><th></th>' +
+    h += '<table><caption class="note">行ける人の割合（' + STATE.w + '分以内・' + esc(fl) + '）</caption><tr><th></th>' +
       L.PERIODS.map(function (p) { return '<th>' + L.PERIOD_LABEL[p] + d.params.start_hours[p] + '時</th>'; }).join('') + '</tr>';
     L.DAYS.forEach(function (dy) {
       h += '<tr><th>' + L.DAY_LABEL[dy] + '</th>';
@@ -242,9 +311,14 @@
       });
       h += '</tr>';
     });
-    h += '</table><p class="note">診断範囲: 収録した停留所から' + d.params.diag_radius_m + 'm以内の人口メッシュ。徒歩圏=施設まで直線' +
-      d.params.walk_only_m + 'm以内。</p>';
+    h += '</table><p class="note">診断範囲: 収録した停留所から' + d.params.diag_radius_m + 'm以内の人口メッシュ。徒歩は直線×' + d.params.detour +
+      '÷分速' + d.params.walk_m_per_min + 'mで換算し、許容時間内に歩いて着けるなら「歩いて行ける」。</p>';
     $('summary').innerHTML = h;
+    // スマホで最初に結論が見えるよう、パネル上部に固定表示する
+    $('headline').innerHTML = '<span class="hl-cond">' + esc(L.DAY_LABEL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] + '時・' +
+      STATE.w + '分以内・' + esc(fl) + '</span><span class="hl-num">行ける <b>' + okp + '%</b></span>' +
+      '<span class="hl-sub">行けない ' + L.pct(s.none, s.pop) + '%／鉄道駅が近い（未評価） ' + L.pct(s.rail, s.pop) + '%</span>' +
+      '<span class="hl-sub">収録はGTFS ' + d.coverage.feeds + '件のみ。' + (d.coverage.modes.length > 1 ? '' : 'JR等の鉄道は未収録。') + '</span>';
   }
 
   /* ---------- 地点の診断 ---------- */
@@ -262,6 +336,7 @@
     } else {
       var c = d.cells[ci];
       h += '<p class="note">この500mメッシュ: 人口 ' + c[1] + '人（65歳以上 ' + c[2] + '人。秘匿処理により近隣メッシュ分を含む／欠ける場合あり）</p>';
+      if (c[5]) h += '<p class="note">未収録の鉄道の駅から徒歩' + d.params.rail_walk_min + '分圏です。鉄道を使えば行ける可能性がありますが、本アプリは評価していません。</p>';
       h += diagTable(c);
     }
     var near = L.nearbyNodes(d.nodes, lon, lat, d.params.walk_in_m, 6);
@@ -303,43 +378,52 @@
     h += '</tr>';
     d.facility_order.forEach(function (k, fi) {
       h += '<tr><th>' + esc(d.facility_labels[k]) + '</th>';
-      var walk = c[4] & (1 << fi);
+      var wl = +String(c[4]).charAt(fi);   // 徒歩だけで着ける水準
       L.DAYS.forEach(function (dy) {
         L.PERIODS.forEach(function (p) {
           var lv = +c[3][L.condIndex(fi, dy, p)];
-          if (walk) h += '<td class="lw">徒歩圏</td>';
+          if (wl > 0 && wl >= lv) h += '<td class="lw">' + esc(L.levelLabel(wl, d.params.thresholds)) + '<br>徒歩</td>';
+          else if (lv === 0 && c[5]) h += '<td class="lr">鉄道駅が近い</td>';
           else h += '<td class="l' + lv + '">' + esc(L.levelLabel(lv, d.params.thresholds)) + '</td>';
         });
       });
       h += '</tr>';
     });
-    return h + '</table><p class="note">朝8時・昼12時・夕17時に出発して、最短で何分以内に着けるか（待ち時間・乗継を含む）。×は60分以内に着けない。</p>';
+    return h + '</table><p class="note">朝8時・昼12時・夕17時に出発して、最短で何分以内に着けるか（待ち時間・乗継を含む）。×は60分以内に歩いても収録した公共交通でも着けない。「鉄道駅が近い」は、未収録の鉄道があるため評価していない。</p>';
   }
 
   /* ---------- 出典・前提 ---------- */
   function openAbout() {
     var d = STATE.data;
     var h = '<h2 id="about-title" style="margin-top:0">出典・ライセンス・診断の前提</h2>';
-    h += '<p>本アプリは、収録した事業者・地域のデータだけで診断しています。<b>全国を網羅するものではありません</b>（JR・大手民営鉄道等、GTFSデータリポジトリに未収録の事業者は含みません）。</p>';
+    h += '<p>本アプリは、収録した事業者・地域のデータだけで診断しています。<b>全国を網羅するものではありません</b>（JR・大手民営鉄道等、GTFSデータリポジトリ・公共交通オープンデータセンターから収録していない事業者は含みません）。</p>';
     if (d) {
       h += '<h2>この地域（' + esc(d.name) + '）に収録したGTFSデータ</h2>';
-      h += '<p>出典: <a href="https://www.gtfs-data.jp/" target="_blank" rel="noopener">GTFSデータリポジトリ</a>。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。</p>';
-      h += '<table><tr><th>事業者</th><th>データ名</th><th>ライセンス</th><th>リポジトリ更新日</th><th>データ有効期間</th><th>診断の基準日（平日/休日）</th></tr>';
+      h += '<p>出典: ' + (d.coverage.sources.indexOf('GTFSデータリポジトリ') >= 0 ? '<a href="https://www.gtfs-data.jp/" target="_blank" rel="noopener">GTFSデータリポジトリ</a>' : '') +
+        (d.coverage.sources.length > 1 ? '、' : '') +
+        (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0 ? '<a href="https://www.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（公開API https://api-public.odpt.org/api/v4/ 、キー不要）' : '') +
+        '。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。</p>';
+      h += '<table><tr><th>事業者</th><th>データ名</th><th>取得元</th><th>ライセンス・クレジット</th><th>更新日</th><th>データ有効期間</th><th>診断の基準日（平日/休日）</th></tr>';
       d.feeds.forEach(function (f) {
+        var warn = f.expired ? ' <b class="warn">期限切れ</b>' : (f.ends_before_public_end ? ' <b class="warn">公開期間（〜' + esc(d.public_until) + '）の途中で終了</b>' : '');
         h += '<tr><td><a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(f.org) + '</a></td><td>' + esc(f.name) + '</td><td>' +
+          (f.source === 'odpt' ? '公共交通オープンデータセンター' : 'GTFSデータリポジトリ') + '</td><td>' +
           (f.license_url ? '<a href="' + esc(f.license_url) + '" target="_blank" rel="noopener">' + esc(f.license) + '</a>' : esc(f.license)) +
-          '</td><td>' + esc(f.updated) + '</td><td>' + esc((f.valid[0] || '?') + '〜' + (f.valid[1] || '?')) + '</td><td>' +
+          (f.credit ? '<br>クレジット: ' + esc(f.credit) : '') +
+          '</td><td>' + esc(f.updated) + '</td><td>' + esc((f.valid[0] || '?') + '〜' + (f.valid[1] || '?')) + warn + '</td><td>' +
           esc(f.ref.wd + ' / ' + f.ref.hol) + '</td></tr>';
       });
       h += '</table><p class="note">データ生成日: ' + esc(d.built) + '。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>';
     }
     h += '<h2>その他のデータ</h2><ul>' +
+      '<li>鉄道駅: 国土数値情報「鉄道データ」N02-22（国土交通省、令和4年12月31日時点）を加工して作成。GTFSに収録していない鉄道の駅の位置を地図に示し、駅から徒歩' + (d ? d.params.rail_walk_min : 15) + '分圏の地区を「鉄道駅が近い（未評価）」とするためだけに使っています（時刻表・運行は使っていません）。新設駅・廃止駅は反映されていない場合があります。</li>' +
       '<li>人口: 政府統計の総合窓口（e-Stat）「令和2年国勢調査 地域メッシュ統計（250mメッシュ）」を500mメッシュに集約して作成。65歳以上人口は秘匿処理のため近隣メッシュに合算されている場合があります。</li>' +
       '<li>施設: 国土数値情報（医療機関データ P04-20［病院のみ］、学校データ P29-21［小学校・中学校］）（国土交通省）を加工して作成。施設の位置・存廃は現在と異なる場合があります。</li>' +
       '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li></ul>';
     h += '<h2>診断の前提と限界</h2><ul>' +
       '<li>「行ける」とは、指定時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可・乗継時間3分以上）→徒歩で、許容時間内に施設の近くへ着けること。待ち時間を含みます。</li>' +
-      '<li>徒歩は直線距離の1.25倍を分速80mで歩くと仮定（道路網・坂・横断は未考慮）。乗車停留所は直線600m以内、降車停留所から施設は直線500m以内。施設まで直線800m以内は「徒歩圏」とし、公共交通なしで可とします。</li>' +
+      '<li>徒歩は直線距離の1.25倍を分速80mで歩くと仮定（道路網・坂・横断は未考慮）。乗車停留所は直線600m以内、降車停留所から施設は直線500m以内。公共交通を使わなくても、同じ徒歩モデルで許容時間内に施設へ歩いて着ければ「歩いて行ける」とします。「行けない」は、歩いても収録した公共交通を使っても許容時間内に着けない場合だけです。</li>' +
+      '<li>GTFSに収録していない鉄道（JR・民鉄等）とデマンド交通は評価していません。そのため、鉄道駅の近くで「行けない」となる地区は赤にせず灰色「鉄道駅が近い（未評価）」で示しています。「行けない」の中にも、未収録のバスや予約制の便で行ける地区が含まれることがあります。</li>' +
       '<li>運賃、予約が必要なデマンド交通の予約可否、バリアフリー、施設の診療時間・受付時間、帰りの便は評価していません。</li>' +
       '<li>診断範囲は、収録した停留所から' + (d ? d.params.diag_radius_m : 2000) + 'm以内の人口メッシュです。未収録事業者のみが走る地区は「空白」に見えることがあります。</li>' +
       '<li>診断は時刻表データに基づく計算であり、実際の遅延・運休を示すものではありません。結果は計画・検討の参考であり、個別の移動の保証ではありません。</li></ul>';

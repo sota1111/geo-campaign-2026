@@ -88,3 +88,24 @@ def read_schools(zip_path, bbox):
         if lat0 <= lat <= lat1 and lon0 <= lon <= lon1:
             out.append((lat, lon, p.get("P29_004") or "", kind))
     return out
+
+
+def read_rail_stations(zip_path, bbox):
+    """国土数値情報 N02（鉄道データ）の駅。[(lat, lon, 駅名, 運営会社, 路線名)]
+
+    駅は2点の線分なので中点を位置とする。UTF-8 版の Station.geojson を読む。
+    """
+    lon0, lat0, lon1, lat1 = bbox
+    with zipfile.ZipFile(zip_path) as zf:
+        name = next(n for n in zf.namelist() if n.startswith("UTF-8/") and n.endswith("_Station.geojson"))
+        data = json.loads(zf.read(name).decode("utf-8"))
+    out = []
+    for f in data["features"]:
+        p = f["properties"]
+        g = f["geometry"]
+        pts = g["coordinates"] if g["type"] == "LineString" else [g["coordinates"]]
+        lon = sum(q[0] for q in pts) / len(pts)
+        lat = sum(q[1] for q in pts) / len(pts)
+        if lat0 <= lat <= lat1 and lon0 <= lon <= lon1:
+            out.append((lat, lon, p.get("N02_005") or "", p.get("N02_004") or "", p.get("N02_003") or ""))
+    return out

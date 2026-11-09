@@ -13,7 +13,8 @@
         ["kumamoto-toshibus", "kumamoto-toshibus"],
         ["kumamotodentetsu", "kumamotodentetsu-bus"],
         ["sankobus", "sankobus"]
-      ]
+      ],
+      "rail_covered": [["熊本市", null]]
     },
     {
       "id": "toyama",
@@ -33,7 +34,9 @@
         ["toyamacity", "kurehaikiikibus"],
         ["kamiichitown", "kamiichi"],
         ["tateyamatown", "tateyama"]
-      ]
+      ],
+      "rail_covered": [["富山地方鉄道", "安野屋線"], ["富山地方鉄道", "呉羽線"], ["富山地方鉄道", "支線"],
+                       ["富山地方鉄道", "富山都心線"], ["富山地方鉄道", "富山駅南北接続線"]]
     },
     {
       "id": "tokushima",
@@ -48,7 +51,8 @@
         ["matsushigetown", "matsushigetownbus"],
         ["kitajimatown", "kitajimatownfukushibus"],
         ["narutocity", "narutocitychiikibus"]
-      ]
+      ],
+      "rail_covered": []
     },
     {
       "id": "iida",
@@ -65,7 +69,28 @@
         ["minamishinshu", "Minamishinshu-takagi-1"],
         ["minamishinshu", "Minamishinshu-toyooka-1"],
         ["minamishinshu", "Minamishinshu-Shinnan-1"]
-      ]
+      ],
+      "rail_covered": []
+    },
+    {
+      "id": "tokyo",
+      "name": "東京都区部（都営バス・都営地下鉄沿線の一部）",
+      "pref": "13",
+      "bbox": [139.62, 35.58, 139.92, 35.80],
+      "reason": "公共交通オープンデータセンター(ODPT)が配信する東京都交通局のデータ（都営バス・都営地下鉄・都電荒川線・日暮里・舎人ライナー）で、本数が多い大都市部の診断結果を、地方の4地域と比べられる。JR・東京メトロ・私鉄は未収録。",
+      "feeds": [
+        {"source": "odpt", "id": "toei-bus", "path": "Toei/data/ToeiBus-GTFS.zip",
+         "organization_name": "東京都交通局", "feed_name": "都営バス（公共交通オープンデータセンター）",
+         "feed_license": "CC BY 4.0", "feed_license_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+         "credit": "東京都交通局・公共交通オープンデータ協議会",
+         "page_url": "https://ckan.odpt.org/dataset/b_bus_gtfs_jp-toei", "last_updated_at": ""},
+        {"source": "odpt", "id": "toei-train", "path": "Toei/data/Toei-Train-GTFS.zip",
+         "organization_name": "東京都交通局", "feed_name": "都営地下鉄・都電荒川線・日暮里・舎人ライナー（公共交通オープンデータセンター）",
+         "feed_license": "CC BY 4.0", "feed_license_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+         "credit": "東京都交通局・公共交通オープンデータ協議会",
+         "page_url": "https://ckan.odpt.org/dataset/train-toei", "last_updated_at": ""}
+      ],
+      "rail_covered": [["東京都", null]]
     }
   ]
 }

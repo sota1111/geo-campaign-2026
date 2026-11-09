@@ -21,33 +21,45 @@ assert.equal(L.needLevel(th, 60), 1);
 assert.throws(() => L.needLevel(th, 50));
 
 // 状態: 診断文字列 = 施設(2) × 日(wd,hol) × 時間帯(m,d,e)
-const cell = ['533946111', 100, 30, '210000' + '004321', 0b01];
+const cell = ['533946111', 100, 30, '210000' + '004321', '30'];
 assert.equal(L.condIndex(1, 'hol', 'e'), 11);
-assert.equal(L.cellStatus(cell, 0, 'wd', 'm', 2), 'walk');          // 病院は徒歩圏ビット
+assert.equal(L.cellStatus(cell, 0, 'wd', 'm', 2), 'walk');          // 病院は徒歩だけで水準3（30分以内）。必要2（45分）を満たす
 assert.equal(L.cellStatus(cell, 1, 'wd', 'm', 1), 'none'); // 学校 wd 朝は水準0
 assert.equal(L.cellStatus(cell, 1, 'hol', 'e', 1), 'transit');       // 末尾 '1'
 assert.equal(L.cellStatus(cell, 1, 'hol', 'e', 2), 'none');          // 水準1 < 必要2
+assert.equal(L.cellStatus(cell, 0, 'wd', 'm', 4), 'none');           // 徒歩3・公共交通2 はどちらも必要4（20分）に届かない
+assert.equal(L.cellStatus(cell, 0, 'wd', 'm', 3), 'walk');           // 必要3（30分）なら歩いて着く（徒歩を優先して表示）
+// 鉄道駅が近い（rail=1）が、どちらでも着けない地区は 'rail'（鉄道は未評価）。着ける地区は rail を無視
+const railCell = ['533946111', 100, 30, '0'.repeat(12), '00', 1];
+assert.equal(L.cellStatus(railCell, 0, 'wd', 'm', 1), 'rail');
+assert.equal(L.cellStatus(['x', 1, 1, '1' + '0'.repeat(11), '00', 1], 0, 'wd', 'm', 1), 'transit');
+assert.equal(L.reachable('rail'), false);
 
 // 集計
 const cells = [
-  ['a', 100, 40, '4' + '00000' + '00000' + '0', 0],
-  ['b', 50, 10, '0'.repeat(12), 0],
-  ['c', 10, 5, '0'.repeat(12), 1],
+  ['a', 100, 40, '4' + '00000' + '00000' + '0', '00'],
+  ['b', 50, 10, '0'.repeat(12), '00'],
+  ['c', 10, 5, '0'.repeat(12), '10'],
+  ['d', 20, 8, '0'.repeat(12), '00', 1],
 ];
 const s = L.summarize(cells, 0, 'wd', 'm', 1);
-assert.deepEqual([s.pop, s.walk, s.transit, s.none], [160, 10, 100, 50]);
-assert.deepEqual([s.pop65, s.walk65, s.transit65, s.none65], [55, 5, 40, 10]);
+assert.deepEqual([s.pop, s.walk, s.transit, s.rail, s.none], [180, 10, 100, 20, 50]);
+assert.deepEqual([s.pop65, s.walk65, s.transit65, s.rail65, s.none65], [63, 5, 40, 8, 10]);
 assert.equal(L.pct(1, 3), 33.3);
 assert.equal(L.pct(1, 0), 0);
 
 // 路線を止めた差分: a は水準4→0 で「行けなくなる」。b は水準0→0 で変化なし。c は徒歩圏で不変
 const cs = [
-  ['a', 100, 40, '4' + '0'.repeat(11), 0],
-  ['b', 50, 10, '0'.repeat(12), 0],
-  ['c', 10, 5, '4' + '0'.repeat(11), 1],
+  ['a', 100, 40, '4' + '0'.repeat(11), '00'],
+  ['b', 50, 10, '0'.repeat(12), '00'],
+  ['c', 10, 5, '4' + '0'.repeat(11), '10'],
+  ['d', 20, 8, '4' + '0'.repeat(11), '00', 1],
 ];
 const lp = L.lostPopulation(cs, [[0, '0'.repeat(12)], [1, '0'.repeat(12)], [2, '0'.repeat(12)]], 0, 'wd', 'm', 1);
 assert.deepEqual([lp.lost, lp.lost65, Object.keys(lp.idx)], [100, 40, ['0']]);
+// d は水準4→0 で「行けなくなる」。鉄道駅が近くても、止めた結果が 'rail' なら行けなくなった人に数える
+const lpd = L.lostPopulation(cs, [[3, '0'.repeat(12)]], 0, 'wd', 'm', 1);
+assert.equal(lpd.lost, 20);
 // 水準が4→2 に下がっても W=60 の条件ではまだ行ける（失わない）
 const lp2 = L.lostPopulation(cs, [[0, '2' + '0'.repeat(11)]], 0, 'wd', 'm', 1);
 assert.equal(lp2.lost, 0);

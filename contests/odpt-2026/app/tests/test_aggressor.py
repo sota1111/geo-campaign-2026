@@ -178,7 +178,6 @@ class TestGtfsEdgeInputs(unittest.TestCase):
         wd_trips = [t["trip_id"] for t in fd["trips"] if t["active"]["wd"]]
         self.assertEqual(wd_trips, ["t1"])   # 現状は ["t2"]（休日ダイヤが平日として入る）
 
-    @known_bug
     def test_expired_feed_is_flagged(self):
         """有効期間が切れたフィード（today > end）。現状は期間内の最後の水曜を黙って使い、
         出力にも「期限切れ」の印が無い。審査時点（2027/1〜2）に古いダイヤで診断している恐れ。"""
@@ -203,21 +202,23 @@ def _empty_net():
 
 
 class TestDiagnosisSemantics(unittest.TestCase):
-    @known_bug
     def test_walk_1km_counts_as_reachable_within_20min(self):
         """施設まで直線1.0km（アプリ自身の徒歩モデルで 1000×1.25/80 = 15.6分）、バスなし。
-        画面は「20分以内に行けるか」と問うのに、徒歩圏判定は直線800m固定のため「到達できない（赤）」。
-        実データでは赤のうち 富山・病院・60分で96%、熊本・学校・60分で97% がこの「歩けば着く」人口。"""
+        徒歩だけで行けるかの判定は徒歩モデルと許容時間に一致させた（修正済み。以前は直線800m固定で「到達できない（赤）」だった）。"""
         lv, walk, _ = _diag([(35.0, 135.0)], [(35.0 + 1000 / 110574.0, 135.0)])
-        reachable = bool(walk["c0"] & 1) or int(lv["c0"][0]) >= 4   # W=20 は水準4
+        reachable = int(walk["c0"][0]) >= 4 or int(lv["c0"][0]) >= 4   # W=20 は水準4
         self.assertTrue(reachable, "徒歩15.6分の地点が20分以内に到達できない扱い")
 
     def test_walk_only_threshold_boundary(self):
-        """799m は徒歩圏、801m は徒歩圏外（現行仕様の境界を固定）。"""
-        _, walk, _ = _diag([(35.0, 135.0), (36.0, 135.0)],
-                           [(35.0 + 799 / 110574.0, 135.0), (36.0 + 801 / 110574.0, 135.0)])
-        self.assertEqual(walk["c0"] & 1, 1)
-        self.assertEqual(walk["c1"] & 1, 1 if 801 <= 800 else 0)
+        """徒歩だけの判定の境界を固定。20分=直線1280m（×1.25÷分速80m）。1279mは水準4（20分以内）、1281mは水準3（30分以内）。
+        3840mは60分ちょうど（水準1）、3841mは歩いても60分以内に着けない（水準0）。"""
+        pts = [(35.0, 135.0), (36.0, 135.0), (37.0, 135.0), (38.0, 135.0)]
+        facs = [(la + d / 110574.0, 135.0) for (la, _), d in zip(pts, (1279, 1281, 3839, 3841))]
+        _, walk, _ = _diag(pts, facs[:1])   # 施設は1つだけ。他の点は遠いので0になることも確認
+        self.assertEqual(walk["c0"], "4")
+        for i, (la, d) in enumerate(zip((36.0, 37.0, 38.0), (1281, 3839, 3841))):
+            _, w, _ = _diag([(la, 135.0)], [(la + d / 110574.0, 135.0)])
+            self.assertEqual(w["c0"], {1281: "3", 3839: "1", 3841: "0"}[d], d)
 
     def test_no_facilities_in_region(self):
         """bbox 内に病院が1つも無い（中山間地で起こりうる）。落ちずに全セル水準0。"""
@@ -226,7 +227,7 @@ class TestDiagnosisSemantics(unittest.TestCase):
         fd = gtfs.load_feed(z, BBOX, TODAY)
         lv, walk, _ = _diag([(35.0, 135.0)], [], feeds=[fd])
         self.assertEqual(lv["c0"], "000000")
-        self.assertEqual(walk["c0"], 0)
+        self.assertEqual(walk["c0"], "0")
 
     @known_bug
     def test_walking_transfer_between_unmerged_stops(self):
@@ -315,7 +316,6 @@ class TestGeneratedDataForJudges(unittest.TestCase):
                     bad.append((rid, f["id"], f["valid"][1]))
         self.assertEqual(bad, [])
 
-    @known_bug
     def test_whatif_route_labels_are_distinguishable(self):
         """「路線を止めたら？」の選択肢で、同じ表示名・同じ事業者の路線が複数ある（GTFS の route_id が
         方向・系統ごとに分かれている）。利用者には区別できず、片方を止めても他方が残るため影響が過小に出る。
@@ -332,10 +332,9 @@ class TestGeneratedDataForJudges(unittest.TestCase):
                 dup[rid] = n
         self.assertEqual(dup, {})
 
-    @known_bug
     def test_red_cells_are_not_walkable(self):
-        """「到達できない（赤）」の人口のうち、アプリ自身の徒歩モデル（直線×1.25÷80m/分）で
-        許容時間内に歩いて着ける人口が 10% 未満であること。現状は多くの条件で 50〜99%。"""
+        """「行けない（赤）」の人口のうち、アプリ自身の徒歩モデル（直線×1.25÷80m/分）で
+        許容時間内に歩いて着ける人口が 10% 未満であること（修正済み。以前は多くの条件で 50〜99%）。"""
         import math
         worst = []
         for rid in self.regions():
@@ -343,7 +342,7 @@ class TestGeneratedDataForJudges(unittest.TestCase):
             fac = d["facilities"]["hospital"]
             red = walkable = 0
             for c in d["cells"]:
-                if c[4] & 1 or int(c[3][0]) >= 1:   # 病院・平日朝・60分
+                if int(c[4][0]) >= 1 or int(c[3][0]) >= 1:   # 病院・平日朝・60分（歩いても公共交通でも着ける）
                     continue
                 red += c[1]
                 a, b, cc, dd = sources.mesh_bounds(c[0])

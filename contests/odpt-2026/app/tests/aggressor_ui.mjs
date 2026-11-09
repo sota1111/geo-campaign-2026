@@ -88,7 +88,7 @@ await scenario('desktop_first_view', async (c, r) => {
   r.info.summary_bottom = await c.ev('Math.round(document.querySelector("#summary").getBoundingClientRect().bottom)');
   r.info.whatif_top = await c.ev('Math.round(document.querySelector("#whatif").getBoundingClientRect().top)');
   r.info.mentions_unlisted_on_main = await c.ev('/JR|鉄道|未収録/.test(document.querySelector("#panel-body").innerText)');
-  r.info.legend_cells = await c.ev('/到達できない/.test(document.querySelector("#legend").innerText)');
+  r.info.legend_cells = await c.ev('/到達できない|行けない/.test(document.querySelector("#legend").innerText)');
   if (r.info.whatif_top > 768) r.fail.push(`看板機能「路線を止めたら？」が初期画面の外（top=${r.info.whatif_top}px, 画面高768）`);
   if (!r.info.legend_cells) r.fail.push('地図の凡例に「メッシュの色（青/緑/赤）」の説明が無い（凡例は停留所の色のみ。メッシュ色はサマリーの帯でしか分からない）');
   await shot(c, 'A_desktop.png');
@@ -100,7 +100,7 @@ await scenario('mobile_390', async (c, r) => {
   r.info.ms_to_summary = await load(c, base);
   r.info.scrollW = await c.ev('document.documentElement.scrollWidth');
   r.info.panel_h = await c.ev('Math.round(document.querySelector("#panel").getBoundingClientRect().height)');
-  r.info.summary_top_in_panel = await c.ev('Math.round(document.querySelector("#summary").getBoundingClientRect().top)');
+  r.info.summary_top_in_panel = await c.ev('(()=>{const hl=document.querySelector("#headline");const e=hl&&getComputedStyle(hl).display!=="none"&&hl.textContent.trim()?hl:document.querySelector("#summary");return Math.round(e.getBoundingClientRect().top)})()');   // 結論の固定表示（#headline）があればその位置
   r.info.small_targets = await c.ev(`[...document.querySelectorAll('#panel button, #panel select, #panel input, #panel label')].filter(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.height>0&&b.height<32}).map(e=>(e.id||e.tagName)+':'+Math.round(e.getBoundingClientRect().height)).slice(0,10)`);
   if (r.info.scrollW > 390) r.fail.push(`横スクロールが発生（scrollWidth=${r.info.scrollW}）`);
   if (r.info.summary_top_in_panel > 844) r.fail.push(`結論（到達率）がスマホ初期表示で見えない（top=${r.info.summary_top_in_panel}px）`);

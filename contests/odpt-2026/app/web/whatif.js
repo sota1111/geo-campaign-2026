@@ -30,7 +30,7 @@
       W = w;
       box.hidden = false;
       box.innerHTML = '<h2>路線を止めたら？</h2>' +
-        '<p class="note">ある路線が無くなったとき、いまの診断条件で<b>行けなくなる人</b>を紫で示します。時刻表を使った再計算で、代替交通・運行本数の部分的な減便は考慮していません。</p>' +
+        '<p class="note">ある路線が無くなったとき、いまの診断条件で<b>行けなくなる人</b>をピンクで示します。路線は「事業者・路線名」でまとめ、方向や系統の違うものも含めて<b>その路線の全便</b>を止めた場合を、時刻表で再計算しています。代替交通・部分的な減便は考慮していません。</p>' +
         '<div id="wi-top"></div>' +
         '<label for="wi-route" class="note">路線を選ぶ（影響が大きい順）</label>' +
         '<select id="wi-route"></select><div id="wi-result"></div>';
@@ -101,7 +101,7 @@
     } else {
       var tot = D.cells.reduce(function (a, c) { return a + c[1]; }, 0);
       h += '「' + esc(cond) + '」で行けなくなる人: <b>' + im.lost.toLocaleString('ja-JP') + '人</b>（診断範囲の' + L.pct(im.lost, tot) +
-        '%）、うち65歳以上 ' + im.lost65.toLocaleString('ja-JP') + '人 <span style="color:#6a1b9a">■</span>';
+        '%）、うち65歳以上 ' + im.lost65.toLocaleString('ja-JP') + '人 <span style="color:' + window.App.colors.lost + '">■</span>';
     }
     // 他の条件（曜日×時間帯）での影響
     var nd = window.App.need();
