@@ -116,6 +116,7 @@ def load_feed(source, bbox, today: dt.date):
       routes {rid: (short, long, color)}
       trips [ {trip_id, route_id, dir, active:{wd,hol}, seq:[(sid, arr, dep)]} ]
       ref {wd: date, hol: date}, start, end
+      expired(今日より前に有効期間が終わったか), modes(運行する route_type の一覧。0=路面電車 1=地下鉄 2=鉄道 3=バス ほか), version
     """
     zf = zipfile.ZipFile(io.BytesIO(source) if isinstance(source, (bytes, bytearray)) else source)
     lon0, lat0, lon1, lat1 = bbox
@@ -128,7 +129,10 @@ def load_feed(source, bbox, today: dt.date):
         if lat0 <= lat <= lat1 and lon0 <= lon <= lon1:
             stops[r["stop_id"]] = (lat, lon, (r.get("stop_name") or "").strip())
     routes = {}
+    route_types = {}
     for r in read_csv(zf, "routes.txt"):
+        rt = (r.get("route_type") or "").strip()
+        route_types[r["route_id"]] = int(rt) if rt.isdigit() else 3   # 未記入はバス扱い
         routes[r["route_id"]] = (
             (r.get("route_short_name") or "").strip(),
             (r.get("route_long_name") or "").strip(),
@@ -136,7 +140,9 @@ def load_feed(source, bbox, today: dt.date):
         )
     calendar = read_csv(zf, "calendar.txt")
     calendar_dates = read_csv(zf, "calendar_dates.txt")
-    start, end = feed_validity(calendar, calendar_dates, read_csv(zf, "feed_info.txt"))
+    feed_info = read_csv(zf, "feed_info.txt")
+    start, end = feed_validity(calendar, calendar_dates, feed_info)
+    version = (feed_info[0].get("feed_version") or "").strip() if feed_info else ""
     ref = {k: pick_ref_date(today, start, end, REF_WEEKDAY[k]) for k in DAYTYPES}
     svc = {k: active_services(calendar, calendar_dates, ref[k]) for k in DAYTYPES}
 
@@ -169,4 +175,7 @@ def load_feed(source, bbox, today: dt.date):
             continue
         t["seq"] = seq
         out.append(t)
-    return {"stops": stops, "routes": routes, "trips": out, "ref": ref, "start": start, "end": end}
+    modes = sorted({route_types.get(t["route_id"], 3) for t in out})
+    # expired: 作成日（today）時点で有効期間がすでに終わっている。この場合も基準日は期間内の最後の曜日に寄せる
+    return {"stops": stops, "routes": routes, "trips": out, "ref": ref, "start": start, "end": end,
+            "expired": bool(end and end < today), "modes": modes, "version": version}

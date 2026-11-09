@@ -1,24 +1,36 @@
-"""拡張点: 公共交通オープンデータセンター(ODPT)の事業者データを追加するための差し込み口。
+"""公共交通オープンデータセンター(ODPT)のデータ取得。キー不要の公開API（api-public.odpt.org）を使う。
 
-現状（キー未取得）は未実装。本アプリはGTFSデータリポジトリだけで動く。
+- 公開API: https://api-public.odpt.org/api/v4/  （例: odpt:Operator は認証なしで JSON を返す）
+- 事業者提供のGTFS: /files/<事業者>/data/<ファイル名>.zip は 302 でストレージの短時間有効URLへ移るので、
+  リダイレクトを辿って取得する（urllib は既定で辿る）。キー（consumer key）は使わず、コードにも含めない。
+- 取得したGTFSは GTFSデータリポジトリと同じ GTFS(-JP) なので、`lifemap.gtfs.load_feed()` がそのまま読める。
+  本モジュールは「どこから取るか」だけを担当し、Network 以降（統合・診断・出力）は共通。
 
-ODPTセンターのAPIキーを取得できた場合は、ここで ODPT(JSON)または事業者提供のGTFSを読み込み、
-`lifemap.gtfs.load_feed()` と同じ形の dict を返す関数を実装し、`lifemap/build.py` の
-feeds 読み込み部分から呼ぶ。Network 以降（統合・診断・出力）は変更不要。
-
-戻り値の形（load_feed と同じ）:
-    {
-      "stops":  {stop_id: (lat, lon, name)},
-      "routes": {route_id: (short_name, long_name, color)},
-      "trips":  [{"trip_id", "route_id", "dir", "active": {"wd": bool, "hol": bool},
-                  "seq": [(stop_id, 到着秒, 出発秒), ...]}],
-      "ref":    {"wd": date, "hol": date},     # 平日・休日の基準日
-      "start":  date | None, "end": date | None,
-    }
-
-キーはコードやリポジトリに含めず、環境変数(例: ODPT_CONSUMER_KEY)から読むこと。
+regions.json の feeds には、次の形のオブジェクトで書く（GTFSデータリポジトリのものは ["組織ID", "フィードID"] のまま）:
+    {"source": "odpt", "id": "toei-bus", "path": "Toei/data/ToeiBus-GTFS.zip",
+     "organization_name": ..., "feed_name": ..., "feed_license": ..., "feed_license_url": ...,
+     "credit": ..., "page_url": ..., "last_updated_at": ...}
 """
+import json
+import urllib.request
+
+from .gtfs import load_feed
+
+API_BASE = "https://api-public.odpt.org/api/v4"
+UA = {"User-Agent": "life-access-map-build/1.0 (static site preprocessing)"}
 
 
-def load_odpt_feed(*args, **kwargs):
-    raise NotImplementedError("ODPTセンターAPIは未対応です（キー未取得）。このファイルのdocstringを参照。")
+def file_url(path):
+    return f"{API_BASE}/files/{path}"
+
+
+def operators(timeout=60):
+    """odpt:Operator の一覧（接続確認と、事業者名の確認用）。"""
+    req = urllib.request.Request(f"{API_BASE}/odpt:Operator", headers=UA)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def load_odpt_feed(zip_path, bbox, today):
+    """ODPTセンター提供のGTFS zip を読む（load_feed と同じ戻り値）。"""
+    return load_feed(zip_path, bbox, today)

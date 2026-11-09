@@ -13,7 +13,7 @@ WALK_MPS = 80.0 / 60.0      # 80 m/分
 DETOUR = 1.25              # 直線距離に対する迂回率
 MAX_WALK_IN_M = 600        # 出発地(メッシュ中心)から乗車停留所まで（直線）
 MAX_WALK_OUT_M = 500       # 降車停留所から施設まで（直線）
-WALK_ONLY_M = 800          # 施設が直線でこの距離以内なら「徒歩圏」
+RAIL_WALK_MIN = 15         # 鉄道駅まで徒歩この分数以内（徒歩モデルで換算）のメッシュを「鉄道あり（未評価）」とする
 TRANSFER_S = 180           # 乗継に必要な最小時間（秒）
 THRESHOLDS = (20, 30, 45, 60)   # 分。小さい方が良い
 START_HOURS = {"m": 8, "d": 12, "e": 17}   # 出発時刻（時）
@@ -23,6 +23,22 @@ NEG = -10 ** 9
 
 def walk_seconds(d_m):
     return d_m * DETOUR / WALK_MPS
+
+
+def walk_level(d_m):
+    """徒歩だけで施設へ着ける水準。公共交通の水準と同じ尺度（W=20分→4 … W=60分→1、0は許容時間内に歩けない）。
+    判定は徒歩モデル（直線×DETOUR÷分速80m）と許容時間 THRESHOLDS をそのまま使う。"""
+    n = len(THRESHOLDS)
+    sec = walk_seconds(d_m)
+    for k, w in enumerate(THRESHOLDS):
+        if sec <= w * 60:
+            return n - k
+    return 0
+
+
+def max_walk_m():
+    """最大の許容時間で歩ける直線距離（m）。"""
+    return THRESHOLDS[-1] * 60 / walk_seconds(1.0)
 
 
 class Grid:
@@ -108,17 +124,23 @@ class Diagnoser:
         node_grid = Grid([(la, lo) for la, lo, _ in network.nodes])
         self.cand = [[(i, walk_seconds(d)) for i, d in node_grid.within(lat, lon, MAX_WALK_IN_M)]
                      for _code, lat, lon, _p, _p65 in cells]
-        self.walk_bits = [0] * len(cells)
+        self.walk_lv = [[0] * len(self.order) for _ in cells]   # メッシュ × 施設種別: 徒歩だけで着ける水準
         self.deadlines = {}   # (type, period) -> [W ごとの {node: 期限秒}]
         for bit, tp in enumerate(self.order):
             fac = facilities_by_type[tp]
             fgrid = Grid(fac) if fac else None
+            reach = max_walk_m()
             for k, (_code, lat, lon, _p, _p65) in enumerate(cells):
-                if fgrid and fgrid.within(lat, lon, WALK_ONLY_M):
-                    self.walk_bits[k] |= 1 << bit
+                if fgrid:
+                    near = [d for _i, d in fgrid.within(lat, lon, reach)]
+                    if near:
+                        self.walk_lv[k][bit] = walk_level(min(near))
             for per in PERIODS:
                 t0 = START_HOURS[per] * 3600
                 self.deadlines[(tp, per)] = [target_deadlines(fac, node_grid, t0 + w * 60) for w in THRESHOLDS]
+
+    def walk_string(self, k):
+        return "".join(str(x) for x in self.walk_lv[k])
 
     def levels(self, exclude_routes=frozenset()):
         """各メッシュの水準の文字列（施設 × 日種(wd,hol) × 時間帯(m,d,e) の順に1桁ずつ）を返す。"""
@@ -140,8 +162,8 @@ def diagnose_cells(network, cells, facilities_by_type, exclude_routes=frozenset(
     """全メッシュについて水準を計算する（Diagnoser の薄い包み）。
 
     cells: [(code, lat, lon, pop, pop65)]、facilities_by_type: {type: [(lat, lon)]}
-    戻り値: ({code: 水準の文字列}, {code: 徒歩圏ビット}, order)
+    戻り値: ({code: 水準の文字列}, {code: 徒歩だけで着ける水準（施設種別ごと1桁）の文字列}, order)
     """
     dg = Diagnoser(network, cells, facilities_by_type, types)
     lv = dg.levels(exclude_routes)
-    return ({c[0]: lv[k] for k, c in enumerate(cells)}, {c[0]: dg.walk_bits[k] for k, c in enumerate(cells)}, dg.order)
+    return ({c[0]: lv[k] for k, c in enumerate(cells)}, {c[0]: dg.walk_string(k) for k, c in enumerate(cells)}, dg.order)
