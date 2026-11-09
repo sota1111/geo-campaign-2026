@@ -11,7 +11,9 @@
 | 施設位置は国土数値情報など公開データ | 国土数値情報（国土交通省）。ライセンスは別途確認 | 未確認 |
 | 同じ計算で住民向けの到達性診断アプリも開発している（公開URL） | contests/odpt-2026/app/ で別部隊が実装中。2026-11-09 時点では .gitkeep のみで、動く物はない | 提出時に本人が確認。公開URLがなければ本文の当該1文を削除する（personalize.md 手順7）。「実証」「実績」とは書かない |
 
+| 海外には到達性のシナリオ分析や路線計画の商用基盤がある（例：Conveyal、Via社のRemix） | Conveyal 公式 https://conveyal.com/ 「Conveyal is the platform for rapid, detailed accessibility analysis of transport and land-use scenarios」。Remix 公式 https://www.remix.com/ 「Remix by Via」「Remix Planning and Scheduling … the world's most comprehensive planning and scheduling platform」（いずれも 2026-11-09 取得） | 確認済み（機能の概要のみ）。価格・日本語対応・国内導入実績は未確認なので、本文では比べていない |
+
 注意
 - 不動産情報ライブラリのデータを使う場合は、出典表記（国土交通省 不動産情報ライブラリ＋URL）、加工の明記、免責が必要。本文はデータ名として言及しているだけで、サービス名には使っていない。
 - 市場規模を書き足す場合は、総務省・国土交通省などの公的統計の名称・年・URLを必ずここに追記する。
-- 競合（既存の交通分析ツール）の記述は「と考えられる」にとどめた。具体名を挙げるなら調査してから。
+- 競合は公式サイトで機能の概要を確認できた2件だけ名前を出した。国内の GTFS 可視化ツール等は未確認なので名前を出していない。価格・日本語対応の比較は導入提案前に行う（challenges.md ④）。
