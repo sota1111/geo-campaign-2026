@@ -1,4 +1,4 @@
-# contest-command
+# geo-campaign-2026
 
 4つのコンペ・ハッカソン（UDC2026／イチBizアワード2026／衛星データ活用アワード2026–2027／公共交通オープンデータチャレンジ2026）への応募を、Claude Code の8つのサブエージェントで遂行するための司令部リポジトリ。
 
@@ -27,7 +27,7 @@ tests/                    ガード・ツール・エージェント定義のテ
 
 ## セットアップ
 ```bash
-gh repo create sota1111/contest-command --private --source=. --push
+gh repo create sota1111/geo-campaign-2026 --private --source=. --push
 gh label create registry-approved --description "registry.json の変更を総司令官が承認"
 python3 -m unittest discover tests   # すべてOKであること
 ```
