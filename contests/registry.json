@@ -1,0 +1,60 @@
+{
+  "_note": "2026-11-07時点の提供情報に基づく。公式要項との再照合は整備隊が行い、差分は reports/maintenance/ に報告する（このファイルの更新は総司令官の承認後）。",
+  "contests": [
+    {
+      "id": "udc-2026",
+      "name": "アーバンデータチャレンジ2026（UDC）",
+      "url": "https://urbandata-challenge.jp/udc2026_entry",
+      "deadlines": [
+        {"label": "概要登録", "at": "2026-11-15T23:59:00+09:00"},
+        {"label": "本応募", "at": "2026-12-27T23:59:00+09:00"}
+      ],
+      "criteria": ["実用度", "完成度", "挑戦度"],
+      "implementation_required": false,
+      "constraints": ["既存作品も応募可", "同一・類似作品の重複応募は無効の可能性", "作品は原則公開"],
+      "field_limits": {}
+    },
+    {
+      "id": "ichibiz-2026",
+      "name": "イチBizアワード2026",
+      "url": "https://g-idea.go.jp/2026/application/",
+      "deadlines": [
+        {"label": "ビジネス部門", "at": "2026-11-30T20:00:00+09:00"},
+        {"label": "アイデア部門・不動産情報活用部門", "at": "2026-12-10T20:00:00+09:00"}
+      ],
+      "criteria": ["独創性", "社会的効果", "実現可能性", "事業性"],
+      "implementation_required": false,
+      "constraints": ["アイデア部門は実装不要", "補足資料はPDF/PPT 10ページ以内（任意）", "表彰式は原則対面"],
+      "field_limits": {
+        "title.md": 50,
+        "problem.md": 400,
+        "service.md": 700,
+        "background.md": 300
+      }
+    },
+    {
+      "id": "satellite-2026",
+      "name": "衛星データ活用アワード2026–2027",
+      "url": "https://canaan-geo.jp/satellite-data-award/",
+      "deadlines": [
+        {"label": "応募締切", "at": "2026-11-30T12:00:00+09:00"}
+      ],
+      "criteria": [],
+      "implementation_required": false,
+      "constraints": ["所定様式の提案書を提出", "初期応募時点でプロトタイプ不要", "一次通過者にGMS3地中探査データ提供"],
+      "field_limits": {}
+    },
+    {
+      "id": "odpt-2026",
+      "name": "公共交通オープンデータチャレンジ2026",
+      "url": "https://challenge2026.odpt.org/ja/outline.html",
+      "deadlines": [
+        {"label": "応募締切", "at": "2027-01-11T23:59:00+09:00"}
+      ],
+      "criteria": ["社会課題解決への寄与", "オープンデータ活用のインパクト", "技術的完成度", "UI/UXの完成度"],
+      "implementation_required": true,
+      "constraints": ["公共交通オープンデータセンターまたはGTFSデータリポジトリのデータ利用が必須", "実際に動作するアプリ・サービスが対象"],
+      "field_limits": {}
+    }
+  ]
+}
