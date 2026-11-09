@@ -9,11 +9,10 @@
 |---|---|---|
 | 下水道管路起因の道路陥没 令和4年度 2,625件／1,000kmあたり5.3件 | 国総研 R4 https://www.nilim.go.jp/lab/ebg/pdf/R4d_kanrienchou_kanbotsu.pdf | 一次（偵察隊が本文確認） |
 | 管きょ総延長 約50万km、50年超 約4万km（約7%）、10年後 約10万km | 国総研 健全率予測式2025 https://www.nilim.go.jp/lab/ebg/pdf/deterioration_rate_prediction_formula_2025.pdf | 一次（偵察隊が本文確認） |
-| Sentinel-1 幅250km、繰返し12日（1機体制時）、商用を含め無料 | ESA IW https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath 、Copernicus Data Space https://documentation.dataspace.copernicus.eu/Data/SentinelMissions/Sentinel1.html | 一次 |
+| Sentinel-1 幅250km、商用を含め無料。1機体制では繰返し12日、Sentinel-1C（2024年12月5日打上げ）の運用開始後に2機・6日回帰に戻る計画 | ESA IW https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes/interferometric-wide-swath 、Copernicus Data Space https://documentation.dataspace.copernicus.eu/Data/SentinelMissions/Sentinel1.html （「the 6-day repeat cycle will be restored under a two-satellite constellation scenario」） | 一次（作戦研究班が2026-11-09にCopernicus文書を確認。日本上空の現行の観測頻度は観測計画に依存し未確認） |
 | ALOS-4 観測幅200km（将来の追加候補。商用条件・価格は未記載） | JAXA EORC https://www.eorc.jaxa.jp/ALOS/jp/alos-4/a4_about_j.htm | 一次（観測幅のみ） |
-| NTTが2025/11に「SAR衛星から道路陥没の予兆を捉える実証」を発表、探査深度は現時点で50〜100cm程度 | Impress Watch https://www.watch.impress.co.jp/docs/news/2061203.html | 二次（報道）。NTT公式発表の確認を推奨 |
 | 全国特別重点調査（管径2m以上の大口径管が対象）で、対策が必要な延長748km、地盤中の空洞96箇所（令和8年4月21日公表、令和8年2月末時点） | 国交省 報道発表 https://www.mlit.go.jp/report/press/mizukokudo13_hh_000731.html | 一次（取得ツール経由の抽出。目視確認を推奨）。「対象外の中小口径管・路面下」という位置づけは情報部の推測を採用 |
-| GMS3: 地中レーダ＋360度カメラ。一次通過者に個別提供、利用は本プログラム内に限る | カナン・ジオリサーチ共同リリース、情報部レポート §1-5, §1-6 | 一次（情報部確認） |
+| GMS3: 地中レーダ＋360度カメラ。一次通過者に個別提供、利用は本プログラム内に限る。「上下水道管近傍までの調査が可能」（製品情報、2021年更新） | カナン・ジオリサーチ共同リリース、情報部レポート §1-5, §1-6、イプロス製品ページ https://www.ipros.com/product/detail/2000615566 | 一次（情報部確認）。探査深度の数値仕様は未確認のため本文に書かない。管内の破損はTVカメラ調査の領分として本文で区別 |
 | 協賛企業テーマの趣旨と応募例（衛星データによる一次スクリーニングでの地中リスク箇所抽出） | 募集要項p4-5（情報部レポート §1-2） | 一次 |
 | 地上の路面下空洞調査の単価 1kmあたり約19万〜38万円（二次調査等を含む契約額÷調査延長） | 仙台市 令和7年度 路面下空洞調査業務委託: 入札額52,200,000円（入札調書 https://www.city.sendai.jp/hozenkekaku/documents/r7nyusatutyousyo.pdf ）、1次調査273km（昼）＋1km（夜）、2次調査75箇所（金抜設計書 https://www.city.sendai.jp/hozenkekaku/documents/05_r7kinnukisekkeisyo.pdf ）→ 約19.1万円/km。札幌市 路面下空洞探査業務(その2) 令和8年度: 落札金額16,280,000円（税抜、契約金額17,908,000円）（入札等執行調書 https://www.city.sapporo.jp/kensetsu/doroiji/nyuusatu/r8nendo/documents/r8sikkoutyousyosono2.pdf ）、1次調査 車道60.42km＋歩道6.48km、クロス調査35箇所等（設計書 https://www.city.sapporo.jp/kensetsu/doroiji/nyuusatu/r8nendo/documents/4_sekkeisyo_r8romensita2.pdf ）→ 約24.3万円/km。神戸市 2026年度路面下空洞調査業務: 決定金額42,000,000円（税抜、契約46,200,000円税込）、調査延長（路線長）109.622km・測線長351.629km、二次調査130箇所（市ページ https://www.city.kobe.lg.jp/a59714/20260622romenshita.html 、開札結果 https://www.city.kobe.lg.jp/documents/85445/2026_kaisatsukekka.pdf ）→ 路線長で約38.3万円/km（測線長では約11.9万円/km） | 一次（作戦研究班が2026-11-09にPDF本文を確認）。注意: 延長の定義（路線長／測線長）は市により異なりうる。仙台市の入札額が税抜かは調書に明記なし。二次調査・コア削孔等を含む契約全体の額を延長で割った概算で、1次調査だけの単価ではない |
 | 自治体の路面下空洞調査は緊急輸送道路や幹線道路が中心 | 仙台市 令和7年度路面下空洞対策について https://www.city.sendai.jp/hozenkekaku/r7romensitakudo.html 「緊急輸送道路や幹線道路を中心に路面下空洞調査を実施します」 | 一次（1市の記述。全国の一般化は解釈） |
@@ -22,6 +21,9 @@
 | NTTが衛星による車載地中レーダの代替を掲げる（コスト約85%削減見込み）、浅い位置の空洞が対象 | NTT ニュースリリース 2025年11月7日 https://group.ntt/jp/newsrelease/2025/11/07/251107b.html | 一次（作戦研究班が本文確認）。旧記述の「探査深度50〜100cm」は一次発表に見当たらないため削除 |
 | 予算区分は調査委託費を想定 | なし | 推測（提案書に「推測」と明記） |
 | 保険など民間への拡張 | なし | 推測（提案書に「推測」と明記） |
+| 地中で進む空洞は地表に現れにくく、衛星は地表観測にとどまる（限界の記述） | NTT ニュースリリース 2025年11月7日（「地下構造物に起因する陥没は、地中で空洞が進展」「衛星は主に地表の状態を観測するに留まっているため…限界」） | 一次 |
+| 画素は生活道路の幅と同程度以上に粗く、安定した反射点は建物に多い | 一般的な技術知識（アグレッサー A-2①） | 数値は書いていない。文献での確認を推奨 |
+| 下水道台帳（布設年度・管種）で優先順位を付けている | 一般的な実務（ストックマネジメント計画）。アグレッサー A-1 | 出典なしの一般論。数値なし |
 | 衛星指標と空洞の因果は未確立 | 偵察隊レポート §2（港湾での相関報告のみ、下水道起因の公式実証は未確認） | 事実に基づく留保 |
 
 提案書に載せていない参考: Asterra英国事例（9,045km、902件、事業者公表。https://www.suez.com/en/uk/case-studies/satellite-leak-detection-delivers-results-affinity-water ）。字数の都合で未使用。使う場合は「事業者の公表値で第三者検証ではない」と明記すること。
@@ -36,7 +38,9 @@
 | 札幌市が衛星で不適正盛土を監視（先行例） | https://www.city.sapporo.jp/toshi/takuchi/simintuuhou.html | 一次（市公式ページ） |
 | 熱海の盛土崩落 死者28名（災害関連死1名を含む）、令和5年2月10日時点の消防庁報告 | 静岡県 https://www.pref.shizuoka.jp/_res/projects/default_project/_page_/001/035/911/atamisokatsu0703.pdf | 一次（PDFの表を目視）。時点により数字が異なる（情報部 §2-5） |
 | Sentinel-1 は商用を含め無料 | ESA／Copernicus（上記） | 一次 |
-| Sentinel-2／Landsat は光学の公開データ | 公式ページ未確認 | 要確認（数値は書いていない） |
+| Sentinel-2: 10m分解能（4バンド）、2機で赤道上5日ごと、観測幅290km | Copernicus Data Space https://documentation.dataspace.copernicus.eu/Data/SentinelMissions/Sentinel2.html | 一次（作戦研究班が確認） |
+| 造成前の地形を国土地理院の数値標高モデルで把握 | 国土地理院 基盤地図情報（数値標高モデル） | データの存在のみ。特定時点の地形で更新されないため、盛土後の高さは現地確認で測る前提（本文では「造成前の地形」に限定） |
+| Landsat は光学の公開データ | 公式ページ未確認 | 要確認（数値は書いていない） |
 | 自治体の巡視人手の制約、衛星解析事業者の先行例 | なし | 推測・仮説（提案書に「想定」「要検証」「仮説」と明記。ヒアリングで検証する計画） |
 | 浜松市 令和7年度予算「（新規）衛星画像による監視 9,603千円（国1/2）」 | 浜松市 予算 盛土規制区域基礎調査等事業 https://www.city.hamamatsu.shizuoka.jp/zaisek/budget/budget07/detail/d_134.html | 一次（作戦研究班が市ページ本文を確認。予算額であり契約額ではない） |
 | 静岡県が令和6・7年度に「衛星画像を活用した盛土監視体制強化業務委託」を公募。業務概要に「職員による現地確認やパトロール等の限界を補完」「発見の遅れによる対応の難航化等を回避」 | 静岡県 https://www.pref.shizuoka.jp/kensei/nyusatsukobai/nyusatsukurashi/1072280.html | 一次（作戦研究班が県ページ本文を確認。契約額は未取得） |
