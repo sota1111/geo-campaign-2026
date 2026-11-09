@@ -56,6 +56,24 @@
     return out;
   }
 
+  /* 路線を止めた場合の差分。diffs=[[セル番号, 新しい水準文字列], ...]。
+     徒歩圏（公共交通に依らない）は変化しない。「行けていたのに行けなくなる」人口を数える */
+  function lostPopulation(cells, diffs, fi, day, per, need) {
+    var out = { lost: 0, lost65: 0, idx: {} };
+    for (var i = 0; i < diffs.length; i++) {
+      var k = diffs[i][0], c = cells[k];
+      var after = [c[0], c[1], c[2], diffs[i][1], c[4]];
+      var was = cellStatus(c, fi, day, per, need) !== 'none';
+      var now = cellStatus(after, fi, day, per, need) !== 'none';
+      if (was && !now) {
+        out.lost += c[1];
+        out.lost65 += c[2];
+        out.idx[k] = 1;
+      }
+    }
+    return out;
+  }
+
   function pct(a, b) {
     return b > 0 ? Math.round((1000 * a) / b) / 10 : 0;
   }
@@ -137,7 +155,7 @@
   return {
     DAYS: DAYS, PERIODS: PERIODS, DAY_LABEL: DAY_LABEL, PERIOD_LABEL: PERIOD_LABEL,
     meshBounds: meshBounds, condIndex: condIndex, needLevel: needLevel,
-    cellStatus: cellStatus, summarize: summarize, pct: pct, levelLabel: levelLabel,
+    cellStatus: cellStatus, summarize: summarize, lostPopulation: lostPopulation, pct: pct, levelLabel: levelLabel,
     fmtMin: fmtMin, distM: distM, nearbyNodes: nearbyNodes, indexCells: indexCells,
     meshCodeAt: meshCodeAt, nodeFacts: nodeFacts
   };

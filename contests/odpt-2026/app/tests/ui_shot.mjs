@@ -42,5 +42,5 @@ const shot = await send('Page.captureScreenshot', { format: 'png' });
 fs.writeFileSync(out, Buffer.from(shot.result.data, 'base64'));
 console.log('logs', logs.slice(0, 8));
 ws.close(); chrome.kill();
-fs.rmSync(prof, { recursive: true, force: true });
+try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* 一時ディレクトリの削除失敗は無視 */ }
 process.exit(0);

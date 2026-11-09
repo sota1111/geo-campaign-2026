@@ -103,26 +103,23 @@ class Network:
                 for dtype in DAYTYPES:
                     if t["active"][dtype]:
                         self.trips[dtype].append((route_idx[rk], comp, t["dir"]))
-        self._conns = {}
+        self._base = {}
 
     def connections(self, dtype, exclude_routes=frozenset()):
-        """後退走査用に出発時刻の降順で整列した接続列 (dep, arr, from, to, trip_no)。"""
-        key = (dtype, frozenset(exclude_routes))
-        if key in self._conns:
-            return self._conns[key]
-        rows = []
-        for tno, (ridx, seq, _dir) in enumerate(self.trips[dtype]):
-            if ridx in exclude_routes:
-                continue
-            for i in range(len(seq) - 1):
-                rows.append((seq[i][2], seq[i + 1][1], seq[i][0], seq[i + 1][0], tno))
-        # 同時刻の接続は便の後ろ側を先に処理する（発生順の逆）
-        order = sorted(range(len(rows)), key=lambda k: (-rows[k][0], -k))
-        out = [rows[k] for k in order]
-        if len(self._conns) > 4:
-            self._conns.clear()
-        self._conns[key] = out
-        return out
+        """後退走査用に出発時刻の降順で整列した接続列 (dep, arr, from, to, trip_no)。路線の除外が可能。"""
+        if dtype not in self._base:
+            rows = []
+            for tno, (_ridx, seq, _dir) in enumerate(self.trips[dtype]):
+                for i in range(len(seq) - 1):
+                    rows.append((seq[i][2], seq[i + 1][1], seq[i][0], seq[i + 1][0], tno))
+            # 同時刻の接続は便の後ろ側を先に処理する（発生順の逆）
+            order = sorted(range(len(rows)), key=lambda k: (-rows[k][0], -k))
+            self._base[dtype] = [rows[k] for k in order]
+        base = self._base[dtype]
+        if not exclude_routes:
+            return base
+        route_of = [t[0] for t in self.trips[dtype]]
+        return [c for c in base if route_of[c[4]] not in exclude_routes]
 
     def node_stats(self, dtype):
         """ノード別: 窓別の発車本数 [朝, 昼, 夕, 全日] と 始発・終発（分, なければ -1）、路線集合。"""

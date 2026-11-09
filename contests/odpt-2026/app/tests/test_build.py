@@ -95,6 +95,20 @@ class TestBuildRegion(unittest.TestCase):
         self.assertEqual(self.out["routes"][0][3:5], [1, 1])    # 平日1便・休日1便
         self.assertEqual(len(self.out["patterns"][0][1]), 3)
 
+    def test_whatif_removing_only_route(self):
+        meta = build.feed_meta_index(self.paths["feeds_json"])
+        out = build.build_region(self.reg, self.paths, meta, TODAY, whatif_top=5)
+        wi = out["_whatif"]
+        self.assertEqual(list(wi["routes"].keys()), ["0"])       # 唯一の路線を除いた結果
+        diff = dict((k, lv) for k, lv in wi["routes"]["0"])
+        # 住宅地メッシュ(セル0)は、病院・学校とも全条件で到達不可（徒歩圏は別ビット）になる
+        self.assertEqual(diff[0], "0" * 12)
+        # 元の診断は変わらない（除外は一時的）
+        self.assertEqual(out["cells"][0][3], self.out["cells"][0][3])
+
+    def test_whatif_off_by_default(self):
+        self.assertNotIn("_whatif", self.out)
+
 
 if __name__ == "__main__":
     unittest.main()

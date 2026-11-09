@@ -1,6 +1,6 @@
 """前処理: 取得済みデータ → web/data/*.json。
 
-python3 -m lifemap.build [--today YYYY-MM-DD] [--region ID] [--fetch]
+python3 -m lifemap.build [--today YYYY-MM-DD] [--region ID] [--whatif-top N]
 """
 import argparse
 import datetime as dt
@@ -13,6 +13,7 @@ from .network import Network
 
 ROOT = Path(__file__).resolve().parent.parent
 DIAG_RADIUS_M = 2000   # 診断対象 = 収録停留所からこの距離以内の人口メッシュ
+WHATIF_TOP = 100000   # 「路線を止めたら」を事前計算する路線数の上限（便数の多い順。実質すべての路線）
 FACILITY_LABELS = {"hospital": "病院", "school": "小・中学校"}
 
 
@@ -29,7 +30,7 @@ def r5(x):
     return round(x, 5)
 
 
-def build_region(reg, paths, meta_idx, today, only_pattern_limit=2):
+def build_region(reg, paths, meta_idx, today, whatif_top=0):
     bbox = reg["bbox"]
     feed_keys = [tuple(k) for k in reg["feeds"]]
     feeds = [load_feed(paths["feed"][k], bbox, today) for k in feed_keys]
@@ -60,7 +61,11 @@ def build_region(reg, paths, meta_idx, today, only_pattern_limit=2):
     hospitals = sources.read_hospitals(paths["p04"][pref], bbox)
     schools = sources.read_schools(paths["p29"][pref], bbox)
     fac = {"hospital": [(h[0], h[1]) for h in hospitals], "school": [(s[0], s[1]) for s in schools]}
-    levels, walk, order = access.diagnose_cells(net, cells, fac)
+    dg = access.Diagnoser(net, cells, fac)
+    order = dg.order
+    base_levels = dg.levels()
+    levels = {c[0]: base_levels[k] for k, c in enumerate(cells)}
+    walk = {c[0]: dg.walk_bits[k] for k, c in enumerate(cells)}
 
     # ノード統計
     stats = {dtp: net.node_stats(dtp) for dtp in DAYTYPES}
@@ -112,9 +117,12 @@ def build_region(reg, paths, meta_idx, today, only_pattern_limit=2):
         })
 
     cells_out = [[c, p, p65, levels[c], walk[c]] for c, _la, _lo, p, p65 in cells]
+    whatif = None
+    if whatif_top:
+        whatif = build_whatif(net, dg, base_levels, routes_out, whatif_top)
     lons = [n[0] for n in nodes_out]
     lats = [n[1] for n in nodes_out]
-    return {
+    out = {
         "id": reg["id"],
         "name": reg["name"],
         "reason": reg["reason"],
@@ -143,13 +151,33 @@ def build_region(reg, paths, meta_idx, today, only_pattern_limit=2):
         },
         "cells": cells_out,
     }
+    if whatif is not None:
+        out["_whatif"] = whatif   # main() が別ファイルに書き出して取り除く
+    return out
+
+
+def build_whatif(net, dg, base_levels, routes_out, top_n):
+    """便数の多い路線 top_n について「その路線が無かったら」の水準を再計算し、変化したメッシュだけ返す。
+
+    routes_out の [3],[4] は平日・休日の便数。戻り値 {"top_n", "routes": {路線index: [[セル番号, 水準文字列], ...]}}
+    """
+    ranked = sorted(range(len(routes_out)), key=lambda r: -(routes_out[r][3] + routes_out[r][4]))
+    result = {}
+    for ridx in ranked[:top_n]:
+        if routes_out[ridx][3] + routes_out[ridx][4] == 0:
+            continue
+        lv = dg.levels(frozenset([ridx]))
+        diff = [[k, lv[k]] for k in range(len(lv)) if lv[k] != base_levels[k]]
+        if diff:
+            result[str(ridx)] = diff
+    return {"top_n": top_n, "routes": result}
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--today", default=dt.date.today().isoformat())
     ap.add_argument("--region")
-    ap.add_argument("--fetch", action="store_true", help="キャッシュが無ければ取得する")
+    ap.add_argument("--whatif-top", type=int, default=WHATIF_TOP, help="路線除外の再計算を行う路線数（0で無効）")
     args = ap.parse_args(argv)
     today = dt.date.fromisoformat(args.today)
     cfg = json.loads((ROOT / "regions.json").read_text(encoding="utf-8"))
@@ -160,7 +188,12 @@ def main(argv=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     index = []
     for reg in regions:
-        data = build_region(reg, paths, meta_idx, today)
+        data = build_region(reg, paths, meta_idx, today, args.whatif_top)
+        whatif = data.pop("_whatif", None)
+        if whatif is not None:
+            wtext = json.dumps(whatif, ensure_ascii=False, separators=(",", ":"))
+            (out_dir / f"whatif_{reg['id']}.json").write_text(wtext, encoding="utf-8")
+            print("  whatif routes", len(whatif["routes"]), "bytes", len(wtext.encode("utf-8")))
         text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
         (out_dir / f"{reg['id']}.json").write_text(text, encoding="utf-8")
         tot = sum(c[1] for c in data["cells"])

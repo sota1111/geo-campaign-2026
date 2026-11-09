@@ -98,37 +98,50 @@ def target_deadlines(facilities, node_grid, t_end):
     return fd
 
 
-def diagnose_cells(network, cells, facilities_by_type, exclude_routes=frozenset(), types=None):
-    """全メッシュについて水準を計算する。
+class Diagnoser:
+    """メッシュ・施設・ノードの前計算を1回だけ行い、路線除外の再計算を安く回せるようにする。"""
 
-    cells: [(code, lat, lon, pop, pop65)]
-    facilities_by_type: {type: [(lat, lon)]}
-    戻り値: ({code: "水準の文字列"}, {code: 徒歩圏ビット}, order)
-      文字列は 施設種別(order順) × 日種(wd,hol) × 時間帯(m,d,e) の順に1桁ずつ。
-    """
-    order = list(types or facilities_by_type.keys())
-    node_pts = [(la, lo) for la, lo, _ in network.nodes]
-    node_grid = Grid(node_pts)
-    cand = {}
-    for code, lat, lon, _p, _p65 in cells:
-        cand[code] = [(i, walk_seconds(d)) for i, d in node_grid.within(lat, lon, MAX_WALK_IN_M)]
-    walk_bits = {code: 0 for code, *_ in cells}
-    for bit, tp in enumerate(order):
-        fgrid = Grid(facilities_by_type[tp]) if facilities_by_type[tp] else None
-        for code, lat, lon, _p, _p65 in cells:
-            if fgrid and fgrid.within(lat, lon, WALK_ONLY_M):
-                walk_bits[code] |= 1 << bit
-    digits = {code: [] for code, *_ in cells}
-    for tp in order:
-        fac = facilities_by_type[tp]
-        for dtype in ("wd", "hol"):
-            conns = network.connections(dtype, exclude_routes)
+    def __init__(self, network, cells, facilities_by_type, types=None):
+        self.network = network
+        self.cells = cells
+        self.order = list(types or facilities_by_type.keys())
+        node_grid = Grid([(la, lo) for la, lo, _ in network.nodes])
+        self.cand = [[(i, walk_seconds(d)) for i, d in node_grid.within(lat, lon, MAX_WALK_IN_M)]
+                     for _code, lat, lon, _p, _p65 in cells]
+        self.walk_bits = [0] * len(cells)
+        self.deadlines = {}   # (type, period) -> [W ごとの {node: 期限秒}]
+        for bit, tp in enumerate(self.order):
+            fac = facilities_by_type[tp]
+            fgrid = Grid(fac) if fac else None
+            for k, (_code, lat, lon, _p, _p65) in enumerate(cells):
+                if fgrid and fgrid.within(lat, lon, WALK_ONLY_M):
+                    self.walk_bits[k] |= 1 << bit
             for per in PERIODS:
                 t0 = START_HOURS[per] * 3600
-                lds = []
-                for w in THRESHOLDS:
-                    fd = target_deadlines(fac, node_grid, t0 + w * 60)
-                    lds.append(latest_departures(conns, network.n, fd) if fd else [NEG] * network.n)
-                for code, *_ in cells:
-                    digits[code].append(str(level_for(lds, cand[code], t0)))
-    return {c: "".join(d) for c, d in digits.items()}, walk_bits, order
+                self.deadlines[(tp, per)] = [target_deadlines(fac, node_grid, t0 + w * 60) for w in THRESHOLDS]
+
+    def levels(self, exclude_routes=frozenset()):
+        """各メッシュの水準の文字列（施設 × 日種(wd,hol) × 時間帯(m,d,e) の順に1桁ずつ）を返す。"""
+        net = self.network
+        digits = [[] for _ in self.cells]
+        for tp in self.order:
+            for dtype in ("wd", "hol"):
+                conns = net.connections(dtype, exclude_routes)
+                for per in PERIODS:
+                    t0 = START_HOURS[per] * 3600
+                    lds = [latest_departures(conns, net.n, fd) if fd else [NEG] * net.n
+                           for fd in self.deadlines[(tp, per)]]
+                    for k in range(len(self.cells)):
+                        digits[k].append(str(level_for(lds, self.cand[k], t0)))
+        return ["".join(d) for d in digits]
+
+
+def diagnose_cells(network, cells, facilities_by_type, exclude_routes=frozenset(), types=None):
+    """全メッシュについて水準を計算する（Diagnoser の薄い包み）。
+
+    cells: [(code, lat, lon, pop, pop65)]、facilities_by_type: {type: [(lat, lon)]}
+    戻り値: ({code: 水準の文字列}, {code: 徒歩圏ビット}, order)
+    """
+    dg = Diagnoser(network, cells, facilities_by_type, types)
+    lv = dg.levels(exclude_routes)
+    return ({c[0]: lv[k] for k, c in enumerate(cells)}, {c[0]: dg.walk_bits[k] for k, c in enumerate(cells)}, dg.order)

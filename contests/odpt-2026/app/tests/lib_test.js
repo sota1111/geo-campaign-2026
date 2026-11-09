@@ -40,6 +40,20 @@ assert.deepEqual([s.pop65, s.walk65, s.transit65, s.none65], [55, 5, 40, 10]);
 assert.equal(L.pct(1, 3), 33.3);
 assert.equal(L.pct(1, 0), 0);
 
+// 路線を止めた差分: a は水準4→0 で「行けなくなる」。b は水準0→0 で変化なし。c は徒歩圏で不変
+const cs = [
+  ['a', 100, 40, '4' + '0'.repeat(11), 0],
+  ['b', 50, 10, '0'.repeat(12), 0],
+  ['c', 10, 5, '4' + '0'.repeat(11), 1],
+];
+const lp = L.lostPopulation(cs, [[0, '0'.repeat(12)], [1, '0'.repeat(12)], [2, '0'.repeat(12)]], 0, 'wd', 'm', 1);
+assert.deepEqual([lp.lost, lp.lost65, Object.keys(lp.idx)], [100, 40, ['0']]);
+// 水準が4→2 に下がっても W=60 の条件ではまだ行ける（失わない）
+const lp2 = L.lostPopulation(cs, [[0, '2' + '0'.repeat(11)]], 0, 'wd', 'm', 1);
+assert.equal(lp2.lost, 0);
+const lp3 = L.lostPopulation(cs, [[0, '2' + '0'.repeat(11)]], 0, 'wd', 'm', 3);   // W=30 では失う
+assert.equal(lp3.lost, 100);
+
 // 表示
 assert.equal(L.fmtMin(8 * 60 + 5), '8:05');
 assert.equal(L.fmtMin(25 * 60 + 10), '翌1:10');

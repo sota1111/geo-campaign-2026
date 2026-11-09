@@ -2,8 +2,8 @@
 (function () {
   'use strict';
   var L = window.Lib;
-  var COLORS = { walk: '#4a90d9', transit: '#2e9e5b', none: '#e0533d' };
-  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 60, marker: null, whatif: null };
+  var COLORS = { walk: '#4a90d9', transit: '#2e9e5b', none: '#e0533d', lost: '#6a1b9a' };
+  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 60, marker: null, lost: null };
   var map;
 
   function $(id) { return document.getElementById(id); }
@@ -62,6 +62,7 @@
     $('sheet-toggle').addEventListener('click', function () {
       var p = $('panel');
       var closed = p.classList.toggle('closed');
+      document.body.classList.toggle('sheet-closed', closed);
       $('sheet-toggle').setAttribute('aria-expanded', String(!closed));
     });
     ['cells', 'nodes', 'routes', 'fac'].forEach(function (k) {
@@ -88,16 +89,18 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.on('load', function () {
       var empty = { type: 'FeatureCollection', features: [] };
-      ['cells', 'routes', 'routes-hl', 'nodes', 'fac'].forEach(function (s) {
+      ['cells', 'routes', 'routes-hl', 'routes-wi', 'nodes', 'fac'].forEach(function (s) {
         map.addSource(s, { type: 'geojson', data: empty });
       });
       map.addLayer({ id: 'cells', type: 'fill', source: 'cells', paint: {
-        'fill-color': ['match', ['get', 'st'], 'walk', COLORS.walk, 'transit', COLORS.transit, COLORS.none],
+        'fill-color': ['match', ['get', 'st'], 'walk', COLORS.walk, 'transit', COLORS.transit, 'lost', COLORS.lost, COLORS.none],
         'fill-opacity': 0.55, 'fill-outline-color': 'rgba(255,255,255,0.35)' } });
       map.addLayer({ id: 'routes', type: 'line', source: 'routes', paint: {
         'line-color': '#444', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 1.8], 'line-opacity': 0.5 } });
       map.addLayer({ id: 'routes-hl', type: 'line', source: 'routes-hl', paint: {
         'line-color': '#1b4f8a', 'line-width': 3.5, 'line-opacity': 0.9 } });
+      map.addLayer({ id: 'routes-wi', type: 'line', source: 'routes-wi', paint: {
+        'line-color': '#6a1b9a', 'line-width': 4, 'line-opacity': 0.9, 'line-dasharray': [2, 1.5] } });
       map.addLayer({ id: 'nodes', type: 'circle', source: 'nodes', paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 13, 3.5, 16, 7],
         'circle-color': '#999', 'circle-stroke-color': '#fff', 'circle-stroke-width': 0.8 } });
@@ -117,6 +120,7 @@
       map.setLayoutProperty(k, 'visibility', $(v[k]).checked ? 'visible' : 'none');
     });
     map.setLayoutProperty('routes-hl', 'visibility', $('lyr-routes').checked ? 'visible' : 'none');
+    map.setLayoutProperty('routes-wi', 'visibility', $('lyr-routes').checked ? 'visible' : 'none');
   }
 
   function loadRegion(id) {
@@ -135,10 +139,12 @@
       map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: pad, duration: 600 });
       if (STATE.marker) { STATE.marker.remove(); STATE.marker = null; }
       map.getSource('routes-hl').setData({ type: 'FeatureCollection', features: [] });
+      map.getSource('routes-wi').setData({ type: 'FeatureCollection', features: [] });
+      STATE.lost = null;
       $('detail').innerHTML = '<h2>地点の診断</h2><p class="note">地図をタップすると、その地点の診断と近くの停留所を表示します。</p>';
       $('region-note').textContent = d.reason;
+      if (window.WhatIf) window.WhatIf.onRegion(STATE, d, refresh);
       refresh();
-      if (window.WhatIf) window.WhatIf.onRegion(STATE, d);
     }).catch(function (e) {
       $('summary').innerHTML = '<p class="note">地域データを読み込めませんでした: ' + esc(e.message) + '</p>';
     });
@@ -178,10 +184,12 @@
     var d = STATE.data;
     if (!d) return;
     var nd = need();
+    if (window.WhatIf) window.WhatIf.onRefresh();   // STATE.lost を更新する
     // メッシュの色
-    var feats = d.cells.map(function (c) {
+    var lost = STATE.lost;
+    var feats = d.cells.map(function (c, k) {
       var b = L.meshBounds(c[0]);
-      return { type: 'Feature', properties: { st: L.cellStatus(c, STATE.fi, STATE.day, STATE.per, nd) },
+      return { type: 'Feature', properties: { st: lost && lost[k] ? 'lost' : L.cellStatus(c, STATE.fi, STATE.day, STATE.per, nd) },
         geometry: { type: 'Polygon', coordinates: [[[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [b[0], b[1]]]] } };
     });
     map.getSource('cells').setData({ type: 'FeatureCollection', features: feats });
@@ -195,7 +203,6 @@
     }) });
     renderSummary();
     renderLegend();
-    if (window.WhatIf) window.WhatIf.onRefresh();
   }
 
   function renderLegend() {
@@ -342,6 +349,7 @@
   }
   function closeAbout() { $('modal').hidden = true; }
 
-  window.App = { STATE: STATE, refresh: refresh, getMap: function () { return map; } };
+  window.App = { STATE: STATE, refresh: refresh, getMap: function () { return map; }, esc: esc, man: man, need: need,
+    lonlat: lonlat, colors: COLORS };
   init();
 })();

@@ -58,6 +58,21 @@ class TestGeneratedData(unittest.TestCase):
                 self.assertTrue(0 <= ridx < nr)
                 self.assertTrue(all(0 <= i < nn for i in seq))
 
+    def test_whatif_files(self):
+        for rid, d in self.regions.items():
+            wp = DATA / f"whatif_{rid}.json"
+            if not wp.exists():
+                continue
+            w = json.loads(wp.read_text(encoding="utf-8"))
+            self.assertGreater(len(w["routes"]), 0, rid)
+            for r, diffs in w["routes"].items():
+                self.assertTrue(0 <= int(r) < len(d["routes"]))
+                for k, lv in diffs:
+                    self.assertTrue(0 <= k < len(d["cells"]))
+                    self.assertEqual(len(lv), len(d["cells"][k][3]))
+                    # 路線を除いて水準が上がることはない
+                    self.assertTrue(all(int(a) <= int(b) for a, b in zip(lv, d["cells"][k][3])), (rid, r, k))
+
     def test_index_matches_regions(self):
         for r in self.index["regions"]:
             d = self.regions[r["id"]]
