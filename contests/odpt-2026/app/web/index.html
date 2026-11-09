@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>生活アクセス診断マップ｜公共交通で病院・学校へ行けるか</title>
+<meta name="description" content="地区ごとに、平日・休日の朝昼夕に公共交通で病院や小・中学校へ行けるかを地図で診断します。GTFSデータリポジトリ・公共交通オープンデータセンター・国勢調査メッシュ・国土数値情報を使用。">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="診断マップ"></div>
+
+<aside id="panel">
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <div id="headline" aria-live="polite"></div>
+  <div id="panel-body">
+    <header>
+      <h1>生活アクセス診断マップ</h1>
+      <p class="lead">その時間に家を出て、公共交通で<b>病院・学校へ何分で行けるか</b>を地区ごとに診断します。</p>
+    </header>
+
+    <section class="ctl" aria-label="地域">
+      <label for="region">診断地域</label>
+      <select id="region"></select>
+      <p id="region-note" class="note"></p>
+    </section>
+
+    <section id="coverage" class="notice" aria-label="診断の範囲"></section>
+    <section id="data-warn" class="notice warn" hidden></section>
+
+    <section class="ctl" aria-label="診断条件">
+      <div class="row"><span class="lbl">行き先</span><div id="ctl-facility" class="seg" role="radiogroup"></div></div>
+      <div class="row"><span class="lbl">曜日</span><div id="ctl-day" class="seg" role="radiogroup"></div></div>
+      <div class="row"><span class="lbl">出発</span><div id="ctl-period" class="seg" role="radiogroup"></div></div>
+      <div class="row"><span class="lbl">許容時間</span><div id="ctl-w" class="seg" role="radiogroup"></div></div>
+    </section>
+
+    <section id="summary" aria-live="polite"></section>
+
+    <section class="ctl" aria-label="表示切替">
+      <div class="checks">
+        <label><input type="checkbox" id="lyr-cells" checked> 診断メッシュ</label>
+        <label><input type="checkbox" id="lyr-nodes" checked> 停留所（本数）</label>
+        <label><input type="checkbox" id="lyr-routes" checked> 路線</label>
+        <label><input type="checkbox" id="lyr-fac" checked> 施設</label>
+        <label><input type="checkbox" id="lyr-rail" checked> 鉄道駅（未収録）</label>
+      </div>
+      <div id="legend"></div>
+    </section>
+
+    <section id="detail" aria-live="polite">
+      <h2>地点の診断</h2>
+      <p class="note">地図をタップすると、その地点の診断と近くの停留所を表示します。</p>
+    </section>
+
+    <section id="whatif" hidden></section>
+
+    <section class="foot">
+      <button id="btn-about" type="button">出典・ライセンス・診断の前提</button>
+    </section>
+  </div>
+</aside>
+
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="about-title">
+  <div class="modal-box">
+    <button id="modal-close" type="button" aria-label="閉じる">×</button>
+    <div id="about"></div>
+  </div>
+</div>
+
+<noscript>このページの表示にはJavaScriptが必要です。</noscript>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+<script src="whatif.js"></script>
+</body>
+</html>
