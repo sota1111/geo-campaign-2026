@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "regions": [
+    {
+      "id": "kumamoto",
+      "name": "熊本市周辺",
+      "pref": "43",
+      "bbox": [130.50, 32.60, 131.00, 33.00],
+      "reason": "県庁所在地規模の都市で、市電と複数のバス事業者のGTFSが揃い、事業者間の乗継を含む診断ができる。",
+      "feeds": [
+        ["kumamoto-shiden", "kumamotoshiden"],
+        ["kuma-bus", "kuma-bus"],
+        ["kumamoto-toshibus", "kumamoto-toshibus"],
+        ["kumamotodentetsu", "kumamotodentetsu-bus"],
+        ["sankobus", "sankobus"]
+      ]
+    },
+    {
+      "id": "toyama",
+      "name": "富山市周辺",
+      "pref": "16",
+      "bbox": [136.95, 36.50, 137.50, 36.90],
+      "reason": "地鉄バス・市内電車に加え、富山市・上市町・立山町のコミュニティバスが同一ライセンス(CC0)で揃い、幹線と地域バスの接続を診断できる。",
+      "feeds": [
+        ["chitetsu", "chitetsubus"],
+        ["chitetsu", "chitetsushinaidensha"],
+        ["toyamacity", "yamadacommunitybus"],
+        ["toyamacity", "fuchucommunitybus"],
+        ["toyamacity", "oyamacommunitybus"],
+        ["toyamacity", "maidohayabus"],
+        ["toyamacity", "horikawaminamicommunitybus"],
+        ["toyamacity", "yatsuocommunitybus"],
+        ["toyamacity", "kurehaikiikibus"],
+        ["kamiichitown", "kamiichi"],
+        ["tateyamatown", "tateyama"]
+      ]
+    },
+    {
+      "id": "tokushima",
+      "name": "徳島市周辺",
+      "pref": "36",
+      "bbox": [134.35, 33.95, 134.75, 34.25],
+      "reason": "市営バス・民間バス・近隣町のコミュニティバスが揃う中小都市圏で、自治体バスが通学・通院を支えているかを診断できる。",
+      "feeds": [
+        ["tokushima-shiei", "tokushimacitybus"],
+        ["tokubus", "tokushimabus"],
+        ["tokushimacity", "kamihachimanbus"],
+        ["matsushigetown", "matsushigetownbus"],
+        ["kitajimatown", "kitajimatownfukushibus"],
+        ["narutocity", "narutocitychiikibus"]
+      ]
+    },
+    {
+      "id": "iida",
+      "name": "飯田市・下伊那",
+      "pref": "20",
+      "bbox": [137.60, 35.25, 138.05, 35.75],
+      "reason": "広域連合が市町村バスを共通様式で公開しており、人口が少なく路線が疎な中山間地域で、診断結果が都市部とどう違うかを示せる。",
+      "feeds": [
+        ["minamishinshu", "Minamishinshu-Iidacity-1"],
+        ["minamishinshu", "Minamishinshu-iida-2"],
+        ["minamishinshu", "Minamishinshu-iidacity-3"],
+        ["minamishinshu", "Minamishinshu-Matsukawa-1"],
+        ["minamishinshu", "Minamishinshu-takamori-1"],
+        ["minamishinshu", "Minamishinshu-takagi-1"],
+        ["minamishinshu", "Minamishinshu-toyooka-1"],
+        ["minamishinshu", "Minamishinshu-Shinnan-1"]
+      ]
+    }
+  ]
+}
