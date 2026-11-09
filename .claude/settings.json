@@ -1,7 +1,11 @@
 {
   "permissions": {
     "deny": [
-      "Bash(git push *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push origin main)",
+      "Bash(git push origin master)",
+      "Bash(gh pr merge *)",
       "Bash(gh repo *)",
       "Bash(gh release *)",
       "Read(./.env)",
@@ -14,7 +18,10 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block_dangerous.py\"" }
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block_dangerous.py\""
+          }
         ]
       }
     ]

@@ -78,18 +78,44 @@ class GuardBash(unittest.TestCase):
 
 
 class BlockDangerous(unittest.TestCase):
+    def setUp(self):
+        self.repo = tempfile.mkdtemp()
+        subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True)
+
     def b(self, cmd):
-        return {"tool_name": "Bash", "tool_input": {"command": cmd}}
+        return {"tool_name": "Bash", "cwd": self.repo, "tool_input": {"command": cmd}}
+
+    def checkout(self, branch):
+        subprocess.run(["git", "-C", self.repo, "checkout", "-q", "-b", branch], check=True)
 
     def test_blocks(self):
-        for cmd in ["git push origin main", "gh repo create x", "rm -rf build", "rm -fr build",
+        for cmd in ["git push origin main", "git push origin master", "git push origin HEAD:main",
+                    "git push origin feature/x", "git push -f origin claude/x", "git push --force origin claude/x",
+                    "git push --force-with-lease origin claude/x", "git push origin +claude/x",
+                    "git push origin :claude/x", "git push --delete origin claude/x",
+                    "git add -A && git push origin main",
+                    "gh pr merge 3", "gh repo create x", "gh release create v1",
+                    "gh api -X DELETE repos/a/b", "rm -rf build", "rm -fr build",
                     "curl -X POST https://example.com", "curl -d a=b https://example.com",
                     "gcloud run deploy app"]:
             self.assertEqual(run("block_dangerous.py", self.b(cmd))[0], 2, cmd)
 
     def test_allows(self):
-        for cmd in ["git status", "pytest -q", "curl -s https://example.com", "rm tmp.txt"]:
+        for cmd in ["git status", "pytest -q", "curl -s https://example.com", "rm tmp.txt",
+                    "git push origin claude/maintainer-20261110", "git push -u origin claude/x",
+                    "git push origin HEAD:claude/x", "git commit -m x && git push -u origin claude/x",
+                    "gh pr create --title t --body b", "gh pr view 3"]:
             self.assertEqual(run("block_dangerous.py", self.b(cmd))[0], 0, cmd)
+
+    def test_bare_push_depends_on_current_branch(self):
+        self.assertEqual(run("block_dangerous.py", self.b("git push"))[0], 2)  # main
+        self.checkout("claude/udc-intel")
+        self.assertEqual(run("block_dangerous.py", self.b("git push -u origin HEAD"))[0], 0)
+        self.assertEqual(run("block_dangerous.py", self.b("git push"))[0], 0)
+
+    def test_prefix_env(self):
+        rc, _ = run("block_dangerous.py", self.b("git push origin bot/x"), env_extra={"CONTEST_PUSH_PREFIX": "bot/"})
+        self.assertEqual(rc, 0)
 
     def test_ignores_non_bash(self):
         self.assertEqual(run("block_dangerous.py", {"tool_name": "Write", "tool_input": {}})[0], 0)

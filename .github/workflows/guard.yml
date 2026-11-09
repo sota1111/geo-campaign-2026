@@ -1,0 +1,56 @@
+name: guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ガード・ツールのテスト
+        run: python -m unittest discover tests -v
+
+  registry-approval:
+    # registry.json の変更は総司令官の承認（ラベル registry-approved）が必要
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: registry.json の無承認変更を検出
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --name-only "$BASE" "$HEAD" | grep -qx 'contests/registry.json'; then
+            case ",$LABELS," in
+              *,registry-approved,*) echo "承認済み" ;;
+              *) echo "::error::contests/registry.json の変更には registry-approved ラベルが必要です"; exit 1 ;;
+            esac
+          fi
+
+  limits:
+    # 字数上限のある戦域の検査（情報提供。失敗してもマージは総司令官が判断）
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 字数検査
+        run: |
+          rc=0
+          for id in $(python -c "import json;print(' '.join(c['id'] for c in json.load(open('contests/registry.json'))['contests'] if c.get('field_limits')))"); do
+            echo "== $id"; python tools/check_limits.py "$id" || rc=1
+          done
+          exit $rc

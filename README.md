@@ -9,7 +9,7 @@
 CLAUDE.md                 総司令官の意図・部隊編制・引き渡し・PACE（参謀長＝メインセッション用）
 .claude/
   agents/                 8部隊の定義（frontmatter＝交戦規定、本文＝意図/SOP/PACE/終了条件）
-  hooks/                  guard_paths.py / guard_bash.py / block_dangerous.py
+  hooks/                  guard_paths.py / guard_bash.py / block_dangerous.py（push は claude/ のみ）
   settings.json           全体の deny ルールと共通 hook
 contests/
   registry.json           締切・審査基準・字数上限（唯一の正）
@@ -20,14 +20,29 @@ contests/
 doctrine/                 交戦規定の強制手段・報告書式・AAR
 reports/<部隊>/            各部隊の報告（escalations/ は総司令官への上申）
 tools/                    deadlines.py（締切一覧）, check_limits.py（字数検査）
+routines/                 クラウド定期実行（Routines）の設定とプロンプト
+.github/                  PR テンプレート（報告書式）、CI（テスト・registry 承認・字数検査）
 tests/                    ガード・ツール・エージェント定義のテスト
 ```
 
 ## セットアップ
 ```bash
 gh repo create sota1111/contest-command --private --source=. --push
-python3 -m unittest discover tests   # 16件すべてOKであること
+gh label create registry-approved --description "registry.json の変更を総司令官が承認"
+python3 -m unittest discover tests   # すべてOKであること
 ```
+GitHub の Settings → Branches で main にブランチ保護（PR 必須・`guard` の tests と registry-approval を必須チェック）を設定する。
+
+## クラウド実行
+Claude Code on the web でリポジトリを開けば、8部隊と hook がそのまま使える。定期・イベント実行は Routines で設定する（手順とプロンプトは `routines/README.md`）。
+
+| Routine | トリガー | 内容 |
+|---|---|---|
+| 整備隊 毎朝巡回 | 毎朝 7:00 JST | 🔴締切・要項差分があれば PR |
+| 憲兵 PR監査 | PR の作成・更新 | 監査結果を PR にコメント（失格級は ⛔） |
+| 情報部 オンデマンド | API | 依頼内容を調査して PR |
+
+成果はすべて `claude/` ブランチの PR で返り、マージは総司令官だけが行う。
 依存は Python 3.10+ の標準ライブラリのみ。
 
 ## 動作確認（導入時とClaude Codeアップデート後に必ず）
@@ -35,7 +50,7 @@ frontmatter hook の発火はバージョンにより不具合報告があるた
 1. `claude` を起動し、`/agents` に8部隊が表示されることを確認
 2. 「intelligence エージェントに CLAUDE.md へ1行追記させて」と依頼 → **交戦規定違反でブロックされれば正常**
 3. 「military-police エージェントに `ls` を実行させて」と依頼 → ブロックされれば正常
-4. メインセッションで `git push` を試させる → ブロックされれば正常
+4. メインセッションで `git push origin main` を試させる → ブロックされれば正常（`claude/` ブランチへの push は通る）
 5. `claude --debug` で起動し、debug ログに未認識フィールドの警告がないことを確認
 
 いずれかが素通りしたら、その部隊は使わず `reports/escalations/` に記録すること。

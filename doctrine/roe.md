@@ -4,7 +4,9 @@
 
 | 規定 | 強制手段 |
 |---|---|
-| push・公開・デプロイ・外部POSTの禁止 | `.claude/settings.json` の permissions.deny ＋ `.claude/hooks/block_dangerous.py`（全エージェント共通） |
+| main への push・強制 push・ブランチ削除・マージ・公開・デプロイ・外部POSTの禁止（`claude/` ブランチへの通常 push のみ許可） | `.claude/settings.json` の permissions.deny ＋ `.claude/hooks/block_dangerous.py`（全エージェント共通） |
+| main へのマージは総司令官のみ | GitHub のブランチ保護（main に PR レビュー必須を設定）＋ hook で `gh pr merge` を禁止 |
+| registry.json の変更は承認制 | CI `guard.yml` の registry-approval ジョブ（ラベル `registry-approved` が必要） |
 | 役割ごとの書き込み範囲 | 各エージェント frontmatter の PreToolUse hook → `guard_paths.py` |
 | 読み取り専用役割のBash制限（整備隊・憲兵） | frontmatter の PreToolUse hook → `guard_bash.py`（連結・リダイレクトも禁止） |
 | 秘密情報を読まない | permissions.deny の Read ルール |

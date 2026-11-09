@@ -5,7 +5,7 @@
 ## 総司令官の意図
 - 目的: 締切に間に合う、要項に適合した、審査基準で高く評価される応募を出すこと。
 - 優先順位: **失格しないこと ＞ 締切に間に合うこと ＞ 評価を上げること**。
-- 応募フォームへの送信・公開・git push は総司令官だけが行う。部隊は「提出可能な状態」まで仕上げて止まる。
+- 応募フォームへの送信・公開・**main へのマージ**は総司令官だけが行う。部隊は「提出可能な状態」まで仕上げ、PR で報告して止まる。
 
 ## 戦域（詳細は contests/registry.json と contests/<id>/brief.md）
 | id | 大会 | 最初の締切 | 実装 |
@@ -51,8 +51,17 @@
 3. Contingency: 安全側（何もしない・変更を戻す）を選び、判断ログに残す
 4. Emergency: 停止し、reports/escalations/<YYYYMMDD>-<topic>.md に記録して総司令官に報告
 
+## 成果の返し方（ローカル・クラウド共通）
+作業の区切りで、参謀長が次を行う。サブエージェントには push させない。
+1. `claude/<部隊>-<contest-id>-<YYYYMMDD>` ブランチを作ってコミット（例: `claude/intel-udc-2026-20261110`）
+2. `git push -u origin HEAD`
+3. `gh pr create` で PR を作成し、本文は `.github/pull_request_template.md` の書式で報告する
+4. マージはしない。総司令官のレビューを待つ
+
+クラウド（Claude Code on the web / Routines）の設定は routines/README.md を参照。
+
 ## 交戦規定（全部隊共通。詳細は doctrine/roe.md）
-- 応募送信・公開・push・デプロイ・外部へのPOSTは禁止（hookで強制）
+- main への push・強制 push・ブランチ削除・マージ・応募送信・公開・デプロイ・外部へのPOSTは禁止（hookで強制）。push は `claude/` ブランチへの通常 push のみ
 - 秘密情報（.env, secrets/）を読まない・書かない
 - 根拠のない数値や効果を書かない。事実には出典を付ける
 - registry.json の変更は総司令官の承認後のみ
