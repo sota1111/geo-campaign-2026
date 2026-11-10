@@ -89,7 +89,11 @@ await scenario('desktop_first_view', async (c, r) => {
   r.info.whatif_top = await c.ev('Math.round(document.querySelector("#whatif").getBoundingClientRect().top)');
   r.info.mentions_unlisted_on_main = await c.ev('/JR|鉄道|未収録/.test(document.querySelector("#panel-body").innerText)');
   r.info.legend_cells = await c.ev('/到達できない|行けない/.test(document.querySelector("#legend").innerText)');
-  if (r.info.whatif_top > 768) r.fail.push(`看板機能「路線を止めたら？」が初期画面の外（top=${r.info.whatif_top}px, 画面高768）`);
+  // 2026-11-11: 初見ユーザー試験を受け、見出し直下のショートカット（#nav）から1タップで行けることを条件にした
+  r.info.nav_whatif_top = await c.ev('Math.round(document.querySelector("#nav button[data-go=whatif]")?.getBoundingClientRect().top ?? 99999)');
+  r.info.region_seg_top = await c.ev('Math.round(document.querySelector("#region-seg")?.getBoundingClientRect().top ?? 99999)');
+  if (r.info.nav_whatif_top > 768) r.fail.push(`看板機能「路線を止めたら？」へのショートカットが初期画面の外（top=${r.info.nav_whatif_top}px, 画面高768）`);
+  if (r.info.region_seg_top > 768) r.fail.push('地域選択ボタンが初期画面の外');
   if (!r.info.legend_cells) r.fail.push('地図の凡例に「メッシュの色（青/緑/赤）」の説明が無い（凡例は停留所の色のみ。メッシュ色はサマリーの帯でしか分からない）');
   await shot(c, 'A_desktop.png');
 });
@@ -120,9 +124,11 @@ await scenario('mobile_tap_detail', async (c, r) => {
   await load(c, base + '#region=toyama');
   await c.ev('App.getMap().fire("click", {lngLat: {lng: 137.2137, lat: 36.7016}, point: {x:0,y:0}})');
   await sleep(1200);
-  r.info.detail = (await c.ev('document.getElementById("detail").innerText'))?.slice(0, 400);
+  const full = await c.ev('document.getElementById("detail").innerText');
+  r.info.detail = full?.slice(0, 400);
   r.info.detail_top = await c.ev('Math.round(document.getElementById("detail").getBoundingClientRect().top)');
-  if (!/停留所/.test(r.info.detail || '')) r.fail.push('タップ後に停留所情報が出ない');
+  if (!/行けます|行けません/.test(r.info.detail || '')) r.fail.push('タップ後に結論の一言が出ない');
+  if (!/停留所/.test(full || '')) r.fail.push('タップ後に停留所情報が出ない');
   await shot(c, 'C_mobile_tap.png');
 });
 
@@ -201,6 +207,65 @@ await scenario('mobile_landscape', async (c, r) => {
   await load(c, base);
   r.info.panel = await c.ev('(()=>{const b=document.querySelector("#panel").getBoundingClientRect();return [Math.round(b.width),Math.round(b.height)]})()');
   await shot(c, 'J_landscape.png');
+});
+
+// K. 共有リンク: 条件・路線・地点がハッシュで復元され、地点クリックで結論の一言とポップアップが出る
+await scenario('share_link_and_verdict', async (c, r) => {
+  await setViewport(c, 1366, 768);
+  await load(c, base + '#region=toyama&f=0&d=hol&p=e&w=45&pt=137.21370,36.70160');
+  for (let i = 0; i < 20; i++) { if (await c.ev('!!document.querySelector("#wi-top button")')) break; await sleep(300); }
+  r.info.state = await c.ev('JSON.stringify({d:App.STATE.day,p:App.STATE.per,w:App.STATE.w,pt:App.STATE.pt})');
+  r.info.verdict = await c.ev('document.querySelector("#detail .v-main")?.innerText');
+  r.info.popup = await c.ev('document.querySelector(".maplibregl-popup-content")?.innerText');
+  if (!/"d":"hol","p":"e","w":45/.test(r.info.state)) r.fail.push('ハッシュの条件が復元されない: ' + r.info.state);
+  if (!r.info.verdict) r.fail.push('復元した地点の結論の一言が出ない');
+  if (!r.info.popup) r.fail.push('地図上のポップアップが出ない');
+  await c.ev('document.querySelector("#wi-top button")?.click()');
+  await sleep(500);
+  r.info.hash = await c.ev('location.hash');
+  if (!/&r=\d+/.test(r.info.hash) || !/pt=/.test(r.info.hash)) r.fail.push('路線・地点がハッシュに入らない: ' + r.info.hash);
+  r.info.pressed = await c.ev('!!document.querySelector("#wi-top button[aria-pressed=true]")');
+  if (!r.info.pressed) r.fail.push('選択した路線ボタンの選択状態が分からない');
+  await shot(c, 'K_share.png');
+});
+
+// L. 開始地域（ハッシュなし）で地図の初期位置と地域の表示が一致する
+await scenario('initial_region_matches_map', async (c, r) => {
+  await setViewport(c, 1366, 768);
+  await load(c, base);
+  await sleep(1500);
+  r.info.now = await c.ev('document.getElementById("region-now").textContent');
+  r.info.center = await c.ev('JSON.stringify(App.getMap().getCenter())');
+  r.info.bbox = await c.ev('JSON.stringify(App.STATE.data.bbox)');
+  const ctr = JSON.parse(r.info.center), bb = JSON.parse(r.info.bbox);
+  if (ctr.lng < bb[0] || ctr.lng > bb[2] || ctr.lat < bb[1] || ctr.lat > bb[3]) r.fail.push('地図の中心が開始地域の範囲外');
+  if (!r.info.now) r.fail.push('いまの地域名が表示されない');
+  r.info.seg = await c.ev('document.querySelectorAll("#region-seg button").length');
+  if (r.info.seg !== 5) r.fail.push('地域ボタンが5つ並んでいない');
+});
+
+// M. 地域比較と住所検索（国土地理院APIは fetch を差し替えて応答を模擬。実APIには送らない）
+await scenario('compare_and_search', async (c, r) => {
+  await setViewport(c, 1366, 768);
+  await load(c, base + '#region=kumamoto');
+  await c.ev('document.getElementById("btn-compare").click()');
+  for (let i = 0; i < 30; i++) { if (await c.ev('document.querySelectorAll("#compare-result tr").length>5')) break; await sleep(300); }
+  r.info.rows = await c.ev('document.querySelectorAll("#compare-result tr").length');
+  r.info.note = await c.ev('/収録/.test(document.getElementById("compare-result").innerText) && /東京/.test(document.getElementById("compare-result").innerText)');
+  if (r.info.rows !== 6) r.fail.push('比較表が6行（見出し+5地域）にならない: ' + r.info.rows);
+  if (!r.info.note) r.fail.push('比較の注意書きが無い');
+  await c.ev(`(()=>{const f=window.fetch;window.fetch=function(u){if(/msearch\\.gsi\\.go\\.jp/.test(u)){window.__gsi=u;return Promise.resolve(new Response(JSON.stringify([{geometry:{coordinates:[137.2137,36.7016]},properties:{title:'富山駅'}}]),{status:200}));}return f.apply(this,arguments);};})()`);
+  await c.ev('document.getElementById("search-q").value="富山駅";document.getElementById("search-btn").click()');
+  for (let i = 0; i < 30; i++) { if (await c.ev('App.STATE.data.id==="toyama" && !!document.querySelector("#detail .v-main")')) break; await sleep(300); }
+  r.info.region = await c.ev('App.STATE.data.id');
+  r.info.gsi = await c.ev('window.__gsi');
+  r.info.verdict = await c.ev('document.querySelector("#detail .v-main")?.innerText');
+  if (r.info.region !== 'toyama' || !r.info.verdict) r.fail.push('検索で地域が自動切替され地点の診断が出る流れが動かない');
+  await c.ev(`(()=>{const f=window.fetch;window.fetch=function(u){if(/msearch\\.gsi/.test(u))return Promise.resolve(new Response(JSON.stringify([{geometry:{coordinates:[139.9,43.0]},properties:{title:'札幌'}}]),{status:200}));return f.apply(this,arguments);};})()`);
+  await c.ev('document.getElementById("search-q").value="札幌";document.getElementById("search-btn").click()');
+  await sleep(800);
+  r.info.outside = await c.ev('document.getElementById("search-result").innerText');
+  if (!/範囲外/.test(r.info.outside || '')) r.fail.push('範囲外の検索結果で範囲外と表示されない');
 });
 
 fs.writeFileSync(path.join(outDir, 'results.json'), JSON.stringify(results, null, 2));

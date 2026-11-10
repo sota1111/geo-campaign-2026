@@ -4,7 +4,7 @@
   var L = window.Lib;
   /* 色覚に配慮: 赤と緑の対比を避け、青（行ける）とオレンジ（行けない）の明暗差で区別する（Okabe-Ito配色を基にした） */
   var COLORS = { walk: '#56B4E9', transit: '#0072B2', none: '#D55E00', rail: '#8c8c8c', lost: '#CC79A7' };
-  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, lost: null, req: 0 };
+  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, popup: null, lost: null, req: 0, pt: null, pendingPt: null, pendingRoute: null, compare: null };
   var map;
 
   function $(id) { return document.getElementById(id); }
@@ -41,6 +41,17 @@
     });
   }
 
+  /* 読み込み・表示の失敗を利用者向けの日本語で示し、再読み込みボタンを出す（技術的な詳細は小さく添える） */
+  function showFail(what, e) {
+    var el = $('summary');
+    if (!el) return;
+    el.innerHTML = '<div class="notice warn"><b>' + what + 'を表示できませんでした。</b><br>通信の不調や、古い画面が残っていることが原因の場合があります。' +
+      '下のボタンでページを読み込み直してください。<br><button type="button" id="btn-reload">ページを読み込み直す</button>' +
+      '<br><span class="note">詳細: ' + esc(e && e.message) + '</span></div>';
+    var b = $('btn-reload');
+    if (b) b.addEventListener('click', function () { location.reload(); });
+  }
+
   function init() {
     if (typeof maplibregl === 'undefined') {
       $('summary').innerHTML = '<p class="note">地図の部品（MapLibre GL JS）を読み込めませんでした。ネットワーク（unpkg.com への接続）を確認して、ページを再読み込みしてください。</p>';
@@ -52,17 +63,35 @@
       sel.innerHTML = idx.regions.map(function (r) {
         return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>';
       }).join('');
-      var m = /region=([a-z0-9_-]+)/.exec(location.hash);
-      var start = m && idx.regions.some(function (r) { return r.id === m[1]; }) ? m[1] : idx.regions[0].id;
+      var hs = L.parseHash(location.hash);
+      var known = function (id) { return idx.regions.some(function (r) { return r.id === id; }); };
+      var start = hs.region && known(hs.region) ? hs.region : idx.regions[0].id;
+      if (hs.region && known(hs.region)) {
+        if (hs.fi != null) STATE.fi = hs.fi;
+        if (hs.day) STATE.day = hs.day;
+        if (hs.per) STATE.per = hs.per;
+        if (hs.w) STATE.w = hs.w;
+        STATE.pendingRoute = hs.route != null ? hs.route : null;
+        STATE.pendingPt = hs.pt || null;
+      }
       sel.value = start;
-      sel.addEventListener('change', function () { loadRegion(sel.value); });
+      buildRegionSeg(idx, start);
+      sel.addEventListener('change', function () { selectRegion(sel.value); });
       window.addEventListener('hashchange', function () {
-        var h = /region=([a-z0-9_-]+)/.exec(location.hash);
-        if (h && h[1] !== sel.value && idx.regions.some(function (r) { return r.id === h[1]; })) { sel.value = h[1]; loadRegion(h[1]); }
+        var h = L.parseHash(location.hash);
+        if (h.region && h.region !== sel.value && known(h.region)) { selectRegion(h.region); }
       });
-      initMap(function () { loadRegion(start); });
+      var sr = idx.regions.filter(function (r) { return r.id === start; })[0];
+      initMap(sr, function () { loadRegion(start); });
     }).catch(function (e) {
-      $('summary').innerHTML = '<p class="note">データを読み込めませんでした: ' + esc(e.message) + '</p>';
+      showFail('診断画面', e);
+    });
+    $('search-form').addEventListener('submit', function (e) { e.preventDefault(); doSearch($('search-q').value); });
+    $('btn-compare').addEventListener('click', runCompare);
+    $('btn-share').addEventListener('click', function () { copyText(location.href, 'share-msg'); });
+    $('btn-cite').addEventListener('click', function () { copyText($('cite-text').value, 'cite-msg'); });
+    Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function (b) {
+      b.addEventListener('click', function () { goSection(b.getAttribute('data-go')); });
     });
     $('btn-about').addEventListener('click', openAbout);
     $('modal-close').addEventListener('click', closeAbout);
@@ -79,7 +108,56 @@
     });
   }
 
-  function initMap(cb) {
+  function selectRegion(id) {
+    STATE.pendingRoute = null; STATE.pendingPt = null;
+    $('region').value = id;
+    loadRegion(id);
+  }
+
+  /* 地域をボタンで並べ、いまの地域が分かるようにする（選択はhiddenのselectにも反映） */
+  function buildRegionSeg(idx, cur) {
+    seg($('region-seg'), idx.regions.map(function (r) { return { value: r.id, label: L.shortName(r.name) }; }), cur,
+      function (v) { selectRegion(v); });
+    setRegionNow(cur);
+  }
+  function setRegionNow(id) {
+    var r = STATE.index.regions.filter(function (x) { return x.id === id; })[0];
+    $('region-now').textContent = r ? L.shortName(r.name) : '';
+    $('region').value = id;
+    var els = $('region-seg').children;
+    for (var i = 0; i < els.length; i++) els[i].setAttribute('aria-checked', String(STATE.index.regions[i].id === id));
+  }
+
+  function goSection(k) {
+    if (k === 'about') { openAbout(); return; }
+    var el = $(k);
+    if (!el || el.hidden) {
+      if (k === 'whatif' && $('summary')) { $('summary').insertAdjacentHTML('afterbegin', '<p class="note">「路線を止めたら？」はこの地域のデータを読み込み中、または用意がありません。</p>'); }
+      return;
+    }
+    $('panel').classList.remove('closed');
+    document.body.classList.remove('sheet-closed');
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // 移動先が分かるよう、一瞬枠を光らせる
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+
+  function copyText(text, msgId) {
+    var msg = $(msgId);
+    function ok() { msg.textContent = 'コピーしました'; }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy') ? ok() : (msg.textContent = 'コピーできませんでした。手動で選択してコピーしてください'); }
+      catch (e) { msg.textContent = 'コピーできませんでした。手動で選択してコピーしてください'; }
+      ta.remove();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback);
+    else fallback();
+  }
+
+  function initMap(region, cb) {
     map = new maplibregl.Map({
       container: 'map',
       style: {
@@ -93,7 +171,7 @@
         },
         layers: [{ id: 'gsi', type: 'raster', source: 'gsi' }]
       },
-      center: [137.2, 36.7], zoom: 10, attributionControl: { compact: true }
+      center: region.center, zoom: 10, attributionControl: { compact: true }
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.on('load', function () {
@@ -105,7 +183,7 @@
         'fill-color': ['match', ['get', 'st'], 'walk', COLORS.walk, 'transit', COLORS.transit, 'lost', COLORS.lost,
           'rail', COLORS.rail, COLORS.none],
         /* 人口の少ないメッシュは薄く、多いメッシュは濃く（面積の広い無人に近い地区が目立ちすぎないように） */
-        'fill-opacity': ['interpolate', ['linear'], ['get', 'pop'], 0, 0.3, 50, 0.45, 300, 0.65],
+        'fill-opacity': ['case', ['==', ['get', 'st'], 'lost'], 0.95, ['interpolate', ['linear'], ['get', 'pop'], 0, 0.3, 50, 0.45, 300, 0.65]],
         'fill-outline-color': 'rgba(255,255,255,0.35)' } });
       map.addLayer({ id: 'routes', type: 'line', source: 'routes', paint: {
         'line-color': '#444', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 1.8], 'line-opacity': 0.5 } });
@@ -146,27 +224,36 @@
       if (req !== STATE.req) return;
       STATE.data = d;
       STATE.cellIdx = L.indexCells(d.cells);
-      STATE.fi = 0;
-      history.replaceState(null, '', '#region=' + id);
+      if (STATE.fi >= d.facility_order.length) STATE.fi = 0;
+      if (d.params.thresholds.indexOf(STATE.w) < 0) STATE.w = d.params.thresholds[0];
+      setRegionNow(id);
+      STATE.pt = null;
+      if ($('pt-bar')) { $('pt-bar').hidden = true; $('pt-bar').innerHTML = ''; }
       buildControls();
       buildStaticLayers();
       var b = d.bbox;
       var mobile = window.matchMedia('(max-width: 720px)').matches;
       var pad = mobile ? { top: 20, left: 20, right: 20, bottom: Math.round(window.innerHeight * 0.56) + 20 }
         : { top: 20, left: 400, right: 20, bottom: 20 };
-      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: pad, duration: 600 });
+      var pp = STATE.pendingPt; STATE.pendingPt = null;
+      if (!pp) map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: pad, duration: 600 });
+      else map.jumpTo({ center: pp, zoom: 14, padding: pad });
       if (STATE.marker) { STATE.marker.remove(); STATE.marker = null; }
+      if (STATE.popup) { STATE.popup.remove(); STATE.popup = null; }
       map.getSource('routes-hl').setData({ type: 'FeatureCollection', features: [] });
       map.getSource('routes-wi').setData({ type: 'FeatureCollection', features: [] });
       STATE.lost = null;
-      $('detail').innerHTML = '<h2>地点の診断</h2><p class="note">地図をタップすると、その地点の診断と近くの停留所を表示します。</p>';
+      $('detail').innerHTML = '<h2>地点の診断</h2><p class="note">地図をタップするか、上の検索で住所・駅名を入れると、その地点から病院などへ行けるかを一言で答えます。</p>';
       $('region-note').textContent = d.reason;
+      $('search-q').placeholder = '例: ' + ({ kumamoto: '熊本駅、熊本市中央区水前寺', toyama: '富山駅、富山市大町', tokushima: '徳島駅、徳島市幸町', iida: '飯田駅、飯田市主税町', tokyo: '王子駅、北区赤羽' }[d.id] || '駅名や住所');
       renderCoverage();
+      $('cite-text').value = L.citationText(d, { url: location.href.replace(/#.*$/, ''), date: todayIso() });
       if (window.WhatIf) window.WhatIf.onRegion(STATE, d, refresh);
       refresh();
+      if (pp) diagnose(pp[0], pp[1], { scroll: false });
     }).catch(function (e) {
       if (req !== STATE.req) return;
-      $('summary').innerHTML = '<p class="note">地域データを読み込めませんでした: ' + esc(e.message) + '</p>';
+      showFail('地域のデータ', e);
     });
   }
 
@@ -174,13 +261,26 @@
     var d = STATE.data;
     seg($('ctl-facility'), d.facility_order.map(function (k, i) { return { value: i, label: d.facility_labels[k] }; }),
       STATE.fi, function (v) { STATE.fi = v; refresh(); });
-    seg($('ctl-day'), L.DAYS.map(function (k) { return { value: k, label: L.DAY_LABEL[k] }; }),
+    seg($('ctl-day'), L.DAYS.map(function (k) { return { value: k, label: L.DAY_FULL[k] }; }),
       STATE.day, function (v) { STATE.day = v; refresh(); });
     seg($('ctl-period'), L.PERIODS.map(function (k) {
       return { value: k, label: L.PERIOD_LABEL[k] + d.params.start_hours[k] + '時' };
     }), STATE.per, function (v) { STATE.per = v; refresh(); });
     seg($('ctl-w'), d.params.thresholds.map(function (w) { return { value: w, label: w + '分' }; }),
       STATE.w, function (v) { STATE.w = v; refresh(); });
+  }
+
+  function todayIso() {
+    var t = new Date();
+    return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
+  }
+
+  function writeHash() {
+    if (!STATE.data) return;
+    var r = window.WhatIf && window.WhatIf.getSelected ? window.WhatIf.getSelected() : null;
+    if (r == null && STATE.pendingRoute != null) r = STATE.pendingRoute;   // 路線の復元が終わるまで URL から落とさない
+    history.replaceState(null, '', L.writeHash({ region: STATE.data.id, fi: STATE.fi, day: STATE.day, per: STATE.per, w: STATE.w, route: r, pt: STATE.pt }));
+    if ($('cite-text')) $('cite-text').value = L.citationText(STATE.data, { url: location.href.replace(/#.*$/, ''), date: todayIso() });
   }
 
   function lonlat(n) { return [n[0], n[1]]; }
@@ -224,8 +324,11 @@
     map.getSource('fac').setData({ type: 'FeatureCollection', features: d.facilities[key].map(function (f) {
       return { type: 'Feature', properties: { t: key, name: f[2] }, geometry: { type: 'Point', coordinates: [f[0], f[1]] } };
     }) });
+    if (STATE.pt) diagnose(STATE.pt[0], STATE.pt[1], { keepView: true });
     renderSummary();
     renderLegend();
+    if (STATE.compare) renderCompare();
+    writeHash();
   }
 
   function sw(color, label, extra) {
@@ -243,7 +346,12 @@
       [['#9e9e9e', '0'], ['#fdd49e', '1-5'], ['#fdbb84', '6-15'], ['#fc8d59', '16-40'], ['#e34a33', '41-100'], ['#b30000', '101+']]
         .map(function (c) { return sw(c[0], c[1]); }).join('') +
       '<br>' + sw(STATE.fi === 0 ? '#8e24aa' : '#f9a825', esc(fl), ';border-radius:50%') +
-      sw('#fff', '鉄道駅（未収録）', ';border-radius:50%;border:1.6px solid #555');
+      sw('#fff', '鉄道駅（未収録）', ';border-radius:50%;border:1.6px solid #555') +
+      '<ul class="terms"><li>メッシュ: 地図を約500m四方に区切った区画。人口はこの単位で数えています。</li>' +
+      '<li>GTFS: バスなどの時刻表・停留所を、決まった形式で公開したオープンデータ。</li>' +
+      '<li>歩いて行ける／公共交通で行ける: 許容時間内に、歩きだけで／バス等に乗って着けること。</li>' +
+      '<li>行けない: 歩いても、収録した公共交通でも許容時間内に着けない（未収録の便は含まない）。</li>' +
+      '<li>休日: 日曜のダイヤで計算（祝日ダイヤは未反映）。</li></ul>';
   }
 
   /* 収録範囲の注記（主要画面に常時表示）。「データなし」を「行けない」と誤読させないため */
@@ -299,7 +407,12 @@
       '<span style="--c:' + COLORS.transit + '">公共交通で ' + L.pct(s.transit, s.pop) + '%</span>' +
       '<span style="--c:' + COLORS.rail + '">鉄道駅が近い（未評価） ' + L.pct(s.rail, s.pop) + '%</span>' +
       '<span style="--c:' + COLORS.none + '">行けない ' + L.pct(s.none, s.pop) + '%</span></div>';
-    h += '<p class="note">「行けない」は、' + STATE.w + '分以内に歩いても、収録した公共交通を使っても着けない場合だけです。65歳以上では ' + ok65 + '%（' + man(s.pop65) + '）が行ける。</p>';
+    h += '<table class="ng65"><caption class="note" style="text-align:left">行けない人（' + STATE.w + '分以内に歩いても、収録した公共交通でも着けない）</caption>' +
+      '<tr><th>全体</th><th>65歳以上</th></tr>' +
+      '<tr><td><b>' + s.none.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none, s.pop) + '%）</td>' +
+      '<td><b>' + s.none65.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none65, s.pop65) + '%）</td></tr></table>' +
+      '<p class="note">パーセントは、診断範囲の人口（全体 ' + man(s.pop) + '／65歳以上 ' + man(s.pop65) + '）に対する割合。「鉄道駅が近い（未評価）」の人は含みません。65歳以上で行ける人は ' + ok65 + '%。' +
+      '代替交通・デマンド交通・減便は考慮していません。</p>';
     // 平日/休日 × 朝昼夕の比較
     h += '<table><caption class="note">行ける人の割合（' + STATE.w + '分以内・' + esc(fl) + '）</caption><tr><th></th>' +
       L.PERIODS.map(function (p) { return '<th>' + L.PERIOD_LABEL[p] + d.params.start_hours[p] + '時</th>'; }).join('') + '</tr>';
@@ -313,6 +426,9 @@
     });
     h += '</table><p class="note">診断範囲: 収録した停留所から' + d.params.diag_radius_m + 'm以内の人口メッシュ。徒歩は直線×' + d.params.detour +
       '÷分速' + d.params.walk_m_per_min + 'mで換算し、許容時間内に歩いて着けるなら「歩いて行ける」。</p>';
+    if (d.facility_order[STATE.fi] === 'school' && STATE.per !== 'm') {
+      h += '<p class="note"><b>学校の昼・夕について:</b> 「その時刻に家を出て学校へ向かう」場合の値です。下校（学校から家へ帰る向き）は評価していません。通学は朝8時の値を見てください。</p>';
+    }
     $('summary').innerHTML = h;
     // スマホで最初に結論が見えるよう、パネル上部に固定表示する
     $('headline').innerHTML = '<span class="hl-cond">' + esc(L.DAY_LABEL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] + '時・' +
@@ -322,15 +438,34 @@
   }
 
   /* ---------- 地点の診断 ---------- */
-  function onMapClick(e) {
+  function onMapClick(e) { diagnose(e.lngLat.lng, e.lngLat.lat, { scroll: true }); }
+
+  function diagnose(lon, lat, opt) {
     var d = STATE.data;
     if (!d) return;
-    var lon = e.lngLat.lng, lat = e.lngLat.lat;
+    STATE.pt = [lon, lat];
     if (STATE.marker) STATE.marker.remove();
     STATE.marker = new maplibregl.Marker({ color: '#1b4f8a' }).setLngLat([lon, lat]).addTo(map);
     var code = L.meshCodeAt(lon, lat);
     var ci = STATE.cellIdx[code];
     var h = '<h2>地点の診断</h2>';
+    var vd = null;
+    if (ci != null) {
+      vd = L.verdict(d.cells[ci], { fi: STATE.fi, day: STATE.day, per: STATE.per, w: STATE.w, thresholds: d.params.thresholds,
+        startHours: d.params.start_hours, facLabel: d.facility_labels[d.facility_order[STATE.fi]] });
+      h += '<div class="verdict' + (vd.ok ? '' : ' no') + '"><p class="v-main">' + esc(vd.main) + '</p><p class="v-cmp">' + esc(vd.cmp + vd.extra) + '</p></div>';
+    } else {
+      h += '<div class="verdict no"><p class="v-main">この地点は診断範囲外です</p><p class="v-cmp">収録した停留所から' + d.params.diag_radius_m + 'm以内の人口メッシュだけを診断しています。</p></div>';
+    }
+    var bar = $('pt-bar');
+    bar.hidden = false;
+    bar.innerHTML = '<span class="pt-lbl">選んだ地点</span> <b>' + esc(vd ? vd.short : '診断範囲外') + '</b>' +
+      '<button type="button" id="pt-goto">詳しく見る</button><button type="button" id="pt-share">この結果のリンクをコピー</button><span id="pt-msg" class="note"></span>';
+    $('pt-goto').addEventListener('click', function () { $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    $('pt-share').addEventListener('click', function () { copyText(location.href, 'pt-msg'); });
+    if (STATE.popup) STATE.popup.remove();
+    STATE.popup = new maplibregl.Popup({ offset: [0, -36], maxWidth: '240px', closeOnClick: false })
+      .setLngLat([lon, lat]).setText(vd ? vd.short : '診断範囲外（停留所から遠い、または人口データなし）').addTo(map);
     if (ci == null) {
       h += '<p class="note">この地点は診断範囲外です（停留所から' + d.params.diag_radius_m + 'm超、または人口データなし）。</p>';
     } else {
@@ -340,22 +475,29 @@
       h += diagTable(c);
     }
     var near = L.nearbyNodes(d.nodes, lon, lat, d.params.walk_in_m, 6);
+    var labels = L.stopLabels(d.nodes, near, d.routes);
     var hl = {};
     if (!near.length) {
       h += '<p><b>半径' + d.params.walk_in_m + 'm以内に停留所がありません。</b>公共交通の空白地の可能性があります（収録事業者のみ対象）。</p>';
     } else {
       h += '<h2>近くの停留所（' + d.params.walk_in_m + 'm以内）</h2>';
-      near.forEach(function (o) {
+      var lastOf = function (k) {
+        var best = null;
+        near.forEach(function (o) { var n = d.nodes[o.i], t = n[k][5]; if (n[k][3] > 0 && t != null && (best == null || t > best.t)) best = { t: t, name: n[2] || '(名称なし)' }; });
+        return best ? L.fmtMin(best.t) + '（' + esc(best.name) + '）' : '運行なし';
+      };
+      h += '<p class="lastbus"><b>近くの停留所で最も遅い終発</b>　平日 ' + lastOf(3) + '／休日 ' + lastOf(4) + '</p>';
+      h += '<p class="note">本数は朝6-9時／昼9-16時／夕16-20時の発車数、終発はその日の最後の発車時刻（基準日の時刻表）。</p>';
+      near.forEach(function (o, k) {
         var n = d.nodes[o.i];
         n[5].forEach(function (r) { hl[r] = 1; });
-        h += '<div class="stop"><b>' + esc(n[2] || '(名称なし)') + '</b>（約' + Math.round(o.d) + 'm）<br>' +
+        h += '<div class="stop"><b>' + esc(labels[k]) + '</b>（約' + Math.round(o.d) + 'm）<br>' +
           '平日 朝' + n[3][0] + '／昼' + n[3][1] + '／夕' + n[3][2] + '本、終発 ' + L.fmtMin(n[3][5]) + '<br>' +
           '休日 朝' + n[4][0] + '／昼' + n[4][1] + '／夕' + n[4][2] + '本、終発 ' + L.fmtMin(n[4][5]) + '<br>' +
           '<span class="note">' + L.nodeFacts(n).map(esc).join('。') + '。路線: ' +
           esc(n[5].slice(0, 5).map(function (r) { return d.routes[r][0]; }).join('、')) + (n[5].length > 5 ? ' ほか' + (n[5].length - 5) + '路線' : '') +
           '</span></div>';
       });
-      h += '<p class="note">本数は朝6-9時／昼9-16時／夕16-20時の発車数（基準日の時刻表）。</p>';
     }
     $('detail').innerHTML = h;
     var feats = d.patterns.filter(function (p) { return hl[p[0]]; }).map(function (p) {
@@ -363,10 +505,110 @@
         geometry: { type: 'LineString', coordinates: p[1].map(function (i) { return lonlat(d.nodes[i]); }) } };
     });
     map.getSource('routes-hl').setData({ type: 'FeatureCollection', features: feats });
-    if (window.matchMedia('(max-width: 720px)').matches) {
+    writeHash();
+    if (opt && opt.scroll) {
       $('panel').classList.remove('closed');
+      document.body.classList.remove('sheet-closed');
       $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  /* ---------- 住所・駅名検索（国土地理院 地名検索API。キー不要・GETのみ） ---------- */
+  function doSearch(q) {
+    q = String(q || '').trim();
+    var out = $('search-result');
+    if (!q) { out.textContent = '住所や駅名を入力してください。'; return; }
+    out.textContent = '検索中…';
+    fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q))
+      .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); })
+      .then(function (j) {
+        var cur = STATE.data && STATE.data.id;
+        var rs = L.parseGsi(j);
+        rs.forEach(function (r) { r.rid = L.regionForPoint(STATE.index.regions, r.lon, r.lat); });
+        rs = rs.map(function (r, i) { return { r: r, k: (r.rid === cur ? 0 : r.rid ? 1 : 2) * 10000 + i }; })
+          .sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; }).slice(0, 5);
+        if (!rs.length) { out.textContent = '「' + q + '」に該当する場所が見つかりませんでした。'; return; }
+        out.innerHTML = '';
+        var first = null;
+        rs.forEach(function (r, i) { if (first == null && r.rid) first = i; });
+        if (first == null) {
+          out.innerHTML = '見つかった場所（' + esc(rs[0].title) + '）は、収録している5地域（' +
+            esc(STATE.index.regions.map(function (x) { return L.shortName(x.name); }).join('・')) + '）の範囲外です。';
+          return;
+        }
+        goToResult(rs[first]);
+        if (rs.length > 1) {
+          var p = document.createElement('div');
+          p.innerHTML = '他の候補:';
+          out.appendChild(p);
+          rs.forEach(function (r, i) {
+            if (i === first) return;
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = r.title + (r.rid ? '' : '（収録範囲外）');
+            b.disabled = !r.rid;
+            b.addEventListener('click', function () { goToResult(r); });
+            out.appendChild(b);
+          });
+        }
+      })
+      .catch(function () { out.textContent = '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認してください。'; });
+  }
+
+  function goToResult(r) {
+    var shown = $('search-result');
+    var head = shown.querySelector('.hit');
+    if (!head) { head = document.createElement('div'); head.className = 'hit'; shown.insertBefore(head, shown.firstChild); }
+    var name = (STATE.index.regions.filter(function (x) { return x.id === r.rid; })[0] || {}).name || '';
+    head.innerHTML = '<b>' + esc(r.title) + '</b>（' + esc(L.shortName(name)) + '）を調べました。地図と「地点の診断」を見てください。';
+    var mobile = window.matchMedia('(max-width: 720px)').matches;
+    var pad = mobile ? { top: 20, left: 20, right: 20, bottom: Math.round(window.innerHeight * 0.56) + 20 } : { top: 20, left: 400, right: 20, bottom: 20 };
+    if (STATE.data && STATE.data.id === r.rid) {
+      map.easeTo({ center: [r.lon, r.lat], zoom: Math.max(map.getZoom(), 14), padding: pad, duration: 600 });
+      diagnose(r.lon, r.lat, { scroll: true });
+    } else {
+      STATE.pendingPt = [r.lon, r.lat]; STATE.pendingRoute = null;
+      loadRegion(r.rid);
+    }
+  }
+
+  /* ---------- 地域比較（押したときだけ全地域を読む） ---------- */
+  function runCompare() {
+    var btn = $('btn-compare');
+    btn.disabled = true;
+    $('compare-result').innerHTML = '<p class="note">5地域のデータを読み込み中…</p>';
+    Promise.all(STATE.index.regions.map(function (r) { return getJSON('data/' + r.id + '.json'); })).then(function (all) {
+      STATE.compare = all;
+      renderCompare();
+      btn.disabled = false;
+      btn.textContent = '条件を変えたら、表も自動で更新されます';
+    }).catch(function (e) {
+      btn.disabled = false;
+      $('compare-result').innerHTML = '<p class="note">比較用のデータを読み込めませんでした: ' + esc(e.message) + '</p>';
+    });
+  }
+
+  function renderCompare() {
+    var d = STATE.data;
+    var key = d.facility_order[STATE.fi];
+    var fl = d.facility_labels[key];
+    var h = '<p class="note"><b>条件: ' + esc(L.DAY_FULL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] + '時発・' + STATE.w + '分以内・' + esc(fl) + '</b></p>';
+    h += '<table><tr><th>地域</th><th>行ける割合</th><th>行けない人（全体）</th><th>行けない人（65歳以上）</th></tr>';
+    STATE.compare.forEach(function (c) {
+      var r = L.compareRow(c, key, STATE.day, STATE.per, STATE.w);
+      h += '<tr><td>' + esc(L.shortName(c.name)) + '</td>';
+      if (!r) { h += '<td colspan="3">この条件は未計算</td></tr>'; return; }
+      h += '<td><b>' + r.okPct + '%</b></td><td>' + r.none.toLocaleString('ja-JP') + '人（' + r.nonePct + '%）</td><td>' +
+        r.none65.toLocaleString('ja-JP') + '人（' + r.none65Pct + '%）</td></tr>';
+    });
+    h += '</table>';
+    h += '<p class="note"><b>比べるときの注意:</b> 収録している事業者・交通手段が地域ごとに違います。';
+    h += STATE.compare.map(function (c) {
+      var ir = STATE.index.regions.filter(function (x) { return x.id === c.id; })[0];
+      return esc(L.shortName(c.name)) + '＝' + esc((ir.operators || []).join('・')) + '（' + esc(c.coverage.modes.join('・')) + '）';
+    }).join('、') + '。';
+    h += 'たとえば東京は都営（東京都交通局）のみ、飯田・下伊那は南信州地域のバスのみで、民営バスやJR等は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。割合・人数は、各地域の診断範囲（収録停留所から' + d.params.diag_radius_m + 'm以内）の人口が分母です。</p>';
+    $('compare-result').innerHTML = h;
   }
 
   function diagTable(c) {
@@ -419,7 +661,9 @@
       '<li>鉄道駅: 国土数値情報「鉄道データ」N02-22（国土交通省、令和4年12月31日時点）を加工して作成。GTFSに収録していない鉄道の駅の位置を地図に示し、駅から徒歩' + (d ? d.params.rail_walk_min : 15) + '分圏の地区を「鉄道駅が近い（未評価）」とするためだけに使っています（時刻表・運行は使っていません）。新設駅・廃止駅は反映されていない場合があります。</li>' +
       '<li>人口: 政府統計の総合窓口（e-Stat）「令和2年国勢調査 地域メッシュ統計（250mメッシュ）」を500mメッシュに集約して作成。65歳以上人口は秘匿処理のため近隣メッシュに合算されている場合があります。</li>' +
       '<li>施設: 国土数値情報（医療機関データ P04-20［病院のみ］、学校データ P29-21［小学校・中学校］）（国土交通省）を加工して作成。施設の位置・存廃は現在と異なる場合があります。</li>' +
-      '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li></ul>';
+      '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li>' +
+      '<li>住所・駅名の検索: <a href="https://msearch.gsi.go.jp/address-search/AddressSearch" target="_blank" rel="noopener">国土地理院 地名検索API</a>（国土地理院）。検索したときだけ、入力した文字列を国土地理院のサーバーへ送って（GET）候補の位置を受け取ります。他には送りません。</li></ul>';
+    h += '<h2>資料に貼れる出典の例</h2><p class="note">画面の「この画面を共有する・出典を書く」にも、地域に合わせた例文とコピーボタンがあります。</p>' + (d ? '<p style="font-size:.8rem;background:#f3f5f8;padding:6px 8px;border-radius:6px">' + esc(L.citationText(d, { url: location.href.replace(/#.*$/, ''), date: todayIso() })) + '</p>' : '');
     h += '<h2>診断の前提と限界</h2><ul>' +
       '<li>「行ける」とは、指定時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可・乗継時間3分以上）→徒歩で、許容時間内に施設の近くへ着けること。待ち時間を含みます。</li>' +
       '<li>徒歩は直線距離の1.25倍を分速80mで歩くと仮定（道路網・坂・横断は未考慮）。乗車停留所は直線600m以内、降車停留所から施設は直線500m以内。公共交通を使わなくても、同じ徒歩モデルで許容時間内に施設へ歩いて着ければ「歩いて行ける」とします。「行けない」は、歩いても収録した公共交通を使っても許容時間内に着けない場合だけです。</li>' +
@@ -434,6 +678,6 @@
   function closeAbout() { $('modal').hidden = true; }
 
   window.App = { STATE: STATE, refresh: refresh, getMap: function () { return map; }, esc: esc, man: man, need: need,
-    lonlat: lonlat, colors: COLORS };
+    lonlat: lonlat, colors: COLORS, writeHash: writeHash };
   init();
 })();
