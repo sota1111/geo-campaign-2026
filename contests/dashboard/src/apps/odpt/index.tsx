@@ -23,7 +23,7 @@ import {
   AboutPanel, COLORS, ComparePanel, RegionPanel, StopsPanel, WhatIfPanel, type WhatIfData,
 } from './panels'
 import {
-  altConditions, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
+  altConditions, dataUsedLine, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
   needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
   type Day, type Lost, type Period, type RegionData, type RegionIndex,
 } from './lib'
@@ -72,11 +72,13 @@ export default function App() {
   const [loadErr, setLoadErr] = useState<string | null>(null)
   const [cond, setCond] = useState<CondState>({ fi: init.fi ?? 0, day: init.day ?? 'wd', per: init.per ?? 'm', w: init.w ?? 30 })
   const [pt, setPt] = useState<Pt | null>(null)
-  const [placeLabel, setPlaceLabel] = useState(isSampleMode() ? SAMPLE_PLACE : '')
+  const [placeLabel, setPlaceLabel] = useState(isSampleMode() ? SAMPLE_PLACE : (init.pt && init.label) || '')
   const [route, setRoute] = useState<string | null>(null)
   const [view, setView] = useState<View>({})
   const [vis, setVis] = useState({ cells: true, nodes: true, routes: true, fac: true, rail: true })
-  const [step, setStep] = useState(isSampleMode() ? 'copy' : 'place')
+  // 共有リンク（地点つき）で開いたときは、その地点の結論を直接出す
+  const [fromLink, setFromLink] = useState(Boolean(init.pt) && !isSampleMode())
+  const [step, setStep] = useState(isSampleMode() ? 'copy' : init.pt ? 'verdict' : 'place')
   const [legendOpen, setLegendOpen] = useState(false)
   const [stopsOpen, setStopsOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -127,6 +129,31 @@ export default function App() {
     }).catch((e: Error) => { if (req === reqRef.current) setLoadErr(e.message) })
   }, [index, regionId])
 
+  // 同じタブでアドレスだけ書き換えられた（共有リンクを貼り直した）時も、そのリンクの地点・条件の結論を出す。
+  // この画面自身がアドレスを更新する時（replaceState）は hashchange が出ないので、ここには来ない
+  const regionRef = useRef(regionId)
+  regionRef.current = regionId
+  useEffect(() => {
+    const onHash = () => {
+      const r = parseQuery(window.location.hash.split('?')[1] ?? '')
+      if (!r.pt) return
+      setCond((c) => ({ fi: r.fi ?? c.fi, day: r.day ?? c.day, per: r.per ?? c.per, w: r.w ?? c.w }))
+      setPlaceLabel(r.label ?? '')
+      setFromLink(true)
+      setStep('verdict')
+      if (r.region && r.region !== regionRef.current) {
+        pending.current = { pt: r.pt, route: r.route ?? null }
+        setRegionId(r.region)
+      } else {
+        setPt(r.pt)
+        setView({ center: r.pt, zoom: 14 })
+        mapRef.current?.easeTo({ center: r.pt, zoom: 14, duration: 0 })
+      }
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   const cellIdx = useMemo(() => (data ? indexCells(data.cells) : {}), [data])
   const need = data ? needLevel(data.params.thresholds, cond.w) : 0
 
@@ -147,8 +174,9 @@ export default function App() {
     const qs = new URLSearchParams(window.location.search)
     qs.delete('sample')
     const search = qs.toString() ? `?${qs.toString()}` : ''
-    return `${window.location.origin}${window.location.pathname}${search}${path}?${queryStr}`
-  }, [queryStr])
+    const nm = placeLabel ? `&n=${encodeURIComponent(placeLabel.slice(0, 40))}` : ''
+    return `${window.location.origin}${window.location.pathname}${search}${path}?${queryStr}${nm}`
+  }, [queryStr, placeLabel])
 
   // 路線を止めたら？
   const impact = useMemo(() => {
@@ -191,7 +219,8 @@ export default function App() {
     const lv = cell ? +cell[3][condIndex(cond.fi, cond.day, cond.per)] : 0
     const transitLevel = v && v.status === 'transit' && lv > 0 ? levelLabel(lv, data.params.thresholds) : null
     const alts = cell && v && !v.ok ? altConditions(cell, { fi: cond.fi, day: cond.day, per: cond.per, w: cond.w, thresholds: data.params.thresholds }) : null
-    return { cell, v, near, facility, transitLevel, alts, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
+    const dataLine = dataUsedLine(data, near.map((o) => o.i))
+    return { cell, v, near, facility, transitLevel, alts, dataLine, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
   }, [data, pt, cellIdx, cond])
 
   const copyText = useMemo(() => {
@@ -204,6 +233,8 @@ export default function App() {
       diag.v
         ? `【${placeLabel || '選んだ地点'}から${fl}へ】${DAY_FULL[cond.day]}${PERIOD_LABEL[cond.per]}${data.params.start_hours[cond.per]}時発・${cond.w}分以内: ${diag.v.yesNo}。${DAY_FULL[diag.v.otherDay]}は ${diag.v.otherYesNo}${lastTxt}`
         : `【${placeLabel || '選んだ地点'}】診断範囲外です（停留所から遠い、または人口データなし）`,
+      ...(diag.v ? [diag.dataLine] : []),
+      ...(diag.v && fl === '病院' ? ['病院の診療時間・予約は確認できていません。出かける前に電話で確認してください。'] : []),
       shareUrl,
     ]
     return withSampleMark(lines.join('\n'))
@@ -240,6 +271,7 @@ export default function App() {
   const choosePoint = useCallback((lon: number, lat: number, label: string, zoomTo: boolean) => {
     setPt([lon, lat])
     setPlaceLabel(label)
+    setFromLink(false)
     if (zoomTo) mapRef.current?.easeTo({ center: [lon, lat], zoom: Math.max(mapRef.current.getZoom(), 14), duration: 500 })
     showConclusion()
   }, [])
@@ -251,6 +283,7 @@ export default function App() {
     else {
       pending.current = { pt: [c.lon, c.lat], route: null }
       setPlaceLabel(c.title)
+      setFromLink(false)
       setRegionId(c.rid)
       showConclusion()
     }
@@ -305,6 +338,21 @@ export default function App() {
     setCands([])
     choosePoint(lng, lat, '', false)
   }, [choosePoint])
+
+  // 「行けない」例: 富山の、平日朝8時・30分以内・病院では行けない地点（収録データの計算で確認した人口の多い区画。許容時間を60分にすると行ける）
+  const onNgExample = () => {
+    const p: Pt = [137.109375, 36.722917]
+    setCond({ fi: 0, day: 'wd', per: 'm', w: 30 })
+    setCands([])
+    setSearchMsg('「行けない」例を選びました。結論は、サイドバーの「行けるか結論を見る」で見られます。')
+    if (data?.id === 'toyama') choosePoint(p[0], p[1], '富山の「行けない」例', true)
+    else {
+      pending.current = { pt: p, route: null }
+      setPlaceLabel('富山の「行けない」例')
+      setFromLink(false)
+      setRegionId('toyama')
+    }
+  }
 
   const onStation = (q: string) => {
     setQuery(q)
@@ -370,7 +418,7 @@ export default function App() {
         'fill-opacity': ['case', ['==', ['get', 'st'], 'lost'], 0.95, ['interpolate', ['linear'], ['get', 'pop'], 0, 0.3, 50, 0.45, 300, 0.65]],
         'fill-outline-color': 'rgba(255,255,255,0.35)' } },
       { id: 'routes', type: 'line', data: staticGeo.routes, filter: f(vis.routes), paint: { 'line-color': '#444', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 14, 1.8], 'line-opacity': 0.5 } },
-      { id: 'routes-hl', type: 'line', data: hlGeo, filter: f(vis.routes), paint: { 'line-color': '#1b4f8a', 'line-width': 3.5, 'line-opacity': 0.9 } },
+      { id: 'routes-hl', type: 'line', data: hlGeo, filter: f(vis.routes), paint: { 'line-color': '#1b4f8a', 'line-width': 2.5, 'line-opacity': 0.7 } },
       { id: 'routes-wi', type: 'line', data: wiGeo, filter: f(vis.routes), paint: { 'line-color': '#B03A8C', 'line-width': 4, 'line-opacity': 0.9, 'line-dasharray': [2, 1.5] } },
       { id: 'nodes', type: 'circle', data: staticGeo.nodes, filter: f(vis.nodes), paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 13, 3.5, 16, 7],
@@ -394,6 +442,7 @@ export default function App() {
   // ---- 左サイドバー（手順）。メインには選んだ手順の内容だけを出す。done は画面の状態・実際の操作で判定する ----
   const hasPt = Boolean(pt && data)
   const verdictShown = hasPt && diag?.v != null
+  // 診断範囲外の地点では「場所を決める」を済にしない（結論が出せないため）
   // 「見る」手順は、前提（診断できる地点）がある状態でその手順を表示したら済。自動では切り替えない。地点を変えたらやり直し
   useEffect(() => {
     if (!verdictShown || (step !== 'verdict' && step !== 'last')) return
@@ -413,12 +462,12 @@ export default function App() {
     ? `いま: ${DAY_FULL[cond.day]}・${PERIOD_LABEL[cond.per]}${data.params.start_hours[cond.per]}時・${cond.w}分以内・${data.facility_labels[data.facility_order[cond.fi]]}`
     : '行き先・曜日・時刻・許容時間'
   const stepDefs = [
-    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: hasPt },
+    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: verdictShown },
     { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true },
-    { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: seenVerdict },
+    { id: 'verdict', title: '行けるか結論を見る', hint: '「家族に送る1枚」: 行けるか・最終便・次の一歩・使ったデータ', done: seenVerdict },
     { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日と休日の枠を押して見比べる', done: seenCmp },
     { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
-    { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: hasPt && copiedPt === ptKey },
+    { id: 'copy', title: '1枚をコピーして家族に送る', hint: '結論・最終便・使ったデータとリンクを、LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: hasPt && copiedPt === ptKey },
     { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
     { id: 'whatif', title: '参考: 路線を止めたら？', hint: '行けなくなる人の数', done: false, optional: true },
     { id: 'compare', title: '参考: 5地域を比べる', hint: '同じ条件で並べる', done: false, optional: true },
@@ -465,6 +514,7 @@ export default function App() {
         lastWd: diag?.lastWd ?? null, lastHol: diag?.lastHol ?? null, nearCount: diag?.near.length ?? 0,
         nearest: diag && diag.near[0] ? { name: diag.labels[0], m: Math.round(diag.near[0].d), wd: data.nodes[diag.near[0].i][3], hol: data.nodes[diag.near[0].i][4] } : null,
         facility: diag?.facility ?? null, transitLevel: diag?.transitLevel ?? null, walkInM: data.params.walk_in_m, alts: diag?.alts ?? null,
+        dataLine: diag?.dataLine ?? '', fromLink: fromLink && step === 'verdict',
       }
     : null
   const coverageTip = data
@@ -541,6 +591,7 @@ export default function App() {
               {STATIONS.map((st) => (
                 <Button key={st.q} variant="outline" size="sm" onClick={() => onStation(st.q)} disabled={searching}>{st.label}</Button>
               ))}
+              <Button variant="outline" size="sm" onClick={onNgExample} data-testid="ng-example">行けない例（富山）</Button>
             </div>
           )}
         </div>

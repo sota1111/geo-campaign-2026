@@ -293,7 +293,7 @@ export default function App() {
         </div>
 
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t bg-card px-3 py-1.5 text-[11px]" data-testid="legend">
+      <div className="flex shrink-0 items-center gap-x-3 gap-y-1 overflow-x-auto whitespace-nowrap border-t bg-card px-3 py-1.5 text-[11px] md:flex-wrap md:overflow-visible md:whitespace-normal [&>*]:shrink-0" data-testid="legend">
         <span className="font-medium">凡例</span>
         <span className="flex items-center gap-1">点数 低<span className="inline-block h-2 w-14 rounded" style={{ background: 'linear-gradient(90deg,#dbe5ec,#f4b942,#8e1b6b)' }} />高</span>
         <span className="flex items-center gap-1"><span className="inline-block w-6 border-t-4 border-dashed border-[#6f7d86]" />調査済み・幹線</span>

@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CONTESTS, appsByContest, getApp, type AppMeta, type ContestId } from '@/apps/registry'
 import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
-import { AppScoreLine, ContestEval, EvalSummary } from '@/pages/EvalPanels'
+import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
+import { LATEST } from '@/apps/eval-results'
 
 /** 残り日数のバッジ。色だけに頼らず、文言と記号で緊急度を示す */
 function Remaining({ at }: { at: string }) {
@@ -32,7 +33,7 @@ function nextDeadline(info: ContestInfo) {
   return info.deadlines.find((d) => new Date(d.at).getTime() > now) ?? info.deadlines[info.deadlines.length - 1]
 }
 
-function AppCard({ a, contestId }: { a: AppMeta; contestId: ContestId }) {
+function AppCard({ a, contestId, note, onOpenEval }: { a: AppMeta; contestId: ContestId; note?: string; onOpenEval: () => void }) {
   const contest = CONTESTS.find((c) => c.id === a.contest)
   // 本応募の前に概要登録が要るコンペ（UDC）は、カードにも概要登録の締切を出す
   const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.find((d) => d.label === '概要登録')
@@ -52,11 +53,14 @@ function AppCard({ a, contestId }: { a: AppMeta; contestId: ContestId }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 px-4 text-xs">
-        <p className="line-clamp-3" title={a.purpose}>
-          {a.purpose}
-        </p>
+        <p>{a.purpose}</p>
+        {note && (
+          <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`app-note-${a.id}`}>
+            {note}
+          </p>
+        )}
         <div className="mt-1.5">
-          <AppScoreLine appId={a.id} contest={contestId} />
+          <AppScoreLine appId={a.id} contest={contestId} onOpen={onOpenEval} />
         </div>
       </CardContent>
       <CardFooter className="flex-wrap items-center justify-between gap-x-2 gap-y-2 px-4">
@@ -89,7 +93,8 @@ function AppCard({ a, contestId }: { a: AppMeta; contestId: ContestId }) {
   )
 }
 
-function Section({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+
+function Section({ title, children, className = '' }: { title: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
     <section className={`rounded-lg border bg-card p-3 ${className}`}>
       <h3 className="mb-1.5 text-sm font-bold">{title}</h3>
@@ -98,173 +103,191 @@ function Section({ title, children, className = '' }: { title: string; children:
   )
 }
 
-function ContestPanel({ info }: { info: ContestInfo }) {
+/** デスクトップでは開いたまま、スマホ幅では閉じて始める（縦の長さを抑える）。見出しに件数を出し、隠さない */
+function FoldSection({ title, className = '', children }: { title: React.ReactNode; className?: string; children: React.ReactNode }) {
+  const [open] = useState(() => typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 1024px)').matches)
+  return (
+    <details open={open} className={`rounded-lg border bg-card p-3 ${className}`}>
+      <summary className="cursor-pointer text-sm font-bold marker:text-foreground">{title}</summary>
+      <div className="mt-1.5">{children}</div>
+    </details>
+  )
+}
+
+function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () => void }) {
   const contest = CONTESTS.find((c) => c.id === info.id)!
   const apps = appsByContest(info.id)
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border bg-card p-3">
-        <h2 className="text-base font-bold">{contest.name}</h2>
-        <p className="mt-1 text-sm">{info.summary}</p>
-      </div>
-
-      <section aria-label={`${contest.short}向けのアプリ`} className="space-y-2">
-        <h3 className="text-sm font-bold">
-          このコンペ向けのアプリ（{apps.length}件）
-          <span className="ml-2 text-xs font-normal text-muted-foreground" data-testid="overview-sample-note">
-            「実行サンプル」は、AI（Sonnet）が使用目的だけを与えられて操作した模擬利用の再現です。実在の利用実績ではなく、何も保存されません。
-          </span>
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {apps.map((a) => (
-            <AppCard key={a.id} a={a} contestId={info.id} />
-          ))}
+      <div className="grid items-start gap-3 lg:grid-cols-[3fr_2fr] lg:grid-rows-[auto_1fr]">
+        {/* 概要と締切 */}
+        <div className="rounded-lg border bg-card p-3 lg:col-start-1 lg:row-start-1">
+          <h2 className="text-base font-bold">{contest.name}</h2>
+          <p className="mt-1 text-sm">{info.summary}</p>
+          <dl className="mt-2 grid gap-x-3 gap-y-1 border-t pt-2 text-xs grid-cols-[auto_1fr]">
+            <dt className="font-bold">締切</dt>
+            <dd className="flex flex-wrap gap-x-4 gap-y-1">
+              {info.deadlines.map((d) => (
+                <span key={d.label} className="inline-flex items-center gap-1.5">
+                  {d.label} {d.text}
+                  <Remaining at={d.at} />
+                </span>
+              ))}
+            </dd>
+            <dt className="font-bold">実装</dt>
+            <dd>{info.implementation}</dd>
+            <dt className="font-bold">賞</dt>
+            <dd>{info.prize}</dd>
+            <dt className="font-bold">公式</dt>
+            <dd className="flex flex-wrap gap-x-3 gap-y-1">
+              {info.sources.map((s) => (
+                <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-800 underline underline-offset-2">
+                  {s.label}
+                  <ExternalLink className="size-3" aria-hidden />
+                  <span className="sr-only">（公式サイト。新しいタブで開く）</span>
+                </a>
+              ))}
+            </dd>
+          </dl>
         </div>
-        {info.alsoApps?.map((x) => {
-          const a = getApp(x.id)
-          if (!a) return null
-          return (
-            <p key={x.id} className="text-xs">
-              <span className="font-bold">もう1件: </span>
-              {a.name}（{x.note}）{' '}
-              <a href={normalUrl(a.id)} className="font-medium text-sky-800 underline underline-offset-2">
-                開く
-              </a>
-            </p>
-          )
-        })}
-      </section>
 
-      <div className="rounded-lg border bg-card p-3">
-        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[auto_1fr]">
-          <dt className="font-bold">締切</dt>
-          <dd className="flex flex-wrap gap-x-4 gap-y-1">
-            {info.deadlines.map((d) => (
-              <span key={d.label} className="inline-flex items-center gap-1.5">
-                {d.label} {d.text}
-                <Remaining at={d.at} />
-              </span>
+        {/* 注意点（デスクトップでは右列に上から並べ、初期画面に出す） */}
+        <Section title="注意点（要項で確認できた、失格・無効につながりうる条件）" className="border-amber-400 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <ul className="space-y-1 text-xs">
+            {info.cautions.map((s) => (
+              <li key={s} className="flex gap-1.5">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden />
+                <span>{s}</span>
+              </li>
             ))}
-          </dd>
-          <dt className="font-bold">実装</dt>
-          <dd>{info.implementation}</dd>
-          <dt className="font-bold">賞</dt>
-          <dd>{info.prize}</dd>
-          <dt className="font-bold">公式</dt>
-          <dd className="flex flex-wrap gap-x-3 gap-y-1">
-            {info.sources.map((s) => (
-              <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-800 underline underline-offset-2">
-                {s.label}
-                <ExternalLink className="size-3" aria-hidden />
-                <span className="sr-only">（公式サイト。新しいタブで開く）</span>
-              </a>
+          </ul>
+          {info.afterAward && (
+            <div className="mt-2 border-t pt-1.5">
+              <h4 className="text-xs font-bold">失格条件ではない、通過・受賞後の条件</h4>
+              <ul className="mt-1 space-y-1 text-xs">
+                {info.afterAward.map((s) => (
+                  <li key={s} className="flex gap-1.5">
+                    <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-slate-700" aria-hidden />
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Section>
+
+        {/* アプリ */}
+        <section aria-label={`${contest.short}向けのアプリ`} className="space-y-2 lg:col-start-1 lg:row-start-2">
+          <h3 className="text-sm font-bold">
+            このコンペ向けのアプリ（{apps.length}件）
+            <span className="ml-2 text-xs font-normal text-muted-foreground" data-testid="overview-sample-note">
+              「実行サンプル」は AI（Sonnet）の模擬利用の再現で、実在の利用実績ではありません。
+            </span>
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {apps.map((a) => (
+              <AppCard key={a.id} a={a} contestId={info.id} note={info.appNotes?.[a.id]} onOpenEval={onOpenEval} />
             ))}
-          </dd>
-        </dl>
+          </div>
+          {info.alsoApps?.map((x) => {
+            const a = getApp(x.id)
+            if (!a) return null
+            return (
+              <div key={x.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-card px-3 py-2 text-xs">
+                <span>
+                  <span className="font-bold">もう1件: </span>
+                  {a.name}（{x.note}）
+                </span>
+                <Button asChild size="sm" variant="outline">
+                  <a href={normalUrl(a.id)}>
+                    開く <ArrowRight className="size-4" />
+                  </a>
+                </Button>
+              </div>
+            )
+          })}
+        </section>
       </div>
 
-      <div className="grid items-start gap-3 lg:grid-cols-2">
-        <div className="space-y-3">
-          <Section title={info.criteriaTitle}>
-            <ul className="space-y-1 text-xs">
-              {info.criteria.map((c) => (
-                <li key={c.name}>
-                  <span className="font-bold">{c.name}</span>
-                  {c.tag && <span className="ml-1 rounded border px-1 text-xs">{c.tag}</span>}
-                  {c.desc && <span className="text-muted-foreground">　{c.desc}</span>}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 border-t pt-1.5 text-xs text-muted-foreground">{info.criteriaNote}</p>
-          </Section>
-          <Section title="提出物と流れ">
-            <ul className="list-disc space-y-1 pl-4 text-xs">
-              {info.submission.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ul>
-          </Section>
-        </div>
-        <div className="space-y-3">
-          <Section title="注意点（要項で確認できた、失格・無効につながりうる条件）" className="border-amber-400">
-            <ul className="space-y-1 text-xs">
-              {info.cautions.map((s) => (
-                <li key={s} className="flex gap-1.5">
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden />
-                  <span>{s}</span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-          <Section title="未確認（要項から確認できていない。応募前に要確認）" className="border-dashed">
-            <ul className="space-y-1 text-xs">
-              {info.unconfirmed.map((s) => (
-                <li key={s} className="flex gap-1.5">
-                  <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-violet-800" aria-hidden />
-                  <span>{s}</span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        </div>
+      <div className="grid items-start gap-3 lg:grid-cols-3">
+        <Section title={info.criteriaTitle}>
+          <ul className="space-y-1 text-xs">
+            {info.criteria.map((c) => (
+              <li key={c.name}>
+                <span className="font-bold">{c.name}</span>
+                {c.tag && <span className="ml-1 rounded border px-1 text-xs">{c.tag}</span>}
+                {c.desc && <span className="text-muted-foreground">　{c.desc}</span>}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 border-t pt-1.5 text-xs text-muted-foreground">{info.criteriaNote}</p>
+        </Section>
+        <FoldSection title={`提出物と流れ（${info.submission.length}件）`}>
+          <ul className="list-disc space-y-1 pl-4 text-xs">
+            {info.submission.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        </FoldSection>
+        <FoldSection title={`未確認（${info.unconfirmed.length}件。要項から確認できていない。応募前に要確認）`} className="border-dashed">
+          <ul className="space-y-1 text-xs">
+            {info.unconfirmed.map((s) => (
+              <li key={s} className="flex gap-1.5">
+                <CircleHelp className="mt-0.5 size-3.5 shrink-0 text-violet-800" aria-hidden />
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </FoldSection>
       </div>
-
-      <ContestEval contest={info.id} />
     </div>
   )
 }
 
 const EVAL_TAB = 'eval'
 
+const TAB_CLS =
+  'h-auto flex-col items-start gap-0.5 whitespace-normal text-foreground border-border px-3 py-1.5 text-left data-[state=active]:border-foreground'
+
 export default function Overview() {
   const initial =
     window.location.hash === `#${EVAL_TAB}` ? EVAL_TAB : (CONTEST_INFO.find((c) => `#${c.id}` === window.location.hash)?.id ?? CONTEST_INFO[0].id)
   const [tab, setTab] = useState<string>(initial)
+  const openEval = () => {
+    setTab(EVAL_TAB)
+    window.scrollTo({ top: 0 })
+  }
   return (
-    <div className="mx-auto max-w-6xl space-y-3">
-      <header className="space-y-1">
+    <div className="mx-auto max-w-6xl space-y-2">
+      <header>
         <h1 className="text-xl font-bold">統合ダッシュボード（4つのコンペ・7つのデモアプリ）</h1>
         <p className="hidden text-xs text-muted-foreground sm:block">
-          コンペを選ぶと、募集内容・締切・提出物・審査基準・注意点と、そのコンペ向けのアプリが見られます。バッジは実データ／架空データ／一部架空の区別です。各タブの「注意点」は要項で確認できた条件、「未確認」は要項から確認できていない事項です。
+          コンペを選ぶと、募集内容・締切・注意点・審査基準と、そのコンペ向けのアプリが見られます。バッジは実データ／架空データ／一部架空の区別です。
         </p>
       </header>
 
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-slate-400 bg-slate-50 px-3 py-1.5 text-xs" data-testid="eval-banner">
-        <span className="font-bold">AI評価を掲載（模擬・2026-11-11の改修前の画面に対するもの。実際の審査結果ではありません）。</span>
-        <button type="button" onClick={() => setTab(EVAL_TAB)} className="font-medium text-sky-800 underline underline-offset-2">
-          全アプリの点数一覧を見る
-        </button>
-      </p>
-
-      <Tabs value={tab} onValueChange={setTab} className="gap-3">
-        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-5">
+      <Tabs value={tab} onValueChange={setTab} className="gap-2">
+        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-[repeat(4,1fr)_auto]">
           {CONTEST_INFO.map((info) => {
             const nd = nextDeadline(info)
             return (
-              <TabsTrigger
-                key={info.id}
-                value={info.id}
-                className="h-auto flex-col items-start gap-0.5 whitespace-normal text-foreground border-border px-3 py-1.5 text-left data-[state=active]:border-foreground"
-              >
+              <TabsTrigger key={info.id} value={info.id} className={TAB_CLS}>
                 <span className="text-sm font-bold">{CONTESTS.find((c) => c.id === info.id)?.name.replace(/20.*$/, '')}</span>
                 <span className="flex flex-col gap-0.5 text-xs font-normal">
                   {info.deadlines.map((d) => (
-                    <span key={d.label} className="flex flex-wrap items-center gap-x-1.5">
+                    <span key={d.label} className={`flex-wrap items-center gap-x-1.5 ${d === nd ? 'flex' : 'hidden lg:flex'}`}>
                       {d.label} {d.text}
                       {d === nd && <Remaining at={d.at} />}
                     </span>
                   ))}
-                  <span className="text-muted-foreground">アプリ{appsByContest(info.id).length}件</span>
+                  <span className="hidden text-muted-foreground lg:inline">アプリ{appsByContest(info.id).length}件</span>
                 </span>
               </TabsTrigger>
             )
           })}
-          <TabsTrigger
-            value={EVAL_TAB}
-            className="h-auto flex-col items-start gap-0.5 whitespace-normal text-foreground border-border px-3 py-1.5 text-left data-[state=active]:border-foreground"
-          >
-            <span className="text-sm font-bold">AI評価の全体</span>
-            <span className="text-xs font-normal text-muted-foreground">全アプリの点数・ポータルの評価（模擬）</span>
+          <TabsTrigger value={EVAL_TAB} className={`${TAB_CLS} col-span-2 justify-center lg:col-span-1`} title={`${MOCK_NOTICE}${ROUND_NOTICE}`}>
+            <span className="text-sm font-bold">AI評価</span>
+            <span className="text-xs font-normal text-muted-foreground">模擬・{LATEST.date.slice(5).replace('-', '/')}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value={EVAL_TAB} forceMount className="data-[state=inactive]:hidden">
@@ -272,12 +295,12 @@ export default function Overview() {
         </TabsContent>
         {CONTEST_INFO.map((info) => (
           <TabsContent key={info.id} value={info.id} forceMount className="data-[state=inactive]:hidden">
-            <ContestPanel info={info} />
+            <ContestPanel info={info} onOpenEval={openEval} />
           </TabsContent>
         ))}
       </Tabs>
       <p className="text-xs text-muted-foreground">
-        出典: 各コンペの公式要項（取得日 2026-11-09）。「注意点」は要項で確認できた条件、「未確認」は要項から確認できていない事項です。全{APPS.length}アプリはサイドバーからも開けます。
+        出典: 各コンペの公式要項（取得日 2026-11-09）。全{APPS.length}アプリはサイドバーからも開けます。
       </p>
     </div>
   )

@@ -271,6 +271,36 @@ export function nearLine(r: MwRecord) {
   return head + 'ありません（最寄りは' + distText(nf).replace(/^大規模盛土造成地/, '') + '）'
 }
 
+export interface LedgerSummary {
+  total: number
+  /** 気づいたことの種類ごとの件数（0件の種類は含めない。KINDS の順） */
+  byKind: { id: string; label: string; n: number }[]
+  /** 近くの造成地ごとの件数（件数の多い順）。造成地の範囲内か NEAR_M 以内の記録だけ */
+  byFill: { id: string; kind: string; n: number }[]
+  /** 対象範囲外の記録 */
+  outside: number
+  /** 近くに登録された造成地がない（NEAR_M より遠い）記録 */
+  far: number
+}
+
+/** 地域の点検台帳の集計。記録の件数を数えるだけで、危険度の判定はしない */
+export function ledgerSummary(records: MwRecord[]): LedgerSummary {
+  const byKind = KINDS.map((k) => ({ id: k.id as string, label: k.label as string, n: records.filter((r) => r.kind === k.id).length })).filter((x) => x.n > 0)
+  const fills = new Map<string, { id: string; kind: string; n: number }>()
+  let outside = 0
+  let far = 0
+  for (const r of records) {
+    if (r.outOfCoverage) { outside++; continue }
+    const nf = r.nearFill
+    if (nf && (nf.inside || nf.distM <= NEAR_M)) {
+      const cur = fills.get(nf.id) ?? { id: nf.id, kind: nf.kind, n: 0 }
+      cur.n++
+      fills.set(nf.id, cur)
+    } else far++
+  }
+  return { total: records.length, byKind, byFill: [...fills.values()].sort((a, b) => b.n - a.n || a.id.localeCompare(b.id)), outside, far }
+}
+
 /** 自治体窓口に伝えるための通報文のたたき台。送信はしない（コピーして各窓口へ） */
 export function reportText(r: MwRecord) {
   const lines = [

@@ -31,6 +31,10 @@ export interface DiagView {
   transitLevel: string | null
   walkInM: number
   alts: Alternatives | null
+  /** 「使ったデータ: ○○の時刻表（…）」の一行（lib の dataUsedLine） */
+  dataLine: string
+  /** 共有リンクから開いた直後か */
+  fromLink: boolean
 }
 
 export const condText = (data: RegionData, c: CondState) =>
@@ -93,34 +97,55 @@ export function VerdictPanel({ d }: { d: DiagView }) {
       </div>
     )
   }
+  const hospital = fl === '病院'
+  const nr = d.nearest
+  const lastOf = (k: 'wd' | 'hol') => (nr && nr[k][3] > 0 ? fmtMin(nr[k][5]) : '運行なし')
   return (
     <div className="space-y-3 text-sm">
-      {d.placeLabel && <p className="text-xs text-muted-foreground">場所: {d.placeLabel}</p>}
-      <div className={`rounded-md border-2 p-3 ${v.ok ? 'border-blue-700 bg-blue-50 text-blue-950' : 'border-orange-600 bg-orange-50 text-orange-950'}`}>
-        <p className="flex items-center gap-2 text-xl font-bold" data-testid="verdict-main">
-          {v.ok ? <Check className="size-6 shrink-0" /> : <X className="size-6 shrink-0" />}
-          <span>{fl}へ {cond.w}分以内に {v.yesNo}</span>
-        </p>
-        <p className="mt-1">{STATUS_NOTE[v.status]}。{v.extra}</p>
-        <div className="mt-2 border-t border-current/20 pt-2" data-testid="verdict-basis">
-          <p className="font-medium">根拠</p>
-          {d.facility && (
-            <p>いちばん近い{fl}: <b>{d.facility.name}</b>（直線で約{d.facility.m}m・<Term tip={TIPS.walk}>徒歩の目安</Term>約{d.facility.min}分）</p>
-          )}
-          {v.status === 'walk' && <p>歩きだけで{cond.w}分以内に着ける、と計算した地点です。</p>}
-          {v.status === 'transit' && (
-            <p>公共交通（乗り継ぎ・待ち時間を含む）で <b>{d.transitLevel ?? `${cond.w}分以内`}</b> に着ける区分です。乗る路線・経路は元データにないため表示できません。</p>
-          )}
-          {!v.ok && <p>最寄りの{fl}までは、{cond.w}分以内には着けない計算です。</p>}
-          <p className="text-xs opacity-80">最寄りの{fl}は直線距離で選んだ目安で、実際に向かう{fl}とは限りません。</p>
-        </div>
-      </div>
-      {!v.ok && <NextSteps d={d} fl={fl} />}
-      {d.popInfo && (
-        <p className="text-xs text-muted-foreground">
-          この<Term tip={TIPS.mesh}>約500m四方のエリア</Term>の人口 {d.popInfo.pop}人（65歳以上 {d.popInfo.pop65}人）。人数は<Term tip={TIPS.hide}>概数</Term>です。
+      {d.fromLink && (
+        <p className="rounded-md border border-blue-300 bg-blue-50 p-2 text-xs text-blue-950" data-testid="from-link">
+          共有リンクから開きました。送り主が選んだ地点・条件の結論です。条件はサイドバーの「条件を確認する」で変えて確かめ直せます。
         </p>
       )}
+      <section aria-label="家族に送る1枚" data-testid="family-sheet" className="overflow-hidden rounded-md border-2 border-foreground/70 bg-white">
+        <div className="flex items-center justify-between gap-2 bg-foreground px-3 py-1 text-xs font-bold text-background">
+          <span>家族に送る1枚</span>
+          <span className="font-normal">手順6で、この内容をコピーして送れます</span>
+        </div>
+        <div className="space-y-2 p-3">
+          <p className="text-xs text-muted-foreground" data-testid="sheet-cond">{d.placeLabel || '選んだ地点'}から ／ {condText(data, cond)}</p>
+          <div className={`rounded-md border-2 p-3 ${v.ok ? 'border-blue-700 bg-blue-50 text-blue-950' : 'border-orange-600 bg-orange-50 text-orange-950'}`}>
+            <p className="flex items-center gap-2 text-xl font-bold" data-testid="verdict-main">
+              {v.ok ? <Check className="size-6 shrink-0" /> : <X className="size-6 shrink-0" />}
+              <span>{fl}へ {cond.w}分以内に {v.yesNo}</span>
+            </p>
+            <p className="mt-1">{STATUS_NOTE[v.status]}。{v.extra}</p>
+          </div>
+          <p data-testid="sheet-last">
+            <b>最終便</b>　{nr ? `最寄りの停留所 ${nr.name}（約${nr.m}m）の最終: 平日 ${lastOf('wd')}・休日 ${lastOf('hol')}` : `半径${d.walkInM}m以内に停留所がありません`}
+          </p>
+          {!v.ok && <NextSteps d={d} fl={fl} />}
+          <p className="text-xs" data-testid="data-used">{d.dataLine}</p>
+          {hospital && <p className="text-xs" data-testid="phone-note">病院の診療時間・予約は確認できていません。出かける前に、病院へ電話で確認してください。</p>}
+        </div>
+      </section>
+      <div className="space-y-1 rounded-md border p-2" data-testid="verdict-basis">
+        <p className="font-medium">くわしい根拠</p>
+        {d.facility && (
+          <p>いちばん近い{fl}: <b>{d.facility.name}</b>（直線で約{d.facility.m}m・<Term tip={TIPS.walk}>徒歩の目安</Term>約{d.facility.min}分）</p>
+        )}
+        {v.status === 'walk' && <p>歩きだけで{cond.w}分以内に着ける、と計算した地点です。</p>}
+        {v.status === 'transit' && (
+          <p>公共交通（乗り継ぎ・待ち時間を含む）で <b>{d.transitLevel ?? `${cond.w}分以内`}</b> に着ける区分です。乗る路線・経路は元データにないため表示できません。</p>
+        )}
+        {!v.ok && <p>最寄りの{fl}までは、{cond.w}分以内には着けない計算です。</p>}
+        <p className="text-xs text-muted-foreground">最寄りの{fl}は直線距離で選んだ目安で、実際に向かう{fl}とは限りません。</p>
+        {d.popInfo && (
+          <p className="text-xs text-muted-foreground">
+            この<Term tip={TIPS.mesh}>約500m四方のエリア</Term>の人口 {d.popInfo.pop}人（65歳以上 {d.popInfo.pop65}人）。人数は<Term tip={TIPS.hide}>概数</Term>です。
+          </p>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground">時刻表データによる推計で、実際の運行を保証するものではありません。収録した事業者のバスのみが対象で、鉄道・予約制の便・病院の診療時間は評価していません。</p>
     </div>
   )
@@ -205,8 +230,8 @@ export function CopyPanel({
       <p className="font-medium text-blue-800" role="status" data-testid="copy-done">
         {copied ? 'コピーしました。LINEやメールに貼り付けて送れます。' : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
       </p>
-      <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">コピーされる文面（自動でコピーできない時は、ここを選んでコピー）</label>
-      <Textarea id="odpt-copy-preview" readOnly rows={5} value={copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+      <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">家族に送る文面（手順3の「1枚」と同じ内容。自動でコピーできない時は、ここを選んでコピー）</label>
+      <Textarea id="odpt-copy-preview" readOnly rows={7} value={copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
       {isLocal && <p className="text-xs text-muted-foreground">※いまは手元の確認用アドレスです。公開後のアドレスで共有すると、相手も開けます。</p>}
       <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">
         <p className="font-medium text-foreground">データの更新と、使う人たち（想定）</p>

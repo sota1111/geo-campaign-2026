@@ -312,6 +312,8 @@ export function writeQuery(s: ShareState): string {
 
 export interface ParsedQuery {
   region?: string; fi?: number; day?: Day; per?: Period; w?: number; route?: string; pt?: [number, number]
+  /** 共有リンクに添える地点の名前（受け取った人の画面で「富山駅から」と出す用。40字まで） */
+  label?: string
 }
 
 /** 読めた項目だけを返す（不正な値は捨てる） */
@@ -320,13 +322,17 @@ export function parseQuery(q: string): ParsedQuery {
   String(q || '').replace(/^[#?]/, '').split('&').forEach((kv) => {
     const i = kv.indexOf('=')
     if (i < 0) return
-    const k = kv.slice(0, i), v = kv.slice(i + 1)
+    const k = kv.slice(0, i)
+    // 共有リンクは、LINE・メール・ブラウザで「,」が「%2C」に変わることがある。読む前に戻す
+    let v = kv.slice(i + 1)
+    try { v = decodeURIComponent(v) } catch { return }
     if (k === 'region' && /^[a-z0-9_-]{1,40}$/.test(v)) out.region = v
     else if (k === 'f' && /^\d{1,2}$/.test(v)) out.fi = +v
     else if (k === 'd' && (DAYS as string[]).includes(v)) out.day = v as Day
     else if (k === 'p' && (PERIODS as string[]).includes(v)) out.per = v as Period
     else if (k === 'w' && /^\d{1,3}$/.test(v)) out.w = +v
     else if (k === 'r' && /^\d{1,5}$/.test(v)) out.route = v
+    else if (k === 'n' && v.length > 0) out.label = v.replace(/[\u0000-\u001f]/g, '').slice(0, 40)
     else if (k === 'pt') {
       const m = /^(-?\d{1,3}(?:\.\d+)?),(-?\d{1,2}(?:\.\d+)?)$/.exec(v)
       if (m && +m[1] >= 120 && +m[1] <= 155 && +m[2] >= 20 && +m[2] <= 46) out.pt = [+m[1], +m[2]]
@@ -440,4 +446,28 @@ export function altConditions(cell: Cell, o: { fi: number; day: Day; per: Period
     if (reachable(status)) { longerW = { w, status }; break }
   }
   return { periods, longerW }
+}
+
+// ---------- 結論カードの「使ったデータ」一行 ----------
+const SOURCE_LABEL: Record<string, string> = {
+  'gtfs-data': 'GTFSデータリポジトリ（公共交通のオープンデータ）',
+  odpt: '公共交通オープンデータセンター（ODPT）',
+}
+
+/**
+ * 結論の根拠にした時刻表データを、事業者名つきで一行にする。
+ * 事業者名は、選んだ地点の近くの停留所を通る路線の事業者（データの routes にある名前）。近くに路線がなければ、収録フィードの事業者。
+ * 公開元・ライセンスは、その事業者の GTFS フィード（data.feeds）に書かれているものだけを使う。
+ */
+export function dataUsedLine(data: Pick<RegionData, 'feeds' | 'routes' | 'nodes'>, nearNodeIdx: number[]): string {
+  const routeIdx = new Set<number>()
+  nearNodeIdx.forEach((i) => data.nodes[i]?.[5]?.forEach((r) => routeIdx.add(r)))
+  let ops = [...new Set([...routeIdx].map((r) => data.routes[r]?.[2]).filter((x): x is string => Boolean(x)))]
+  if (!ops.length) ops = [...new Set(data.feeds.map((f) => f.org))]
+  const feeds = data.feeds.filter((f) => ops.includes(f.org))
+  const use = feeds.length ? feeds : data.feeds
+  const srcs = [...new Set(use.map((f) => SOURCE_LABEL[f.source] ?? f.source))]
+  const lic = [...new Set(use.map((f) => f.license).filter(Boolean))]
+  const shown = ops.slice(0, 3).join('・') + (ops.length > 3 ? `ほか${ops.length - 3}事業者` : '')
+  return `使ったデータ: ${shown}の時刻表（GTFS。${srcs.join('・')}で公開${lic.length ? `・${lic.join('／')}` : ''}）`
 }

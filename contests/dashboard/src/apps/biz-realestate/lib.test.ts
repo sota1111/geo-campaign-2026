@@ -2,10 +2,13 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  buildDigest, buildSheet, glossaryFor, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, SAMPLE_FACTS,
+  buildDigest, buildSheet, glossaryFor, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, sheetToText,
   summarize, tileOf, transitAround, worldToLonLat, type AreaData, type Facts,
 } from './lib'
 import { analyze, reverseGeocode } from './collect'
+import {
+  aggregateTrade, extractDivision, extractLandPoints, isReinfolibData, lookupLibrary, MIN_TRADES, townOf, GENERATOR, type ReinfolibData,
+} from './reinfolib'
 
 describe('距離の言い方', () => {
   it('50m未満は「直線約0m」ではなく「すぐ近く（50m未満）」', () => {
@@ -171,11 +174,13 @@ describe('1枚シート', () => {
       expect(summarize(f).some((r) => r.value.includes('取得できなかった') && r.tone === 'unknown')).toBe(true)
     }
   })
-  it('サンプル: 架空と明記、調整区域の前提', () => {
-    const s = buildSheet(SAMPLE_FACTS, SAMPLE_ANSWERS)
-    expect(s.sample).toBe(true)
-    expect(s.title).toContain('架空')
-    expect(text(exit(s, 'sell'))).toMatch(/市街化調整区域/)
+  it('例（徳島駅付近）: 実データの用途地域を使い、調整区域の前提は置かない。回答は例（架空）と明記', () => {
+    const f = base({ example: true, zone: { name: '商業地域', bcr: 80, far: 600, polys: [] } })
+    const s = buildSheet(f, SAMPLE_ANSWERS)
+    expect(s.example).toBe(true)
+    expect(s.title).toContain('徳島駅付近')
+    expect(text(exit(s, 'sell'))).toMatch(/商業地域/)
+    expect(text(s)).not.toMatch(/市街化調整区域にある|サンプルの前提|〇〇バス停|△△駅/)
     expect(text(exit(s, 'sell'))).toMatch(/相続登記/)
   })
   it('農地・接道なし・登記未の回答が反映される', () => {
@@ -219,5 +224,113 @@ describe('収集（通信失敗）', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 404, ok: false }))
     const f = await analyze(data, 134.5515, 34.0742, 't')
     expect(f.flood?.status).toBe('outside')
+  })
+})
+
+// ---- 不動産情報ライブラリ（フィクスチャ。テスト用の値で、画面には出ない。実データではない） ----
+describe('不動産情報ライブラリ: 取得結果の整形', () => {
+  const rows = (district: string, prices: number[], type = '宅地(土地)') =>
+    prices.map((p, i) => ({ Type: type, DistrictName: district, UnitPrice: String(p), Period: `2025年第${(i % 4) + 1}四半期` }))
+  it('町名ごとの㎡単価の中央値。MIN_TRADES件未満の町名は出さない。個別の取引は残らない', () => {
+    const t = aggregateTrade([...rows('A町', [100, 300, 200]), ...rows('B町', [50, 60]), ...rows('C町', [10], '中古マンション等')])!
+    expect(t.districts).toEqual([{ name: 'A町', n: 3, medianUnitPrice: 200 }])
+    expect(t.city).toEqual({ name: '市全体', n: 5, medianUnitPrice: 100 })
+    expect(t.total).toBe(5)
+    expect(t.period).toBe('2025年第1四半期〜2025年第3四半期')
+    expect(JSON.stringify(t)).not.toMatch(/TradePrice|Area|Remarks/)
+    expect(MIN_TRADES).toBe(3)
+  })
+  it('全角括弧の「宅地（土地）」も数える。土地以外・単価なしだけなら null', () => {
+    expect(aggregateTrade(rows('A', [1, 2, 3], '宅地（土地）'))?.total).toBe(3)
+    expect(aggregateTrade(rows('A', [1, 2, 3], '宅地(土地と建物)'))).toBeNull()
+    expect(aggregateTrade([{ Type: '宅地(土地)', DistrictName: 'A', UnitPrice: '' }])).toBeNull()
+  })
+  it('地価公示: 点を取り出し、point_id で重複を除く（タイル境界）', () => {
+    const f = (id: number, lon: number) => ({ geometry: { type: 'Point', coordinates: [lon, 34.07] }, properties: { point_id: id, u_current_years_price_ja: '1,234,000(円/㎡)', standard_lot_number_ja: '徳島5-1', use_category_name_ja: '4,商業地', target_year_name_ja: '令和7年7月1日', land_price_type: 0, location: '徳島市X' } })
+    const pts = extractLandPoints([f(1, 134.55), f(1, 134.55), f(2, 134.56), { geometry: { type: 'Point', coordinates: [1, 1] }, properties: { point_id: 3 } }])
+    expect(pts.map((p) => p.id)).toEqual([1, 2])
+    expect(pts[0]).toMatchObject({ price: 1234000, use: '商業地', kind: '地価公示', lot: '徳島5-1' })
+  })
+  it('区域区分: Polygon と MultiPolygon を多角形にし、座標を丸める', () => {
+    const sq = [[[0, 0], [1, 0], [1, 1.123456789], [0, 0]]]
+    const out = extractDivision([
+      { geometry: { type: 'Polygon', coordinates: sq }, properties: { area_classification_ja: '市街化区域' } },
+      { geometry: { type: 'MultiPolygon', coordinates: [sq] }, properties: { area_classification_ja: '市街化調整区域' } },
+      { geometry: { type: 'Point', coordinates: [0, 0] }, properties: { area_classification_ja: '無視' } },
+    ])
+    expect(out.map((o) => o.cls)).toEqual(['市街化区域', '市街化調整区域'])
+    expect(out[0].polys[0][0][2]).toEqual([1, 1.12346])
+  })
+})
+
+describe('不動産情報ライブラリ: 検証・照合・表示', () => {
+  const fixture: ReinfolibData = {
+    generator: GENERATOR, source: '国土交通省 不動産情報ライブラリ', fetchedAt: '2026-11-20', city: { code: '36201', name: '徳島市' },
+    trade: { period: '2025年第1四半期〜2025年第4四半期', total: 40, city: { name: '市全体', n: 40, medianUnitPrice: 111000 }, districts: [{ name: '寺島本町東', n: 5, medianUnitPrice: 222000 }] },
+    landPrice: { year: 2025, points: [{ id: 1, lon: 134.5515, lat: 34.0745, lot: '徳島5-1', use: '商業地', price: 333000, year: '令和7年7月1日', location: '徳島市X', kind: '地価公示' }, { id: 2, lon: 134.7, lat: 34.2, lot: '遠い', use: '', price: 1, year: '', location: '', kind: '' }] },
+    division: { features: [{ cls: '市街化区域', polys: [[[[134.5, 34.0], [134.6, 34.0], [134.6, 34.1], [134.5, 34.1], [134.5, 34.0]]]] }] },
+  }
+  it('検証: 作成者・出典・取得日の形が違うものは読み込まない（手書きの偽ファイルを通さない）', () => {
+    expect(isReinfolibData(fixture)).not.toBeNull()
+    expect(isReinfolibData({ ...fixture, generator: 'hand' })).toBeNull()
+    expect(isReinfolibData({ ...fixture, fetchedAt: '' })).toBeNull()
+    expect(isReinfolibData({ ...fixture, source: 'x' })).toBeNull()
+    expect(isReinfolibData(null)).toBeNull()
+    expect(isReinfolibData('<!doctype html>')).toBeNull()
+    expect(isReinfolibData({ ...fixture, trade: undefined, landPrice: undefined, division: undefined })).toBeNull()
+  })
+  it('検証: MIN_TRADES 未満の集計・価格0の標準地は捨てる', () => {
+    const d = isReinfolibData({ ...fixture, trade: { ...fixture.trade!, city: { name: '市全体', n: 2, medianUnitPrice: 5 }, districts: [] }, landPrice: { year: 2025, points: [{ ...fixture.landPrice!.points[0], price: 0 }] } })!
+    expect(d.trade).toBeUndefined()
+    expect(d.landPrice).toBeUndefined()
+    expect(d.division).toBeDefined()
+  })
+  it('町名の取り出し: 丁目を除く', () => {
+    expect(townOf('徳島県徳島市寺島本町東三丁目付近', '徳島市')).toBe('寺島本町東')
+    expect(townOf(null, '徳島市')).toBeNull()
+    expect(townOf('徳島県鳴門市撫養町', '徳島市')).toBeNull()
+  })
+  it('照合: 区域内・近い標準地・町名一致。遠い標準地は使わない', () => {
+    const l = lookupLibrary(fixture, 134.5515, 34.0745, '徳島県徳島市寺島本町東三丁目付近')!
+    expect(l.division?.main).toBe('市街化区域')
+    expect(l.landPrice?.point.id).toBe(1)
+    expect(l.trade).toMatchObject({ scope: 'district', stat: { name: '寺島本町東' } })
+  })
+  it('照合: 町名が集計にない時は市全体。住所なし・他市町村は取引なし。範囲外は null。取得結果なしは null', () => {
+    expect(lookupLibrary(fixture, 134.5515, 34.0745, '徳島県徳島市別の町')!.trade?.scope).toBe('city')
+    expect(lookupLibrary(fixture, 134.5515, 34.0745, null)!.trade).toBeUndefined() // 住所が取れない時は取引の数値を当てない
+    expect(lookupLibrary(fixture, 134.5515, 34.0745, '徳島県鳴門市撫養町')!.trade).toBeUndefined() // 他市町村
+    expect(lookupLibrary(fixture, 135.5, 35.0, null)).toBeNull()
+    expect(lookupLibrary(null, 134.5515, 34.0745, 'x')).toBeNull()
+  })
+  it('取得結果がなければ、シート・要約に「ライブラリ由来」も金額も出ない（偽の由来を出さない）', () => {
+    const f = base({ zone: { name: '商業地域', bcr: 80, far: 600, polys: [] }, lib: null })
+    const s = buildSheet(f, {})
+    expect(s.libSections).toEqual([])
+    expect(text([s, summarize(f)])).not.toMatch(/ライブラリ由来|不動産情報ライブラリ|円/)
+    expect(s.otherItems.join()).toMatch(/取引価格.*地価公示.*区域区分/)
+  })
+  it('取得結果があれば、売るの聞くことと要約に由来つきで出て、「確認する項目」から外れる。価格は参考値・個別でないと明記', () => {
+    const lib = lookupLibrary(fixture, 134.5515, 34.0745, '徳島県徳島市寺島本町東三丁目付近')!
+    const f = base({ zone: { name: '商業地域', bcr: 80, far: 600, polys: [] }, lib })
+    const s = buildSheet(f, {})
+    expect(s.libSections).toEqual(['division', 'landPrice', 'trade'])
+    const sell = exit(s, 'sell')!.items.filter((i) => i.basis === 'library')
+    expect(sell).toHaveLength(3)
+    expect(text(sell)).toMatch(/333,000円/)
+    expect(text(sell)).toMatch(/この土地の価格ではない/)
+    expect(text(sell)).toMatch(/個別の物件の価格ではない/)
+    expect(text(sell)).not.toMatch(/売るべき|査定額|評価額|おすすめ/)
+    const rows = summarize(f).filter((r) => r.lib)
+    expect(rows.map((r) => r.key)).toEqual(['lib-division', 'lib-land', 'lib-trade'])
+    expect(summarize(f).filter((r) => !r.lib).every((r) => !/円/.test(r.value))).toBe(true)
+    expect(s.otherItems.join()).not.toMatch(/取引価格|地価公示|区域区分/)
+    expect(sheetToText(s, summarize(f), [], '', [])).toMatch(/ライブラリ由来/)
+  })
+  it('調整区域のときは売る・活かすに市役所への聞くことが付く', () => {
+    const lib: ReinfolibData = { ...fixture, trade: undefined, landPrice: undefined, division: { features: [{ cls: '市街化調整区域', polys: fixture.division!.features[0].polys }] } }
+    const s = buildSheet(base({ lib: lookupLibrary(lib, 134.55, 34.05, null) }), {})
+    expect(text(exit(s, 'sell'))).toMatch(/市街化調整区域/)
+    expect(text(exit(s, 'use'))).toMatch(/必要な手続き/)
   })
 })

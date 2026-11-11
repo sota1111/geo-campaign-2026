@@ -1,13 +1,16 @@
 // AI（Sonnet）による模擬評価の結果。実際の審査結果ではない。
 // 出典（点数・文言はここからだけ転記。新しい数値は作らない）:
 //   採点基準 reports/ops/dashboard-rubric-20261111.md
-//   評価報告 reports/ops/dashboard-eval-20261111/{odpt-udc,satellite,ichibiz-business-idea,ichibiz-realestate-mobile}.md
-// 評価日 2026-11-11、評価者は Sonnet 4名。各アプリの B・C は1名が採点（複数人の突き合わせはしていない）。
+//   第1回（2026-11-11・改修前）reports/ops/dashboard-eval-20261111/{odpt-udc,satellite,ichibiz-business-idea,ichibiz-realestate-mobile}.md
+//   第2回（2026-11-12・第1回の改修後）reports/ops/dashboard-eval-20261112/ 以下の同名4件
+// 評価者は各回 Sonnet 4名。各アプリの B・C は1名が採点（複数人の突き合わせはしていない）。第2回の後にさらに改修が入る予定。
 import type { ContestId } from './registry'
 
-export const EVAL_DATE = '2026-11-11'
+export const EVAL_DATE_R1 = '2026-11-11'
+export const EVAL_DATE_R2 = '2026-11-12'
 export const RUBRIC_PATH = 'reports/ops/dashboard-rubric-20261111.md'
 const DIR = 'reports/ops/dashboard-eval-20261111/'
+const DIR2 = 'reports/ops/dashboard-eval-20261112/'
 
 export interface Evaluator {
   n: 1 | 2 | 3 | 4
@@ -29,7 +32,7 @@ export const B_ITEMS = ['B1 目的の伝わりやすさ', 'B2 操作の導線', 
 export const A_MAX = 25
 export const B_MAX = 35
 
-export const EVALUATORS: Evaluator[] = [
+export const EVALUATORS_R1: Evaluator[] = [
   {
     n: 1,
     scope: 'ODPT・UDC（診断マップ／盛土ウォッチ）',
@@ -104,7 +107,7 @@ export interface AppEval {
   bugs: string[]
 }
 
-export const APP_EVALS: AppEval[] = [
+export const APP_EVALS_R1: AppEval[] = [
   {
     appId: 'odpt',
     evaluator: 1,
@@ -322,14 +325,15 @@ export const APP_EVALS: AppEval[] = [
 ]
 
 export interface PortalFinding {
-  priority: '高' | '中' | '低'
+  /** 優先度。報告書の「ポータルの記載とアプリの食い違い」欄の指摘は優先度が付かないため '食い違い' */
+  priority: '高' | '中' | '低' | '食い違い'
   text: string
   /** 指摘した評価者 */
   by: number[]
 }
 
 /** ポータルへの指摘（報告書の改善提案・不具合・食い違いから） */
-export const PORTAL_FINDINGS: PortalFinding[] = [
+export const PORTAL_FINDINGS_R1: PortalFinding[] = [
   { priority: '高', by: [1, 4], text: 'コンペタブ内のアプリへの「開く」が1画面目の外にある（デスクトップで y≒750、スマホでは約1500pxのスクロール）。概要カードの直下か見出し横に置く。' },
   { priority: '高', by: [3], text: 'アプリから「← 統合ダッシュボード」で戻ると毎回UDCタブが選ばれ、元のコンペに戻れない（評価者2も優先度「中」で同じ指摘。評価者1は同じタブに戻れたと記録しており、評価者間で食い違う）。' },
   { priority: '高', by: [2], text: '衛星タブの国籍要件が、注意点では確定的（「必要」）、未確認では未確定（「本アワードにも適用されるか」）と食い違う。失格に関わる項目のため表現をそろえる。' },
@@ -339,20 +343,377 @@ export const PORTAL_FINDINGS: PortalFinding[] = [
 ]
 
 /** 評価全体の限界（評価で確認できなかった範囲） */
-export const COMMON_UNVERIFIED = [
+export const COMMON_UNVERIFIED_R1 = [
   'キーボード（Tab/Enter）操作は、確認できたアプリと未検証のアプリがある（衛星の2アプリは未検証、イチBizは一部のみ）',
   'スマホ幅は headless Chrome や iframe による確認が中心で、実機は未確認',
   '書き出し（CSV・GeoJSON のダウンロード）と印刷は、実行していないアプリがある',
   '各アプリの B・C は1名の評価者による採点で、複数人の突き合わせはしていない',
 ]
 
+// ---------------------------------------------------------------------------
+// 第2回（2026-11-12）。第1回の改修後の画面に対する評価。出典は DIR2 の各報告書。
+// ---------------------------------------------------------------------------
+
+export const EVALUATORS_R2: Evaluator[] = [
+  {
+    n: 1,
+    scope: 'ODPT・UDC（診断マップ／盛土ウォッチ）',
+    report: DIR2 + 'odpt-udc.md',
+    a: [4, 4, 4, 4, 3],
+    aReported: 19,
+    unverified: [
+      'スマホ幅は headless の静止画（初期画面のみ・操作なし）で、診断マップは地図の格子が静止画に出ていなかった（読み込み待ちの可能性）。実機での確認が必要',
+      'Tab キーだけで全手順を完走することは未確認。クリップボードの内容そのもの（貼り付け結果）は未確認',
+      '公開後のアドレスでも共有リンクが同じ動作かは未確認',
+    ],
+  },
+  {
+    n: 2,
+    scope: '衛星アワード（提案A／提案B）',
+    report: DIR2 + 'satellite.md',
+    a: [4, 4, 5, 4, 3],
+    aReported: 20,
+    unverified: [
+      'アプリから「統合ダッシュボード」で戻ったときの戻り先タブは未確認（今回は戻りを使わず直接移動）',
+      'CSV 書き出しは実行せず（ボタンの存在と手順上の扱いのみ確認）。エラー表示も試していない',
+      'キーボードは一部の手順のみ（提案A 手順3、提案B の確認・記録）。スマホ幅は自タブ内の390px iframe で、実機ではない',
+    ],
+  },
+  {
+    n: 3,
+    scope: 'イチBiz（バス路線見直し案／地名の記憶マップ）',
+    report: DIR2 + 'ichibiz-business-idea.md',
+    a: [4, 4, 4, 4, 3],
+    aReported: 19,
+    unverified: [
+      'CSV／GeoJSON の書き出し（ダウンロード）と各アプリの「実行サンプル」は未実行',
+      'バス路線の路線の追加・削除・検索は試していない',
+      'スマホ幅は390px の iframe で1枚のみ',
+    ],
+  },
+  {
+    n: 4,
+    scope: 'イチBiz（相談前の1枚シート）・スマホ幅のポータル',
+    report: DIR2 + 'ichibiz-realestate-mobile.md',
+    a: [4, 4, 4, 4, 3],
+    aReported: 19,
+    unverified: [
+      'スマホ幅は 390×844 の iframe（実効の描画幅375px）での確認で、実機のタッチ・アドレスバーは未検証',
+      '印刷ダイアログは開いていない。Tab 順による全操作の確認までは行っていない',
+      '検索ヒットなしなどのエラー系は未検証。スマホでの注意点の見つけやすさは「未確認」と報告書に記載',
+    ],
+  },
+]
+
+export const APP_EVALS_R2: AppEval[] = [
+  {
+    appId: 'odpt',
+    evaluator: 1,
+    report: DIR2 + 'odpt-udc.md',
+    b: [5, 4, 4, 5, 3, 3, 5],
+    bReported: 29,
+    c: [
+      {
+        contest: 'odpt-2026',
+        label: 'ODPT',
+        items: [
+          { name: 'C-ODPT1 社会課題解決', score: 4 },
+          { name: 'C-ODPT2 オープンデータ活用', score: 4 },
+          { name: 'C-ODPT3 技術的完成度', score: 4 },
+          { name: 'C-ODPT4 UI/UX', score: 4 },
+        ],
+        reported: 16,
+      },
+      {
+        contest: 'udc-2026',
+        label: 'UDC 作品①',
+        items: [
+          { name: 'C-UDC1 実用度', score: 4 },
+          { name: 'C-UDC2 完成度', score: 4 },
+          { name: 'C-UDC3 挑戦度', score: 3 },
+        ],
+        reported: 11,
+        note: '差別化: 題材は違うが、画面の骨格（左に5手順・右に地図・最後にコピー）と注意書きの型が同じで、同一主体の「類似作品」に見えるおそれがある（報告書）。',
+      },
+    ],
+    high: [
+      '共有リンクを新しいタブで開くと場所（pt）が落ちて手順1に戻り、受け取った家族が結論を見られない。リンクを開いたら該当地点の結論を直接表示する。復元できないなら、コピー文を結論の文面だけで完結させる。',
+      '作品①と②が同じ「5手順＋地図」の型に見える。①は「家族に送る1枚（結論・最終便・次の一歩）」を画面の主役にし、②は「記録の台帳・地域でまとめる」側に寄せるなど、見せ方と最終成果物を変える。',
+      '結論カードの下に「使ったデータ: 〇〇バス（ODPT/GTFS）」を事業者名つきで一行出す（C-ODPT2）。出典ボタンを開かないと分からない。',
+    ],
+    bugs: [
+      '共有リンク（結論とリンクをコピー）を別のページから新規に開くと、場所が復元されず手順1・0/5に戻る。',
+      '同一ページでURLのハッシュだけを変えて移動すると、表示は前の地点のまま URL だけ別地点になる。',
+      '範囲外をタップすると赤字で「診断範囲外」と出るが、手順1は ✓ のまま、手順2が「次はこれ」になる。',
+    ],
+  },
+  {
+    appId: 'udc-moritsuchi',
+    evaluator: 1,
+    report: DIR2 + 'odpt-udc.md',
+    b: [4, 4, 4, 5, 3, 3, 5],
+    bReported: 28,
+    c: [
+      {
+        contest: 'udc-2026',
+        label: 'UDC 作品②',
+        items: [
+          { name: 'C-UDC1 実用度', score: 4 },
+          { name: 'C-UDC2 完成度', score: 4 },
+          { name: 'C-UDC3 挑戦度', score: 3 },
+        ],
+        reported: 11,
+        note: '差別化: 作品①と同じ画面の型に見える（上記①の補足と同じ）。',
+      },
+    ],
+    high: [
+      '作品①と同じ「5手順＋地図」の型に見える。②は「記録の台帳・地域でまとめる」側に寄せるなど、結論の見せ方と最終成果物を①と変える（報告書の提案は①と②に共通）。',
+    ],
+    bugs: [
+      '開いた直後から手順4「気づいたことを記録する」が ✓（同じブラウザに前回の保存記録が残るため）。画面に「前回の記録」の説明がない。',
+      '手順5で「全記録を消す」（赤）が「GeoJSONを読み込む」の隣にある。確認の有無は試していない。',
+    ],
+  },
+  {
+    appId: 'sat-a',
+    evaluator: 2,
+    report: DIR2 + 'satellite.md',
+    b: [4, 4, 4, 4, 3, 4, 5],
+    bReported: 28,
+    c: [
+      {
+        contest: 'satellite-2026',
+        label: '衛星アワード 提案A',
+        items: [
+          { name: 'C-SAT1 テーマ合致', score: 5 },
+          { name: 'C-SAT2 衛星データの妥当性', score: 3 },
+          { name: 'C-SAT3 実現性・収益性', score: 4 },
+          { name: 'C-SAT4 社会発展性', score: 3 },
+          { name: 'C-SAT5 開発の進捗（加点）', score: 4 },
+        ],
+        reported: 19,
+        note: '差別化（衛星内）: 提案Aと提案Bは対象と利用者が異なり、似て見えない（報告書）。',
+      },
+    ],
+    high: [
+      '衛星値が人手の式と乱数であることが最大の弱点（C-SAT2）。公開InSARの沈下速度を少数区画だけでも使い「架空の街」に実データを混ぜる。難しければ「衛星指標の作り方」の図を1枚置く。',
+      '（両アプリ共通）事業モデルに数字を足す。顧客数、1自治体あたりの想定年額の幅、削減割合の仮説と根拠を「仮説」の印付きで（C-SAT3）。',
+    ],
+    bugs: [
+      '手順2のスライダ説明行（走らせられる延長）が、固定の「選択中 0 区間」帯の下に重なって一部切れて見える。',
+      '「点数の上位から自動で選ぶ」を押すとボタンが約16px下へ動く（メッセージの追加による）。',
+      'スマホ幅（iframe近似）で地図が小さく（高さ約150px）区画ラベルが重なって読めない。ヘッダは3段に折り返す。',
+    ],
+  },
+  {
+    appId: 'sat-b',
+    evaluator: 2,
+    report: DIR2 + 'satellite.md',
+    b: [4, 4, 4, 5, 3, 3, 5],
+    bReported: 28,
+    c: [
+      {
+        contest: 'satellite-2026',
+        label: '衛星アワード 提案B',
+        items: [
+          { name: 'C-SAT1 テーマ合致', score: 4 },
+          { name: 'C-SAT2 衛星データの妥当性', score: 2 },
+          { name: 'C-SAT3 実現性・収益性', score: 4 },
+          { name: 'C-SAT4 社会発展性', score: 4 },
+          { name: 'C-SAT5 開発の進捗（加点）', score: 5 },
+        ],
+        reported: 19,
+      },
+    ],
+    high: [
+      '衛星由来の変化量を実データで1つでも点数に載せる（例: 実在の盛土1〜2か所に公開済みの Sentinel-1/InSAR 結果または地理院の標高差）。現状は「衛星由来：点数外」と出るだけで、審査基準の核心を満たさない（C-SAT2）。',
+      '（両アプリ共通）事業モデルに数字を足す。顧客数、1自治体あたりの想定年額の幅、削減割合の仮説と根拠を「仮説」の印付きで（C-SAT3）。',
+      '初期状態の「記録1件／巡視済み」を空にする、または「サンプルの巡視記録」と明示し、回り順から巡視済みを除く（B5）。',
+    ],
+    bugs: [
+      '開くと「巡視を記録済み 1か所／記録 1件」が最初から出る（画面に「前の利用者の記録が残っている場合があります」の注意あり）。',
+      '手順3は開いた時点で ✓ になり「次はこれ」が手順4へ移る。計画の1番に既に「巡視済み」の地点が入る。',
+      '手順3の回り順の線が北と南を往復し、5番が遠く（約17.4km）離れる。最短順のようには見えない（近傍法との説明はある）。',
+    ],
+  },
+  {
+    appId: 'biz-business',
+    evaluator: 3,
+    report: DIR2 + 'ichibiz-business-idea.md',
+    b: [4, 4, 4, 4, 3, 4, 4],
+    bReported: 27,
+    c: [
+      {
+        contest: 'ichibiz-2026',
+        label: 'イチBiz バス路線（ビジネス部門）',
+        items: [
+          { name: 'C-BIZ1 独創性', score: 3 },
+          { name: 'C-BIZ2 社会的インパクト', score: 4 },
+          { name: 'C-BIZ3 実現可能性', score: 4 },
+          { name: 'C-BIZ4 持続性', score: 3 },
+        ],
+        reported: 14,
+      },
+    ],
+    high: [
+      '手順1・手順4は、操作しなくても済になる。「例のまま確定」「見ただけ」で完了にするならナビに書くか、確定ボタンを押した時だけ済にする（B5）。',
+      '案A・案Bを同じ画面に並べて見られるようにする（地図に2案を色分けで同時表示、または比較バー）。結論「案B」の根拠が地図から見えない。',
+      '持続性（C-BIZ4）の根拠を画面に出す。年額ライセンス（価格未定）を、想定顧客数・導入手順・データ更新の担い手で補う。',
+    ],
+    bugs: ['手順1が最初から済、手順4は開くだけで済になり、操作しなくても進捗が進む。'],
+  },
+  {
+    appId: 'biz-idea',
+    evaluator: 3,
+    report: DIR2 + 'ichibiz-business-idea.md',
+    b: [4, 4, 4, 3, 3, 4, 5],
+    bReported: 27,
+    c: [
+      {
+        contest: 'ichibiz-2026',
+        label: 'イチBiz 地名の記憶マップ（アイデア部門）',
+        items: [
+          { name: 'C-BIZ1 独創性', score: 4 },
+          { name: 'C-BIZ2 社会的インパクト', score: 3 },
+          { name: 'C-BIZ3 実現可能性', score: 3 },
+          { name: 'C-BIZ4 持続性', score: 3 },
+        ],
+        reported: 13,
+      },
+    ],
+    high: [
+      '開いた直後に「6のうち2完了」（手順4・5が済）となる。初回表示や再訪時に「前回の記録があります／最初からやり直す」を明示するか、今回の操作に基づく進捗だけを数える（B4・B5）。',
+    ],
+    bugs: [
+      '開いた直後に「6のうち2完了」で手順4・5が済。手順1の地名も未選択（他の評価者の保存が同一ブラウザに残った可能性あり）。',
+      '手順3で推薦ボタンを押すと説明文が伸び、下の項目が約30px下がって押し損じた。',
+      '初回の地図が「地図を読み込み中…」の淡い表示のまま数秒止まる。',
+      '「サンプルの語りを入力欄に写す」を押して保存すると、保存後に入力欄が空に戻る（通知には書かれている）。',
+    ],
+  },
+  {
+    appId: 'biz-realestate',
+    evaluator: 4,
+    report: DIR2 + 'ichibiz-realestate-mobile.md',
+    b: [4, 4, 4, 4, 3, 3, 5],
+    bReported: 27,
+    c: [
+      {
+        contest: 'ichibiz-2026',
+        label: 'イチBiz 相談前の1枚シート（不動産情報活用部門）',
+        items: [
+          { name: 'C-BIZ1 独創性', score: 3 },
+          { name: 'C-BIZ2 社会的インパクト', score: 4 },
+          { name: 'C-BIZ3 実現可能性', score: 3 },
+          { name: 'C-BIZ4 持続性', score: 3 },
+        ],
+        reported: 13,
+        note: '不動産情報ライブラリの活用（一言評価）: 2/5相当。画面で「ライブラリとの関係」を整理していて誠実だが、実際のデータはライブラリ由来ではなく、部門の趣旨の核は未達成と見える（報告書）。',
+      },
+    ],
+    high: [
+      '不動産情報ライブラリを最低1項目でも実際に取得して手順3に出し、「ライブラリ由来」バッジを付ける。取得できない場合の表示も用意する。部門の評価の中心で最優先。',
+      'サンプル土地の前提「市街化調整区域」と、地図の徳島駅周辺の商業系用途地域とのズレを解消する。サンプルを廃止して実検索の例を既定にする案もある。',
+      '持続性（誰が・いくらで・どう更新するか）を、手順5のシート上部かポータルのカード上にも要約で置く。',
+      'スマホで手順一覧を開くと地図が隠れる。最終シートは4241pxあるので、出口ごとの折りたたみか「出口を1つ選ぶと該当だけ表示」にする。',
+    ],
+    bugs: [
+      '手順2は未回答でも「地図では分からないことに答える ✓」になる。',
+      'アプリを再読み込みすると前回の進捗（5/5完了）が復元され、検索欄に入力しても手順5のまま反応が無いように見える。復元の表示か「最初からやり直す」が欲しい。',
+      '「実行サンプルを見る」を開いた直後、一瞬「土地の位置がまだ決まっていません」と出る。',
+      'スマホで手順一覧を開くと地図が隠れ、手順を選ぶまで開いたまま。',
+      'サンプル土地の「市街化調整区域」が、地図背景（徳島駅周辺の商業系用途地域の色）と食い違って見える。',
+    ],
+  },
+]
+
+/** 第2回のポータルへの指摘（各報告書の改善提案・食い違い欄から） */
+export const PORTAL_FINDINGS_R2: PortalFinding[] = [
+  { priority: '高', by: [1, 2, 3, 4], text: 'AI評価の表示（帯・タブ・各カードの点数・タブ末尾）が複数箇所にあり、審査員が見たい募集内容・締切を押し下げる（4名とも A5 を3点）。1か所（専用タブ）に集約する。' },
+  { priority: '高', by: [1], text: 'ODPT の審査基準4項目が見出しだけで説明がない。UDC のように各一行の説明を付け、要項に説明がなければ「要項に記載なし」と明記する。' },
+  { priority: '高', by: [1, 4], text: '初期画面で「注意点」まで見えない（デスクトップ 1568×765）。概要の一文と締切を上に詰める。スマホでは概要が約2821pxと縦長で、注意点が押し下げられる。' },
+  { priority: '中', by: [4], text: 'イチBiz不動産部門の説明（「活用する不動産情報ライブラリの情報を書く」）だけ読むと活用済みと受け取れる。デモはライブラリの API をまだ使っていない旨をポータルにも示す。' },
+  { priority: '中', by: [3], text: 'イチBizの注意点で、失格につながる条件（生成AI・知財・秘密にしたい案）と、受賞後の義務（現地参加）が同じ枠に混在し、重みが同じに見える。' },
+  { priority: '低', by: [1], text: 'UDC タブの作品①の案内「もう1件」が小さな一行で、カードに見えず見落としやすい。' },
+  { priority: '低', by: [2], text: '衛星タブに協賛企業テーマと共通テーマ1・2の内容を1行ずつ載せる。' },
+  { priority: '食い違い', by: [3], text: 'ポータルの地名の記憶マップの説明「公開データで確かめ」は、実際は伝承碑と旧版地図の重ね合わせで、「手がかりを探す」が正確（アプリの説明文の側の記載）。' },
+  { priority: '食い違い', by: [1], text: 'ポータルの診断マップ紹介の「富山市・上市町・立山町…」は5地域のうち富山の話で、他4地域で同様の接続診断ができるかはアプリ内から分からない（アプリの説明文の側の記載）。' },
+]
+
+export const COMMON_UNVERIFIED_R2 = [
+  'キーボード（Tab/Enter）操作は、一部の手順のみ確認したアプリが多く、全手順の通しは未確認',
+  'スマホ幅は headless Chrome や iframe による確認が中心で、実機は未確認',
+  '書き出し（CSV・GeoJSON のダウンロード）と印刷は、実行していないアプリがある',
+  '各アプリの B・C は1名の評価者による採点で、複数人の突き合わせはしていない',
+  '第2回の後にさらに改修が入る予定で、その画面は未評価',
+]
+
+// ---------------------------------------------------------------------------
+// 回ごとの束ね
+// ---------------------------------------------------------------------------
+
+export type Round = 1 | 2
+export interface RoundData {
+  round: Round
+  date: string
+  /** 評価対象の画面の説明 */
+  target: string
+  evaluators: Evaluator[]
+  apps: AppEval[]
+  findings: PortalFinding[]
+  unverified: string[]
+}
+
+export const ROUND_1: RoundData = {
+  round: 1,
+  date: EVAL_DATE_R1,
+  target: '改修前の画面',
+  evaluators: EVALUATORS_R1,
+  apps: APP_EVALS_R1,
+  findings: PORTAL_FINDINGS_R1,
+  unverified: COMMON_UNVERIFIED_R1,
+}
+export const ROUND_2: RoundData = {
+  round: 2,
+  date: EVAL_DATE_R2,
+  target: '第1回の改修後の画面',
+  evaluators: EVALUATORS_R2,
+  apps: APP_EVALS_R2,
+  findings: PORTAL_FINDINGS_R2,
+  unverified: COMMON_UNVERIFIED_R2,
+}
+
+/** 最新（第2回）と、その前（第1回）。さらに回が増えたらここを差し替える */
+export const LATEST = ROUND_2
+export const PREVIOUS = ROUND_1
+export const APP_EVALS = LATEST.apps
+
 export const sum = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0)
 export const pct = (score: number, max: number) => Math.round((score / max) * 100)
 
-export function evalOf(appId: string): AppEval | undefined {
-  return APP_EVALS.find((e) => e.appId === appId)
+export function evalOf(appId: string, r: RoundData = LATEST): AppEval | undefined {
+  return r.apps.find((e) => e.appId === appId)
 }
-export function cSetOf(appId: string, contest: ContestId): CSet | undefined {
-  return evalOf(appId)?.c.find((c) => c.contest === contest)
+export function cSetOf(appId: string, contest: ContestId, r: RoundData = LATEST): CSet | undefined {
+  return evalOf(appId, r)?.c.find((c) => c.contest === contest)
 }
 export const cMax = (c: CSet) => c.items.length * 5
+export const bTotal = (ev: AppEval) => sum(ev.b)
+export const cTotal = (c: CSet) => sum(c.items.map((i) => i.score))
+export const aTotal = (e: Evaluator) => sum(e.a)
+
+/** 点の差。+3／−2／±0 の形（色に頼らず符号で示す） */
+export function deltaText(d: number): string {
+  return d > 0 ? `+${d}` : d < 0 ? `−${Math.abs(d)}` : '±0'
+}
+
+/** 第1回→第2回の差（アプリ・コンペ単位）。どちらかの回に無ければ undefined */
+export function diffOf(appId: string, contest: ContestId): { b: number; c: number } | undefined {
+  const a1 = evalOf(appId, PREVIOUS)
+  const a2 = evalOf(appId, LATEST)
+  const c1 = cSetOf(appId, contest, PREVIOUS)
+  const c2 = cSetOf(appId, contest, LATEST)
+  if (!a1 || !a2 || !c1 || !c2) return undefined
+  return { b: bTotal(a2) - bTotal(a1), c: cTotal(c2) - cTotal(c1) }
+}
+

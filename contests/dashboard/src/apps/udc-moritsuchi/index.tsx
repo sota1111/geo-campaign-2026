@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   ATAMI_STATION, KINDS, KIND_LABEL, distText, fmtDate, inCoverage, kindDescription,
-  makeRecord, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
+  ledgerSummary, makeRecord, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
   type FillFeature, type MwRecord, type NearFill,
 } from './lib'
 import { KIND_HELP, NEAR_M, nearSummary, searchPlaces, type PlaceHit } from './search'
@@ -138,6 +138,10 @@ export default function App() {
   const [rawRecords, setRawRecords] = useLocalStorage<MwRecord[]>('udc-moritsuchi:records', [], [SAMPLE_RECORD])
   const records = useMemo(() => sanitizeRecords(rawRecords), [rawRecords])
   const sample = isSampleMode()
+  // 前回までに保存した記録（この端末に残っているもの）。手順4の「済」は、今回の操作で保存したときだけにする
+  const [prevIds] = useState(() => new Set(sanitizeRecords(rawRecords).map((r) => r.id)))
+  const [addedNow, setAddedNow] = useState(sample)
+  const [importedN, setImportedN] = useState(0)
   const [step, setStep] = useState(sample ? 'prep' : 'place')
   const [selFill, setSelFill] = useState<string | null>(null)
   const [selRec, setSelRec] = useState<string | null>(sample ? SAMPLE_REC_ID : null)
@@ -448,6 +452,7 @@ export default function App() {
     setMemo('')
     setWhen(fmtDate(new Date()).replace(' ', 'T'))
     setSelRec(rec.id)
+    setAddedNow(true)
     setIoMsg('')
     setSavedMsg(`保存しました（${KIND_LABEL[rec.kind]}／${rec.observedAt}）。地図の黄色い丸が記録です。`)
     toast.success('記録を保存しました')
@@ -521,6 +526,7 @@ export default function App() {
         const have = new Set(records.map((x) => x.id))
         const add = r.records.filter((x) => !have.has(x.id))
         setRawRecords((prev) => [...sanitizeRecords(prev), ...add])
+        setImportedN((n) => n + add.length)
         setIoMsg(
           `${add.length}件を読み込みました` +
             (r.skipped ? `（形式が不正な${r.skipped}件は除外）` : '') +
@@ -540,6 +546,8 @@ export default function App() {
     setIoMsg('全記録を消しました。')
   }
 
+  const prevLeft = records.filter((r) => prevIds.has(r.id)).length
+  const ledger = ledgerSummary(records)
   const outOfCoverage = pick ? !inCoverage(pick.lng, pick.lat) : false
   const originIsExample = origin.label.startsWith('熱海駅（例')
 
@@ -547,8 +555,8 @@ export default function App() {
     place: { title: '自宅の場所を入れる', hint: '住所・駅名で検索します（熱海駅は例です）' },
     look: { title: '近くの盛土造成地を確かめる', hint: '一覧から選び、型（谷埋め／腹付け）を見ます' },
     compare: { title: '昔の写真と見比べる', hint: '年代を選び、スライダーで今と昔を行き来します' },
-    rec: { title: '気づいたことを記録する', hint: '地図をタップして位置を決め、保存します' },
-    prep: { title: '市に伝える文面を用意する', hint: '通報文をコピーするか、記録を書き出します' },
+    rec: { title: '台帳に記録を足す', hint: '地図をタップして位置を決め、気づいたことを1件ずつ台帳に足します' },
+    prep: { title: '台帳にまとめて市に届ける', hint: '台帳をCSV／GeoJSONで書き出す。1件の通報文もコピーできます' },
     ref: { title: '参考（出典・注意）', hint: '任意。データの出典と使うときの注意です' },
   }
 
@@ -558,14 +566,14 @@ export default function App() {
       { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: originChosen },
       { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: didLook },
       { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今', done: didCompare },
-      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて保存', action: '保存すると完了', done: records.length > 0 },
-      { id: 'prep', title: STEP_META.prep.title, hint: 'コピーまたは書き出し', action: '文面をコピーすると完了', done: didPrepare },
+      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: addedNow },
+      { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: didPrepare },
       { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
     ],
     {
       activeId: step,
       onSelectStep: goStep,
-      description: '熱海市に住む住民として、自宅の周りに大規模な盛土の造成地があるかを知り、気づいた変化を記録して市に伝える準備をします。',
+      description: '熱海市・伊東市の住民や自治会が、身近な盛土の変化を「地域の点検台帳」に記録し、まとめて書き出して市に届ける準備をします。',
     },
   )
 
@@ -847,45 +855,56 @@ export default function App() {
       <div className="mt-auto shrink-0 space-y-2 border-t bg-background pt-3 md:sticky md:bottom-0">
         {(savedMsg || records.length > 0) && (
           <p className="rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-medium" data-testid="saved-note" role="status">
-            {savedMsg ? `✔ ${savedMsg}` : ''} 保存済みの記録: {records.length}件
+            {savedMsg ? `✔ ${savedMsg}` : ''} 台帳の記録: {records.length}件
           </p>
         )}
-        <Button type="submit" disabled={!pick} className="w-full">この場所を記録する（この端末に保存）</Button>
+        {prevLeft > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2 text-xs" data-testid="prev-records">
+            <span>前回までの記録が、この端末に{prevLeft}件残っています（この手順の「済」は、今回保存したときにつきます）。</span>
+            <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setClearOpen(true)}><Trash2 className="size-3.5" />全記録を消す</Button>
+          </div>
+        )}
+        <Button type="submit" disabled={!pick} className="w-full">台帳に足す（この端末に保存）</Button>
       </div>
     </form>
   )
 
   const panelPrep = (
     <div className="relative space-y-3">
-      {selectedRecord ? (
-        <div className="space-y-2 rounded-md border-2 border-primary p-3">
-          <p className="text-sm font-medium" data-testid="prep-status">
-            {didPrepare ? '✔ 完了しました（文面のコピーまたは書き出しをしました）。' : 'この手順は、文面をコピー（または書き出し）すると完了します。'}
-          </p>
-          <Button size="lg" className="h-14 w-full text-base" onClick={() => copy(withSampleMark(report), 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピーする</Button>
-          <div className="text-sm font-semibold">通報文のたたき台</div>
-          <Textarea readOnly rows={7} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={exportGeo}><Download className="size-4" />GeoJSONで書き出す</Button>
-            <Button variant="outline" onClick={exportCsv}><Download className="size-4" />CSVで書き出す</Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            このページは送信しません。通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
-          </p>
-          <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">
-            <p className="font-medium text-foreground">記録を集める人と、伝え先（想定）</p>
-            <ul className="mt-1 list-disc space-y-1 pl-4">
-              <li>記録を集めるのは、自治会・自主防災組織の有志や住民を想定しています。各自が書き出したGeoJSON／CSVを持ち寄ると、地域の点検記録になります。</li>
-              <li>伝え先は、市の盛土・造成を扱う担当課や防災の窓口（電話・メール・フォームなど、市ごとに異なります）を想定しています。特定の市や自治会との連携、運用の実績はまだありません。</li>
-            </ul>
-          </div>
+      <div className="space-y-2 rounded-md border-2 border-primary p-3" data-testid="ledger">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-sm font-bold">地域の点検台帳</p>
+          <p className="text-sm">この端末: <b data-testid="rec-count">{records.length}</b> 件{importedN > 0 ? `（うち今回読み込み ${importedN} 件）` : ''}</p>
         </div>
-      ) : (
-        <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">記録がまだありません。記録を1件保存すると、通報文のたたき台ができます。</p>
-      )}
+        {records.length > 0 ? (
+          <div className="space-y-1 text-xs" data-testid="ledger-summary">
+            <p>種類別: {ledger.byKind.map((k) => `${k.label} ${k.n}`).join('／')}</p>
+            <p>
+              近くの造成地（範囲内か{NEAR_M}m以内）別:{' '}
+              {ledger.byFill.length ? ledger.byFill.map((f) => `${f.id}（${f.kind}）${f.n}件`).join('／') : 'なし'}
+              {ledger.far > 0 && `／それ以外 ${ledger.far}件`}
+              {ledger.outside > 0 && `／対象範囲外 ${ledger.outside}件`}
+            </p>
+            <p className="text-muted-foreground">件数を数えただけで、危険かどうかの判定ではありません。</p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">台帳はまだ空です。「台帳に記録を足す」で1件足すか、仲間の台帳（GeoJSON）を読み込みます。</p>
+        )}
+        <p className="text-sm font-medium" data-testid="prep-status">
+          {didPrepare ? '✔ 完了しました（台帳の書き出しか、通報文のコピーをしました）。' : 'この手順は、台帳を書き出すか、通報文をコピーすると完了します。'}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="lg" className="h-12 text-base" onClick={exportCsv} disabled={!records.length} data-testid="export-csv"><Download className="size-5" />台帳をCSVで書き出す</Button>
+          <Button size="lg" variant="outline" className="h-12 text-base" onClick={exportGeo} disabled={!records.length}><Download className="size-5" />GeoJSONで書き出す</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          CSVは表計算ソフトで開けます。GeoJSONは、仲間に渡して読み込んでもらったり、地図ソフト（QGIS等）で確かめたりできます。このページは送信しません。
+        </p>
+      </div>
+
       <div className="space-y-1.5">
-        <p className="text-sm">記録 <b data-testid="rec-count">{records.length}</b> 件。選ぶと、その記録の通報文になります。</p>
-        <ul className="max-h-44 space-y-1.5 overflow-y-auto" aria-label="記録の一覧">
+        <p className="text-sm font-medium">台帳の記録（足した順）</p>
+        <ul className="space-y-1.5" aria-label="記録の一覧">
           {!records.length && <li className="rounded-md border p-2 text-sm text-muted-foreground">まだ記録がありません。</li>}
           {records.map((r) => (
             <li key={r.id} className={`space-y-0.5 rounded-md border p-2 text-sm ${r.id === selectedRecord?.id ? 'border-primary bg-accent/50' : ''}`}>
@@ -901,9 +920,10 @@ export default function App() {
           ))}
         </ul>
       </div>
+
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" asChild>
-          <label htmlFor="mw-import" className="cursor-pointer"><Upload className="size-4" />GeoJSONを読み込む</label>
+          <label htmlFor="mw-import" className="cursor-pointer"><Upload className="size-4" />仲間の台帳（GeoJSON）を読み込む</label>
         </Button>
         <input id="mw-import" type="file" className="sr-only" accept=".geojson,.json,application/geo+json,application/json" onChange={onImport} />
         <Button size="sm" variant="destructive" disabled={!records.length} onClick={() => setClearOpen(true)}>
@@ -912,8 +932,27 @@ export default function App() {
       </div>
       <p className="text-sm" role="status" data-testid="io-msg">{ioMsg}</p>
       <p className="text-xs text-muted-foreground">
-        書き出したファイルは、自治会の仲間への共有や、地図ソフト（QGIS等）での確認に使えます。読み込みはこの端末内で行い、外部へ送信しません。
+        読み込みはこの端末内で行い、外部へ送信しません。同じIDの記録は重ねて足さず、いまの台帳のものを残します。
       </p>
+
+      {selectedRecord && (
+        <div className="space-y-2 rounded-md border p-3">
+          <div className="text-sm font-semibold">1件の通報文のたたき台（選んだ記録）</div>
+          <Textarea readOnly rows={7} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
+          <Button variant="outline" onClick={() => copy(withSampleMark(report), 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-4" />通報文をコピーする</Button>
+          <p className="text-xs text-muted-foreground">
+            通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">
+        <p className="font-medium text-foreground">台帳を集める人と、伝え先（想定）</p>
+        <ul className="mt-1 list-disc space-y-1 pl-4">
+          <li>台帳をつけるのは、自治会・自主防災組織の有志や住民を想定しています。各自が書き出したGeoJSON／CSVを持ち寄り、読み込んで1つにまとめると、地域の点検記録になります（複数人の持ち寄りはまだ実地では試していません）。</li>
+          <li>伝え先は、市の盛土・造成を扱う担当課や防災の窓口（電話・メール・フォームなど、市ごとに異なります）を想定しています。特定の市や自治会との連携、運用の実績はまだありません。</li>
+        </ul>
+      </div>
     </div>
   )
 

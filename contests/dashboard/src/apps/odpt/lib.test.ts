@@ -135,3 +135,28 @@ describe('検索の並べ替えと代替条件', () => {
     expect(L.altConditions(cell, { fi: 0, day: 'wd', per: 'm', w: 60, thresholds: th }).longerW).toBeNull()
   })
 })
+
+describe('共有リンクの読み取り・使ったデータの一行', () => {
+  it('「,」が %2C に変わったリンクでも地点を読める', () => {
+    const q = 'region=toyama&f=0&d=hol&p=m&w=30&pt=137.21307%2C36.70125'
+    expect(L.parseQuery(q).pt).toEqual([137.21307, 36.70125])
+    expect(L.parseQuery(q).day).toBe('hol')
+    expect(L.parseQuery('pt=%E0%A4%A')).toEqual({})
+    expect(L.parseQuery('n=%E5%AF%8C%E5%B1%B1%E9%A7%85&pt=137.2,36.7').label).toBe('富山駅')
+  })
+  it('近くの路線の事業者名と、フィードの公開元・ライセンスだけを使う', () => {
+    const i = toyama.nodes.findIndex((n) => n[5].length > 0)
+    const line = L.dataUsedLine(toyama, [i])
+    const op = toyama.routes[toyama.nodes[i][5][0]][2]
+    expect(line).toContain('使ったデータ: ')
+    expect(line).toContain(op)
+    expect(line).toContain('GTFSデータリポジトリ')
+    expect(line).not.toContain('ODPT')
+    // 近くに路線がなければ、収録フィードの事業者
+    expect(L.dataUsedLine(toyama, [])).toContain(toyama.feeds[0].org)
+  })
+  it('ODPTセンターのフィードは公共交通オープンデータセンター（ODPT）と書く', () => {
+    const tokyo = load('tokyo.json') as L.RegionData
+    expect(L.dataUsedLine(tokyo, [])).toContain('公共交通オープンデータセンター（ODPT）')
+  })
+})

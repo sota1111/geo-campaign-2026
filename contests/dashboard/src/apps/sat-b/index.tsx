@@ -8,7 +8,7 @@ import { SourceDialog, type SourceItem } from '@/components/shared/SourceDialog'
 import { downloadText } from '@/components/shared/downloadText'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { useHashState } from '@/components/shared/useHashState'
-import { useLocalStorage } from '@/components/shared/useLocalStorage'
+import { useSessionState } from './useSession'
 import { fetchData } from '@/lib/data'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +32,7 @@ import { isSampleMode } from '@/lib/sample'
 import { SAMPLE_RECORD } from './sample'
 import { SampleFrame, SiteMap, TilePhoto } from './parts'
 import { BusinessDialog } from './Business'
-import { SatContrast } from './SatContrast'
+import { SatContrast, satRank } from './SatContrast'
 import { markCsv } from '../_samples/mark'
 
 
@@ -67,7 +67,12 @@ const SOURCES: SourceItem[] = [
     url: 'https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html',
     note: '標高差・平均傾斜は本デモ用に算出（造成地ポリゴン内の最大−最小で、盛土の高さそのものではありません）。写真はブラウザが地理院から直接取得します。',
   },
-  { name: '架空サンプル（12地点）', note: '地点・区域・変化量・許可届出・巡視結果はすべて架空です。第三者データを含みません。' },
+  { name: '架空サンプル（12地点）', note: '地点・区域・変化量・許可届出・巡視結果はすべて架空です。第三者データを含みません。手順3「衛星の変化量で巡視の優先順位を決める」はこの架空値を使います。' },
+  {
+    name: '衛星由来の変化量（外部データは取り込んでいません）',
+    note: '2026-11-12 時点の検討結果: キー不要・ライセンス明確・地点ごとに使える公開の InSAR／光学の変化データを、横須賀市の716か所について時間内に確認・取り込みできませんでした（国土地理院の地図レイヤ一覧に該当する地盤変動のレイヤを見つけられず、地理院サイトの解説ページへは作業環境から接続できませんでした。存在しないと断定するものではありません）。そのため実データ版に衛星由来の値は入れておらず、画面では「未接続」と示しています。手順3は架空値の体験です。実運用で使う想定のデータは Sentinel-1（SAR）・Sentinel-2（光学）で、いずれも ESA が商用利用を含め無料で提供しています（提案書B・出典一覧）。',
+    url: 'https://documentation.dataspace.copernicus.eu/Data/SentinelMissions/Sentinel2.html',
+  },
 ]
 
 const dateStr = (d = new Date()) =>
@@ -143,7 +148,7 @@ const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   csv: { title: '計画をCSVで書き出す', hint: '書き出す内容を確かめて保存します' },
   record: { title: '巡視結果を記録する', hint: '地点・巡視日・巡視者・結果を入れて「記録する」' },
   check: { title: '台帳に反映されたか確かめる', hint: '台帳の「最新の巡視」に、記録した結果が出ています' },
-  sat: { title: '衛星の変化量が入ると（架空値の対比）', hint: '架空の12地点で、変化量の配点を動かして順位の動きを見ます（任意）' },
+  sat: { title: '衛星の変化量で巡視の優先順位を決める（架空値）', hint: '衛星が検出した変化が点数に入ると、巡視候補の上位が入れ替わります。架空の12地点で体験します' },
   tune: { title: '検出条件の見直し（参考）', hint: '巡視結果を集計し、型ごとの重みを手で調整します（任意）' },
 }
 
@@ -161,12 +166,13 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
   // 実行サンプル（実データ版）: 被験者が最後に見た手順6の状態から始める
   const seed = isSampleMode() && real
   const [step, setStep] = useState<StepId>(seed ? 'check' : 'data')
-  const [results, setResults] = useLocalStorage<PatrolResult[]>(`sat-b:results:${mode}`, [], seed ? [SAMPLE_RECORD] : [])
-  const [weights, setWeights] = useLocalStorage<Weights>(`sat-b:weights:${mode}`, clone(real ? DEFAULT_WEIGHTS_REAL : DEFAULT_WEIGHTS))
+  const [results, setResults] = useSessionState<PatrolResult[]>(`sat-b:results:${mode}`, [], seed ? [SAMPLE_RECORD] : [])
+  const [weights, setWeights] = useSessionState<Weights>(`sat-b:weights:${mode}`, clone(real ? DEFAULT_WEIGHTS_REAL : DEFAULT_WEIGHTS))
   const [sel, setSel] = useState<string | null>(seed ? SAMPLE_RECORD.siteId : null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [recSite, setRecSite] = useState<string>('')
   const [cap, setCap] = useState(5)
+  const [satPct, setSatPct] = useState(0)
   const [zone, setZone] = useState('all')
   const [second, setSecond] = useState('all')
   const [unvisited, setUnvisited] = useState(false)
@@ -177,7 +183,6 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
   const dataChecked = prog.data, planSeen = prog.plan, planExported = prog.csv, recordedNow = prog.record, ledgerChecked = prog.check
   const lastRecorded = prog.last
   const setDataChecked = (b: boolean) => setProg({ data: b })
-  useEffect(() => { if (step === 'plan' && !prog.plan) setProg({ plan: true }) }, [step, prog.plan, setProg])
   // 「見る」手順: 台帳の行（または地図の点）を1つ選んで内訳を見たら済（開いただけでは済にしない）
   useEffect(() => { if (sel && !prog.ledger) setProg({ ledger: true }) }, [sel, prog.ledger, setProg])
   useEffect(() => { if (step === 'check' && prog.record && !prog.check) setProg({ check: true }) }, [step, prog.record, prog.check, setProg])
@@ -188,12 +193,15 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
     [ranked, mode, zone, second, unvisited],
   )
   const selSite = ranked.find((s) => s.id === sel) ?? null
-  const plan = useMemo(() => planRoute(ranked, ds.origin, Math.max(1, Math.min(30, cap || 1))), [ranked, ds, cap])
+  // 開いた時点で巡視済みの地点は、今月の計画に入れない（この画面で記録した地点は、計画に残して「記録済み」と出す）
+  const [doneBefore] = useState<Set<string>>(() => new Set(seed ? [] : results.map((r) => r.siteId)))
+  const planPool = useMemo(() => ranked.filter((s) => !doneBefore.has(s.id)), [ranked, doneBefore])
+  const plan = useMemo(() => planRoute(planPool, ds.origin, Math.max(1, Math.min(30, cap || 1))), [planPool, ds, cap])
   const note = real ? '実データ: 国土数値情報A54/A56・地理院DEM。衛星由来の変化は未接続' : 'サンプル（架空）'
   const resetAll = () => {
     setResults([])
     setWeights(clone(real ? DEFAULT_WEIGHTS_REAL : DEFAULT_WEIGHTS))
-    toast.success('この端末に保存された記録と重みを消して、最初の状態に戻しました')
+    toast.success('このタブに保存された記録と重みを消して、最初の状態に戻しました')
   }
 
   const select = (id: string) => { setSel(id); setDetailOpen(true) }
@@ -202,11 +210,11 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
     [
       { id: 'data', title: 'データを確かめる', hint: real ? '実データの内容を確認' : '「実データ（横須賀市）」を選ぶ', action: '確認ボタンを押すと完了', done: real && dataChecked },
       { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '台帳の行を選ぶと内訳が見られる', action: '台帳の行を1つ選ぶと完了', done: prog.ledger },
-      { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', done: planSeen },
+      { id: 'sat', title: '衛星の変化量で巡視の優先順位を決める（架空値）', hint: '衛星の変化が点数に入ると、巡視候補が入れ替わる', action: 'スライダーを右へ動かすと完了', done: prog.sat },
+      { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', action: '「この計画で確定する」を押すと完了', done: planSeen },
       { id: 'csv', title: '計画をCSVで書き出す', action: '書き出すと完了', done: planExported },
       { id: 'record', title: '巡視結果を記録する', action: '記録すると完了', done: recordedNow },
       { id: 'check', title: '台帳に反映されたか確かめる', hint: '「最新の巡視」に結果が出る', done: ledgerChecked },
-      { id: 'sat', title: '衛星の変化量が入ると（架空値）', hint: '架空の12地点で順位の動きを比べる', action: 'スライダーを動かすと完了', optional: true, done: prog.sat },
       { id: 'tune', title: '検出条件の見直し（参考）', optional: true, done: false },
     ],
     {
@@ -223,12 +231,24 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
   const info = STEP_INFO[step]
   const showDetail = (step === 'ledger' || step === 'check') && detailOpen && !!selSite
 
+  // 手順3は、実データ（横須賀市）の地図ではなく、架空の12地点の模式図を出す（実データと取り違えないため、枠も別にする）
+  const satMode = step === 'sat'
+  const satRows = useMemo(() => satRank(fictional, satPct), [fictional, satPct])
   const aside = (
-    <div className="relative h-full">
-      <SiteMap
-        ds={ds} rows={step === 'ledger' ? rows : ranked} sel={mapSel} onSelect={select}
-        route={step === 'plan' || step === 'csv' ? plan.route : undefined} className="h-full"
-      />
+    <div className={cn('relative h-full', satMode && 'border-4 border-dashed border-amber-500')} data-testid={satMode ? 'sat-fictional-map' : undefined}>
+      {satMode ? (
+        <SiteMap ds={fictional} rows={satRows} sel={null} onSelect={() => undefined} className="h-full" />
+      ) : (
+        <SiteMap
+          ds={ds} rows={step === 'ledger' ? rows : ranked} sel={mapSel} onSelect={select}
+          route={step === 'plan' || step === 'csv' ? plan.route : undefined} className="h-full"
+        />
+      )}
+      {satMode && (
+        <p className="pointer-events-none absolute left-2 top-2 z-10 rounded border border-dashed border-amber-600 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-950">
+          ◇架空の12地点（実在の地図・実データではありません）。丸の数字＝衛星の配点 {satPct}% での順位
+        </p>
+      )}
       {isDesktop && showDetail && selSite && (
         <div className="absolute inset-y-2 right-2 z-10 flex w-[min(24rem,calc(100%-1rem))] flex-col rounded-md border bg-background shadow-lg">
           <div className="flex shrink-0 items-start gap-2 border-b px-3 py-2">
@@ -243,9 +263,9 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
           </div>
         </div>
       )}
-      <p className="pointer-events-none absolute bottom-6 left-2 z-10 max-w-[60%] rounded bg-background/85 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+      {!satMode && <p className="pointer-events-none absolute bottom-6 left-2 z-10 max-w-[60%] rounded bg-background/85 px-1.5 py-0.5 text-[10px] text-muted-foreground">
         {real ? '濃い茶ほど優先度が高い（淡い橙＝低い）。大きい点は上位20か所' : '模式図（実在の地図ではありません）。濃いほど優先度が高い'}
-      </p>
+      </p>}
     </div>
   )
 
@@ -283,9 +303,9 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
           />
         )}
         {step === 'plan' && (
-          <PlanPanel mode={mode} plan={plan} cap={cap} setCap={setCap} sel={sel} onSelect={select} />
+          <PlanPanel mode={mode} plan={plan} cap={cap} setCap={setCap} sel={sel} onSelect={select} skipped={doneBefore.size} confirmed={planSeen} onConfirm={() => setProg({ plan: true })} />
         )}
-        {step === 'csv' && <CsvPanel mode={mode} plan={plan} note={note} onExported={() => setProg({ csv: true })} />}
+        {step === 'csv' && <CsvPanel mode={mode} plan={plan} note={note} onExported={() => setProg({ csv: true, plan: true })} />}
         {step === 'record' && (
           <RecordPanel
             mode={mode} ranked={ranked} planIds={plan.route.map((s) => s.id)} results={results} setResults={setResults} recSite={recSite}
@@ -295,7 +315,7 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
         {step === 'check' && (
           <CheckPanel plan={plan.route} mode={mode} ranked={ranked} results={results} sel={sel} onSelect={select} onReset={resetAll} />
         )}
-        {step === 'sat' && <SatContrast fictional={fictional} onTouched={() => !prog.sat && setProg({ sat: true })} />}
+        {step === 'sat' && <SatContrast fictional={fictional} pct={satPct} setPct={setSatPct} onTouched={() => !prog.sat && setProg({ sat: true })} />}
         {step === 'tune' && <TuneTab ds={ds} mode={mode} results={results} weights={weights} setWeights={setWeights} />}
       </StepLayout>
 
@@ -340,7 +360,7 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
           {real ? (
             <p>
               造成地の位置・型・規制区域は国土数値情報、標高差と傾斜は地理院DEM、写真は地理院タイルの実データです。
-              <b>{NOT_CONNECTED}</b>。実運用では Sentinel-1/2 で算出する想定で、今の点数は型・区域・面積・標高差・傾斜だけの暫定です。
+              <b>{NOT_CONNECTED}</b>。実運用では Sentinel-1/2 で算出する想定で、今の点数は型・区域・面積・標高差・傾斜だけの暫定です。衛星の変化が巡視の優先順位を決める流れは、手順3で架空の12地点を使って体験できます（実データとは別物です）。
               衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。内容を読んだら、下のボタンを押してください。
             </p>
           ) : (
@@ -351,7 +371,7 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
       <div className="grid grid-cols-3 gap-2">
         <Metric label="台帳の件数" value={`${ranked.length}か所`} sub={real ? '横須賀市（A54）' : '架空'} />
         <Metric label="巡視を記録済み" value={`${visited}か所`} sub={`未巡視 ${ranked.length - visited}か所`} />
-        <Metric label="記録の件数" value={`${results.length}件`} sub="この端末の記録" />
+        <Metric label="記録の件数" value={`${results.length}件`} sub="このタブの記録" />
       </div>
       {real && (
         <Button
@@ -362,7 +382,7 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
         </Button>
       )}
       <div className="space-y-1.5 rounded-md border p-2 text-xs text-muted-foreground">
-        <p>{isSampleMode() ? `記録（${results.length}件）は実行サンプルの再現で、どこにも保存されません。` : `記録（${results.length}件）はこの端末のブラウザ（localStorage）に保存されたもので、外部へは送信されません。前の利用者の記録が残っている場合があります。`}</p>
+        <p>{isSampleMode() ? `記録（${results.length}件）は実行サンプルの再現で、どこにも保存されません。` : (results.length === 0 ? '記録はまだありません（開いた直後は空です）。記録はこのタブのブラウザ内（sessionStorage）にだけ保存され、外部へは送信されません。タブを閉じると消えます。' : `記録（${results.length}件）はこのタブのブラウザ内（sessionStorage）にだけ保存され、外部へは送信されません。タブを閉じると消えます。`)}</p>
         <ResetDialog onReset={onReset} count={results.length} />
       </div>
       {real && (
@@ -472,9 +492,9 @@ function LedgerPanel({ mode, rows, ranked, sel, onSelect, note, zone, setZone, s
 
 // ---------------- 3 計画 ----------------
 type Plan = ReturnType<typeof planRoute<Ranked>>
-function PlanPanel({ mode, plan, cap, setCap, sel, onSelect }: {
+function PlanPanel({ mode, plan, cap, setCap, sel, onSelect, skipped, confirmed, onConfirm }: {
   mode: Mode; plan: Plan; cap: number; setCap: (n: number) => void; sel: string | null
-  onSelect: (id: string) => void
+  onSelect: (id: string) => void; skipped: number; confirmed: boolean; onConfirm: () => void
 }) {
   const real = mode === 'real'
   return (
@@ -486,9 +506,18 @@ function PlanPanel({ mode, plan, cap, setCap, sel, onSelect }: {
             onChange={(e) => setCap(Math.max(0, Math.min(30, Math.round(+e.target.value) || 0)))} />
         </div>
         <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-          点数の高い順に上位N件を選び、{real ? '市役所付近' : '役所'}からの回り順（地図上の直線距離の最近傍法）で並べます。道路事情・立入可否は考慮しません。
+          巡視済みでない地点から点数の高い順に上位N件を選び、{real ? '市役所付近' : '役所'}から出て戻る回り順（地図上の直線距離で最短になる順）に並べます。道路事情・立入可否は考慮しません。
         </p>
       </div>
+      {skipped > 0 && (
+        <p className="text-xs text-muted-foreground" data-testid="plan-skipped">この画面を開いた時点で巡視済みの {skipped} か所は、計画に入れていません。</p>
+      )}
+      <Button
+        variant={confirmed ? 'secondary' : 'default'} className="h-auto w-full whitespace-normal py-2 text-left"
+        aria-pressed={confirmed} onClick={onConfirm} data-testid="plan-confirm"
+      >
+        {confirmed ? '✓ この件数・回り順で計画を確定しました' : 'この件数・回り順で計画を確定する'}
+      </Button>
       <p className="text-xs">
         <b>同点のとき</b>は面積の大きい順、面積も同じなら ID の順（台帳と同じ順位）。内訳は各行の下に出ます。
       </p>
@@ -602,7 +631,7 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        {isSampleMode() ? '実行サンプルでは記録はどこにも保存されません（再読み込みで元に戻ります）。' : '記録はこのブラウザの localStorage にだけ保存され、外部へ送信しません。'}氏名等の個人情報は入れないでください。実データ版と架空サンプルで記録は別に保存されます。
+        {isSampleMode() ? '実行サンプルでは記録はどこにも保存されません（再読み込みで元に戻ります）。' : '記録はこのタブのブラウザ内（sessionStorage）にだけ保存され、外部へ送信しません。タブを閉じると消えます。'}氏名等の個人情報は入れないでください。実データ版と架空サンプルで記録は別に保存されます。
       </p>
       <div className="space-y-1">
         <Label htmlFor="sat-b-site">地点{rec ? `（順位 ${rec.rank}／点数 ${rec.score}）` : ''}</Label>
@@ -712,7 +741,7 @@ function CheckPanel({ plan, ranked, results, sel, onSelect, onReset }: {
           <p className="mr-auto text-xs font-medium">記録一覧（{results.length}件）</p>
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={exportRec} disabled={!results.length}><Download className="size-3.5" />巡視記録の一覧をCSVで保存（patrol-records.csv）</Button>
         </div>
-        <p className="text-xs text-muted-foreground">{isSampleMode() ? '実行サンプルの再現した記録です（保存されません）。' : 'この端末のブラウザに保存された記録です（外部へ送信されません）。前の利用者の記録が残っている場合があります。'}</p>
+        <p className="text-xs text-muted-foreground">{isSampleMode() ? '実行サンプルの再現した記録です（保存されません）。' : 'このタブのブラウザ内に保存された記録です（外部へ送信されません。タブを閉じると消えます）。'}</p>
         <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
           <Table>
             <TableHeader><TableRow><TableHead>巡視日</TableHead><TableHead>ID</TableHead><TableHead>巡視者</TableHead><TableHead>結果</TableHead><TableHead>メモ</TableHead></TableRow></TableHeader>
@@ -790,7 +819,7 @@ function SiteDetail({ s, mode, results }: { s: Ranked; mode: Mode; results: Patr
             <li key={label} className="flex justify-between gap-2">
               <span>{p == null ? '衛星由来' : label}</span>
               {p == null
-                ? <span className="shrink-0 font-medium text-amber-800">点数外</span>
+                ? <span className="shrink-0 font-medium text-amber-800">未接続（手順3で架空値を体験）</span>
                 : <span className="shrink-0 font-mono">{p >= 0 ? '+' : ''}{p}</span>}
             </li>
           ))}
@@ -821,7 +850,7 @@ function PartsInline({ parts }: { parts: Ranked['parts'] }) {
     <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
       {parts.map(([label, p]) => (
         <li key={label} className="whitespace-nowrap">
-          {p == null ? <span className="text-amber-800">衛星由来: 点数外</span> : <>{label.split('（')[0]} <b className="font-mono">{p >= 0 ? '+' : ''}{p}</b></>}
+          {p == null ? <span className="text-amber-800">衛星由来: 未接続</span> : <>{label.split('（')[0]} <b className="font-mono">{p >= 0 ? '+' : ''}{p}</b></>}
         </li>
       ))}
     </ul>
@@ -896,7 +925,7 @@ function ResetDialog({ onReset, count }: { onReset: () => void; count: number })
         <DialogHeader>
           <DialogTitle>記録をすべて消して最初の状態に戻しますか</DialogTitle>
           <DialogDescription>
-            このデータ（実データ／架空サンプルのうち表示中の側）について、この端末のブラウザに保存された巡視記録 {count}件と、検出条件の重みの変更を消します。元に戻せません。
+            このデータ（実データ／架空サンプルのうち表示中の側）について、このタブに保存された巡視記録 {count}件と、検出条件の重みの変更を消します。元に戻せません。
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

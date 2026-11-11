@@ -1,4 +1,5 @@
 /* 相談前の1枚シート: 純粋ロジック（元アプリ web/lib.js の TypeScript 版＋画面用の要約）。DOM・ネットワークには触れない。 */
+import { yen, type LibFacts } from './reinfolib.ts'
 
 export type Ring = [number, number][]
 export type Poly = Ring[]
@@ -109,7 +110,10 @@ export function demElevation(r: number, g: number, b: number): number | null {
 export type HazStatus = 'inside' | 'outside' | 'error'
 export interface Haz { status: HazStatus; depth?: string | null }
 export interface Facts {
-  sample?: boolean
+  /** 「例を見る」で出した例の土地（徳島駅付近の実際の位置の実データ。回答は例の回答＝架空） */
+  example?: boolean
+  /** 不動産情報ライブラリ由来のデータ（同梱の取得結果があり、この地点に該当した分だけ） */
+  lib?: LibFacts | null
   place: string
   inArea: boolean
   zone: Zone | null
@@ -119,25 +123,16 @@ export interface Facts {
   sediment: { kyukeisha?: HazStatus; dosekiryu?: HazStatus; jisuberi?: HazStatus }
   elevation: number | null
   transit: Transit | null
-  調整区域?: boolean
 }
 export interface Answers { building?: string; landUse?: string; road?: string; registered?: string }
 
-export const SAMPLE_FACTS: Facts = {
-  sample: true,
-  place: 'サンプル（架空）の土地',
-  inArea: true,
-  zone: null,
-  flood: { status: 'inside', depth: '0.5〜3m' },
-  hightide: { status: 'outside' },
-  tsunami: { status: 'outside' },
-  sediment: { kyukeisha: 'outside', dosekiryu: 'outside', jisuberi: 'outside' },
-  elevation: null,
-  transit: { radius: 500, busNames: 1, bus: { name: '（架空）〇〇バス停', dist: 620 }, rail: { name: '（架空）△△駅', dist: 4800 } },
-  調整区域: true,
-}
+/** 例の土地（徳島駅付近）に添える回答。実在の人の回答ではなく、例として置いたもの（架空） */
 export const SAMPLE_ANSWERS: Answers = { building: 'あり', landUse: '不明', road: '不明', registered: '未' }
 
+/** 「約◯m」。50m未満は「50m未満」 */
+export function fmtApprox(m: number) {
+  return m < 50 ? '50m未満' : '約' + fmtDist(m)
+}
 export function fmtDist(m: number) {
   return m >= 1000 ? (m / 1000).toFixed(1) + 'km' : Math.round(m / 10) * 10 + 'm'
 }
@@ -146,9 +141,10 @@ export function fmtNear(m: number) {
   return m < 50 ? 'すぐ近く（50m未満）' : '直線約' + fmtDist(m)
 }
 
-export interface Item { basis: 'data' | 'answer' | 'none'; fact: string; ask: string; who: string }
+export type LibSection = 'division' | 'landPrice' | 'trade'
+export interface Item { basis: 'data' | 'library' | 'answer' | 'none'; fact: string; ask: string; who: string }
 export interface Exit { key: 'sell' | 'rent' | 'use' | 'release'; label: string; items: Item[] }
-export interface Sheet { title: string; place: string; sample: boolean; exits: Exit[]; missing: string[]; otherItems: string[] }
+export interface Sheet { title: string; place: string; example: boolean; libSections: LibSection[]; exits: Exit[]; missing: string[]; otherItems: string[] }
 
 export function hazardErrors(f: Facts): string[] {
   const out: string[] = []
@@ -165,10 +161,7 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
   const exits: Record<Exit['key'], Item[]> = { sell: [], rent: [], use: [], release: [] }
   const missing: string[] = []
 
-  if (f.調整区域 === true) {
-    exits.sell.push({ basis: 'data', fact: '市街化調整区域にある（サンプルの前提）。', ask: '建てられる建物の条件を市役所の都市計画担当に聞く。買い手の想定を不動産会社に聞く。', who: '市役所・不動産会社' })
-    exits.use.push({ basis: 'data', fact: '市街化調整区域にある（サンプルの前提）。', ask: '自分で建てる・使う場合に必要な手続きを市役所に聞く。', who: '市役所' })
-  } else if (f.zone) {
+  if (f.zone) {
     const z = f.zone
     const far = z.bcr || z.far ? '（データ上の建ぺい率' + (z.bcr || '—') + '%・容積率' + (z.far || '—') + '%）' : ''
     exits.sell.push({ basis: 'data', fact: '用途地域は「' + z.name + '」' + far + '。', ask: 'この用途地域で建てられる建物と、買い手が使える範囲を市役所・不動産会社に聞く。', who: '市役所・不動産会社' })
@@ -222,6 +215,40 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
     }
   }
 
+  // ---- 不動産情報ライブラリ由来（同梱の取得結果があり、この地点に該当した分だけ。無ければ何も足さない） ----
+  const libSections: LibSection[] = []
+  if (f.lib?.division) {
+    libSections.push('division')
+    const m = f.lib.division.main
+    const fact = '区域区分は「' + m + '」（不動産情報ライブラリ・都市計画決定GISデータ）。'
+    if (m.includes('調整')) {
+      exits.sell.push({ basis: 'library', fact, ask: '建てられる建物の条件を市役所の都市計画担当に聞く。買い手の想定を不動産会社に聞く。', who: '市役所・不動産会社' })
+      exits.use.push({ basis: 'library', fact, ask: '自分で建てる・使う場合に必要な手続きを市役所に聞く。', who: '市役所' })
+    } else {
+      exits.sell.push({ basis: 'library', fact, ask: '用途地域とあわせて、建てられる建物の条件を市役所の都市計画担当に聞く。', who: '市役所' })
+    }
+  }
+  if (f.lib?.landPrice) {
+    libSections.push('landPrice')
+    const { point: p, dist, year } = f.lib.landPrice
+    exits.sell.push({
+      basis: 'library',
+      fact: '近くの標準地「' + p.lot + '」（' + (p.kind || '地価公示・地価調査') + '・' + fmtApprox(dist) + '・' + (p.year || year + '年') + '）の価格は1平方メートルあたり' + yen(p.price) + '（参考値。この土地の価格ではない）。',
+      ask: 'この参考値と、実際の土地への当てはめ方（形・接道などによる違い）を不動産会社に聞く。',
+      who: '不動産会社',
+    })
+  }
+  if (f.lib?.trade) {
+    libSections.push('trade')
+    const { stat, scope, period } = f.lib.trade
+    exits.sell.push({
+      basis: 'library',
+      fact: (scope === 'district' ? '「' + stat.name + '」の' : '徳島市全体の') + '土地の取引（' + period + '・' + stat.n + '件）の1平方メートル単価の中央値は約' + yen(stat.medianUnitPrice) + '（' + (scope === 'district' ? '町名単位' : '町名の集計がないため市全体') + 'の集計。個別の物件の価格ではない）。',
+      ask: '相場の見方（立地・形・接道による違い）を不動産会社に聞く。',
+      who: '不動産会社',
+    })
+  }
+
   if (ans.building === 'あり') {
     exits.release.push({ basis: 'answer', fact: '土地に建物がある（あなたの回答）。建物がある土地は、相続土地国庫帰属制度の申請ができない。', ask: '解体の要否と費用の見通しを、司法書士・法務局に聞く。', who: '司法書士・法務局' })
     exits.sell.push({ basis: 'answer', fact: '土地に建物がある（あなたの回答）。', ask: '建物付きで売るか更地にして売るかを不動産会社に聞く。', who: '不動産会社' })
@@ -253,9 +280,10 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
   const empty = (arr: Item[], text: string): Item[] =>
     arr.length ? arr : [{ basis: 'none', fact: text, ask: '相談先に、この出口で確認すべき点を聞く。', who: '相談先' }]
   return {
-    title: f.sample ? 'サンプル（架空）の土地の1枚シート' : '相談前の1枚シート',
+    title: f.example ? '例（徳島駅付近）の1枚シート' : '相談前の1枚シート',
     place: f.place,
-    sample: !!f.sample,
+    example: !!f.example,
+    libSections,
     exits: [
       { key: 'sell', label: '売る', items: empty(exits.sell, 'この地点の用途地域データがない。') },
       { key: 'rent', label: '貸す', items: empty(exits.rent, 'この地点の災害・交通データがない。') },
@@ -263,13 +291,18 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
       { key: 'release', label: '手放す', items: exits.release },
     ],
     missing,
-    otherItems: ['周辺の取引価格の傾向（地区単位）', '近くの地価公示・地価調査の標準地', '将来推計人口（250mメッシュ）', '医療機関・小学校区'],
+    otherItems: [
+      ...(libSections.includes('trade') ? [] : ['周辺の取引価格の傾向（地区単位）']),
+      ...(libSections.includes('landPrice') ? [] : ['近くの地価公示・地価調査の標準地']),
+      ...(libSections.includes('division') ? [] : ['区域区分（市街化調整区域か）']),
+      '将来推計人口（250mメッシュ）', '医療機関・小学校区',
+    ],
   }
 }
 
 // ---- 画面用の「この土地の条件」要約 ----
 export type Tone = 'ok' | 'warn' | 'unknown'
-export interface SummaryRow { key: string; label: string; value: string; tone: Tone }
+export interface SummaryRow { key: string; label: string; value: string; tone: Tone; /** 不動産情報ライブラリ由来の行 */ lib?: boolean }
 
 function hazRow(key: string, label: string, h: Haz | null | undefined): SummaryRow {
   if (!h) return { key, label, value: '未確認', tone: 'unknown' }
@@ -280,8 +313,7 @@ function hazRow(key: string, label: string, h: Haz | null | undefined): SummaryR
 
 export function summarize(f: Facts): SummaryRow[] {
   const rows: SummaryRow[] = []
-  if (f.調整区域) rows.push({ key: 'zone', label: '用途地域', value: '指定なし（市街化調整区域というサンプルの前提）', tone: 'unknown' })
-  else if (f.zone) {
+  if (f.zone) {
     const z = f.zone
     rows.push({ key: 'zone', label: '用途地域', value: z.name + (z.bcr || z.far ? `（建ぺい率${z.bcr || '—'}%・容積率${z.far || '—'}%）` : ''), tone: 'ok' })
   } else if (f.inArea) rows.push({ key: 'zone', label: '用途地域', value: '指定がデータにない（調整区域・都市計画区域外・データが古い可能性。市役所で確認）', tone: 'unknown' })
@@ -298,13 +330,24 @@ export function summarize(f: Facts): SummaryRow[] {
   else rows.push({ key: 'sediment', label: '土砂災害警戒区域', value: '未確認', tone: 'unknown' })
   rows.push(f.elevation != null
     ? { key: 'elev', label: '標高（参考）', value: `約${f.elevation.toFixed(1)}m（地理院の標高タイル。測量ではない）`, tone: 'ok' }
-    : { key: 'elev', label: '標高（参考）', value: f.sample ? 'サンプルでは出さない' : '取得できなかった・値なし', tone: 'unknown' })
+    : { key: 'elev', label: '標高（参考）', value: '取得できなかった・値なし', tone: 'unknown' })
   if (f.transit) {
     const t = f.transit
     rows.push({ key: 'bus', label: '最寄りバス停', value: t.bus ? `${t.bus.name}まで${fmtNear(t.bus.dist)}（便数・運行日は含まない）` : 'データなし', tone: t.bus ? 'ok' : 'unknown' })
     rows.push({ key: 'rail', label: '最寄り駅', value: t.rail ? `${t.rail.name}まで${fmtNear(t.rail.dist)}` : 'データなし', tone: t.rail ? 'ok' : 'unknown' })
   } else {
     rows.push({ key: 'bus', label: '最寄りバス停・駅', value: '出せない（地図データは徳島市のみ。範囲外）', tone: 'unknown' })
+  }
+  // 不動産情報ライブラリ由来（同梱の取得結果がこの地点に該当した分だけ。無ければ行を出さない）
+  const L = f.lib
+  if (L?.division) rows.push({ key: 'lib-division', label: '区域区分', value: L.division.main + (L.division.classes.length > 1 ? '（データ上の区分: ' + L.division.classes.join('・') + '）' : ''), tone: 'ok', lib: true })
+  if (L?.landPrice) {
+    const { point: p, dist, year } = L.landPrice
+    rows.push({ key: 'lib-land', label: '近くの地価（参考）', value: '標準地「' + p.lot + '」（' + (p.kind || '地価公示・地価調査') + '、' + (p.year || year + '年') + '、' + fmtApprox(dist) + '）1平方メートルあたり' + yen(p.price) + '。この土地の価格ではない', tone: 'ok', lib: true })
+  }
+  if (L?.trade) {
+    const { stat, scope, period } = L.trade
+    rows.push({ key: 'lib-trade', label: '取引価格の傾向', value: (scope === 'district' ? stat.name + '（町名）' : '徳島市全体') + '・土地' + stat.n + '件（' + period + '）の1平方メートル単価の中央値 約' + yen(stat.medianUnitPrice) + '。個別の物件の価格ではない', tone: 'ok', lib: true })
   }
   return rows
 }
@@ -359,4 +402,21 @@ export const GLOSSARY: { term: string; re: RegExp; text: string }[] = [
 ]
 export function glossaryFor(text: string) {
   return GLOSSARY.filter((g) => g.re.test(text))
+}
+
+// ---- テキストでコピー（相談先にメール等で送る用）。画面のシートと同じ内容の素のテキスト ----
+export function sheetToText(sheet: Sheet, rows: SummaryRow[], digest: string[], where: string, answerLines: string[]): string {
+  const L: string[] = []
+  L.push(sheet.title + (sheet.example ? '（実在の相続土地ではありません。回答は例として置いた架空のものです）' : ''))
+  if (where) L.push(where)
+  if (digest.length) L.push('', '【まず確認すること】', ...digest.map((d) => '・' + d))
+  L.push('', '【あなたの回答】', answerLines.join('／'))
+  L.push('', '【この土地の条件（公開データから）】', ...rows.map((r) => '・' + r.label + (r.lib ? '［不動産情報ライブラリ由来］' : '') + '：' + r.value))
+  for (const e of sheet.exits) {
+    L.push('', '【' + e.label + '】')
+    for (const it of e.items) L.push('・' + it.fact, '　→ ' + it.ask + '（' + it.who + '）')
+  }
+  L.push('', '【データにない項目（相談先で確かめる）】', ...sheet.missing.map((m) => '・' + m))
+  L.push('', '国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。')
+  return L.join('\n')
 }
