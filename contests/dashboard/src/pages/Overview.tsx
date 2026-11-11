@@ -6,8 +6,9 @@ import { normalUrl, sampleUrl } from '@/components/layout/SampleBar'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { APPS, CONTESTS, appsByContest, getApp, type AppMeta } from '@/apps/registry'
+import { APPS, CONTESTS, appsByContest, getApp, type AppMeta, type ContestId } from '@/apps/registry'
 import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
+import { AppScoreLine, ContestEval, EvalSummary, MOCK_NOTICE } from '@/pages/EvalPanels'
 
 /** 残り日数のバッジ。色だけに頼らず、文言と記号で緊急度を示す */
 function Remaining({ at }: { at: string }) {
@@ -31,7 +32,7 @@ function nextDeadline(info: ContestInfo) {
   return info.deadlines.find((d) => new Date(d.at).getTime() > now) ?? info.deadlines[info.deadlines.length - 1]
 }
 
-function AppCard({ a }: { a: AppMeta }) {
+function AppCard({ a, contestId }: { a: AppMeta; contestId: ContestId }) {
   const contest = CONTESTS.find((c) => c.id === a.contest)
   return (
     <Card data-app-card={a.id} className="flex flex-col gap-2 py-3">
@@ -52,6 +53,9 @@ function AppCard({ a }: { a: AppMeta }) {
         <p className="line-clamp-2" title={a.purpose}>
           {a.purpose}
         </p>
+        <div className="mt-1.5">
+          <AppScoreLine appId={a.id} contest={contestId} />
+        </div>
       </CardContent>
       <CardFooter className="flex-wrap items-center justify-between gap-x-2 gap-y-2 px-4">
         <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
@@ -173,7 +177,7 @@ function ContestPanel({ info }: { info: ContestInfo }) {
         </h3>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {apps.map((a) => (
-            <AppCard key={a.id} a={a} />
+            <AppCard key={a.id} a={a} contestId={info.id} />
           ))}
         </div>
         {info.alsoApps?.map((x) => {
@@ -190,12 +194,17 @@ function ContestPanel({ info }: { info: ContestInfo }) {
           )
         })}
       </section>
+
+      <ContestEval contest={info.id} />
     </div>
   )
 }
 
+const EVAL_TAB = 'eval'
+
 export default function Overview() {
-  const initial = CONTEST_INFO.find((c) => `#${c.id}` === window.location.hash)?.id ?? CONTEST_INFO[0].id
+  const initial =
+    window.location.hash === `#${EVAL_TAB}` ? EVAL_TAB : (CONTEST_INFO.find((c) => `#${c.id}` === window.location.hash)?.id ?? CONTEST_INFO[0].id)
   const [tab, setTab] = useState<string>(initial)
   return (
     <div className="mx-auto max-w-6xl space-y-3">
@@ -209,8 +218,16 @@ export default function Overview() {
         </p>
       </header>
 
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-slate-400 bg-slate-50 px-3 py-1.5 text-xs" data-testid="eval-banner">
+        <span className="font-bold">AI評価の結果を掲載しています。</span>
+        <span>{MOCK_NOTICE}</span>
+        <button type="button" onClick={() => setTab(EVAL_TAB)} className="font-medium text-sky-800 underline underline-offset-2">
+          全アプリの点数一覧を見る
+        </button>
+      </p>
+
       <Tabs value={tab} onValueChange={setTab} className="gap-3">
-        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-4">
+        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-5">
           {CONTEST_INFO.map((info) => {
             const nd = nextDeadline(info)
             return (
@@ -228,7 +245,17 @@ export default function Overview() {
               </TabsTrigger>
             )
           })}
+          <TabsTrigger
+            value={EVAL_TAB}
+            className="h-auto flex-col items-start gap-0.5 whitespace-normal text-foreground border-border px-3 py-1.5 text-left data-[state=active]:border-foreground"
+          >
+            <span className="text-sm font-bold">AI評価の全体</span>
+            <span className="text-xs font-normal text-muted-foreground">全アプリの点数・ポータルの評価（模擬）</span>
+          </TabsTrigger>
         </TabsList>
+        <TabsContent value={EVAL_TAB} forceMount className="data-[state=inactive]:hidden">
+          <EvalSummary />
+        </TabsContent>
         {CONTEST_INFO.map((info) => (
           <TabsContent key={info.id} value={info.id} forceMount className="data-[state=inactive]:hidden">
             <ContestPanel info={info} />
