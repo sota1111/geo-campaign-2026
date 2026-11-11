@@ -178,3 +178,14 @@ export function pendingLabel(steps: Pick<AppStep, 'id' | 'title' | 'done' | 'opt
   const rest = p.length - 1
   return `まだ済んでいない手順: 手順${p[0].num}「${p[0].title}」${rest > 0 ? `ほか${rest}件` : ''}`
 }
+
+/** 飛ばして先へ進んでいるか: 表示中の手順が、最初の未完了の必須手順より後ろにある。activeId なし・全完了・順番どおりは false */
+export function skippedAhead(
+  steps: Pick<AppStep, 'id' | 'title' | 'done' | 'optional'>[],
+  activeId: string | undefined,
+): boolean {
+  if (!activeId) return false
+  const act = steps.findIndex((s) => s.id === activeId)
+  const first = steps.findIndex((s) => !s.done && !s.optional)
+  return act >= 0 && first >= 0 && act > first
+}

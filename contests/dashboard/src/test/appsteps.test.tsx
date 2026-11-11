@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import {
-  AppStepsProvider, currentStepIndex, pendingLabel, pendingRequired, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useAppSteps, useRegisteredSteps, type AppStep,
+  AppStepsProvider, currentStepIndex, pendingLabel, pendingRequired, skippedAhead, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useAppSteps, useRegisteredSteps, type AppStep,
 } from '@/components/shared/AppSteps'
 
 const s = (id: string, done: boolean, optional = false): AppStep => ({ id, title: id, done, optional })
@@ -46,6 +46,24 @@ describe('pendingLabel / pendingRequired', () => {
   it('必須がすべて済みなら null（任意が未完了でも）', () => {
     expect(pendingLabel([t('a', true), t('o', false, true)])).toBeNull()
     expect(pendingRequired([])).toEqual([])
+  })
+})
+
+describe('skippedAhead（飛ばしたときだけ未完了を出す）', () => {
+  const t = (id: string, done: boolean, optional = false) => ({ id, title: id, done, optional })
+  const steps = [t('a', true), t('b', false), t('c', false), t('o', false, true)]
+  it('順番どおり（表示中が最初の未完了以前）なら false', () => {
+    expect(skippedAhead(steps, 'a')).toBe(false)
+    expect(skippedAhead(steps, 'b')).toBe(false)
+  })
+  it('最初の未完了より後ろを表示したら true（任意手順でも）', () => {
+    expect(skippedAhead(steps, 'c')).toBe(true)
+    expect(skippedAhead(steps, 'o')).toBe(true)
+  })
+  it('activeId なし・全部済み・不明な id は false', () => {
+    expect(skippedAhead(steps, undefined)).toBe(false)
+    expect(skippedAhead([t('a', true), t('o', false, true)], 'o')).toBe(false)
+    expect(skippedAhead(steps, 'zzz')).toBe(false)
   })
 })
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import {
-  currentStepIndex, pendingLabel, pendingRequired, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useRegisteredSteps,
+  currentStepIndex, pendingLabel, pendingRequired, progressLabel, skippedAhead, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useRegisteredSteps,
   type AppStep, type StepStatus,
 } from '@/components/shared/AppSteps'
 import { cn } from '@/lib/utils'
@@ -20,9 +20,9 @@ function ProgressLine({ steps }: { steps: Steps }) {
   )
 }
 
-/** 未完了の必須手順の明示。押すとその手順へ。全部済みなら完了メッセージ */
+/** 未完了の必須手順の明示（前の必須手順を飛ばして先へ進んだ時だけ）。押すとその手順へ。全部済みなら完了メッセージ1行 */
 function PendingNotice({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
-  const { select } = useRegisteredSteps()
+  const { select, activeId } = useRegisteredSteps()
   const label = pendingLabel(steps)
   const first = pendingRequired(steps)[0]
   if (!label || !first) {
@@ -30,6 +30,8 @@ function PendingNotice({ steps, onPick }: { steps: Steps; onPick?: () => void })
       <p className="text-xs font-medium text-sky-800" data-testid="steps-alldone">目的に必要な手順はすべて完了しました</p>
     ) : null
   }
+  // 飛ばしたときだけ出す（順番どおりの間は「次はこれ」と手順リストで足りる）
+  if (!skippedAhead(steps, activeId)) return null
   return (
     <button
       type="button"

@@ -447,18 +447,6 @@ export default function BizIdeaApp() {
             <Note>碑が建てられていないだけの場合もあり、話が誤りという意味ではありません。範囲を広げるか、郷土資料・語り手への再確認で確かめます。</Note>
           </div>
         )}
-        {form.claimedKinds.length > 0 && (() => {
-          const rec = recommendOverlays(form.claimedKinds)[0]
-          const o = OVERLAYS.find((x) => x.id === rec.id)!
-          return (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border-2 border-black bg-yellow-50 p-2 text-sm">
-              <span className="font-bold">この話を昔の地図で確かめる</span>
-              <Button size="sm" variant={overlayId === rec.id ? 'default' : 'outline'} onClick={() => chooseOverlay(rec.id)}>
-                {overlayId === rec.id && <Check className="size-3.5" />}おすすめ: {o.label}を重ねる
-              </Button>
-            </div>
-          )
-        })()}
         {near.length ? (
           <>
             <Note>範囲内の伝承碑（語られた種類に合う碑を先頭に、あとは近い順・上位5件／全{near.length}件）。地図の青い丸でも見られます。</Note>
@@ -598,7 +586,6 @@ export default function BizIdeaApp() {
   const confirmPanel = (
     <div className="space-y-3">
       <Note>記録は必ず「未確認」から始まります。確認役が出典などを確かめて「確認済み」にし、公開範囲を選びます。このデモでは、あなたが確認役を兼ねます（実運用では図書館・郷土資料館等の担当者が行います）。</Note>
-      {savedRec && <SavedNotice rec={savedRec} />}
       {!records.length && <div className="rounded-md border p-3 text-sm">まだ記録がありません。手順「聞き取りを記録する」で1件保存してください。</div>}
       <ul className="space-y-2">
         {records.map((r) => (

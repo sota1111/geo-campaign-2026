@@ -76,6 +76,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   console.log(label, 'step cross', await stepClick('cross'), await panelTitle())
   let t = await body()
   console.log(label, '手がかりあり:', /手がかりあり/.test(t), await statuses(), await heights())
+  console.log(label, "手順2におすすめ重ねボタンなし:", !/この話を昔の地図で確かめる/.test(t))
   await shot(`${label}-3-cross`)
 
   console.log(label, 'step overlay', await stepClick('overlay'), await panelTitle(), '(押しただけ:', await statuses(), ')')
@@ -95,6 +96,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   console.log(label, '未確認:', /「未確認」の記録として保存しました/.test(t), '地名保持:', await ev(`document.getElementById('f-name').value`), await statuses())
 
   console.log(label, 'step confirm', await stepClick('confirm'), await panelTitle(), await heights())
+  console.log(label, "手順5の保存案内の数(保存しました):", (await body()).match(/保存しました/g)?.length ?? 0)
   console.log(label, await clickText('button', '確認済みにする…（確認役を兼ねる）'))
   await sleep(600)
   await shot(`${label}-6-confirm-dialog`)
