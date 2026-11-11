@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { fetchData } from '@/lib/data'
+import { useAppSteps } from '@/components/shared/AppSteps'
 import { cn } from '@/lib/utils'
 import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
@@ -159,7 +160,7 @@ export default function App() {
     const go = (behavior: ScrollBehavior) => {
       const el = sheetRef.current
       if (!el) return
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior })
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 96, behavior })
     }
     go('smooth')
     setTimeout(() => go('auto'), 800)
@@ -241,6 +242,38 @@ export default function App() {
     // 相続土地国庫帰属制度は「手放す」の注記に常にあるため、用語の説明にも常に載せる
     return glossaryFor(t + '国庫帰属')
   }, [sheet, digest, rows])
+  // ---- 手順サイドバー（useAppSteps） ----
+  const [viewed, setViewed] = useState<Record<string, boolean>>({})
+  const [printed, setPrinted] = useState(false)
+  // 条件・4出口の欄が実際に画面に表示されたら「読んだ」とみなす（土地が変わるたびにリセット）
+  useEffect(() => {
+    setViewed({})
+    setPrinted(false)
+    if (!facts) return
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) setViewed((v) => (v[e.target.id] ? v : { ...v, [e.target.id]: true }))
+    }, { threshold: 0.25 })
+    for (const id of ['rs-s3', 'rs-s4']) { const el = document.getElementById(id); if (el) io.observe(el) }
+    return () => io.disconnect()
+  }, [facts])
+  useEffect(() => {
+    const h = () => setPrinted(true)
+    window.addEventListener('afterprint', h)
+    return () => window.removeEventListener('afterprint', h)
+  }, [])
+  const goto = (id: string, fallbackSheet = false) => () => {
+    const el = document.getElementById(id) ?? (fallbackSheet ? sheetRef.current : null)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (id === 'rs-s1') setTimeout(() => document.getElementById('rs-q')?.focus({ preventScroll: true }), 400)
+  }
+  const answered = QUESTIONS.some((q) => (answers[q.key] ?? '不明') !== '不明')
+  useAppSteps([
+    { id: 'place', title: '土地の場所を決める', hint: '住所・駅名で検索して「この位置を土地として使う」、または地図をクリック', done: !!facts, onSelect: goto('rs-s1') },
+    { id: 'answers', title: '地図では分からないことに答える', hint: '建物・地目・接道・相続登記', done: answered, optional: true, onSelect: goto('rs-s2') },
+    { id: 'conditions', title: '土地の条件を確かめる', hint: '用途地域・災害の想定区域', done: !!facts && !!viewed['rs-s3'], onSelect: goto('rs-s3', true) },
+    { id: 'exits', title: '4つの出口の「聞くこと」を読む', hint: '売る・貸す・活かす・手放す', done: !!facts && !!viewed['rs-s4'], onSelect: goto('rs-s4', true) },
+    { id: 'print', title: '印刷・PDFで保存する', hint: '1枚シートをA4で出力', done: !!facts && printed, onSelect: goto('rs-s5') },
+  ])
   const keyRows = rows.filter((r) => r.key === 'zone' || r.key === 'flood')
 
   return (
@@ -261,7 +294,7 @@ export default function App() {
       </Alert>
 
       <div className="grid gap-4 lg:grid-cols-5 print:hidden">
-        <Card className="lg:col-span-3">
+        <Card id="rs-s1" className="scroll-mt-24 lg:col-span-3">
           <CardHeader>
             <CardTitle>1. 土地の場所を地図で指す</CardTitle>
             <CardDescription>地図をクリック（タップ）すると、その位置を土地として扱います。ドラッグで移動、右上のボタンで拡大縮小。</CardDescription>
@@ -295,7 +328,7 @@ export default function App() {
               </div>
             </div>
             {hit && (
-              <div ref={hitBannerRef} className="space-y-2 rounded-lg border-2 border-sky-700 bg-sky-50 p-3 scroll-mt-16" data-testid="use-hit" role="status">
+              <div ref={hitBannerRef} className="space-y-2 rounded-lg border-2 border-sky-700 bg-sky-50 p-3 scroll-mt-24" data-testid="use-hit" role="status">
                 <p className="text-base font-bold">「{hit.title}」の位置に移動しました（地図の青いマーカー）。次はどちらかを選んでください。</p>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" size="lg" className="h-auto min-h-11 whitespace-normal py-2 text-base" onClick={() => void choose(hit.lon, hit.lat, `検索した位置（${hit.title}）`)}>
@@ -330,7 +363,7 @@ export default function App() {
         </Card>
 
         <div className="space-y-4 lg:col-span-2">
-          <Card>
+          <Card id="rs-s2" className="scroll-mt-24">
             <CardHeader>
               <CardTitle>2. 地図では分からないことを選ぶ（任意）</CardTitle>
               <CardDescription>選ぶと、下の1枚シートの「手放す」「売る」などの内容が変わります（未選択でもシートは作れます）。選んだ内容は、この端末の中だけで使い、送信・保存はしません。</CardDescription>
@@ -354,7 +387,7 @@ export default function App() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="rs-s5" className="scroll-mt-24">
             <CardHeader>
               <CardTitle>3. 1枚シートを印刷・PDF保存する</CardTitle>
             </CardHeader>
@@ -375,7 +408,7 @@ export default function App() {
                 </dl>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" disabled={!sheet} onClick={() => window.print()}><Printer className="size-4" />印刷・PDFで保存する</Button>
+                <Button type="button" disabled={!sheet} onClick={() => { setPrinted(true); window.print() }}><Printer className="size-4" />印刷・PDFで保存する</Button>
                 <span className="text-xs text-muted-foreground">印刷画面で「PDFに保存」を選ぶとPDFになります。</span>
               </div>
             </CardContent>
@@ -383,7 +416,7 @@ export default function App() {
         </div>
       </div>
 
-      <div ref={sheetRef} className="scroll-mt-16">
+      <div ref={sheetRef} className="scroll-mt-24">
         {sheet ? (
           <Card className="print-sheet print:rounded-none print:border-0 print:p-0 print:shadow-none" id="rs-sheet" data-testid="sheet" aria-live="polite">
             <CardHeader className="print:p-0 print:pb-1">
@@ -423,7 +456,7 @@ export default function App() {
                   <li><span className="mr-1 inline-block rounded border px-1">データなし</span>＝ 該当データがなく、一般的な確認のみ</li>
                 </ul>
               </section>
-              <section aria-label="この土地の条件">
+              <section id="rs-s3" className="scroll-mt-24" aria-label="この土地の条件">
                 <h3 className="mb-1 text-sm font-bold print:mb-0.5 print:text-[9pt]">この土地の条件（公開データから）</h3>
                 <dl className="grid gap-x-4 sm:grid-cols-2 print:grid-cols-2" data-testid="summary">
                   {rows.map((r) => {
@@ -440,7 +473,7 @@ export default function App() {
                 </dl>
               </section>
 
-              <section aria-label="4つの出口ごとの聞くこと">
+              <section id="rs-s4" className="scroll-mt-24" aria-label="4つの出口ごとの聞くこと">
                 <h3 className="mb-1 text-sm font-bold print:mb-0.5 print:text-[9pt]">4つの出口ごとに、専門家に聞くこと</h3>
                 <div className="grid gap-3 md:grid-cols-2 print:grid-cols-2 print:gap-1.5">
                   {sheet.exits.map((e) => (

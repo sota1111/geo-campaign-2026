@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
-import { AlertTriangle, Copy, Crosshair, Download, CheckCircle2, Circle, History, LocateFixed, MapPin, Search, Trash2, Upload } from 'lucide-react'
+import { AlertTriangle, Copy, Crosshair, Download, History, LocateFixed, MapPin, Search, Trash2, Upload } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { downloadGeoJson, downloadText } from '@/components/shared/downloadText'
 import { useLocalStorage } from '@/components/shared/useLocalStorage'
 import { useHashState } from '@/components/shared/useHashState'
+import { useAppSteps } from '@/components/shared/AppSteps'
 import { parseHashQuery } from '@/components/shared/hashState'
 import { fetchData } from '@/lib/data'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -128,6 +129,7 @@ export default function App() {
   const [searchMsg, setSearchMsg] = useState('')
   const [justSaved, setJustSaved] = useState(false)
   const [didCompare, setDidCompare] = useState(false)
+  const [originChosen, setOriginChosen] = useState(false)
   const [didPrepare, setDidPrepare] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
 
@@ -256,6 +258,7 @@ export default function App() {
 
   const goOrigin = (o: { label: string; lng: number; lat: number }) => {
     setOrigin(o)
+    setOriginChosen(true)
     mapRef.current?.flyTo({ center: [o.lng, o.lat], zoom: 14.5, duration: 600 })
     if (window.innerWidth < 1024) mapWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -413,7 +416,7 @@ export default function App() {
       q.set('lng', c.lng.toFixed(5))
     }
     const i = window.location.hash.indexOf('?')
-    const path = i < 0 ? window.location.hash : window.location.hash.slice(0, i)
+    const path = (i < 0 ? window.location.hash : window.location.hash.slice(0, i)) || '#/'
     const url = window.location.href.split('#')[0] + path + '?' + q.toString()
     void copy(url, '表示中の地図のURLをコピーしました')
   }
@@ -467,26 +470,46 @@ export default function App() {
 
   const outOfCoverage = pick ? !inCoverage(pick.lng, pick.lat) : false
 
-  const checklist = [
-    { key: 'look', label: '近くの盛土造成地を確かめた', done: selFill !== null, next: '近くの盛土造成地を1つ選んで、型を確かめる', button: '一覧から選ぶ',
-      go: () => {
+  const goLast = () => {
+    const last = records[records.length - 1]
+    if (!last) return changeTab('rec')
+    setSelRec(last.id)
+    changeTab('out')
+    setJustSaved(true)
+  }
+  // 左サイドバー（スマホは上部ステッパー）の手順。上から順に進めると目的を達成できる
+  useAppSteps([
+    {
+      id: 'place', title: '自宅の場所を入れる', hint: '住所・駅名で検索（熱海駅は例）', done: originChosen,
+      onSelect: () => {
+        changeTab('look')
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const el = document.getElementById('mw-q')
+          el?.scrollIntoView({ behavior: 'auto', block: 'center' })
+          el?.focus({ preventScroll: true })
+        }))
+      },
+    },
+    {
+      id: 'look', title: '近くの盛土造成地を確かめる', hint: '一覧から選び、型（谷埋め／腹付け）を見る', done: selFill !== null,
+      onSelect: () => {
         changeTab('look')
         requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('ul[aria-label="近い盛土造成地"]')?.scrollIntoView({ behavior: 'auto', block: 'center' })))
-      } },
-    { key: 'compare', label: '昔の写真と見比べた', done: didCompare, next: '昔の写真と今を見比べる', button: selFill ? '昔の写真で見る（1961〜69年）' : '造成地を選ぶ',
-      go: () => (selFill ? viewOld(selFill, 'ort_old10') : changeTab('look')) },
-    { key: 'rec', label: '気づいたことを記録した', done: records.length > 0, next: '気づいた変化を1件記録する', button: '記録する画面へ',
-      go: () => changeTab('rec') },
-    { key: 'prep', label: '市に伝える文面を用意した（コピーまたは書き出し）', done: didPrepare, next: '通報文をコピーするか、記録を書き出す', button: '通報文を開く',
-      go: () => {
-        const last = records[records.length - 1]
-        if (!last) return changeTab('rec')
-        setSelRec(last.id)
-        changeTab('out')
-        setJustSaved(true)
-      } },
-  ]
-  const nextItem = checklist.find((c) => !c.done)
+      },
+    },
+    {
+      id: 'compare', title: '昔の写真と見比べる', hint: '選んだ造成地を1961〜69年／1974〜78年の写真で', done: didCompare,
+      onSelect: () => (selFill ? viewOld(selFill, 'ort_old10') : changeTab('compare')),
+    },
+    {
+      id: 'rec', title: '気づいたことを記録する', hint: '地図で位置を決めて保存', done: records.length > 0,
+      onSelect: () => changeTab('rec'),
+    },
+    {
+      id: 'prep', title: '市に伝える文面を用意する', hint: '通報文のコピー、または書き出し', done: didPrepare,
+      onSelect: goLast,
+    },
+  ])
 
   const fillCard = (actions: boolean) => (
     <Card aria-live="polite">
@@ -536,43 +559,22 @@ export default function App() {
       <PageHeader appId="udc-moritsuchi" actions={<SourceDialog sources={SOURCES} />} />
 
       <Tabs value={tab} onValueChange={changeTab} className="space-y-4">
-      <nav aria-label="手順" className="sticky top-0 z-20 -mx-1 bg-background/95 px-1 py-2 backdrop-blur">
+      <nav aria-label="画面の切り替え" className="py-1">
+        <p className="mb-1 text-xs text-muted-foreground">画面の切り替え（手順は左のサイドバーの順に進めます）</p>
         <TabsList className="grid h-auto w-full grid-cols-4 gap-1 p-1">
-          <TabsTrigger value="look" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>1 確かめる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">場所と型</span></TabsTrigger>
-          <TabsTrigger value="compare" className="flex-col gap-0 py-1.5 text-xs font-bold sm:text-sm"><span className="flex items-center gap-1"><History className="size-3.5" />2 見比べる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">昔の航空写真</span></TabsTrigger>
-          <TabsTrigger value="rec" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>3 記録する</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">変化を保存</span></TabsTrigger>
-          <TabsTrigger value="out" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>4 届ける{records.length > 0 && <Badge variant="secondary" className="ml-1 px-1 text-[10px]">記録{records.length}件</Badge>}</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">通報文・書き出し</span></TabsTrigger>
+          <TabsTrigger value="look" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>確かめる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">場所と型</span></TabsTrigger>
+          <TabsTrigger value="compare" className="flex-col gap-0 py-1.5 text-xs font-bold sm:text-sm"><span className="flex items-center gap-1"><History className="size-3.5" />見比べる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">昔の航空写真</span></TabsTrigger>
+          <TabsTrigger value="rec" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>記録する</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">変化を保存</span></TabsTrigger>
+          <TabsTrigger value="out" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>届ける{records.length > 0 && <Badge variant="secondary" className="ml-1 px-1 text-[10px]">記録{records.length}件</Badge>}</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">通報文・書き出し</span></TabsTrigger>
         </TabsList>
       </nav>
-
-      <section aria-label="目的の達成状況" className="rounded-md border bg-card p-3" data-testid="checklist">
-        <div className="mb-2 text-sm font-semibold">あなたの目的の達成状況</div>
-        <ul className="grid gap-1 text-sm sm:grid-cols-2">
-          {checklist.map((c) => (
-            <li key={c.key} className={`flex items-center gap-2 ${c.done ? 'text-foreground' : 'text-muted-foreground'}`} data-done={c.done ? '1' : '0'}>
-              {c.done ? <CheckCircle2 className="size-4 shrink-0 text-primary" aria-label="完了" /> : <Circle className="size-4 shrink-0" aria-label="未完了" />}
-              <span>{c.label}{c.done && <span className="sr-only">（完了）</span>}</span>
-            </li>
-          ))}
-        </ul>
-        {nextItem ? (
-          <div className="mt-2 flex min-h-[7rem] flex-wrap content-start items-center gap-2 rounded-md border-2 border-primary bg-accent/50 p-2 sm:min-h-[3.5rem]" data-testid="next-action">
-            <span className="text-sm font-semibold">次にやること: {nextItem.next}</span>
-            <Button size="sm" onClick={nextItem.go}>{nextItem.button}</Button>
-          </div>
-        ) : (
-          <p className="mt-2 min-h-[7rem] rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-semibold sm:min-h-[3.5rem]" data-testid="all-done">
-            すべて完了です。コピーした文面は、市の窓口へ電話・メール・フォームで伝えるときに使えます。
-          </p>
-        )}
-      </section>
 
       <Alert>
         <AlertTriangle className="size-4" />
         <AlertTitle>対象は静岡県 熱海市・伊東市のみ</AlertTitle>
         <AlertDescription>
           <p className="text-sm">
-            表示している盛土造成地は<b>「安全性の確認が必要な盛土造成地」で、直ちに危険な場所ではありません</b>。すべての盛土造成地が載っているわけでもなく、このページは危険かどうかの判定をしません。上のボタンの順（確かめる→見比べる→記録→届ける）に進めます。
+            表示している盛土造成地は<b>「安全性の確認が必要な盛土造成地」で、直ちに危険な場所ではありません</b>。すべての盛土造成地が載っているわけでもなく、このページは危険かどうかの判定をしません。手順は左のサイドバー（スマホは上部のステッパー）の上から順に進めてください。下のタブは画面の切り替えです。
           </p>
         </AlertDescription>
       </Alert>
@@ -762,8 +764,8 @@ export default function App() {
                     </div>
                   ) : (
                     <div className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">
-                      盛土造成地がまだ選ばれていません。「1 確かめる」で選ぶと、その場所に寄って見比べられます。
-                      <Button size="sm" variant="outline" className="ml-2" onClick={() => changeTab('look')}>1 確かめるへ</Button>
+                      盛土造成地がまだ選ばれていません。「確かめる」画面で選ぶと、その場所に寄って見比べられます。
+                      <Button size="sm" variant="outline" className="ml-2" onClick={() => changeTab('look')}>確かめる画面へ</Button>
                     </div>
                   )}
                   <div className="space-y-1">
@@ -795,7 +797,7 @@ export default function App() {
                     昔の写真はズーム10〜17で表示され、撮影年・範囲により空白の場所があります。見比べは目視で、変化の自動判定はしません。
                   </p>
                   {fills.length > 0 && selFillFeature && (
-                    <Button onClick={() => { changeTab('rec') }} variant="secondary" size="sm">気づいたことを記録する（3 記録する）</Button>
+                    <Button onClick={() => { changeTab('rec') }} variant="secondary" size="sm">気づいたことを記録する（記録する画面へ）</Button>
                   )}
                 </CardContent>
               </Card>
@@ -876,7 +878,7 @@ export default function App() {
               </p>
               <ul className="space-y-2" aria-label="記録の一覧">
                 {!records.length && (
-                  <li className="rounded-md border p-3 text-sm text-muted-foreground">まだ記録がありません。「3 記録する」から追加できます。</li>
+                  <li className="rounded-md border p-3 text-sm text-muted-foreground">まだ記録がありません。「記録する」画面から追加できます。</li>
                 )}
                 {records.map((r) => (
                   <li key={r.id} className={`space-y-1 rounded-md border p-3 text-sm ${r.id === selRec ? 'border-primary bg-accent/50' : ''}`}>

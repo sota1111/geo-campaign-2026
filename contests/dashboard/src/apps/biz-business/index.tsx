@@ -6,6 +6,7 @@ import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog, type SourceItem } from '@/components/shared/SourceDialog'
 import { downloadText } from '@/components/shared/downloadText'
 import { useHashState } from '@/components/shared/useHashState'
+import { useAppSteps, stepProgress } from '@/components/shared/AppSteps'
 import { fetchData } from '@/lib/data'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -65,6 +66,8 @@ export default function App() {
   const exportBtn = useRef<HTMLButtonElement>(null)
   const [seen, setSeen] = useState(false)
   const [lastAction, setLastAction] = useState('')
+  const [condOk, setCondOk] = useState(false)
+  const [planOk, setPlanOk] = useState<boolean[]>([false, false, false])
 
   useEffect(() => {
     fetchData<{ regions: RegionInfo[] }>(APP, 'index.json').then((i) => setRegions(i.regions)).catch((e) => setError(String(e.message)))
@@ -82,6 +85,7 @@ export default function App() {
         setW(wi)
         setSelFac(0)
         setSelPlan(0)
+        setPlanOk([false, false, false])
         // 例として、病院・学校の合計で影響が大きい2路線を案A・案Bに仮に入れる（開いた時点の条件）
         const need = needLevel(d.params.thresholds, w)
         const sel = d.routes.map((_, i) => i).filter((i) => d.routes[i][3] + d.routes[i][4] > 0)
@@ -199,7 +203,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, calc, plans, activePlan, selFac])
 
-  const updatePlan = (k: number, f: (p: Plan) => Plan) => setPlans((ps) => ps.map((p, i) => (i === k ? f(p) : p)))
+  const updatePlan = (k: number, f: (p: Plan) => Plan) => {
+    setPlanOk((o) => o.map((v, i) => (i === k ? true : v)))
+    setPlans((ps) => ps.map((p, i) => (i === k ? f(p) : p)))
+  }
 
   const planViews = (): PlanView[] => ks.map((k) => ({ name: plans[k].name, routes: plans[k].routes.map(routeFull), per: calc!.results[k] }))
   const makeRows = () => {
@@ -243,6 +250,17 @@ export default function App() {
       () => toast.error('コピーできませんでした'),
     )
   }
+
+  const go = (id: string, block: ScrollLogicalPosition = 'start') => (document.getElementById(id) ?? document.getElementById('biz-conclusion'))?.scrollIntoView({ behavior: 'smooth', block })
+  const steps = [
+    { id: 'cond', title: '地域と条件を確かめる', hint: '徳島市周辺・平日朝8時・20分以内でよければ「この条件でよい」', done: condOk && !!data, onSelect: () => go('biz-cond') },
+    { id: 'planA', title: '案Aを作る', hint: '止める路線を選ぶ（例が入っています）', done: planOk[0] && (plans[0]?.routes.length ?? 0) > 0, onSelect: () => go('biz-plan-0') },
+    { id: 'planB', title: '案Bを作る', hint: '複数の路線を同時に止めたい場合は路線を足す', done: planOk[1] && (plans[1]?.routes.length ?? 0) > 0, onSelect: () => go('biz-plan-1') },
+    { id: 'verdict', title: 'どちらの影響が小さいか確かめる', hint: '結論（確定／暫定、下限値の意味）を読む', done: ks.length >= 2 && seen && planOk[0] && planOk[1], onSelect: () => go('biz-verdict', 'center') },
+    { id: 'export', title: '会議資料用に書き出す', hint: 'CSV（表）または文章コピー', done: exported, onSelect: () => { exportBtn.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); exportBtn.current?.focus() } },
+  ]
+  useAppSteps(steps)
+  const prog = stepProgress(steps)
 
   const sources: SourceItem[] = data
     ? [
@@ -294,14 +312,14 @@ export default function App() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="biz-cond" className="scroll-mt-16">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">準</span>地域と診断の条件（初期値のままで可）</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-1.5 sm:max-w-md">
             <Label htmlFor="region">地域</Label>
-            <Select value={regionId} onValueChange={setRegionId}>
+            <Select value={regionId} onValueChange={(v) => { setCondOk(true); setRegionId(v) }}>
               <SelectTrigger id="region" className="w-full"><SelectValue placeholder="地域を選ぶ" /></SelectTrigger>
               <SelectContent>
                 {regions.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
@@ -313,16 +331,16 @@ export default function App() {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label>曜日</Label>
-                <Seg label="曜日" value={day} onChange={setDay} options={DAYS.map((k) => ({ value: k, label: DAY_LABEL[k] }))} />
+                <Seg label="曜日" value={day} onChange={(v) => { setCondOk(true); setDay(v) }} options={DAYS.map((k) => ({ value: k, label: DAY_LABEL[k] }))} />
               </div>
               <div className="space-y-1.5">
                 <Label>時間帯</Label>
-                <Seg label="時間帯" value={per} onChange={setPer}
+                <Seg label="時間帯" value={per} onChange={(v) => { setCondOk(true); setPer(v) }}
                   options={PERIODS.map((k) => ({ value: k, label: `${PERIOD_LABEL[k]}${data.params.start_hours[k]}時` }))} />
               </div>
               <div className="space-y-1.5">
                 <Label>許容時間（病院・学校まで）</Label>
-                <Seg label="許容時間" value={String(w)} onChange={(v) => setWmin(+v)}
+                <Seg label="許容時間" value={String(w)} onChange={(v) => { setCondOk(true); setWmin(+v) }}
                   options={data.params.thresholds.map((t) => ({ value: String(t), label: `${t}分` }))} />
               </div>
             </div>
@@ -330,6 +348,9 @@ export default function App() {
           <p className="text-xs text-muted-foreground">
             「行ける」= その時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可）→徒歩で、許容時間内に施設の近くへ着けること（待ち時間込み）。歩いて着ける地区は路線を止めても影響を受けません。
           </p>
+          <Button size="sm" variant={condOk ? 'outline' : 'default'} onClick={() => { setCondOk(true); toast.success(`この条件で進めます: ${condText}`) }}>
+            {condOk ? '条件を確認済み（変更しても構いません）' : 'この条件でよい（初期値のまま進める）'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -345,7 +366,7 @@ export default function App() {
             <>
               <div className="grid gap-3 md:grid-cols-3">
                 {plans.map((p, k) => (
-                  <div key={k} className="space-y-2 rounded-lg border p-3">
+                  <div key={k} id={`biz-plan-${k}`} className="scroll-mt-16 space-y-2 rounded-lg border p-3">
                     <div className="flex items-center gap-2">
                       <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{PLAN_IDS[k]}</span>
                       <Input value={p.name} maxLength={30} aria-label={`案${PLAN_IDS[k]}の名前`}
@@ -375,6 +396,11 @@ export default function App() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {p.routes.length > 0 && (
+                      <Button size="sm" variant={planOk[k] ? 'outline' : 'default'} className="w-full" onClick={() => updatePlan(k, (q) => q)}>
+                        {planOk[k] ? `${p.name}を確認済み` : '例のままこの案でよい'}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -387,50 +413,18 @@ export default function App() {
         </CardContent>
       </Card>
 
-      <Card className="border-2 border-primary/60" aria-live="polite">
+      <Card id="biz-conclusion" className="scroll-mt-16 border-2 border-primary/60" aria-live="polite">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">②</span>比べる ― 結論（会議資料用）</CardTitle>
           <CardDescription>条件: {condText || '—'}。上の案を変えると、ここがすぐ更新されます。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {data && calc && (() => {
-            const items = [
-              { done: ks.length >= 2, label: '案を2つ作った', todo: '案を2つ作る（案Aと案Bに止める路線を選ぶ）', optional: false },
-              { done: plans.some((p) => p.routes.length >= 2), label: '少なくとも1案を複数路線にした（任意。複数の路線を同時に止める案を比べたい場合は必須。下限値の意味もここで分かります）', todo: '', optional: true },
-              { done: ks.length >= 2 && seen, label: 'どちらの影響が小さいか確かめた', todo: 'どちらの影響が小さいか確かめる（2案に路線を選ぶと結論が出ます）', optional: false },
-              { done: exported, label: '会議資料用に書き出した（CSVまたは文章コピー）', todo: '会議資料用に書き出す（CSVまたは文章コピー）', optional: false },
-            ]
-            const next = items.findIndex((it) => !it.done && !it.optional)
-            const goNext = () => {
-              if (next === 0) document.getElementById('biz-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              else if (next === 2) document.getElementById('biz-verdict')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              else { exportBtn.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); exportBtn.current?.focus() }
-            }
-            return (
-              <div className="rounded-lg border bg-muted/30 p-3" aria-label="目的の達成状況">
-                <div className="mb-1 text-sm font-bold">目的の達成状況（操作すると自動でチェックされます）</div>
-                <ul className="space-y-1 text-sm">
-                  {items.map((it, i) => (
-                    <li key={i} className={`flex items-start gap-2 rounded px-1 py-0.5 ${i === next ? 'bg-primary/10 font-bold ring-1 ring-primary' : ''}`}>
-                      {it.done ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-label="完了" /> : <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label="未完了" />}
-                      <span>{it.done ? '済: ' : '未: '}{it.label}</span>
-                    </li>
-                  ))}
-                </ul>
-                {next >= 0 ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold">次にやること: {items[next].todo}</span>
-                    <Button size="sm" onClick={goNext}><ArrowRight className="size-4" />{next === 3 ? '書き出しボタンへ' : next === 2 ? '結論の表示へ' : '案を作る場所へ'}</Button>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-sm font-bold">必要な項目はすべて完了しました。書き出したCSV／文章を会議資料に貼り付けてください。</p>
-                )}
-                {!exported && (
-                  <p role="status" className="mt-2 text-sm font-medium text-foreground">まだ資料用に書き出していません。会議資料にするには、下の「会議資料用にCSVで書き出す」または「資料用の文章をコピー」を押してください。</p>
-                )}
-              </div>
-            )
-          })()}
+          <div className="rounded-lg border bg-muted/30 p-3 text-sm" aria-label="目的の達成状況">
+            <b>手順 {prog.done}/{prog.total} 完了。</b>
+            左のサイドバー（スマホは上部の手順）を上から順に進めてください。
+            {!exported && <span role="status" className="mt-1 block font-medium">まだ資料用に書き出していません。下の「会議資料用にCSVで書き出す」または「資料用の文章をコピー」を押してください。</span>}
+            {prog.allDone && <span className="mt-1 block font-bold">目的に必要な手順はすべて完了しました。書き出したCSV／文章を会議資料に貼り付けてください。</span>}
+          </div>
           {!data || !calc ? <p className="text-sm text-muted-foreground">読み込み中…</p> : !ks.length ? (
             <p className="text-sm text-muted-foreground">「① 見直し案をつくる」で、止める路線を1つ以上選んでください。</p>
           ) : (

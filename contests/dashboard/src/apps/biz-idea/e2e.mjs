@@ -41,95 +41,79 @@ const shot = async (name) => { const r = await send('Page.captureScreenshot', { 
 const clickText = (sel, text) => ev(`(()=>{const e=[...document.querySelectorAll(${JSON.stringify(sel)})].find(x=>x.textContent.includes(${JSON.stringify(text)}));if(!e)return 'NOTFOUND';e.scrollIntoView({block:'center'});e.click();return 'ok'})()`)
 const body = () => ev('document.body.innerText')
 
-const checked = () => ev(`[...document.querySelectorAll('[aria-label=達成状況] li')].map(li=>li.textContent.replace(/（(完了|未完了)）/,'')+(li.textContent.includes('（完了）')?':済':':未')).join(' / ')`)
-const scrollY = () => ev('Math.round(window.scrollY)')
+const IDS = ['place', 'cross', 'overlay', 'record', 'confirm', 'export']
+const statuses = () => ev(`[...document.querySelectorAll('aside [data-step]')].map(b=>b.dataset.step+':'+b.dataset.status).join(' ')`)
 const activeTab = () => ev(`document.querySelector('[role=tab][data-state=active]').textContent`)
+// サイドバー（スマホは上部ステッパーを開いて）の手順を押す
+const stepClick = async (id) => {
+  const r = await ev(`(()=>{
+    const vis=()=>[...document.querySelectorAll('[data-step="${id}"]')].find(b=>b.offsetParent!==null);
+    let b=vis();
+    if(!b){const t=document.querySelector('[data-testid=steps-topbar] button[aria-expanded]');if(t&&t.getAttribute('aria-expanded')==='false')t.click()}
+    return new Promise(res=>setTimeout(()=>{b=vis();if(!b){res('NOTFOUND');return}b.click();res('ok')},200))})()`)
+  await sleep(700)
+  return r
+}
+const setSelect = (id, v) => ev(`(()=>{const s=document.getElementById('${id}');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'${v}');s.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+const URL0 = base + 'apps/biz-idea/'
+
 for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   logs.length = 0
-  await send('Page.navigate', { url: base + '#/apps/biz-idea' })
-  await sleep(2000)
+  await send('Page.navigate', { url: URL0 })
+  await sleep(2500)
   await ev('localStorage.clear()')
   await send('Page.reload')
   await sleep(2500)
   await shot(`${label}-1-initial`)
-  console.log(label, 'no horizontal overflow:', await ev('document.documentElement.scrollWidth<=window.innerWidth'))
-  console.log(label, 'checklist:', await checked())
-  // 地名を選ぶ: タブもスクロールも動かない
-  const y0 = await scrollY()
-  console.log(label, 'select place', await clickText('button', 'ぬま田'))
+  console.log(label, 'overflow ok:', await ev('document.documentElement.scrollWidth<=window.innerWidth'), 'sidebar visible:', await ev(`(()=>{const a=document.querySelector('aside[aria-label=進め方]');return !!a&&a.offsetParent!==null})()`), 'topbar visible:', await ev(`(()=>{const a=document.querySelector('[data-testid=steps-topbar]');return !!a&&a.offsetParent!==null})()`))
+  console.log(label, 'initial', await statuses())
+
+  // 1 地名
+  console.log(label, 'step place', await stepClick('place'), await activeTab())
+  console.log(label, await clickText('button', 'ぬま田'))
   await sleep(1200)
-  console.log(label, 'tab:', await activeTab(), 'scroll moved by click-into-view only:', (await scrollY()) - y0)
-  console.log(label, 'checklist:', await checked())
-  await shot(`${label}-2-picked`)
-  // 次にやること → 2-1
-  console.log(label, await clickText('button', '近くの伝承碑と突き合わせる'))
-  await sleep(800)
+  console.log(label, await statuses())
+  // 2 突き合わせ
+  console.log(label, 'step cross', await stepClick('cross'), await activeTab())
   let t = await body()
-  console.log(label, '手がかりあり:', /手がかりあり/.test(t), '2-1/2-2 見出し:', /2-1 伝承碑と突き合わせる（/.test(t), /2-2 昔の地図・写真と重ねる（/.test(t))
-  console.log(label, 'checklist:', await checked())
-  await shot(`${label}-3-check`)
-  // 次にやること → 2-2 おすすめ
-  console.log(label, await clickText('button', '昔の地図・写真を重ねて見る'))
-  await sleep(800)
-  t = await body()
-  console.log(label, 'おすすめ洪水:', /明治期の低湿地（洪水の話なら）/.test(t) && /治水地形分類図（洪水の話なら）/.test(t))
-  console.log(label, 'rec btn', await clickText('button', '明治期の低湿地（洪水の話なら）'))
+  console.log(label, '手がかりあり:', /手がかりあり/.test(t))
+  console.log(label, await statuses())
+  await shot(`${label}-2-cross`)
+  // 3 重ねる
+  console.log(label, 'step overlay', await stepClick('overlay'))
+  console.log(label, await clickText('button', '明治期の低湿地（洪水の話なら）'))
   await sleep(1800)
-  console.log(label, 'checklist:', await checked())
-  await shot(`${label}-4-overlay`)
-  // 記録
-  console.log(label, await clickText('button', '聞き取りを記録する →'))
-  await sleep(800)
-  console.log(label, await clickText('button', '記録して地図に残す'))
-  await sleep(300)
-  console.log(label, 'validation error shown:', /記録できません/.test(await body()))
+  console.log(label, await statuses())
+  await shot(`${label}-3-overlay`)
+  // 4 記録
+  console.log(label, 'step record', await stepClick('record'), await activeTab())
   console.log(label, await clickText('button', 'サンプルの語り'))
   await sleep(300)
-  console.log(label, 'filled story/basis/teller:', await ev(`['f-story','f-basis','f-teller'].map(i=>document.getElementById(i).value.length>0).join(',')`), 'flash ring:', await ev(`document.getElementById('f-story').className.includes('ring-2')`), '必須/任意表示:', /聞いた日\s*任意/.test(await body()))
-  await shot(`${label}-4b-filled`)
-  console.log(label, 'initial visibility:', await ev('document.getElementById("f-vis").value'))
   console.log(label, await clickText('button[type=submit]', '記録して地図に残す'))
   await sleep(1000)
   t = await body()
-  console.log(label, 'tab:', await activeTab(), 'saved msg:', /を保存しました/.test(t), '未確認:', /未確認/.test(t), '未定の案内:', /公開範囲は未定のまま/.test(t))
-  console.log(label, 'form reset after save:', await ev(`['f-story','f-basis','f-teller'].map(i=>document.getElementById(i).value==='').join(',')`))
-  console.log(label, 'tab badge:', await ev(`[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes('一覧')).textContent`))
-  await shot(`${label}-5-saved`)
-  // 確認ダイアログ
-  console.log(label, await clickText('button', '確認済みにする…（確認役を兼ねる）'))
-  await sleep(600)
-  console.log(label, 'dialog ok disabled until vis chosen:', await ev(`[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent==='確認済みにする').disabled`))
-  await shot(`${label}-6-dialog`)
-  await ev(`(()=>{const s=document.getElementById('dlg-vis');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'public');s.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+  console.log(label, '未確認:', /「未確認」の記録として保存しました/.test(t))
+  console.log(label, await statuses())
+  await shot(`${label}-4-saved`)
+  // 5 確認して公開範囲
+  console.log(label, 'step confirm', await stepClick('confirm'))
+  console.log(label, 'dialog open:', await ev(`!!document.querySelector('[role=dialog]')`))
+  await shot(`${label}-5-dialog`)
+  await setSelect('dlg-vis', 'public')
   await sleep(300)
-  console.log(label, await ev(`(()=>{const b=[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent==='確認済みにする');const d=b.disabled;b.click();return 'clicked, was disabled='+d})()`))
-  await sleep(600)
-  t = await body()
-  console.log(label, 'notice updated:', /確認済み・公開です。公開分に入りました/.test(t), '未確認として保存の文言が残っていない:', !/「未確認」の記録として保存しました/.test(t))
-  console.log(label, 'checklist:', await checked())
-  // 一覧・書出タブ（見出しを直接押す）→ 書き出しても留まる
-  await ev(`(()=>{const e=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes('一覧'));e.focus();e.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}))})()`)
-  await sleep(600)
-  await ev(`document.getElementById('step-publish').scrollIntoView({block:'center'})`)
-  await sleep(500)
-  const yb = await scrollY()
+  console.log(label, await ev(`(()=>{const b=[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent==='確認済みにする');b.click();return 'ok'})()`))
+  await sleep(700)
+  console.log(label, await statuses())
+  // 6 書き出し
+  console.log(label, 'step export', await stepClick('export'), await activeTab())
   console.log(label, await clickText('button', '公開分を書き出し'))
   await sleep(700)
   t = await body()
-  console.log(label, (t.match(/\d件を GeoJSON で書き出しました（[^）]*）/) || [])[0], 'tab:', await activeTab(), 'scroll delta:', (await scrollY()) - yb)
-  console.log(label, 'result visible in viewport:', await ev(`(()=>{const e=[...document.querySelectorAll('[role=status]')].find(x=>x.textContent.includes('GeoJSON で書き出しました'));if(!e)return 'none';const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()`))
-  console.log(label, 'checklist:', await checked())
-  await shot(`${label}-7-exported`)
-  console.log(label, '掲載想定の1行:', /地域のオープンデータサイト等に掲載する想定です（このデモは掲載しません）/.test(t))
-  console.log(label, await clickText('button', '続けて別の話を記録する'))
-  await sleep(500)
-  console.log(label, 'next record: tab', await activeTab(), 'story empty:', await ev(`document.getElementById('f-story').value===''`), 'name kept:', await ev(`document.getElementById('f-name').value`))
-  await ev(`(()=>{const e=[...document.querySelectorAll('[role=tab]')].find(x=>x.textContent.includes('一覧'));e.focus();e.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}))})()`)
-  await sleep(500)
-  console.log(label, await clickText('button', '非公開にする'))
-  await sleep(300)
-  console.log(label, 'private:', JSON.parse(await ev('localStorage.getItem("biz-idea:records")'))[0].visibility)
+  console.log(label, (t.match(/\d件を GeoJSON で書き出しました（[^）]*）/) || [])[0])
+  console.log(label, 'FINAL', await statuses())
+  console.log(label, 'progress text:', await ev(`document.body.innerText.match(/\\d+\\/\\d+ 完了|目的に必要な手順はすべて完了しました/g)?.join(' | ')`))
+  await shot(`${label}-6-all-done`)
   console.log(label, 'console errors (tile fetch除く):', JSON.stringify(logs.filter((l) => !/cyberjapandata|ERR_|Failed to load resource/.test(l))), 'raw count', logs.length)
 }
 ws.close(); chrome.kill()

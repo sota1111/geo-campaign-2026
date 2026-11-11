@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ClipboardList, Download, MapPin, Route as RouteIcon, SatelliteDish } from 'lucide-react'
+import { ClipboardList, Download, SatelliteDish } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { SourceDialog, type SourceItem } from '@/components/shared/SourceDialog'
 import { downloadText } from '@/components/shared/downloadText'
+import { useAppSteps } from '@/components/shared/AppSteps'
 import { useHashState } from '@/components/shared/useHashState'
 import { useLocalStorage } from '@/components/shared/useLocalStorage'
 import { fetchData } from '@/lib/data'
@@ -127,6 +128,27 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
   const [recSite, setRecSite] = useState<string>('')
   const [cap, setCap] = useState(5)
   const isDesktop = useIsDesktop()
+  // 手順の進み具合（この画面を開いてからの操作で判定。前の利用者の記録は数えない）
+  const [dataChecked, setDataChecked] = useState(false)
+  const [planSeen, setPlanSeen] = useState(false)
+  const [planExported, setPlanExported] = useState(false)
+  const [recordedNow, setRecordedNow] = useState(false)
+  const [ledgerChecked, setLedgerChecked] = useState(false)
+  const [lastRecorded, setLastRecorded] = useState('')
+  useEffect(() => { if (tab === 'plan') setPlanSeen(true) }, [tab])
+  useEffect(() => { if (tab === 'ledger' && recordedNow) setLedgerChecked(true) }, [tab, recordedNow])
+  const goTo = (nextTab: string, id: string) => {
+    setTab(nextTab)
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+  }
+  useAppSteps([
+    { id: 'data', title: 'データを確かめる', hint: real ? '実データ（横須賀市）・衛星由来は未接続、を確認' : '「実データ（横須賀市）」を選ぶ', done: real && dataChecked, onSelect: () => goTo(tab, 'sat-b-banner') },
+    { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '行を選ぶと点数の内訳が出る', done: !!sel, onSelect: () => goTo('ledger', 'sat-b-tabs') },
+    { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）を確認', done: planSeen, onSelect: () => goTo('plan', 'sat-b-tabs') },
+    { id: 'csv', title: '計画をCSVで書き出す', hint: '「計画をCSVで書き出す」を押す', done: planExported, onSelect: () => goTo('plan', 'sat-b-tabs') },
+    { id: 'record', title: '巡視結果を1件記録する', hint: '結果と巡視者を入れて「記録する」', done: recordedNow, onSelect: () => goTo('record', 'sat-b-tabs') },
+    { id: 'check', title: '台帳に反映されたか確かめる', hint: '「最新の巡視」に結果が出る', done: ledgerChecked, onSelect: () => { if (lastRecorded) setSel(lastRecorded); goTo('ledger', 'sat-b-tabs') } },
+  ])
 
   const ranked = useMemo(() => rank(ds.sites, weights, ds.refDate, results, mode), [ds, weights, results, mode])
   const selSite = ranked.find((s) => s.id === sel) ?? null
@@ -149,7 +171,7 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
 
   return (
     <>
-      <Alert className={cn(real ? 'border-sky-300 bg-sky-50' : 'border-dashed border-amber-400 bg-amber-50')}>
+      <Alert id="sat-b-banner" className={cn('scroll-mt-16', real ? 'border-sky-300 bg-sky-50' : 'border-dashed border-amber-400 bg-amber-50')}>
         <SatelliteDish className="size-4" />
         <AlertTitle className="flex flex-wrap items-center gap-2">
           {real ? <>実データ版（神奈川県横須賀市・大規模盛土造成地 {ds.sites.length}か所）</> : <>架空サンプル（実在の盛土ではありません）</>}
@@ -163,6 +185,14 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
               衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。巡視結果は利用者の入力です。</p>
           ) : (
             <p>地点・区域・変化量・許可届出・巡視結果はすべて架空で、実在の盛土や衛星解析結果ではありません。</p>
+          )}
+          {real && (
+            <Button
+              size="sm" variant={dataChecked ? 'secondary' : 'default'} className="mt-2 h-auto whitespace-normal py-1.5 text-left"
+              aria-pressed={dataChecked} onClick={() => setDataChecked(!dataChecked)}
+            >
+              {dataChecked ? '✓ 確認済み: 実データ（横須賀市）で、衛星由来の変化量は未接続（点数に含まれない）' : '実データ（横須賀市）で、衛星由来の変化量は未接続であることを確認した'}
+            </Button>
           )}
         </AlertDescription>
       </Alert>
@@ -179,16 +209,12 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
         <ResetDialog onReset={resetAll} count={results.length} />
       </p>
 
-      <section aria-label="使い方（3ステップ）" className="space-y-1.5">
-        <p className="text-sm font-medium">使い方: 今月の巡視先を決めて、計画を書き出し、結果を記録します</p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Step n={1} icon={<MapPin className="size-4" />} title="台帳で優先度を確認" body="点数の高い順に並びます。行を選ぶと内訳と前後の写真が見られます。" onClick={() => setTab('ledger')} active={tab === 'ledger'} />
-          <Step n={2} icon={<RouteIcon className="size-4" />} title="巡視計画をCSVに書き出す" body="件数を入れると、上位から回り順に並びます。" onClick={() => setTab('plan')} active={tab === 'plan'} />
-          <Step n={3} icon={<ClipboardList className="size-4" />} title="巡視結果を記録" body="記録は台帳の「最新の巡視」に反映されます。" onClick={() => setTab('record')} active={tab === 'record'} />
-        </div>
-      </section>
+      <p className="text-sm text-muted-foreground">
+        進め方は左のサイドバー（スマホは上部の手順）に上から順に並んでいます。下のタブは画面の切り替えで、
+        ①台帳＝手順2・6、②巡視計画＝手順3・4、③結果の記録＝手順5に当たります。
+      </p>
 
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={setTab} id="sat-b-tabs" className="scroll-mt-16">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-5">
           <TabsTrigger value="ledger">① 台帳</TabsTrigger>
           <TabsTrigger value="plan">② 巡視計画</TabsTrigger>
@@ -204,10 +230,10 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
           />
         </TabsContent>
         <TabsContent value="plan">
-          <PlanTab ds={ds} mode={mode} ranked={ranked} plan={plan} cap={cap} setCap={setCap} note={note} onRecord={goRecord} onSelect={select} sel={sel} />
+          <PlanTab onExported={() => setPlanExported(true)} ds={ds} mode={mode} ranked={ranked} plan={plan} cap={cap} setCap={setCap} note={note} onRecord={goRecord} onSelect={select} sel={sel} />
         </TabsContent>
         <TabsContent value="record">
-          <RecordTab
+          <RecordTab onRecorded={(id) => { setRecordedNow(true); setLastRecorded(id) }}
             ds={ds} mode={mode} ranked={ranked} results={results} setResults={setResults}
             recSite={recSite || ranked[0]?.id || ''} setRecSite={setRecSite} plan={plan.route} onReset={resetAll}
             onShowLedger={(id) => { setSel(id); setTab('ledger') }}
@@ -243,23 +269,6 @@ function Metric({ label, value, sub, warn }: { label: string; value: string; sub
         {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
       </CardContent>
     </Card>
-  )
-}
-
-function Step({ n, icon, title, body, onClick, active }: {
-  n: number; icon: React.ReactNode; title: string; body: string; onClick: () => void; active: boolean
-}) {
-  return (
-    <button
-      type="button" onClick={onClick}
-      className={cn('flex items-start gap-3 rounded-md border p-2 text-left sm:p-3 transition-colors hover:bg-accent', active && 'border-primary bg-accent')}
-    >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{n}</span>
-      <span className="space-y-0.5">
-        <span className="flex items-center gap-1 text-sm font-medium">{icon}{title}</span>
-        <span className="hidden text-xs text-muted-foreground sm:block">{body}</span>
-      </span>
-    </button>
   )
 }
 
@@ -489,7 +498,8 @@ function SiteDetail({ s, mode, results, onRecord }: { s: Ranked; mode: Mode; res
 }
 
 // ---------------- ② 巡視計画 ----------------
-function PlanTab({ ds, mode, ranked, plan, cap, setCap, note, onRecord, onSelect, sel }: {
+function PlanTab({ onExported, ds, mode, ranked, plan, cap, setCap, note, onRecord, onSelect, sel }: {
+  onExported: () => void
   ds: Dataset; mode: Mode; ranked: Ranked[]; plan: ReturnType<typeof planRoute<Ranked>>; cap: number; setCap: (n: number) => void; note: string
   onRecord: (id: string) => void; onSelect: (id: string) => void; sel: string | null
 }) {
@@ -499,6 +509,7 @@ function PlanTab({ ds, mode, ranked, plan, cap, setCap, note, onRecord, onSelect
       toCSV(['order', 'id', 'score', 'type_or_change', 'zone', 'data_note'],
         plan.route.map((s, i) => [i + 1, s.id, s.score, real ? s.type : s.change, s.zone, note])),
       'text/csv;charset=utf-8')
+    onExported()
     toast.success(`巡視計画 ${plan.route.length}か所を patrol-plan.csv として書き出しました`)
   }
   const header = ['order', 'id', 'score', 'type_or_change', 'zone', 'data_note']
@@ -602,10 +613,10 @@ function PartsInline({ parts }: { parts: Ranked['parts'] }) {
 }
 
 // ---------------- ③ 結果の記録 ----------------
-function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite, onShowLedger, plan, onReset }: {
+function RecordTab({ onRecorded, ds, mode, ranked, results, setResults, recSite, setRecSite, onShowLedger, plan, onReset }: {
   ds: Dataset; mode: Mode; ranked: Ranked[]; results: PatrolResult[]; setResults: (r: PatrolResult[]) => void
   recSite: string; setRecSite: (id: string) => void; onShowLedger: (id: string) => void
-  plan: Ranked[]; onReset: () => void
+  plan: Ranked[]; onReset: () => void; onRecorded: (id: string) => void
 }) {
   const real = mode === 'real'
   const [date, setDate] = useState(dateStr())
@@ -644,7 +655,7 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
     setFormError([])
     const r: PatrolResult = { siteId: recSite, date, who: who.trim(), result, memo: memo.trim() }
     setResults([...results, r])
-    setSaved(r); setMemo(''); setResult('')
+    setSaved(r); setMemo(''); setResult(''); onRecorded(r.siteId)
     toast.success(`${r.siteId} の巡視結果を記録しました。台帳の「最新の巡視」に反映されています`)
   }
   const exportRec = () =>

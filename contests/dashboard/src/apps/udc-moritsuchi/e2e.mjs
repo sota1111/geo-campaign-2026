@@ -7,7 +7,7 @@ import path from 'node:path'
 
 const [outDir, w, h, mobileFlag] = process.argv.slice(2)
 const mobile = mobileFlag === '1'
-const URL0 = 'http://127.0.0.1:8842/#/apps/udc-moritsuchi'
+const URL0 = 'http://127.0.0.1:8842/apps/udc-moritsuchi/'
 const MAP = '[role=region][aria-label=盛土ウォッチの地図]'
 fs.mkdirSync(outDir, { recursive: true })
 const dl = fs.mkdtempSync(path.join(os.tmpdir(), 'dl-'))
@@ -71,62 +71,61 @@ await sleep(4000)
 await shot('01-initial')
 
 check('初期表示: 地図とタブ', await ev(`!!document.querySelector(${JSON.stringify(MAP)} + ' canvas') && !![...document.querySelectorAll('[role=tab]')].find(t=>t.textContent.includes('確かめる'))`))
-const doneCount = () => ev(`document.querySelectorAll('[data-testid=checklist] li[data-done="1"]').length`)
-check('初期は「1 確かめる」が選択状態', await ev(`document.querySelector('[role=tab][data-state=active]').innerText.includes('1 確かめる') && [...document.querySelectorAll('[role=tab]')].filter(t=>t.dataset.state==='active').length===1`))
-check('チェックリスト: 初期は0件完了・次にやることが出る', (await doneCount()) === 0 && (await ev(`document.querySelector('[data-testid=next-action]').innerText`)).includes('近くの盛土造成地'))
-check('結論バナーが地図の上に出る', (await ev(`document.querySelector('[data-testid=near-banner]').innerText`)).includes('自宅の住所を入れてください'))
-check('初期は「熱海駅（例）からの結果です」が先頭、住所入力欄が結論の直前', await ev(`(()=>{const b=document.querySelector('[data-testid=near-banner]');const t=b.innerText;const f=b.querySelector('form[role=search]');const sum=b.querySelector('[data-testid=near-summary]');return t.startsWith('熱海駅（例）からの結果です') && t.includes('自宅の住所を入れてください') && (f.compareDocumentPosition(sum) & Node.DOCUMENT_POSITION_FOLLOWING)>0})()`))
-// 「一覧から選ぶ」: スクロール後に動かず、押した項目がそのまま選ばれる
-await clickText('[data-testid=next-action] button', '一覧から選ぶ'); await sleep(1500)
+const doneCount = async () => +(/(\d)\/5 完了/.exec(await ev(`document.querySelector('[data-testid=steps-topbar]').textContent`))?.[1] ?? -1)
+const stepStatus = (id) => ev(`(document.querySelector('aside [data-step=${id}]') || document.querySelector('[data-testid=steps-topbar] [data-step=${id}]'))?.dataset.status ?? 'none'`)
+const clickStep = async (id) => {
+  if (mobile) {
+    const open = await ev(`document.querySelector('[data-testid=steps-topbar] > button').getAttribute('aria-expanded')`)
+    if (open !== 'true') await ev(`document.querySelector('[data-testid=steps-topbar] > button').click()`)
+    await sleep(300)
+    await ev(`document.querySelector('[data-testid=steps-topbar] [data-step=${id}]').click()`)
+  } else {
+    await ev(`document.querySelector('aside [data-step=${id}]').click()`)
+  }
+  await sleep(1200)
+}
+const typeInto = (sel, text) => ev(`(()=>{const t=document.querySelector(${JSON.stringify(sel)});const s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;s.call(t,${JSON.stringify(text)});t.dispatchEvent(new Event('input',{bubbles:true}))})()`)
+
+check('初期は「確かめる」画面で、手順1がいまここ・進捗0/5', (await ev(`document.querySelector('[role=tab][data-state=active]').innerText.includes('確かめる')`)) && (await stepStatus('place')) === 'current' && (await doneCount()) === 0)
+if (!mobile) check('手順が5つ、上から順に登録されている', (await ev(`[...document.querySelectorAll('aside [data-step]')].map(e=>e.dataset.step).join(',')`)) === 'place,look,compare,rec,prep')
+check('結論バナー: 初期は例と明示', (await ev(`document.querySelector('[data-testid=near-banner]').innerText`)).startsWith('熱海駅（例）からの結果です'))
+// 手順1: 自宅の場所を入れる
+await clickStep('place')
+check('手順1を押すと住所入力欄にフォーカス', await ev(`document.activeElement?.id === 'mw-q'`))
+await typeInto('#mw-q', '熱海駅')
+await ev(`document.querySelector('form[role=search] button[type=submit]').click()`); await sleep(3500)
+check('検索候補が出る', (await ev(`document.querySelectorAll('ul[aria-label="検索結果"] li').length`)) > 0)
+await ev(`document.querySelector('ul[aria-label="検索結果"] li button').click()`); await sleep(1500)
+check('手順1が済・手順2がいまここ', (await stepStatus('place')) === 'done' && (await stepStatus('look')) === 'current' && (await doneCount()) === 1)
+check('検索地点の近くの造成地が距離順に出る', (await ev(`document.querySelectorAll('ul[aria-label="近い盛土造成地"] li').length`)) === 5)
+const ns = await ev(`document.querySelector('[data-testid=near-summary]').innerText`)
+check('最寄りまでの距離（直線）と近くの基準', ns.includes('（直線）') && ns.includes('500m以内'))
+await shot('02b-search')
+// 手順2: 近くの盛土造成地を確かめる
+await clickStep('look')
 const top1 = await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').getBoundingClientRect().top`)
 await sleep(800)
 const top2 = await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').getBoundingClientRect().top`)
-check('自動スクロール後にレイアウトが動かない', Math.abs(top1 - top2) < 1 && top2 > 0 && top2 < +h, `${top1} ${top2}`)
+check('手順2: 一覧へ移動し、動かない', Math.abs(top1 - top2) < 1 && top2 > 0 && top2 < +h, `${top1} ${top2}`)
 const want = await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button .font-medium').innerText`)
-await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').click()`); await sleep(1200)
-check('押した造成地が選ばれ、一覧で強調される', await ev(`document.querySelector('[data-testid=fill-info]').innerText.includes(${JSON.stringify(want)}) && document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').getAttribute('aria-pressed')==='true'`), want)
-check('選んだ名前のトーストが出る', await ev(`document.body.innerText.includes(${JSON.stringify(want)} + '（') && document.body.innerText.includes('を選びました')`))
-check('熱海駅の近くの一覧が出る', (await ev(`document.querySelectorAll('ul[aria-label="近い盛土造成地"] li').length`)) === 5)
-await clickText('button', '熱海駅の近くへ'); await sleep(1200)
-console.log('first item:', await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li button').textContent`))
-await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li button').click()`); await sleep(2500)
-const info = await ev(`document.querySelector('[data-testid=fill-info]').innerText`)
-console.log(info.replace(/\n/g, ' | '))
-check('造成地の型が表示される', /谷埋め型|腹付け型|区分なし/.test(info) && info.includes('盛土区分'))
+await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').click()`); await sleep(1500)
+check('押した造成地が選ばれ型が出る', await ev(`/谷埋め型|腹付け型|区分なし/.test(document.querySelector('[data-testid=fill-info]').innerText) && document.querySelector('[data-testid=fill-info]').innerText.includes(${JSON.stringify(want)})`), want)
+check('型の説明が凡例にある', await ev(`document.body.innerText.includes('谷を埋めた盛土') && document.body.innerText.includes('斜面に盛った盛土')`))
+check('手順2が済・手順3がいまここ', (await stepStatus('look')) === 'done' && (await stepStatus('compare')) === 'current' && (await doneCount()) === 2)
 await shot('02-fill-selected')
-
-const ns = await ev(`document.querySelector('[data-testid=near-summary]').innerText`)
-console.log(ns)
-check('最寄りまでの距離（直線）と近くの基準が書かれる', ns.includes('（直線）') && ns.includes('500m以内'))
-check('型の説明（谷埋め/腹付け）が凡例にある', await ev(`document.body.innerText.includes('谷を埋めた盛土') && document.body.innerText.includes('斜面に盛った盛土')`))
-check('手順の見出し（見比べる含む）が常に出る', await ev(`['1 確かめる','2 見比べる','3 記録する','4 届ける'].every(t=>document.querySelector('nav[aria-label=手順]').innerText.includes(t))`))
-// 住所・駅名検索
-await ev(`(()=>{const t=document.querySelector('input[aria-label="住所・駅名で探す"]');const s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;s.call(t,'熱海駅');t.dispatchEvent(new Event('input',{bubbles:true}))})()`)
-await ev(`document.querySelector('form[role=search] button[type=submit]').click()`); await sleep(3500)
-const nHits = await ev(`document.querySelectorAll('ul[aria-label="検索結果"] li').length`)
-const sMsg = await ev(`document.querySelector('[role=status]')?.innerText || ''`)
-console.log('search hits:', nHits, sMsg)
-check('住所・駅名検索（候補またはエラー表示）', nHits > 0 || sMsg.includes('検索できません') || sMsg.includes('見つかりません'))
-if (nHits > 0) {
-  await ev(`document.querySelector('ul[aria-label="検索結果"] li button').click()`); await sleep(1500)
-  check('検索地点の近くの造成地が距離順に出る', (await ev(`document.querySelectorAll('ul[aria-label="近い盛土造成地"] li').length`)) === 5)
-  await shot('02b-search')
-}
-// 見つけた造成地を昔の写真で見る
-await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li button').click()`); await sleep(1500)
-await clickText('button', '1961〜69年の写真で見る'); await sleep(2500)
-check('「昔の写真で見る」で見比べ画面に移り、昔の写真に切替', await ev(`location.hash.includes('old=ort_old10') && document.querySelector('[role=tab][data-state=active]').innerText.includes('見比べる')`), await ev('location.hash'))
-check('「見るポイント」が見比べ画面にある', await ev(`document.querySelector('[data-testid=look-points]').innerText.includes('判定しません')`))
-check('地図上に今/昔のラベルが出る', (await ev(`document.querySelector('[data-testid=compare-badge]')?.innerText || ''`)).includes('左＝今'))
-check('チェックリスト: 確かめた・見比べたが完了', (await doneCount()) === 2)
+// 手順3: 昔の写真と見比べる
+await clickStep('compare'); await sleep(1500)
+check('手順3: 昔の写真に切り替わり見比べ画面', await ev(`location.hash.includes('old=ort_old10') && document.querySelector('[role=tab][data-state=active]').innerText.includes('見比べる')`), await ev('location.hash'))
+check('見るポイントと今/昔のラベル', (await ev(`document.querySelector('[data-testid=look-points]').innerText.includes('判定しません')`)) && (await ev(`document.querySelector('[data-testid=compare-badge]')?.innerText || ''`)).includes('左＝今'))
+check('手順3が済・手順4がいまここ', (await stepStatus('compare')) === 'done' && (await stepStatus('rec')) === 'current' && (await doneCount()) === 3)
 await shot('03-old-photo')
 await clickText('button', '航空写真(現在)'); await sleep(300)
 await ev(`[...document.querySelectorAll('button[role=radio]')].find(x=>x.textContent.trim()==='1974〜78年').click()`); await sleep(1500)
 check('1974〜78年に切替', await ev(`location.hash.includes('old=gazo1')`))
 await shot('03b-compare-1974')
 await ev(`[...document.querySelectorAll('button[role=radio]')].find(x=>x.textContent.trim()==='なし').click()`); await sleep(300)
-
-await clickText('[role=tab]', '3 記録する'); await sleep(500)
+// 手順4: 気づいたことを記録する
+await clickStep('rec')
 check('位置は未選択から始まる（初期座標なし）', (await ev(`document.querySelector('[data-testid=pick-pos]').innerText`)).includes('未選択') && (await ev(`document.body.innerText.includes('地図をタップして位置を決めてください')`)))
 check('位置未選択では保存ボタンが無効', await ev(`[...document.querySelectorAll('button[type=submit]')].find(b=>b.textContent.includes('記録する')).disabled`))
 await tapMap()
@@ -139,8 +138,8 @@ await clickText('label', '位置を約100m'); await sleep(200)
 await shot('04-record-form')
 await ev(`[...document.querySelectorAll('button[type=submit]')].find(b=>b.textContent.includes('記録する')).click()`); await sleep(1000)
 check('保存後に記録1件', (await ev(`document.querySelector('[data-testid=rec-count]').innerText`)) === '1')
+check('手順4が済・手順5がいまここ・バッジ「記録1件」', (await stepStatus('rec')) === 'done' && (await stepStatus('prep')) === 'current' && (await doneCount()) === 4 && (await ev(`document.querySelector('[role=tab][data-state=active]').innerText.includes('記録1件')`)))
 await sleep(1200)
-check('記録完了・バッジに「記録1件」・次にやることは通報文', (await doneCount()) === 3 && (await ev(`document.querySelector('[role=tab][data-state=active]').innerText.includes('記録1件')`)) && (await ev(`document.querySelector('[data-testid=next-action]').innerText.includes('通報文')`)))
 check('保存後に通報文カードへ自動スクロール', await ev(`(()=>{const r=document.querySelector('[data-testid=report-text]').getBoundingClientRect();return r.top>=0&&r.top<window.innerHeight})()`))
 const rep = await ev(`document.querySelector('[data-testid=report-text]').value`)
 check('通報文に500m以内の一文と通報先案内', rep.includes('500m以内に登録された大規模盛土造成地:') && (await ev(`document.body.innerText.includes('熱海市・伊東市の担当窓口')`)))
@@ -150,7 +149,7 @@ check('localStorage に保存', (await ev(`JSON.parse(localStorage.getItem('udc-
 await clickText('button', '文面をコピー'); await sleep(600)
 const clip = await ev(`navigator.clipboard.readText().catch(e=>'ERR '+e.message)`)
 check('通報文がクリップボードにコピーされる', clip.startsWith('【盛土の変化'), clip.slice(0, 30))
-check('コピーで「市に伝える文面を用意した」が完了し全完了表示', (await doneCount()) === 4 && (await ev(`!!document.querySelector('[data-testid=all-done]')`)))
+check('手順5が済・5/5完了・完了メッセージ', (await stepStatus('prep')) === 'done' && (await doneCount()) === 5 && (await ev(`document.querySelector('[data-testid=steps-topbar]').textContent.includes('すべて完了')`)))
 await shot('05-out', true)
 
 await clickText('button', 'GeoJSONで書き出す'); await sleep(800)
@@ -170,15 +169,15 @@ if (gj) {
 }
 
 // 範囲外（東京）を開き、記録タブで地図をタップ
-await send('Page.navigate', { url: URL0 + '?z=12&lat=35.68&lng=139.76' })
+await send('Page.navigate', { url: URL0 + '#/?z=12&lat=35.68&lng=139.76' })
 await sleep(800); await send('Page.reload'); await sleep(4000)
-await clickText('[role=tab]', '3 記録する'); await sleep(300)
+await clickText('[role=tab]', '記録する'); await sleep(300)
 await tapMap()
 check('範囲外の警告が出る', await ev(`!!document.querySelector('[data-testid=out-of-coverage]')`))
 check('リロード後も記録が残る', (await ev(`JSON.parse(localStorage.getItem('udc-moritsuchi:records')).length`)) === 2)
 await shot('06-out-of-coverage')
 
-await clickText('[role=tab]', '4 届ける'); await sleep(300)
+await clickText('[role=tab]', '届ける'); await sleep(300)
 await clickText('button', '全記録を消す'); await sleep(400)
 await clickText('[role=dialog] button', '消す'); await sleep(500)
 check('全記録を消せる', (await ev(`document.querySelector('[data-testid=rec-count]').innerText`)) === '0')

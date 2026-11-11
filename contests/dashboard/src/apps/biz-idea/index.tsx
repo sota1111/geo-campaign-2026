@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Download, MapPin, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog } from '@/components/shared/SourceDialog'
+import { useAppSteps } from '@/components/shared/AppSteps'
 import { downloadGeoJson } from '@/components/shared/downloadText'
 import { useLocalStorage } from '@/components/shared/useLocalStorage'
 import { fetchData } from '@/lib/data'
@@ -114,41 +115,6 @@ function SavedNotice({ rec, onConfirm, onList, onNext }: {
         <Button type="button" size="sm" variant="outline" onClick={onNext}>続けて別の話を記録する</Button>
       </div>
     </div>
-  )
-}
-
-interface ProgressItem { key: string; label: string; done: boolean; action: string; go: () => void }
-
-/** 目的の達成状況チェックリスト。操作に応じて自動でチェックされ、次の1項目を強調する */
-function ProgressCard({ items, next }: { items: ProgressItem[]; next: ProgressItem | null }) {
-  const n = items.filter((i) => i.done).length
-  return (
-    <Card>
-      <CardContent className="space-y-2 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <b className="text-sm">やることの進み具合（{n}/{items.length}）</b>
-          <span className="text-xs text-muted-foreground">操作すると自動でチェックされます</span>
-        </div>
-        <ol className="grid gap-1 text-sm sm:grid-cols-2 lg:grid-cols-3" aria-label="達成状況">
-          {items.map((i) => (
-            <li key={i.key} className={`flex items-center gap-1.5 ${i === next ? 'font-bold' : ''}`}>
-              <span aria-hidden className={`inline-flex size-4 shrink-0 items-center justify-center rounded border ${i.done ? 'border-[#0072B2] bg-[#0072B2] text-white' : 'border-neutral-500'}`}>
-                {i.done && <Check className="size-3" />}
-              </span>
-              <span>{i.label}<span className="sr-only">{i.done ? '（完了）' : '（未完了）'}</span></span>
-            </li>
-          ))}
-        </ol>
-        {next ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border-2 border-black bg-yellow-50 p-2">
-            <span className="text-sm font-bold">次にやること</span>
-            <Button size="sm" onClick={next.go}>{next.action} →</Button>
-          </div>
-        ) : (
-          <p className="rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm font-bold">すべて完了しました。別の地名でも試せます。</p>
-        )}
-      </CardContent>
-    </Card>
   )
 }
 
@@ -294,7 +260,7 @@ export default function BizIdeaApp() {
       certainty: p.certainty,
     })
     setErrors([])
-    toast.success(`「${p.name}」を選びました。画面上部の「次にやること」から進めます`)
+    toast.success(`「${p.name}」を選びました。次は手順「伝承碑と突き合わせる」です`)
     map?.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 14), duration: 600 })
   }, [map, closePopup])
 
@@ -303,7 +269,7 @@ export default function BizIdeaApp() {
     setFocus({ lon, lat, place: null })
     setForm((f) => (!f.placeName || /（架空）$/.test(f.placeName) ? { ...f, placeName: '', claimedKinds: [] } : f))
     setErrors([])
-    toast.success('新しい地名の位置を指定しました。「次にやること」から進めます')
+    toast.success('新しい地名の位置を指定しました。次は手順「伝承碑と突き合わせる」です')
   }, [closePopup])
 
   const selectRef = useRef({ selectPlace, setPin })
@@ -437,16 +403,40 @@ export default function BizIdeaApp() {
     if (onlyPub) setDone((d) => ({ ...d, published: true }))
   }
   const publishableCount = records.filter(isPublishable).length
-  const progressItems: ProgressItem[] = [
-    { key: 'pick', label: '地名を選んだ', done: !!focus, action: '地名を選ぶ（下の一覧か地図のピン）', go: () => goTab('pick') },
-    { key: 'cross', label: '伝承碑と突き合わせた', done: done.cross, action: '近くの伝承碑と突き合わせる', go: () => goTab('check', 'step-2-1') },
-    { key: 'overlay', label: '昔の地図・写真と重ねて見た', done: done.overlay, action: '昔の地図・写真を重ねて見る', go: () => goTab('check', 'step-2-2') },
-    { key: 'record', label: '聞き取りを記録した', done: records.length > 0, action: '聞き取りを記録する', go: () => goTab('rec') },
-    { key: 'publish', label: '確認して公開分として書き出した', done: done.published, action: '確認して公開分として書き出す', go: () => goTab('list', 'step-publish') },
-  ]
-  const nextItem = progressItems.find((i) => !i.done) ?? null
   const savedRec = records.find((r) => r.id === lastSavedId) ?? null
-  const confirmRec =records.find((r) => r.id === confirmId) ?? null
+
+  /* 左サイドバー（スマホは上部）の手順。done は実際の操作の結果から判定する */
+  const unverified = records.filter((r) => !r.verified)
+  useAppSteps([
+    {
+      id: 'place', title: '地名を選ぶ', hint: '地名と語りは架空のサンプル', done: !!focus,
+      onSelect: () => goTab('pick'),
+    },
+    {
+      id: 'cross', title: '伝承碑と突き合わせる', hint: '半径内の自然災害伝承碑（実データ）と比べる', done: done.cross,
+      onSelect: () => goTab('check', 'step-2-1'),
+    },
+    {
+      id: 'overlay', title: '昔の地図・写真と重ねる', hint: '空中写真・低湿地など。おすすめ表示あり', done: done.overlay,
+      onSelect: () => goTab('check', 'step-2-2'),
+    },
+    {
+      id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', done: records.length > 0,
+      onSelect: () => goTab('rec'),
+    },
+    {
+      id: 'confirm', title: '確認して公開範囲を選ぶ', hint: 'デモでは自分が確認役を兼ねる',
+      done: records.some((r) => r.verified && r.visibility !== 'undecided'),
+      onSelect: () => {
+        if (unverified.length) { goTab('list'); openConfirm(unverified[unverified.length - 1]) } else goTab(records.length ? 'list' : 'rec')
+      },
+    },
+    {
+      id: 'export', title: '公開分を書き出す', hint: '確認済み・公開の記録だけ（GeoJSON）', done: done.published,
+      onSelect: () => goTab('list', 'step-publish'),
+    },
+  ])
+  const confirmRec = records.find((r) => r.id === confirmId) ?? null
 
   if (loadError) {
     return (
@@ -472,7 +462,9 @@ export default function BizIdeaApp() {
         </AlertDescription>
       </Alert>
 
-      <ProgressCard items={progressItems} next={nextItem} />
+      <p className="rounded-md border bg-muted/40 p-2 text-sm">
+        <b>進め方:</b> 左の「手順」（スマホは上部の手順表示）を上から順に押すと、各手順の操作位置へ移ります。操作すると自動で「済」になります。
+      </p>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
         {/* 地図 */}
@@ -529,7 +521,7 @@ export default function BizIdeaApp() {
                 {focus && (
                   <p className="rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm" role="status">
                     選択中: <b>{focus.place ? focus.place.name : `新しい位置（経度 ${focus.lon.toFixed(4)}・緯度 ${focus.lat.toFixed(4)}）`}</b>
-                    <span className="block text-xs">ほかの地名を押すと選び直せます。次は、画面上部の「次にやること」を押してください。</span>
+                    <span className="block text-xs">ほかの地名を押すと選び直せます。次は、左の手順「伝承碑と突き合わせる」を押してください。</span>
                   </p>
                 )}
                 <Note>地図上のオレンジの地名か、下の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>

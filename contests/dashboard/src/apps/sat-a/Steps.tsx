@@ -151,6 +151,7 @@ export function Step1({
                   <TableRow
                     key={s.id}
                     tabIndex={0}
+                    data-testid="rank-row"
                     data-state={focus === s.id ? 'selected' : undefined}
                     className="cursor-pointer"
                     onClick={() => onFocus(s.id)}

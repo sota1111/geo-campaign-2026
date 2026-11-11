@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { useAppSteps } from '@/components/shared/AppSteps'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +37,8 @@ export default function App() {
   const [focus, setFocus] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
   const [prev, setPrev] = useState<PrevInfo | null>(null)
+  const [viewedTop, setViewedTop] = useState(false)
+  const [wTouched, setWTouched] = useState(false)
   const stepperRef = useRef<HTMLDivElement>(null)
   const firstStep = useRef(true)
   useEffect(() => {
@@ -75,8 +78,12 @@ export default function App() {
     })
   }
 
-  const onSegmentClick = (id: string) => {
+  const focusRow = (id: string) => {
     setFocus(id)
+    setViewedTop(true)
+  }
+  const onSegmentClick = (id: string) => {
+    focusRow(id)
     if (step !== '2') return
     const s = segs.find((x) => x.id === id)
     if (s && s.cls === 'life' && !s.surveyed) toggle(id)
@@ -126,10 +133,38 @@ export default function App() {
     setRevealed(false)
     setCalib(null)
     setLastBatch([])
+    setFocus(null)
     setStep('1')
   }
 
   const autoSelect = () => setSelected(new Set(selectByBudget(ranked, budgetKm)))
+
+  const goto = (st: StepId, id = 'sat-panel') => {
+    setStep(st)
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+  }
+  const selKmNow = totalKm(segs, selected)
+  const scanned = results.size > 0
+  useAppSteps([
+    {
+      id: 'top', title: '候補区間の点数を見る', hint: '最も高い区間を確かめる。表の行をタップ（データはすべて架空）',
+      done: viewedTop || step !== '1' || round > 1 || scanned, onSelect: () => goto('1'),
+    },
+    {
+      id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで点数と順位が変わる', optional: true,
+      done: wTouched, onSelect: () => goto('1'),
+    },
+    {
+      id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
+      done: scanned || (selected.size > 0 && selKmNow <= budgetKm + 1e-9), onSelect: () => goto('2'),
+    },
+    { id: 'scan', title: '走査結果を見る', hint: '結果は乱数のシミュレーション', done: scanned, onSelect: () => goto('3') },
+    { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', done: round > 1, onSelect: () => goto('3') },
+    {
+      id: 'round2', title: '第2回の順位を確かめる', hint: '対比表の変化を見て、「点数の高い順」表の行をタップ',
+      done: round > 1 && viewedTop && focus !== null, onSelect: () => goto('1'),
+    },
+  ])
 
   if (error) {
     return (
@@ -210,7 +245,7 @@ export default function App() {
       </Alert>
 
       <Tabs value={step} onValueChange={(v) => setStep(v as StepId)} className="gap-4">
-        <div ref={stepperRef} className="sticky top-12 z-30 -mx-1 flex scroll-mt-2 flex-wrap items-center gap-2 border-b bg-background/95 px-1 py-2 backdrop-blur" data-testid="sticky-bar">
+        <div ref={stepperRef} className="sticky top-20 z-30 md:top-10 -mx-1 flex scroll-mt-2 flex-wrap items-center gap-2 border-b bg-background/95 px-1 py-2 backdrop-blur" data-testid="sticky-bar">
           <TabsList className="h-auto w-full flex-1 sm:w-auto sm:flex-none" aria-label="調査の段階">
             <TabsTrigger value="1" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>1</b> 絞る</TabsTrigger>
             <TabsTrigger value="2" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>2</b> 選ぶ</TabsTrigger>
@@ -231,17 +266,17 @@ export default function App() {
           <Skeleton className="h-64 w-full" />
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
-            <div className="order-2 min-w-0 space-y-4 lg:order-1">
+            <div id="sat-panel" className="order-2 min-w-0 space-y-4 scroll-mt-32 lg:order-1">
               {step === '1' && (
                 <Step1
                   round={round}
                   w={w}
-                  setW={(v) => { setW(v); setMsg('') }}
+                  setW={(v) => { setW(v); setMsg(''); setWTouched(true) }}
                   candidates={candidates}
                   msg={msg}
                   prev={prev}
                   focus={focus}
-                  onFocus={setFocus}
+                  onFocus={focusRow}
                   onNext={() => setStep('2')}
                   detail={focusSeg ? detailCard : null}
                 />
@@ -255,7 +290,7 @@ export default function App() {
                   selected={selected}
                   toggle={toggle}
                   focus={focus}
-                  onFocus={setFocus}
+                  onFocus={focusRow}
                   onAuto={autoSelect}
                   onClear={() => setSelected(new Set())}
                   onBack={() => setStep('1')}

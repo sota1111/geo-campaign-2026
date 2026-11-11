@@ -80,11 +80,7 @@ export const Conclusion = forwardRef<HTMLDivElement, ConclusionProps>(function C
         {data && !p.hasPoint && (
           <div className="space-y-2">
             <p className="font-medium">まだ地点が選ばれていません。</p>
-            <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
-              <li>「住所・駅名で探す」に場所を入れて「探す」を押す（または地図をタップ）</li>
-              <li>行き先・曜日・出発・許容時間を選ぶ（いまは「{condText}」）</li>
-              <li>ここに「行けます／行けません」と最終便の時刻が出ます。「結論とリンクをコピー」で家族に送れます</li>
-            </ol>
+            <p className="text-muted-foreground">場所を決めると、ここに「行けます／行けません」と最終便の時刻が出ます（条件は「{condText}」）。手順は左のサイドバー（スマホは上部）に順に出ています。</p>
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-xs text-muted-foreground">駅名の例:</span>
               {p.stations.map((s) => (
@@ -137,7 +133,7 @@ export const Conclusion = forwardRef<HTMLDivElement, ConclusionProps>(function C
             </div>
         
 
-            <div>
+            <div data-testid="compare-days">
               <p className="mb-1 font-medium">平日と休日（日曜ダイヤ）の違い（{PERIOD_LABEL[cond.per]}{hr}時発・{cond.w}分以内）</p>
               <div className="grid grid-cols-2 gap-2">
                 {(['wd', 'hol'] as Day[]).map((d) => {

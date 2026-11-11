@@ -1,5 +1,5 @@
 // 操作確認（ヘッドレスChrome, CDP）。usage: node src/apps/biz-business/e2e.mjs <base_url> <out_dir>
-// 初期表示 → 案Bに路線追加（複数路線化）→ CSV書き出し を、デスクトップと390pxで行い、結果の文言・CSV・はみ出し・コンソールエラーを出力する。
+// 独立ページ apps/biz-business/ で、サイドバーの手順を上から順に押し、各手順の操作を行って全手順が「済」になることを、デスクトップと390pxで確認する。
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -36,33 +36,36 @@ async function shot(name) {
 }
 const click = (txt, sel = 'button') => ev(`(()=>{const b=[...document.querySelectorAll('${sel}')].find(x=>x.textContent.trim().includes(${JSON.stringify(txt)}));if(!b)return 'nf';b.click();return 'ok'})()`)
 const alerts = `[...document.querySelectorAll('[role=alert],[role=status]')].map(a=>a.innerText.replace(/\\n/g,' ')).join(' || ').slice(0,900)`
+const status = `[...document.querySelectorAll('button[data-step]')].map(b=>b.dataset.step+':'+b.dataset.status).filter((v,i,a)=>a.indexOf(v)===i).join(' ')`
+const pick = (id) => ev(`(()=>{const bs=[...document.querySelectorAll('button[data-step="${id}"]')];if(!bs.length)return 'nf';(bs.find(b=>b.offsetParent)||bs[0]).click();return 'ok'})()`)
 for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300)
-  await send('Page.navigate', { url: `${base}#/apps/biz-business` }); await sleep(5000)
+  await send('Page.navigate', { url: `${base}apps/biz-business/` }); await sleep(5000)
   await ev(`(()=>{window.__csv=[];const o=URL.createObjectURL;URL.createObjectURL=(b)=>{b.text().then(t=>window.__csv.push(t));return o(b)}})()`)
+  if (mobile) { console.log(label, 'toggle', await click('完了')); await sleep(500) }
   console.log(label, 'overflow', await ev('document.documentElement.scrollWidth - window.innerWidth'))
-  console.log(label, 'alert', await ev(alerts))
-  console.log(label, 'cards', await ev(`[...document.querySelectorAll('[data-slot=card-title]')].map(a=>a.innerText.replace(/\\n/g,' ')).join(' | ').slice(0,700)`))
-  const cl = `(document.querySelector('[aria-label="目的の達成状況"]')||{innerText:'none'}).innerText.replace(/\\n/g,' / ')`
-  console.log(label, 'checklist0', await ev(cl))
-  console.log(label, 'nextbtn', await click('結論の表示へ')); await sleep(800)
-  console.log(label, 'checklist0b', await ev(cl))
-  console.log(label, 'nextbtn2', await click('書き出しボタンへ')); await sleep(800)
-  console.log(label, 'focus', await ev('document.activeElement.textContent'))
+  console.log(label, 'initial', await ev(status))
   await shot(`${label}-1-initial.png`)
-  await ev(`document.querySelectorAll('[aria-label="案Bに止める路線を追加"]')[0].click()`); await sleep(400)
-  await ev(`document.querySelectorAll('[role=option]')[0].click()`); await sleep(800)
-  console.log(label, 'after add', await ev(alerts))
-  console.log(label, 'csvclick', await click('会議資料用にCSVで書き出す')); await sleep(800)
-  console.log(label, 'checklist1', await ev(cl))
-  console.log(label, 'lastAction', await ev(`[...document.querySelectorAll('[role=status]')].map(a=>a.innerText).filter(t=>t.includes('ダウンロードフォルダ')).join('|')`))
-  console.log(label, 'preview', await ev(`(document.querySelector('details')||{innerText:'none'}).innerText.replace(/\\n/g,' / ').slice(0,500)`))
-  console.log(label, 'lbnote', await ev(`document.body.innerText.includes('重複を除いた下限。足し算ではありません')`))
-  const csv = await ev('window.__csv[0]||"none"')
-  fs.writeFileSync(path.join(outDir, `${label}.csv`), csv)
-  console.log(label, 'csv head', csv.slice(0, 900))
-  await shot(`${label}-2-multi.png`)
+  const ops = [
+    ['cond', () => click('この条件でよい（初期値')],
+    ['planA', () => click('例のままこの案でよい')],
+    ['planB', async () => {
+      await ev(`document.querySelectorAll('[aria-label="案Bに止める路線を追加"]')[0].click()`); await sleep(400)
+      await ev(`document.querySelectorAll('[role=option]')[0].click()`); await sleep(500)
+      return click('を確認済み') && 'multi-route added'
+    }],
+    ['verdict', async () => { await sleep(1200); return 'viewed' }],
+    ['export', () => click('会議資料用にCSVで書き出す')],
+  ]
+  for (const [id, op] of ops) {
+    if (mobile) { await click('完了').catch(() => {}); await sleep(300) }
+    console.log(label, 'step', id, 'pick', await pick(id)); await sleep(1000)
+    console.log(label, '  op', await op()); await sleep(900)
+    console.log(label, '  ->', await ev(status))
+  }
+  console.log(label, 'csv rows', (await ev('(window.__csv[0]||"").split("\\n").length')))
+  await shot(`${label}-2-done.png`)
   console.log(label, 'overflow2', await ev('document.documentElement.scrollWidth - window.innerWidth'))
   console.log(label, 'mapcanvas', await ev(`!!document.querySelector('canvas.maplibregl-canvas')`))
   console.log(label, 'errors', JSON.stringify(logs)); logs.length = 0

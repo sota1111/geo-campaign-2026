@@ -3,6 +3,7 @@ import type maplibregl from 'maplibre-gl'
 import { Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
+import { useAppSteps } from '@/components/shared/AppSteps'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { parseHashQuery, withHashQuery } from '@/components/shared/hashState'
@@ -75,6 +76,9 @@ export default function App() {
   const [cands, setCands] = useState<Cand[]>([])
   const [searching, setSearching] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [condTouched, setCondTouched] = useState(false)
+  const [seen, setSeen] = useState({ pt: '', cmp: false, last: false })
+  const [copiedPt, setCopiedPt] = useState('')
   const [all, setAll] = useState<RegionData[] | null>(null)
   const [allErr, setAllErr] = useState<string | null>(null)
   const pending = useRef<{ pt: Pt | null; route: string | null }>({ pt: init.pt ?? null, route: init.route ?? null })
@@ -212,9 +216,10 @@ export default function App() {
     else fallback()
   }, [])
 
+  const ptKey = pt ? `${pt[0].toFixed(5)},${pt[1].toFixed(5)}` : ''
   const onCopy = useCallback(() => {
-    writeClipboard(copyText, () => { setCopied(true); toast.success('コピーしました。LINEやメールに貼り付けて送れます'); setTimeout(() => setCopied(false), 3000) })
-  }, [copyText, writeClipboard])
+    writeClipboard(copyText, () => { setCopied(true); setCopiedPt(ptKey); toast.success('コピーしました。LINEやメールに貼り付けて送れます'); setTimeout(() => setCopied(false), 3000) })
+  }, [copyText, writeClipboard, ptKey])
   useEffect(() => { setCopied(false) }, [copyText])
 
   // 地点の選択・移動
@@ -371,7 +376,52 @@ export default function App() {
   const facLabel = data?.facility_labels[data.facility_order[cond.fi]] ?? ''
   const exampleFor: Record<string, string> = { kumamoto: '熊本駅', toyama: '富山駅', tokushima: '徳島駅', iida: '飯田駅', tokyo: '王子駅' }
 
-  const setC = (p: Partial<CondState>) => setCond((c) => ({ ...c, ...p }))
+  const setC = (p: Partial<CondState>) => { setCondTouched(true); setCond((c) => ({ ...c, ...p })) }
+
+  // ---- 左サイドバー（手順）。done は画面の状態・実際の操作で判定する ----
+  const hasPt = Boolean(pt && data)
+  const verdictShown = hasPt && diag?.v != null
+  // 「比べた」「最終便を見た」は、該当の表示が画面に（9割以上）入った時点で済にする。地点を変えたらやり直し
+  const seenHere = seen.pt === ptKey
+  const seenCmp = hasPt && seenHere && seen.cmp
+  const seenLast = hasPt && seenHere && seen.last
+  useEffect(() => {
+    if (!verdictShown) return
+    const sels = ['[data-testid=compare-days]', '[data-testid=last-bus]']
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        const k = (e.target as HTMLElement).dataset.testid === 'compare-days' ? 'cmp' : 'last'
+        setSeen((v) => (v.pt === ptKey ? { ...v, [k]: true } : { pt: ptKey, cmp: false, last: false, [k]: true }))
+      }
+    }, { threshold: 0.9 })
+    sels.forEach((sel) => { const el = document.querySelector(sel); if (el) io.observe(el) })
+    return () => io.disconnect()
+  }, [verdictShown, ptKey, diag?.near.length])
+  // スマホの手順一覧は選ぶと閉じて高さが変わるので、閉じた後にスクロールする
+  const later = (fn: () => void) => { window.setTimeout(fn, 250) }
+  const focusSearch = () => later(() => {
+    const el = document.getElementById('odpt-q') as HTMLInputElement | null
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el?.focus({ preventScroll: true })
+  })
+  const goTo = (sel: string) => {
+    if (!hasPt) { focusSearch(); return }
+    later(() => document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+  }
+  const condHint = data
+    ? `いま: ${DAY_FULL[cond.day]}・${PERIOD_LABEL[cond.per]}${data.params.start_hours[cond.per]}時・${cond.w}分以内・${data.facility_labels[data.facility_order[cond.fi]]}`
+    : '行き先・曜日・時刻・許容時間'
+  useAppSteps([
+    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: hasPt, onSelect: focusSearch },
+    { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true,
+      onSelect: () => { setCondTouched(true); later(() => document.getElementById('odpt-cond')?.scrollIntoView({ behavior: 'smooth', block: 'center' })) } },
+    { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: verdictShown, onSelect: () => goTo('[data-testid=verdict-main]') },
+    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp || (verdictShown && cond.day === 'hol'), onSelect: () => goTo('[data-testid=compare-days]') },
+    { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast, onSelect: () => goTo('[data-testid=last-bus]') },
+    { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', done: hasPt && copiedPt === ptKey,
+      onSelect: () => { goTo('[data-testid=copy-conclusion]'); later(() => (document.querySelector('[data-testid=copy-conclusion]') as HTMLElement | null)?.focus({ preventScroll: true })) } },
+  ])
 
   // 診断範囲の注記・データ期限
   const dataWarn = useMemo(() => {
@@ -409,7 +459,7 @@ export default function App() {
         {/* 1. 場所と条件 */}
         <Card className="min-w-0 gap-3 py-4 lg:col-start-1 lg:row-start-1">
           <CardHeader className="px-4">
-            <CardTitle className="text-base">1. 場所を選ぶ　2. 条件を選ぶ</CardTitle>
+            <CardTitle className="text-base">場所と条件</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 px-4">
             <div className="space-y-1">
@@ -455,7 +505,7 @@ export default function App() {
               </div>
             )}
             {data && (
-              <div className="space-y-2 border-t pt-3">
+              <div className="space-y-2 border-t pt-3" id="odpt-cond">
                 <div className="grid grid-cols-[4.5rem_1fr] items-start gap-x-2 gap-y-2 text-sm">
                   <span className="pt-2 font-medium">行き先</span>
                   <Seg label="行き先" value={cond.fi} options={data.facility_order.map((k, i) => ({ value: i, label: data.facility_labels[k] }))} onChange={(fi) => setC({ fi })} />
