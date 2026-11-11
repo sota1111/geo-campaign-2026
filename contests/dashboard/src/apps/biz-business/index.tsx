@@ -155,7 +155,7 @@ export default function App() {
   }, [data, W, plans, day, per, need])
 
   // 案Bの初期値は例（病院への影響が大きい路線）。手順「案Bを作る」を開く（または作る）まで、案Bは比較に入れない
-  const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0 && (k !== 1 || !!visited.planB))
+  const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0 && (k !== 1 || !!visited.planB || !!edited[1]))
   const verdict = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])) : null
   const smaller = verdict ? verdict.winners.map((i) => ks[i]) : []
   const firm = verdict?.firm ?? false
@@ -185,9 +185,12 @@ export default function App() {
       })
       return `${plans[k].name}（${plans[k].routes.map(routeFull).join('・')}を廃止）: ${condText}で、${parts.join('。')}。`
     })
-    return reversalText ? [...base, reversalText] : base
+    const conclusion = smaller.length
+      ? `結論: ${fl0}へ行けなくなる人が少ない（影響が小さい）案は${smaller.length === ks.length ? '差なし（同数）' : smaller.map((k) => plans[k].name).join('・')}です（${firm ? '確定' : '暫定。複数路線の案は下限値のため、大小は確定できません'}）。`
+      : ''
+    return [...base, ...(conclusion ? [conclusion] : []), ...(reversalText ? [reversalText] : [])]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, calc, plans, condText, reversalText])
+  }, [data, calc, plans, condText, reversalText, smaller.join(','), firm])
 
   // 地図に出す案: 案A・案Bの手順ではその案、それ以外は選択中の案
   const defaultMapPlan = step === 'cond' || step === 'planA' ? 0 : step === 'planB' ? 1 : (smaller[0] ?? ks[0] ?? 0)
@@ -281,12 +284,18 @@ export default function App() {
     )
   }
 
+  /** 初期値（例の路線）のまま案を確定する。利用者の明示的な操作として「済」にする */
+  const confirmPlan = (k: number) => {
+    setEdited((e) => (e[k] ? e : { ...e, [k]: true }))
+    toast.success(`${plans[k].name}を例の路線のまま確定しました`)
+  }
   const hasA = (plans[0]?.routes.length ?? 0) > 0
   const hasB = (plans[1]?.routes.length ?? 0) > 0
   // 「済」の共通ルール: 見る手順・初期値で成り立つ手順は、前提が満たされた状態で表示したら済。する手順（書き出し）は主操作で済
   const prereq: Record<StepId, boolean> = { cond: !!data, planA: hasA && !!edited[0], planB: hasB && !!edited[1], verdict: ks.length >= 2, export: false }
   useEffect(() => {
-    if (prereq[step]) setVisited((v) => (v[step] ? v : { ...v, [step]: true }))
+    const ids: StepId[] = [step, 'planA', 'planB']
+    for (const id of ids) if (prereq[id]) setVisited((v) => (v[id] ? v : { ...v, [id]: true }))
   })
   // 実行サンプル: 被験者は全手順を開きCSVを書き出したので、前提が満たされたら済にする（実際のダウンロードはしない）
   useEffect(() => {
@@ -416,6 +425,13 @@ export default function App() {
             選べるのは基準日に便がある{calc.selectable.length}路線／収録{data.routes.length}路線（全便の停止のみ。減便は未対応）。
           </p>
         </div>
+        {p.routes.length > 0 && !edited[k] && (
+          <div className="space-y-1" data-testid={`confirm-plan-${k}`}>
+            <Button size="sm" onClick={() => confirmPlan(k)}>{p.name}を例の路線のままで確定</Button>
+            <p className="text-xs text-muted-foreground">いま入っているのは例です。路線を変えるか、この例のままで確定すると、この手順が済になります。</p>
+          </div>
+        )}
+        {p.routes.length > 0 && edited[k] && <p className="text-xs font-medium" data-testid={`plan-done-${k}`}>✓ {p.name}は確定済みです（路線はいつでも変えられます）。</p>}
         {l && p.routes.length > 0 && (
           <div className="rounded-lg border bg-muted/40 p-3" data-testid={`plan-result-${k}`}>
             <div className="text-xs text-muted-foreground">この案で{fl0}へ行けなくなる人（{condText}）</div>
@@ -431,7 +447,13 @@ export default function App() {
   const verdictPanel = () => {
     if (!data || !calc) return loading
     if (ks.length < 2) {
-      return <Alert><Info className="size-4" /><AlertDescription>比較するには、案Aと案Bの両方に路線を選び、手順「案Bを作る」を開いてください（左の手順から）。</AlertDescription></Alert>
+      return <Alert><Info className="size-4" /><AlertDescription className="space-y-2">
+          <p>比較するには、案Aと案Bの両方に路線を選んで確定してください。</p>
+          {[0, 1].filter((k) => plans[k]?.routes.length && !edited[k]).map((k) => (
+            <Button key={k} size="sm" variant="outline" onClick={() => confirmPlan(k)} data-testid="confirm-plan-verdict">{plans[k].name}を例の路線のままで確定する</Button>
+          ))}
+          {!(plans[0]?.routes.length && plans[1]?.routes.length) && <p>案A・案Bのどちらかが未選択です。左の手順「案Aを作る」「案Bを作る」で路線を選んでください。</p>}
+        </AlertDescription></Alert>
     }
     const actPlan = ks.includes(mapPlan) ? mapPlan : ks[0]
     const lg = calc.results[actPlan][selFac]
@@ -484,10 +506,10 @@ export default function App() {
           <summary className="cursor-pointer text-sm font-bold">詳細比較表（{condText}）</summary>
           <div className="mt-2">
           <div className="rounded border">
-            <Table>
+            <Table className="table-fixed text-xs [&_td]:whitespace-normal [&_th]:whitespace-normal [&_td]:px-1.5 [&_th]:px-1.5">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-28">指標</TableHead>
+                  <TableHead className="w-[34%]">指標</TableHead>
                   {ks.map((k) => <TableHead key={k} className="text-right">{plans[k].name}</TableHead>)}
                 </TableRow>
               </TableHeader>
@@ -581,7 +603,14 @@ export default function App() {
         <Button size="lg" className="h-12 w-full text-base" onClick={exportCsv} data-testid="export-csv"><Download className="size-5" />会議資料用にCSVで書き出す</Button>
         <Button variant="outline" size="sm" onClick={copySentences} data-testid="copy-text"><Copy className="size-4" />文章だけをコピー（本文に貼る場合）</Button>
         <p className="text-xs text-muted-foreground">使い分け: 表に貼る・集計に使う → CSV／報告書や議事録の本文に貼る → 文章。この端末の中で作るだけで、送信しません。</p>
+        {!ks.includes(1) && hasB && (
+          <p className="rounded-md bg-muted/50 p-2 text-xs" data-testid="export-no-b">案Bは未確定のため、書き出し・コピーに含まれていません。左の手順「案Bを作る」で確定してください。</p>
+        )}
         {lastAction && <p role="status" className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium">{lastAction}</p>}
+        <div className="space-y-1 rounded-lg border border-dashed p-2.5 text-xs" data-testid="sustain-note">
+          <b className="text-sm">継続の想定（構想段階。実運用はまだ始まっていません）</b>
+          <p>顧客は市町村・都道府県の交通担当部署。収益は自治体向けの年額ライセンスと、初回のデータ取り込み・資料づくりの支援で、費用は自治体が負担する想定です（価格は未定）。個人開発のため、保守の協力先を探しています。住民向けの診断は無償です。</p>
+        </div>
         <details className="rounded-lg border p-2" data-testid="export-preview">
           <summary className="cursor-pointer text-sm font-bold">書き出す内容のプレビュー（文章全文・CSV先頭）</summary>
           <div className="mt-2 space-y-3">

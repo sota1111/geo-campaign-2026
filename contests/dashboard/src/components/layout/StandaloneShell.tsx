@@ -42,7 +42,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
         <div className="sticky top-0 z-30 bg-background md:shrink-0">
           <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-sm md:h-10 md:flex-nowrap md:overflow-hidden md:py-0">
             <a
-              href={portalUrl()}
+              href={portalUrl(app?.contest)}
               className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-primary hover:bg-accent"
             >
               <ArrowLeft className="size-4" />

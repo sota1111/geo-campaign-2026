@@ -54,7 +54,15 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   for (const id of STEPS) {
     if (mobile) { await click('完了'); await sleep(300) }
     const r = await pick(id); await sleep(900)
-    if (id === 'export') { console.log(label, 'csv', await click('CSVで書き出す')); await sleep(600) }
+    if (id === 'planA' || id === 'planB') { console.log(label, 'confirm', id, await click('例の路線のままで確定')); await sleep(500) }
+    if (id === 'export') {
+      console.log(label, 'sustain', await ev(`(document.querySelector('[data-testid=sustain-note]')||{innerText:'none'}).innerText.slice(0,40)`))
+      await ev(`window.__copied='';navigator.clipboard.writeText=(t)=>{window.__copied=t;return Promise.resolve()}`)
+      console.log(label, 'copy', await click('文章だけをコピー')); await sleep(600)
+      console.log(label, 'copied', await ev('window.__copied'))
+      console.log(label, 'lastAction', await ev(`(document.querySelector('[role=status].border-l-4')||{innerText:''}).innerText`))
+      console.log(label, 'csv', await click('CSVで書き出す')); await sleep(600)
+    }
     console.log(label, id, r, 'scrollH/innerH/body', await scrollH(), '->', await ev(status))
     console.log(label, '  legend:', await ev(`(document.querySelector('[data-testid=map-legend]')||{innerText:''}).innerText.slice(0,30)`), '| details open:', await ev(`[...document.querySelectorAll('details')].map(d=>d.open).join(',')`))
     if (id === 'verdict' || id === 'export') {

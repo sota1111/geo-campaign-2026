@@ -8,9 +8,9 @@ export function siteRoot(): string {
   return document.getElementById('root')?.dataset.root ?? './'
 }
 
-/** 統合ダッシュボード（ポータル）の URL */
-export function portalUrl(): string {
-  return `${siteRoot()}index.html`
+/** 統合ダッシュボード（ポータル）の URL。tab を渡すと、そのコンペのタブを開いた状態で戻れる（例 satellite-2026） */
+export function portalUrl(tab?: string): string {
+  return `${siteRoot()}index.html${tab ? `#${tab}` : ''}`
 }
 
 /** 各アプリの独立ページの URL */

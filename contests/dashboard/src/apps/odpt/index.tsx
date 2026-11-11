@@ -23,7 +23,7 @@ import {
   AboutPanel, COLORS, ComparePanel, RegionPanel, StopsPanel, WhatIfPanel, type WhatIfData,
 } from './panels'
 import {
-  distM, condIndex, levelLabel, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
+  altConditions, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
   needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
   type Day, type Lost, type Period, type RegionData, type RegionIndex,
 } from './lib'
@@ -83,7 +83,7 @@ export default function App() {
   const [searchMsg, setSearchMsg] = useState('')
   const [cands, setCands] = useState<Cand[]>([])
   const [searching, setSearching] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copiedText, setCopiedText] = useState('')
   const [condTouched, setCondTouched] = useState(false)
   const [seen, setSeen] = useState(() => (isSampleMode() ? { pt: ptKeyOf(SAMPLE_PT), verdict: true, cmp: true, last: true } : { pt: '', verdict: false, cmp: false, last: false }))
   const [copiedPt, setCopiedPt] = useState(isSampleMode() ? ptKeyOf(SAMPLE_PT) : '')
@@ -190,7 +190,8 @@ export default function App() {
     if (facility) facility = { name: facility.name, m: Math.round(facility.m), min: Math.max(1, Math.ceil((facility.m * data.params.detour) / data.params.walk_m_per_min)) }
     const lv = cell ? +cell[3][condIndex(cond.fi, cond.day, cond.per)] : 0
     const transitLevel = v && v.status === 'transit' && lv > 0 ? levelLabel(lv, data.params.thresholds) : null
-    return { cell, v, near, facility, transitLevel, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
+    const alts = cell && v && !v.ok ? altConditions(cell, { fi: cond.fi, day: cond.day, per: cond.per, w: cond.w, thresholds: data.params.thresholds }) : null
+    return { cell, v, near, facility, transitLevel, alts, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
   }, [data, pt, cellIdx, cond])
 
   const copyText = useMemo(() => {
@@ -229,9 +230,10 @@ export default function App() {
 
   const ptKey = pt ? `${pt[0].toFixed(5)},${pt[1].toFixed(5)}` : ''
   const onCopy = useCallback(() => {
-    writeClipboard(copyText, () => { setCopied(true); setCopiedPt(ptKey); toast.success('コピーしました。LINEやメールに貼り付けて送れます'); setTimeout(() => setCopied(false), 3000) })
+    writeClipboard(copyText, () => { setCopiedText(copyText); setCopiedPt(ptKey); toast.success('コピーしました。LINEやメールに貼り付けて送れます') })
   }, [copyText, writeClipboard, ptKey])
-  useEffect(() => { setCopied(false) }, [copyText])
+  // コピー済みの表示は、いまの文面をコピーしたかどうかで決める（手順を行き来しても保持。条件を変えて文面が変わったら未コピーに戻る）
+  const copied = copiedText !== '' && copiedText === copyText
 
   // 地点の選択・移動
   const showConclusion = () => {}
@@ -269,7 +271,8 @@ export default function App() {
     const cur = data?.id
     // 並び順: 選択中の地域で診断できる場所 → 選択中の地域の範囲内 → 他の収録地域 → 範囲外
     rs = rs.map((r) => ({ ...r, inCell: r.rid === cur && cellIdx[meshCodeAt(r.lon, r.lat)] != null }))
-    rs = rs.map((r, i) => ({ r, k: (r.rid === cur ? (r.inCell ? 0 : 1) : r.rid ? 2 : 3) * 1e7 + (r.rid === cur && data ? Math.round(distM(r.lon, r.lat, data.center[0], data.center[1])) : i) })).sort((a, b) => a.k - b.k).map((x) => x.r).slice(0, 6)
+    // 名前が完全一致するものを最優先にする（「富山駅」で南富山駅が先に選ばれないように）
+    rs = rs.map((r, i) => ({ r, k: matchRank(r.title, q) * 1e8 + (r.rid === cur ? (r.inCell ? 0 : 1) : r.rid ? 2 : 3) * 1e7 + (r.rid === cur && data ? Math.round(distM(r.lon, r.lat, data.center[0], data.center[1])) : i) })).sort((a, b) => a.k - b.k).map((x) => x.r).slice(0, 6)
     // 地名検索で見つからない／接続できないときは、読み込み済みの地域の停留所名から探す
     if (!rs.some((r) => r.rid) && data) {
       searchStops(data.nodes, q.replace(/^.*[都道府県市区町村]/, '') || q).forEach((s) => {
@@ -393,9 +396,15 @@ export default function App() {
   const verdictShown = hasPt && diag?.v != null
   // 「見る」手順は、前提（診断できる地点）がある状態でその手順を表示したら済。自動では切り替えない。地点を変えたらやり直し
   useEffect(() => {
-    if (!verdictShown || (step !== 'verdict' && step !== 'hol' && step !== 'last')) return
-    setSeen((v) => ({ ...(v.pt === ptKey ? v : { pt: ptKey, verdict: false, cmp: false, last: false }), [step === 'hol' ? 'cmp' : step]: true }))
+    if (!verdictShown || (step !== 'verdict' && step !== 'last')) return
+    setSeen((v) => ({ ...(v.pt === ptKey ? v : { pt: ptKey, verdict: false, cmp: false, last: false }), [step]: true }))
   }, [step, verdictShown, ptKey])
+  // 休日との比較は、見ただけでは済にしない。曜日の枠を押して結論を切り替えた時に済
+  const pickDay = (day: Day) => {
+    if (day === cond.day) return
+    setC({ day })
+    setSeen((v) => ({ ...(v.pt === ptKey ? v : { pt: ptKey, verdict: false, cmp: false, last: false }), cmp: true }))
+  }
   const seenHere = seen.pt === ptKey
   const seenVerdict = hasPt && seenHere && seen.verdict
   const seenCmp = hasPt && seenHere && seen.cmp
@@ -407,7 +416,7 @@ export default function App() {
     { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: hasPt },
     { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true },
     { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: seenVerdict },
-    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp },
+    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日と休日の枠を押して見比べる', done: seenCmp },
     { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
     { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: hasPt && copiedPt === ptKey },
     { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
@@ -455,7 +464,7 @@ export default function App() {
         popInfo: diag?.cell ? { pop: diag.cell[1], pop65: diag.cell[2] } : null,
         lastWd: diag?.lastWd ?? null, lastHol: diag?.lastHol ?? null, nearCount: diag?.near.length ?? 0,
         nearest: diag && diag.near[0] ? { name: diag.labels[0], m: Math.round(diag.near[0].d), wd: data.nodes[diag.near[0].i][3], hol: data.nodes[diag.near[0].i][4] } : null,
-        facility: diag?.facility ?? null, transitLevel: diag?.transitLevel ?? null, walkInM: data.params.walk_in_m,
+        facility: diag?.facility ?? null, transitLevel: diag?.transitLevel ?? null, walkInM: data.params.walk_in_m, alts: diag?.alts ?? null,
       }
     : null
   const coverageTip = data
@@ -552,7 +561,7 @@ export default function App() {
         </div>
       )}
       {step === 'verdict' && (hasPt ? <VerdictPanel d={dv} /> : needPt)}
-      {step === 'hol' && (hasPt ? <HolPanel d={dv} /> : needPt)}
+      {step === 'hol' && (hasPt ? <HolPanel d={dv} onPickDay={pickDay} /> : needPt)}
       {step === 'last' && (hasPt ? (
         <div className="space-y-3">
           <LastPanel d={dv} />
@@ -569,7 +578,7 @@ export default function App() {
           </div>
         </div>
       ) : needPt)}
-      {step === 'copy' && (hasPt ? <CopyPanel copyText={copyText} onCopy={onCopy} copied={copied} isLocal={isLocal()} /> : needPt)}
+      {step === 'copy' && (hasPt ? <CopyPanel copyText={copyText} onCopy={onCopy} copied={copied} isLocal={isLocal()} expiry={dataWarn} /> : needPt)}
       {step === 'region' && <RegionPanel data={data} cond={cond} />}
       {step === 'whatif' && <WhatIfPanel data={data} whatif={whatif} cond={cond} route={route} onRoute={selectRoute} impact={impact} />}
       {step === 'compare' && index && <ComparePanel index={index} all={all} cond={cond} data={data} loading={!all && !allErr} error={allErr} />}
@@ -616,7 +625,7 @@ export default function App() {
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <b>エリア（<Term tip={TIPS.mesh}>約500m四方</Term>）</b>
               <Sw c={COLORS.walk} l="歩いて行ける" /><Sw c={COLORS.transit} l="公共交通で行ける" /><Sw c={COLORS.none} l="行けない" />
-              <Sw c={COLORS.rail} l="鉄道駅が近い（未評価）" />{lostIdx && <Sw c={COLORS.lost} l="路線を止めると行けなくなる" />}
+              <Sw c="#ffffff" l="色なし＝診断対象外（人口データなし、または停留所から遠い）" /><Sw c={COLORS.rail} l="鉄道駅が近い（未評価）" />{lostIdx && <Sw c={COLORS.lost} l="路線を止めると行けなくなる" />}
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <b>停留所（1日の本数）</b>
@@ -627,7 +636,14 @@ export default function App() {
             <p className="text-muted-foreground"><Term tip={TIPS.gtfs}>GTFS</Term>・<Term tip={TIPS.none}>行けない</Term>の意味は、言葉に触れると表示されます。</p>
           </div>
         ) : (
-          <Button size="sm" variant="secondary" className="h-7 border bg-white/95 px-2 text-xs shadow" onClick={() => setLegendOpen(true)}>凡例・表示切替</Button>
+          <div className="space-y-1" data-testid="legend-compact">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md border bg-white/95 px-2 py-1 text-xs shadow" aria-label="色の意味（エリア約500m四方）">
+              <b>色の意味</b>
+              <Sw c={COLORS.walk} l="歩いて行ける" /><Sw c={COLORS.transit} l="公共交通で行ける" /><Sw c={COLORS.none} l="行けない" />
+              {lostIdx && <Sw c={COLORS.lost} l="路線を止めると行けなくなる" />}
+            </div>
+            <Button size="sm" variant="secondary" className="h-7 border bg-white/95 px-2 text-xs shadow" onClick={() => setLegendOpen(true)}>凡例・表示切替</Button>
+          </div>
         )}
       </div>
     </div>

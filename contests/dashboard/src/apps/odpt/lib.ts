@@ -410,3 +410,34 @@ export function searchStops(nodes: StopNode[], q: string, limit = 5): { i: numbe
   })
   return out
 }
+
+/** 地名検索の並べ替え用。0=名前が完全一致、1=前方一致、2=それ以外（「富山駅」で南富山駅より先に富山駅を出す） */
+export function matchRank(title: string, q: string): number {
+  const t = title.trim(), s = q.trim()
+  if (!s) return 2
+  if (t === s) return 0
+  return t.startsWith(s) ? 1 : 2
+}
+
+export interface AltResult { per: Period; status: Status; ok: boolean }
+export interface Alternatives {
+  /** 同じ曜日で、ほかの時間帯 */
+  periods: AltResult[]
+  /** いまの許容時間より長い許容時間のうち、最初に行けるようになるもの（無ければ null） */
+  longerW: { w: number; status: Status } | null
+}
+
+/** 「行けません」のときの次の一歩に使う、画面にある事実だけ（ほかの時間帯・許容時間を延ばした場合の結果） */
+export function altConditions(cell: Cell, o: { fi: number; day: Day; per: Period; w: number; thresholds: number[] }): Alternatives {
+  const need = needLevel(o.thresholds, o.w)
+  const periods = PERIODS.filter((p) => p !== o.per).map((per) => {
+    const status = cellStatus(cell, o.fi, o.day, per, need)
+    return { per, status, ok: reachable(status) }
+  })
+  let longerW: Alternatives['longerW'] = null
+  for (const w of o.thresholds.filter((x) => x > o.w)) {
+    const status = cellStatus(cell, o.fi, o.day, o.per, needLevel(o.thresholds, w))
+    if (reachable(status)) { longerW = { w, status }; break }
+  }
+  return { periods, longerW }
+}

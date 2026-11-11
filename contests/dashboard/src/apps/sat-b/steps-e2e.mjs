@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-const base = 'http://127.0.0.1:8844/apps/sat-b/', out = process.argv[2]
+const base = process.env.BASE ?? 'http://127.0.0.1:8844/apps/sat-b/', out = process.argv[2]
 fs.mkdirSync(out, { recursive: true })
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)
@@ -46,10 +46,10 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
     const open = await ev('document.querySelector("[data-testid=steps-topbar] button")?.getAttribute("aria-expanded")')
     if (open !== 'true') { await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); await sleep(300) }
   }
-  const step = async (sid) => { await openTop(); R.log.push(sid + ':' + await click(`[data-step=${sid}]`)); await sleep(1000); R.heights[sid] = await heights(); R.trace = (R.trace || []).concat(sid + '→current=' + (await ev('document.querySelector("[data-status=current]")?.dataset.step ?? "none"'))); await shot(`steps-${label}-${sid}.png`) }
+  const step = async (sid) => { await openTop(); if (!(await ev(`!!document.querySelector('[data-step=${sid}]')`))) { await ev(`document.querySelector('[data-testid=steps-optional] > button')?.click()`); await sleep(300) } R.log.push(sid + ':' + await click(`[data-step=${sid}]`)); await sleep(1000); R.heights[sid] = await heights(); R.trace = (R.trace || []).concat(sid + '→current=' + (await ev('document.querySelector("[data-status=current]")?.dataset.step ?? "none"'))); await shot(`steps-${label}-${sid}.png`) }
   R.initial = await (async () => { await openTop(); const s = await statuses(); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })()
   await step('data'); R.unconnectedCount = await ev('(document.body.innerText.match(/未接続/g)||[]).length'); R.confirmText = await ev('document.querySelector("button[aria-pressed]")?.innerText'); R.confirm = await click('button[aria-pressed]', '確認しました'); await sleep(300)
-  await step('ledger'); R.ledgerDoneNoClick = await (async () => { await openTop(); const s = await ev('document.querySelector("[data-step=ledger]").dataset.status'); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })(); R.ledgerScroll = await ev('(()=>{const c=[...document.querySelectorAll("[data-testid=step-panel-body] div")].find(d=>d.scrollHeight>d.clientHeight+20&&getComputedStyle(d).overflowY!=="visible");return c?c.scrollHeight+">"+c.clientHeight:"none"})()'); R.row = 'skipped (selection optional)'; await sleep(300); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
+  await step('ledger'); R.ledgerDoneNoClick = await (async () => { await openTop(); const s = await ev('document.querySelector("[data-step=ledger]").dataset.status'); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })(); R.ledgerScroll = await ev('(()=>{const c=[...document.querySelectorAll("[data-testid=step-panel-body] div")].find(d=>d.scrollHeight>d.clientHeight+20&&getComputedStyle(d).overflowY!=="visible");return c?c.scrollHeight+">"+c.clientHeight:"none"})()'); R.row = await click('[data-testid=step-panel-body] tbody tr[data-id]'); await sleep(600); R.ledgerDoneAfterClick = await (async () => { await openTop(); const s = await ev('document.querySelector("[data-step=ledger]").dataset.status'); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })(); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
   if (mobile) { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(500) }
   await step('plan'); R.cap = await ev('document.querySelector("#sat-b-cap")?.value')
   await ev('window.__dlname=[];HTMLAnchorElement.prototype.click=function(){window.__dlname.push(this.download)}')
@@ -62,6 +62,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await step('check'); await sleep(500)
   R.planSummary = await ev('(document.body.innerText.match(/計画の\\d+件のうち[^\\n]*/)||["none"])[0]')
   R.ledgerRow = await ev('[...document.querySelectorAll("[data-testid=step-panel-body] tbody tr")].map(r=>r.innerText.replace(/\\s+/g," ")).join(" | ")')
+  await step('sat'); R.satNote = await ev('document.querySelector("[data-testid=sat-contrast]")?.innerText.slice(0,60)'); R.satBefore = await ev('document.querySelector("[data-testid=sat-contrast-summary]").innerText'); await ev('document.querySelector("[role=slider]").focus()'); await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowLeft', code: 'ArrowLeft', windowsVirtualKeyCode: 37 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowLeft', code: 'ArrowLeft', windowsVirtualKeyCode: 37 }); await sleep(300); R.satAfter = await ev('document.querySelector("[data-testid=sat-contrast-summary]").innerText'); await shot(`steps-${label}-sat.png`)
   await step('tune')
   R.final = await (async () => { await openTop(); return statuses() })()
   await shot(`steps-${label}-final.png`)

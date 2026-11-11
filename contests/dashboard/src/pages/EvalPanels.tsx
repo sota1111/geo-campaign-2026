@@ -21,6 +21,9 @@ import {
 
 export const MOCK_NOTICE = `AI（Sonnet）による模擬評価（${EVAL_DATE}）です。実際の審査結果ではありません。`
 
+/** 点数は改修前の画面に対するもの。再評価するまで改修後の点数は出さない */
+export const BEFORE_NOTICE = `この評価は改修前（${EVAL_DATE}）の画面に対するものです。その後の改修は反映しておらず、再評価はまだです。`
+
 /** 点と割合。色に頼らず「点/満点（割合）」の数字と細い棒で示す */
 export function Score({ label, score, max, className = '' }: { label: string; score: number; max: number; className?: string }) {
   const p = pct(score, max)
@@ -46,7 +49,7 @@ export function AppScoreLine({ appId, contest }: { appId: string; contest: Conte
     <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs" data-testid={`score-line-${appId}`}>
       <span className="inline-flex items-center gap-1 text-muted-foreground">
         <Bot className="size-3" aria-hidden />
-        AI評価
+        AI評価（改修前の画面）
       </span>
       <Score label="B" score={sum(ev.b)} max={B_MAX} />
       <Score label="C" score={sum(c.items.map((i) => i.score))} max={cMax(c)} />
@@ -93,7 +96,7 @@ export function ContestEval({ contest }: { contest: ContestId }) {
         <Bot className="size-4" aria-hidden />
         AI評価の結果（{short}）
         <span className="text-xs font-normal text-muted-foreground">
-          項目別の内訳・優先度「高」の改善提案・不具合を見る（{MOCK_NOTICE}）
+          項目別の内訳・優先度「高」の改善提案・不具合を見る（{MOCK_NOTICE}{BEFORE_NOTICE}）
         </span>
       </summary>
       <div className="space-y-4 border-t p-3">
@@ -185,6 +188,9 @@ export function EvalSummary() {
           <Bot className="size-4" aria-hidden />
           {MOCK_NOTICE}
         </p>
+        <p className="mt-1 text-xs font-bold" data-testid="eval-before-notice">
+          {BEFORE_NOTICE}
+        </p>
         <p className="mt-1 text-xs">
           評価者はSonnet 4名。ポータルから出発し、画面を操作して採点しました（基準: {RUBRIC_PATH}）。A はポータル（25点）、B は各アプリの操作性・デザイン（35点）、C は各コンペの審査基準に照らした採点です。審査員の採点や順位を予測するものではありません。
         </p>
@@ -268,7 +274,7 @@ export function EvalSummary() {
         <section className="rounded-lg border bg-card p-3" aria-label="ポータルへの指摘">
           <h3 className="mb-1.5 flex items-center gap-1 text-sm font-bold">
             <Flag className="size-4" aria-hidden />
-            ポータルへの指摘（今回は表示のみ。修正は未対応）
+            ポータルへの指摘（改修前の画面に対するもの。一部は改修済み）
           </h3>
           <ul className="space-y-1 text-xs">
             {PORTAL_FINDINGS.map((f) => (

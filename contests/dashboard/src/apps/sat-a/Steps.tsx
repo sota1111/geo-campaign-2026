@@ -1,4 +1,4 @@
-import { Radar, Wand2 } from 'lucide-react'
+import { Download, Radar, Wand2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -144,7 +144,7 @@ export function WeightPanel({ w, setW, candidates, focus, onFocus }: {
 
 /* ---------- 3 予算内で調査対象を選ぶ ---------- */
 export function PickPanel({
-  budgetKm, setBudgetKm, segs, candidates, selected, toggle, focus, onFocus, onAuto, onClear,
+  budgetKm, setBudgetKm, segs, candidates, selected, toggle, focus, onFocus, onAuto, onClear, onExport,
 }: {
   budgetKm: number
   setBudgetKm: (v: number) => void
@@ -156,6 +156,7 @@ export function PickPanel({
   onFocus: (id: string) => void
   onAuto: () => void
   onClear: () => void
+  onExport: () => void
 }) {
   const km = totalKm(segs, selected)
   const over = km > budgetKm + 1e-9
@@ -164,6 +165,20 @@ export function PickPanel({
   const inTop = [...selected].filter((id) => top15.has(id)).length
   return (
     <div className="space-y-3">
+      <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-1 space-y-1 border-b bg-background px-4 pb-2 pt-3 shadow-sm" aria-live="polite" data-testid="sel-sticky">
+        <div className="flex items-baseline justify-between text-sm">
+          <span>選択中 <b className="text-lg" data-testid="sel-count">{selected.size}</b> 区間</span>
+          <span className={cn('font-medium', over && 'text-[#b45309]')} data-testid="sel-km">{fmt1(km)} / {fmt1(budgetKm)} km</span>
+        </div>
+        <Progress value={Math.min(100, (km / budgetKm) * 100)} className={over ? '[&>div]:bg-[#b45309]' : ''} />
+        {selected.size > 0 && (
+          <div className="text-xs text-muted-foreground" data-testid="sel-breakdown">
+            上位15区間のうち {inTop} 区間＋それ以外 {selected.size - inTop} 区間を選びました。
+          </div>
+        )}
+        {over && <div className="text-sm font-medium text-[#b45309]">▲ 上限を超えています。区間を外すか、延長を増やしてください。</div>}
+      </div>
+
       <div className="space-y-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <label className="text-sm font-medium" id="bud-label">走らせられる延長（予算＝走行延長に換算した仮の値）</label>
@@ -178,24 +193,11 @@ export function PickPanel({
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={onAuto} data-testid="auto"><Wand2 />点数の上位から自動で選ぶ</Button>
         <Button size="sm" variant="outline" onClick={onClear} data-testid="clear">選択をクリア</Button>
+        <Button size="sm" variant="outline" onClick={onExport} disabled={selected.size === 0} data-testid="export-targets"><Download />調査対象をCSVで書き出す</Button>
       </div>
       <p className="text-xs text-muted-foreground">
         延長の上限（{fmt1(budgetKm)}km）まで点数順に選ぶため、表の上位15に入らない区間も含まれます。地図の道路のタップでも選択／解除できます。
       </p>
-
-      <div className="space-y-1" aria-live="polite">
-        <div className="flex items-baseline justify-between text-sm">
-          <span>選択中 <b className="text-lg" data-testid="sel-count">{selected.size}</b> 区間</span>
-          <span className={cn('font-medium', over && 'text-[#b45309]')} data-testid="sel-km">{fmt1(km)} / {fmt1(budgetKm)} km</span>
-        </div>
-        <Progress value={Math.min(100, (km / budgetKm) * 100)} className={over ? '[&>div]:bg-[#b45309]' : ''} />
-        {selected.size > 0 && (
-          <div className="text-xs text-muted-foreground" data-testid="sel-breakdown">
-            上位15区間のうち {inTop} 区間＋それ以外 {selected.size - inTop} 区間を選びました。
-          </div>
-        )}
-        {over && <div className="text-sm font-medium text-[#b45309]">▲ 上限を超えています。区間を外すか、延長を増やしてください。</div>}
-      </div>
 
       <div className="text-sm font-medium">候補 {rows.length} 区間（点数の高い順）</div>
       <Table>
@@ -312,7 +314,7 @@ export function ApplyPanel({
           <Alert className="border-primary/40 bg-primary/5">
             <AlertTitle>第{round}回に反映済みです</AlertTitle>
             <AlertDescription className="text-foreground">
-              衛星指標の重みは {pct(applied.oldW)}% → {pct(applied.newW)}%。結果は「第2回の順位を確かめる」の手順で見られます。
+              衛星指標の重みは {pct(applied.oldW)}% → {pct(applied.newW)}%。結果は、左の手順リストの「第2回の順位を確かめる」を押すと見られます（強調表示しています）。
             </AlertDescription>
           </Alert>
         ) : (
@@ -361,7 +363,7 @@ export function ApplyPanel({
 
 /* ---------- 6 第2回の順位を確かめる ---------- */
 export function Round2Panel({
-  round, msg, prev, candidates, focus, onFocus,
+  round, msg, prev, candidates, focus, onFocus, onExport,
 }: {
   round: number
   msg: string
@@ -369,6 +371,7 @@ export function Round2Panel({
   candidates: Scored[]
   focus: string | null
   onFocus: (id: string) => void
+  onExport: () => void
 }) {
   if (!prev || round < 2) {
     return <Alert><AlertDescription>第2回の順位はまだありません。「較正を反映して第2回へ進む」まで済ませると、ここに第1回との対比が出ます。</AlertDescription></Alert>
@@ -402,6 +405,7 @@ export function Round2Panel({
       </Table>
       <div className="text-sm font-medium">第{round}回の順位 上位10区間（「前回」＝第{prev.round}回の順位）</div>
       <RankTable rows={candidates.slice(0, 10)} focus={focus} onFocus={onFocus} prev={prev} />
+      <Button size="sm" variant="outline" onClick={onExport} data-testid="export-round2"><Download />第{round}回の順位をCSVで書き出す</Button>
     </div>
   )
 }

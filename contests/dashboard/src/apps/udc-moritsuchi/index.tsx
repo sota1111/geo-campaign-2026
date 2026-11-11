@@ -49,6 +49,8 @@ const OLDS = [
   { id: 'ort_old10', label: '1961〜69年' },
   { id: 'gazo1', label: '1974〜78年' },
 ] as const
+/** 記録する位置の輪の色。橙・青の造成地や写真の上でも見える濃い赤紫 */
+const PICK_COLOR = '#A0145E'
 const EMPTY_FC: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 const RASTERS = [
   { id: 'mw-std', path: 'std', ext: 'png', minzoom: 5, maxzoom: 18 },
@@ -102,6 +104,17 @@ function bboxOf(f: FillFeature): [[number, number], [number, number]] {
   const xs = ring.map((p) => p[0])
   const ys = ring.map((p) => p[1])
   return [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]]
+}
+
+const DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西']
+/** 起点から見た造成地の方角（8方位）。造成地の範囲の中心との位置関係（データの座標から計算） */
+function dirLabel(from: { lng: number; lat: number }, f: FillFeature | undefined): string {
+  if (!f) return ''
+  const [[w, s], [e, n]] = bboxOf(f)
+  const dx = ((w + e) / 2 - from.lng) * Math.cos((from.lat * Math.PI) / 180)
+  const dy = (s + n) / 2 - from.lat
+  const k = Math.round((Math.atan2(dx, dy) / (Math.PI / 2)) * 2 + 8) % 8
+  return DIRS[k]
 }
 
 function metersLabel(d: NearFill) {
@@ -255,9 +268,14 @@ export default function App() {
         },
       },
       {
+        id: 'pick-halo', type: 'circle',
+        data: pick ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [pick.lng, pick.lat] } } : EMPTY_FC,
+        paint: { 'circle-radius': 21, 'circle-color': 'rgba(255,255,255,0.55)', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 },
+      },
+      {
         id: 'pick', type: 'circle',
         data: pick ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [pick.lng, pick.lat] } } : EMPTY_FC,
-        paint: { 'circle-radius': 16, 'circle-color': 'rgba(204,121,167,0.2)', 'circle-stroke-color': '#CC79A7', 'circle-stroke-width': 5 },
+        paint: { 'circle-radius': 16, 'circle-color': 'rgba(176,32,112,0.25)', 'circle-stroke-color': PICK_COLOR, 'circle-stroke-width': 5 },
       },
     ]
   }, [fills, records, selRec, selFill, pick, origin])
@@ -433,7 +451,7 @@ export default function App() {
     setIoMsg('')
     setSavedMsg(`保存しました（${KIND_LABEL[rec.kind]}／${rec.observedAt}）。地図の黄色い丸が記録です。`)
     toast.success('記録を保存しました')
-    mapRef.current?.easeTo({ center: [rec.lng, rec.lat], duration: 400 })
+    // 地図は動かさない（直前まで見ていた造成地との位置関係を保つ）。記録は選んだ位置にそのまま黄色い丸で出る
   }
 
   const selectRecord = (id: string) => {
@@ -566,7 +584,7 @@ export default function App() {
         <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-[#F0E442]" />黄色い丸＝保存した自分の記録
       </li>
       <li className="flex items-center gap-2">
-        <span className="inline-block size-4 shrink-0 rounded-full border-[3px] border-[#CC79A7] bg-[#CC79A7]/20" />ピンクの輪＝記録する位置（保存前）
+        <span className="inline-block size-4 shrink-0 rounded-full border-[3px] bg-white/60" style={{ borderColor: PICK_COLOR }} />濃い赤紫の輪＝記録する位置（保存前）
       </li>
     </ul>
   )
@@ -588,6 +606,14 @@ export default function App() {
         attribution="大規模盛土造成地：国土数値情報（国土交通省）"
         ariaLabel="盛土ウォッチの地図"
       />
+      <div className="pointer-events-none absolute bottom-7 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md border bg-white/95 px-2 py-1 text-xs shadow" data-testid="map-legend">
+        <b>色の意味</b>
+        {(['谷埋め型', '腹付け型'] as const).map((k) => (
+          <span key={k} className="flex items-center gap-1"><span className="inline-block size-3 rounded-sm border-2" style={{ borderColor: KIND_COLOR[k], background: KIND_COLOR[k] + '70' }} />{k}</span>
+        ))}
+        <span className="flex items-center gap-1"><span className="inline-block size-3 rounded-full border-2 border-black bg-[#F0E442]" />自分の記録</span>
+        {step === 'rec' && <span className="flex items-center gap-1"><span className="inline-block size-3 rounded-full border-[3px] bg-white/60" style={{ borderColor: PICK_COLOR }} />記録する位置</span>}
+      </div>
       {step === 'compare' && old !== 'none' && (
         <div className="pointer-events-none absolute left-2 top-2 z-10 max-w-[70%] rounded-md bg-white/95 px-2 py-1 text-xs font-medium shadow" data-testid="compare-badge">
           スライダー: 左＝今（{BASES.find((b) => b.id === base)?.label}）／右＝昔（{OLDS.find((o) => o.id === old)?.label}）。昔の写真 {op}%
@@ -595,7 +621,7 @@ export default function App() {
       )}
       {step === 'rec' && (
         <div className="pointer-events-none absolute left-2 top-2 z-10 max-w-[70%] rounded-md bg-white/95 px-2 py-1 text-xs font-bold shadow">
-          {pick ? 'ピンクの輪＝いま選んだ位置' : '▶ 地図をタップして位置を決めてください'}
+          {pick ? '濃い赤紫の輪＝いま選んだ位置' : '▶ 地図をタップして位置を決めてください'}
         </div>
       )}
     </div>
@@ -700,7 +726,9 @@ export default function App() {
             >
               <span className="min-w-0">
                 <span className="font-medium">{d.id}</span>
-                <span className="ml-2 text-muted-foreground">起点から{metersLabel(d)}{!d.inside && d.distM <= NEAR_M ? '（近く）' : ''}</span>
+                <span className="ml-2 text-muted-foreground" data-testid="fill-dir">
+                  {d.inside ? '起点を含む範囲' : `起点の${dirLabel(origin, fills.find((x) => x.properties.id === d.id))}側 ${metersLabel(d)}`}{!d.inside && d.distM <= NEAR_M ? '（近く）' : ''}
+                </span>
               </span>
               <KindBadge kind={d.kind} />
             </button>
@@ -775,7 +803,7 @@ export default function App() {
         </ul>
         <div className="space-y-2">
           <p className={`rounded-md border-2 p-2 text-sm font-medium ${pick ? 'border-primary bg-accent/40' : 'border-dashed border-primary'}`}>
-            {pick ? '位置を選びました（地図のピンク色の大きな輪）。違えば、もう一度地図をタップ。' : '地図をタップして位置を決めてください（まだ選ばれていません）'}
+            {pick ? '位置を選びました（地図の濃い赤紫の大きな輪）。違えば、もう一度地図をタップ。' : '地図をタップして位置を決めてください（まだ選ばれていません）'}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
@@ -844,6 +872,13 @@ export default function App() {
           <p className="text-xs text-muted-foreground">
             このページは送信しません。通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
           </p>
+          <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">
+            <p className="font-medium text-foreground">記録を集める人と、伝え先（想定）</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              <li>記録を集めるのは、自治会・自主防災組織の有志や住民を想定しています。各自が書き出したGeoJSON／CSVを持ち寄ると、地域の点検記録になります。</li>
+              <li>伝え先は、市の盛土・造成を扱う担当課や防災の窓口（電話・メール・フォームなど、市ごとに異なります）を想定しています。特定の市や自治会との連携、運用の実績はまだありません。</li>
+            </ul>
+          </div>
         </div>
       ) : (
         <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">記録がまだありません。記録を1件保存すると、通報文のたたき台ができます。</p>

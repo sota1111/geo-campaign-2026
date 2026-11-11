@@ -436,6 +436,7 @@ export default function BizIdeaApp() {
         </div>
       )}
       <Note>オレンジの地名か、地名の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>
+      <Note>手順1〜3の進捗（選んだ地名・重ね地図）は、ページを再読み込みすると消えます。{isSampleMode() ? '' : '手順4以降の保存した記録は端末に残ります。'}</Note>
       {!places.length && (
         <div className="space-y-2" role="status" aria-label="地名を読み込み中">
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
@@ -703,6 +704,10 @@ export default function BizIdeaApp() {
         <b className="text-sm">全記録（未確認を含む・内部用）</b>
         <Note>非公開を除くすべて（未確認を含む）。確認作業や内部の見直し用で、<b>公開には使いません</b>。対象: {records.filter((r) => r.visibility !== 'private').length}件</Note>
         <Button variant="outline" className="w-full" onClick={() => exportGeo(false)}><Download className="size-4" />全記録を書き出し</Button>
+      </div>
+      <div className="space-y-1 rounded-md border border-dashed p-2" data-testid="sustain-note">
+        <b className="text-sm">継続の想定（構想段階。実運用はまだ始まっていません）</b>
+        <Note>聞き取りは、住民が出典つきで投稿し、図書館・郷土資料館・学校の担当者が確認して公開する想定です（郷土資料の整理や防災学習の一部として）。投稿者は公開範囲と利用条件を選べ、求めがあれば非公開にします。公開は書き出したGeoJSONを地域のオープンデータサイト等に載せる形で、地図は公開データで作り運営費を抑える想定です。まず1地区から始めます。</Note>
       </div>
       <Note>書き出したGeoJSONは、地域のオープンデータサイト等に掲載する想定です（このデモは掲載しません）。</Note>
       <Note>ファイルは端末内で作成し、送信しません。地名に「（架空）」が付く記録は、このデモのための架空の内容です。実際の公開データとしては使わないでください。</Note>

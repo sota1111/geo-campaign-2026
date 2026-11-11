@@ -59,7 +59,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 800, false], ['mobile', 3
     const title = (await send('Runtime.evaluate', { expression: 'document.querySelector("h1")?.textContent', returnByValue: true })).result?.result?.value
     const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnByValue: true })).result?.result?.value
     const canvas = await ev('!!document.querySelector(".maplibregl-canvas")')
-    const back = await ev('document.querySelector("header a[href$=\\"index.html\\"]")?.getAttribute("href") ?? null')
+    const back = await ev('document.querySelector("header a[href*=\\"index.html\\"]")?.getAttribute("href") ?? null')
     const sw = await ev('document.documentElement.scrollWidth')
     const sh = await ev('document.documentElement.scrollHeight')
     const topbar = await ev('document.querySelector("[data-testid=steps-topbar-main]")?.textContent ?? null')

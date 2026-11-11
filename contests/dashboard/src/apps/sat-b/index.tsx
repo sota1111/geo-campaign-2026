@@ -31,6 +31,8 @@ import {
 import { isSampleMode } from '@/lib/sample'
 import { SAMPLE_RECORD } from './sample'
 import { SampleFrame, SiteMap, TilePhoto } from './parts'
+import { BusinessDialog } from './Business'
+import { SatContrast } from './SatContrast'
 import { markCsv } from '../_samples/mark'
 
 
@@ -72,8 +74,8 @@ const dateStr = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 
-interface Progress { data: boolean; ledger: boolean; plan: boolean; csv: boolean; record: boolean; check: boolean; last: string }
-const NO_PROGRESS: Progress = { data: false, ledger: false, plan: false, csv: false, record: false, check: false, last: '' }
+interface Progress { sat: boolean; data: boolean; ledger: boolean; plan: boolean; csv: boolean; record: boolean; check: boolean; last: string }
+const NO_PROGRESS: Progress = { sat: false, data: false, ledger: false, plan: false, csv: false, record: false, check: false, last: '' }
 /** 被験者が済にした手順（報告: 手順1〜6を操作。CSV書き出しと巡視記録を実行） */
 const SAMPLE_PROGRESS: Partial<Progress> = { data: true, ledger: true, plan: true, csv: true, record: true, check: true, last: SAMPLE_RECORD.siteId }
 function useProgress(mode: Mode) {
@@ -130,10 +132,10 @@ export default function App() {
     )
   }
   if (!data) return <div className="space-y-3"><PageHeader appId="sat-b" compact /><Skeleton className="h-64 w-full" /></div>
-  return <Body key={mode} mode={mode} ds={data[mode]} setMode={setMode} />
+  return <Body key={mode} mode={mode} ds={data[mode]} fictional={data.sample} setMode={setMode} />
 }
 
-type StepId = 'data' | 'ledger' | 'plan' | 'csv' | 'record' | 'check' | 'tune'
+type StepId = 'data' | 'ledger' | 'plan' | 'csv' | 'record' | 'check' | 'sat' | 'tune'
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   data: { title: 'データを確かめる', hint: '実データ（横須賀市）の内容を確かめます' },
   ledger: { title: '台帳で優先度と内訳を見る', hint: '行か地図の点を選ぶと、地図の上に点数の内訳と前後の写真が出ます' },
@@ -141,6 +143,7 @@ const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   csv: { title: '計画をCSVで書き出す', hint: '書き出す内容を確かめて保存します' },
   record: { title: '巡視結果を記録する', hint: '地点・巡視日・巡視者・結果を入れて「記録する」' },
   check: { title: '台帳に反映されたか確かめる', hint: '台帳の「最新の巡視」に、記録した結果が出ています' },
+  sat: { title: '衛星の変化量が入ると（架空値の対比）', hint: '架空の12地点で、変化量の配点を動かして順位の動きを見ます（任意）' },
   tune: { title: '検出条件の見直し（参考）', hint: '巡視結果を集計し、型ごとの重みを手で調整します（任意）' },
 }
 
@@ -153,7 +156,7 @@ function ModeToggle({ mode, setMode }: { mode: Mode; setMode: (m: string) => voi
   )
 }
 
-function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: string) => void }) {
+function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; fictional: Dataset; setMode: (m: string) => void }) {
   const real = mode === 'real'
   // 実行サンプル（実データ版）: 被験者が最後に見た手順6の状態から始める
   const seed = isSampleMode() && real
@@ -175,8 +178,8 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   const lastRecorded = prog.last
   const setDataChecked = (b: boolean) => setProg({ data: b })
   useEffect(() => { if (step === 'plan' && !prog.plan) setProg({ plan: true }) }, [step, prog.plan, setProg])
-  // 「見る」手順: 台帳を表示したら済（行の選択は任意の深掘り）
-  useEffect(() => { if ((step === 'ledger' || sel) && !prog.ledger) setProg({ ledger: true }) }, [step, sel, prog.ledger, setProg])
+  // 「見る」手順: 台帳の行（または地図の点）を1つ選んで内訳を見たら済（開いただけでは済にしない）
+  useEffect(() => { if (sel && !prog.ledger) setProg({ ledger: true }) }, [sel, prog.ledger, setProg])
   useEffect(() => { if (step === 'check' && prog.record && !prog.check) setProg({ check: true }) }, [step, prog.record, prog.check, setProg])
 
   const ranked = useMemo(() => rank(ds.sites, weights, ds.refDate, results, mode), [ds, weights, results, mode])
@@ -198,11 +201,12 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   useAppSteps(
     [
       { id: 'data', title: 'データを確かめる', hint: real ? '実データの内容を確認' : '「実データ（横須賀市）」を選ぶ', action: '確認ボタンを押すと完了', done: real && dataChecked },
-      { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '台帳を開く。行を選ぶと内訳も見られる', done: prog.ledger },
+      { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '台帳の行を選ぶと内訳が見られる', action: '台帳の行を1つ選ぶと完了', done: prog.ledger },
       { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', done: planSeen },
       { id: 'csv', title: '計画をCSVで書き出す', action: '書き出すと完了', done: planExported },
       { id: 'record', title: '巡視結果を記録する', action: '記録すると完了', done: recordedNow },
       { id: 'check', title: '台帳に反映されたか確かめる', hint: '「最新の巡視」に結果が出る', done: ledgerChecked },
+      { id: 'sat', title: '衛星の変化量が入ると（架空値）', hint: '架空の12地点で順位の動きを比べる', action: 'スライダーを動かすと完了', optional: true, done: prog.sat },
       { id: 'tune', title: '検出条件の見直し（参考）', optional: true, done: false },
     ],
     {
@@ -257,6 +261,7 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
                 ? <Badge variant="outline" className="border-dashed border-amber-500 bg-amber-100 text-amber-900">衛星由来の変化量: 未接続</Badge>
                 : <DataBadge kind="fictional" />}
             </span>
+            <BusinessDialog />
             <SourceDialog sources={SOURCES} />
           </>
         }
@@ -284,12 +289,13 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
         {step === 'record' && (
           <RecordPanel
             mode={mode} ranked={ranked} planIds={plan.route.map((s) => s.id)} results={results} setResults={setResults} recSite={recSite}
-            setRecSite={setRecSite} onRecorded={(id) => setProg({ record: true, last: id })}
+            setRecSite={setRecSite} csvDone={planExported} onRecorded={(id) => setProg({ record: true, last: id })}
           />
         )}
         {step === 'check' && (
           <CheckPanel plan={plan.route} mode={mode} ranked={ranked} results={results} sel={sel} onSelect={select} onReset={resetAll} />
         )}
+        {step === 'sat' && <SatContrast fictional={fictional} onTouched={() => !prog.sat && setProg({ sat: true })} />}
         {step === 'tune' && <TuneTab ds={ds} mode={mode} results={results} weights={weights} setWeights={setWeights} />}
       </StepLayout>
 
@@ -546,9 +552,9 @@ function CsvPanel({ mode, plan, note, onExported }: { mode: Mode; plan: Plan; no
 }
 
 // ---------------- 5 記録 ----------------
-function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setRecSite, onRecorded }: {
+function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setRecSite, onRecorded, csvDone }: {
   planIds: string[]; mode: Mode; ranked: Ranked[]; results: PatrolResult[]; setResults: (r: PatrolResult[]) => void
-  recSite: string; setRecSite: (id: string) => void; onRecorded: (id: string) => void
+  recSite: string; setRecSite: (id: string) => void; onRecorded: (id: string) => void; csvDone: boolean
 }) {
   const real = mode === 'real'
   const [date, setDate] = useState(dateStr())
@@ -590,6 +596,11 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
   }
   return (
     <form onSubmit={submit} noValidate className="space-y-3 text-sm">
+      {!csvDone && (
+        <p className="rounded-md border border-dashed border-amber-500 bg-amber-50 p-1.5 text-xs" data-testid="csv-pending">
+          手順4「計画をCSVで書き出す」がまだ済んでいません。記録は先にできますが、計画は画面を閉じると再計算されます。左の手順リストの4から書き出せます。
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         {isSampleMode() ? '実行サンプルでは記録はどこにも保存されません（再読み込みで元に戻ります）。' : '記録はこのブラウザの localStorage にだけ保存され、外部へ送信しません。'}氏名等の個人情報は入れないでください。実データ版と架空サンプルで記録は別に保存されます。
       </p>

@@ -158,11 +158,11 @@ check('localStorage に保存', (await ev(`JSON.parse(localStorage.getItem('udc-
 await clickStep('prep')
 const rep = await ev(`document.querySelector('[data-testid=report-text]').value`)
 check('通報文（ぼかし・湧水・メモ・500m以内の一文）', rep.includes('ぼかした位置') && rep.includes('湧水') && rep.includes('擁壁の下から') && rep.includes('500m以内に登録された大規模盛土造成地:'))
-check('手順5: 主操作「文面をコピーする」が本文より上・大きい', await ev(`(()=>{const b=[...document.querySelectorAll('button')].find(x=>x.textContent.includes('文面をコピーする'));const t=document.querySelector('[data-testid=report-text]');return b.getBoundingClientRect().bottom<=t.getBoundingClientRect().top && b.getBoundingClientRect().height>=48})()`))
+check('手順5: 主操作「文面をコピーする」が本文より上・大きい', await ev(`(()=>{const b=[...document.querySelectorAll('button:not([data-step])')].find(x=>x.textContent.includes('文面をコピーする'));const t=document.querySelector('[data-testid=report-text]');return b.getBoundingClientRect().bottom<=t.getBoundingClientRect().top && b.getBoundingClientRect().height>=48})()`))
 check('通報先案内と「コピーで準備完了」', await ev(`document.body.innerText.includes('熱海市・伊東市の担当窓口') && document.body.innerText.includes('この手順は、文面をコピー（または書き出し）すると完了します')`))
 if (!mobile) { const d = await docScroll(); check(`手順5（記録あり）でもページはスクロールしない (${d.sh}/${d.ih})`, d.sh <= d.ih) }
 await shot('05-prep')
-await clickText('button', '文面をコピー'); await sleep(600)
+await ev(`[...document.querySelectorAll('button:not([data-step])')].find(x=>x.textContent.includes('文面をコピーする')).click()`); await sleep(600)
 const clip = await ev(`navigator.clipboard.readText().catch(e=>'ERR '+e.message)`)
 check('通報文がクリップボードにコピーされる', clip.startsWith('【盛土の変化'), clip.slice(0, 30))
 check('手順5が済・5/5完了', (await stepStatus('prep')) === 'done' && (await doneCount()) === 5)

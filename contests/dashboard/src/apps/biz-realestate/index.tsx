@@ -24,6 +24,7 @@ import {
   type Answers, type AreaData, type Facts, type Tone, type Zone,
 } from './lib'
 
+const LIB_URL = 'https://www.reinfolib.mlit.go.jp/'
 const CENTER: [number, number] = [134.5548, 34.0703]
 const SOURCES = [
   { name: '地図（背景）', provider: '国土地理院', url: 'https://maps.gsi.go.jp/development/ichiran.html', note: '国土地理院タイル（淡色・標準・写真）。' },
@@ -33,7 +34,7 @@ const SOURCES = [
   { name: 'バス停・鉄道駅', provider: 'GTFSデータリポジトリ掲載の徳島市営バス・徳島バス・上八万コミュニティバス・松茂町・北島町・鳴門市のGTFS', license: 'CC BY 4.0', note: '直線距離のみ。便数や運行日は含まない。' },
   { name: '住所検索', provider: '国土地理院 住所検索API', note: 'キー不要のGET。入力語が国土地理院に届く。' },
   { name: '町名の表示（逆ジオコーダ）', provider: '国土地理院 逆ジオコーダ（LonLatToAddress）', url: 'https://maps.gsi.go.jp/development/api.html', note: 'キー不要のGET。指した位置の緯度経度が国土地理院に届く。町名までで、番地は出ない。利用条件は国土地理院サイトの利用規約に従う（出典: 国土地理院）。' },
-  { name: 'この画面にないもの', provider: '国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）', note: '取引価格・地価・将来人口・医療機関・小学校区は、そちらで確認する項目として示すだけで、この画面では取得していない。' },
+  { name: '不動産情報ライブラリ（この画面では未取得）', provider: '国土交通省「不動産情報ライブラリ」', url: LIB_URL, note: 'この画面の数値・判定は、ライブラリのAPIからは取得していない（APIの利用にはキーの申請が要るため、まだ使っていない）。ライブラリで確認できる項目（取引価格・地価公示・将来人口・医療機関・小学校区・区域区分、用途地域や洪水浸水想定区域の最新情報）は、この画面の手順3と1枚シートに「ライブラリで確認する項目」として示すだけ。' },
   { name: 'サンプル（架空）', note: '「サンプル（架空）の土地を使う」で出るシートは架空の土地の例。実在の土地の情報ではない。' },
 ]
 const DESCRIPTION = '相続した土地の所有者として、売る・貸す・活かす・手放すのどれにするか専門家に相談する前に、土地の条件と聞くべきことを1枚にまとめます。'
@@ -44,6 +45,17 @@ const QUESTIONS: { key: keyof Answers; legend: string; short: string; options: [
   { key: 'road', legend: '道路に接していますか', short: '道路への接し方', options: [['不明', '分からない'], ['あり', '接している'], ['なし', '接していない・不明確']] },
   { key: 'registered', legend: '相続登記は済んでいますか', short: '相続登記', options: [['不明', '分からない'], ['済', '済んでいる'], ['未', 'まだ']] },
 ]
+// この画面の項目と不動産情報ライブラリ（国土交通省）の対応。ライブラリのAPI名は提出文書（reinfolib.md・2026-11-09 公式API仕様で確認）による。
+// 「この画面はライブラリから取得していない」ことを明示する（ライブラリ由来とは書かない）。
+const LIB_SCREEN: { item: string; from: string; lib: string }[] = [
+  { item: '用途地域・建ぺい率・容積率', from: '国土数値情報（令和元年度版・徳島県）を同梱', lib: 'ライブラリにも「用途地域」（XKT002）がある。最新はそちらで確認' },
+  { item: '洪水浸水想定区域', from: 'ハザードマップポータル（国土地理院）のタイル', lib: 'ライブラリにも「洪水浸水想定区域（想定最大規模）」（XKT026）がある' },
+  { item: '高潮・津波・土砂災害警戒区域', from: 'ハザードマップポータル（国土地理院）のタイル', lib: 'ライブラリでの提供は未確認' },
+  { item: '標高・バス停・駅', from: '国土地理院の標高タイル、GTFSデータ', lib: 'ライブラリの項目としては確認していない' },
+]
+const LIB_ONLY: string[] = ['区域区分（市街化調整区域か。XKT001）', '周辺の取引価格の傾向（地区単位。XIT001）', '近くの地価公示・地価調査（XPT002）', '将来推計人口（250mメッシュ。XKT013）', '医療機関（XKT010）・小学校区（XKT004）']
+const WHO = '相続した土地の持ち主が、売る・貸す・活かす・手放すを専門家に相談する前に、土地の条件と聞くことを1枚にまとめるシートです。'
+const ORDER = ['place', 'answers', 'conditions', 'exits', 'print'] as const
 const BASIS = { data: 'データ', answer: 'あなたの回答による', none: 'データなし' } as const
 
 const STEP_META: Record<string, { title: string; hint: string }> = {
@@ -51,7 +63,7 @@ const STEP_META: Record<string, { title: string; hint: string }> = {
   answers: { title: '地図では分からないことに答える', hint: '建物・地目・接道・相続登記。分からなければそのままで構いません' },
   conditions: { title: '土地の条件を確かめる', hint: '用途地域・災害の想定区域など（公開データから）' },
   exits: { title: '4つの出口の「聞くこと」を読む', hint: '売る・貸す・活かす・手放す。相談先に聞くことの一覧です' },
-  print: { title: '印刷・PDFで保存する', hint: '印刷すると1枚シートだけがA4・1ページで出ます' },
+  print: { title: '1枚シートを読み、印刷・PDFで保存する', hint: 'シートを開けば完了。印刷は任意で、A4・1ページで出ます' },
 }
 
 // ---- 専門用語のその場の説明（ツールチップ。タップでも開閉） ----
@@ -106,7 +118,7 @@ const TONE: Record<Tone, { icon: typeof CheckCircle2; cls: string; sr: string }>
 const SAMPLE_MODE = isSampleMode()
 const SUBJECT_QUERY = '徳島駅'
 const SUBJECT_ANSWERS: Answers = { landUse: 'その他', registered: '未' }
-const SUBJECT_SEEN = { answers: true, conditions: true, exits: true }
+const SUBJECT_SEEN = { answers: true, conditions: true, exits: true, print: true }
 
 export default function App() {
   const [step, setStep] = useState(SAMPLE_MODE ? 'print' : 'place')
@@ -125,6 +137,8 @@ export default function App() {
   const [seen, setSeen] = useState<Record<string, boolean>>({})
   const [printed, setPrinted] = useState(false)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const [mapEpoch, setMapEpoch] = useState(0)
+  const desktop = useIsDesktop()
   const seq = useRef(0)
   const overlayRef = useRef(overlay)
   overlayRef.current = overlay
@@ -170,6 +184,8 @@ export default function App() {
   const onMapReady = useCallback((map: maplibregl.Map) => {
     mapRef.current = map
     map.on('style.load', applyOverlay)
+    map.on('remove', () => { if (mapRef.current === map) mapRef.current = null })
+    setMapEpoch((n) => n + 1)
   }, [applyOverlay])
 
   // 検索結果・駅のマーカーとラベル
@@ -186,7 +202,7 @@ export default function App() {
     el.append(lab, dot)
     const mk = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([hit.lon, hit.lat]).addTo(map)
     return () => { mk.remove() }
-  }, [hit])
+  }, [hit, mapEpoch])
 
   // 地図の表示領域が変わった時（シートのプレビューとの切替）に大きさを合わせる
   useEffect(() => {
@@ -207,7 +223,7 @@ export default function App() {
     setBusy(false)
     setFacts(f)
     setAddress(addr)
-    setStatus(f.inArea ? '' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。')
+    setStatus(f.inArea ? '公開データの取得が完了しました。' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。')
   }, [data])
 
   // 実行サンプル: データが読めたら、被験者と同じく「徳島駅」の位置を土地として確定する（実データで再計算）
@@ -274,7 +290,7 @@ export default function App() {
   // 土地が変わったら閲覧・印刷の記録をリセット。条件・4出口は、その手順を実際に開いたら「読んだ」とする
   useEffect(() => { setSeen(SAMPLE_MODE && facts ? SUBJECT_SEEN : {}); setPrinted(false) }, [facts])
   useEffect(() => {
-    if (facts && (step === 'answers' || step === 'conditions' || step === 'exits')) setSeen((s) => (s[step] ? s : { ...s, [step]: true }))
+    if (facts && (step === 'answers' || step === 'conditions' || step === 'exits' || step === 'print')) setSeen((s) => (s[step] ? s : { ...s, [step]: true }))
   }, [facts, step])
   useEffect(() => {
     const h = () => setPrinted(true)
@@ -286,8 +302,9 @@ export default function App() {
       id,
       title: STEP_META[id].title,
       hint: STEP_META[id].hint.split('。')[0],
-      // 手順1・5は操作で済、2〜4は「土地が決まった状態で表示したら済」（回答そのものは任意）
-      done: id === 'place' ? !!facts : id === 'print' ? !!facts && printed : !!facts && !!seen[id],
+      action: id === 'place' && !facts ? '検索して「この位置を土地として使う」' : undefined,
+      // 手順1は操作で済、2〜5は「土地が決まった状態で表示したら済」（回答・印刷そのものは任意。印刷しても済になる）
+      done: id === 'place' ? !!facts : !!facts && (!!seen[id] || (id === 'print' && printed)),
     })),
     { activeId: step, onSelectStep: setStep, description: DESCRIPTION },
   )
@@ -365,7 +382,7 @@ export default function App() {
         )}
         <p className="text-xs text-muted-foreground print:text-[6.5pt] print:text-black">
           出典: 国土地理院タイル・住所検索・逆ジオコーダ（町名の表示）、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
-          取引価格・地価などは国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）で確認。
+          この画面は不動産情報ライブラリのAPIから取得していません。取引価格・地価公示・将来人口・医療機関・小学校区・区域区分は、国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）で確認してください。用途地域・洪水浸水想定区域の最新情報もライブラリで確認できます。
           国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
         </p>
       </CardContent>
@@ -429,6 +446,7 @@ export default function App() {
             </p>
             {dataError && <p className="text-sm text-orange-700">用途地域・公共交通のデータを読み込めませんでした（地図と災害データだけで動きます）。</p>}
             <Button type="button" variant="secondary" size="sm" onClick={showSample}>サンプル（架空）の土地を使う</Button>
+            <NextHint step="place" ready={!!facts && !busy} />
           </div>
         )
       case 'answers':
@@ -455,6 +473,7 @@ export default function App() {
                 ? `回答はシートに反映されます（いま: ${QUESTIONS.map((q) => `${q.short} ${q.options.find((o) => o[0] === (answers[q.key] ?? '不明'))?.[1] ?? '分からない'}`).join('／')}）。`
                 : '土地の位置を決めると、回答がシートに反映されます。'}
             </p>
+            <NextHint step="answers" ready />
           </div>
         )
       case 'conditions':
@@ -480,6 +499,8 @@ export default function App() {
               <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden />注意が必要（想定区域に入る）</li>
               <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden />分からない（データにない・範囲外・取得できなかった）</li>
             </ul>
+            <LibraryBox />
+            <NextHint step="conditions" ready />
           </div>
         )
       case 'exits':
@@ -489,6 +510,7 @@ export default function App() {
             {sheet.exits.map((e) => <ExitBlock key={e.key} e={e} />)}
             <MissingList sheet={sheet} part="missing" />
             <MissingList sheet={sheet} part="other" />
+            <NextHint step="exits" ready />
           </div>
         )
       case 'print':
@@ -499,8 +521,17 @@ export default function App() {
                 <p className="text-sm">土地の条件と4出口の「聞くこと」を、A4・1枚にまとめたシートです。印刷画面で「PDFに保存」を選ぶとPDFになります。</p>
                 <Button type="button" size="lg" onClick={() => { setPrinted(true); window.print() }}><Printer className="size-5" />印刷・PDFで保存する</Button>
                 {printed && <p className="text-xs text-muted-foreground" role="status">印刷画面を開きました。</p>}
+                <NextHint step="print" ready />
               </>
             )}
+            <details className="rounded-md border p-2 text-xs" data-testid="sustain">
+              <summary className="cursor-pointer font-bold">この構想の続け方（想定）</summary>
+              <p className="mt-1">
+                想定：相続人は無料で使い、自治体の空き家相談窓口には、職員と相談者が同じシートを見る窓口版を有償で提供する（提出文書の構想。実施は決まっていません）。
+                いまの用途地域データは徳島県の令和元年度版を同梱したもので、市町村を広げるには、データの追加・差し替えが要ります。
+                更新・運用する担い手は未定です。想定として、用途地域などを不動産情報ライブラリのAPIから取る形にすれば、同梱データの差し替えが減ります（APIの利用にはキー申請が要り、未申請）。
+              </p>
+            </details>
           </div>
         )
       default:
@@ -510,37 +541,45 @@ export default function App() {
 
   const showSheet = step === 'print' && !!sheetEl
   const meta = STEP_META[step]
+  // スマホは、地図を手順1〜3だけに出す（手順4・5では読む面積を広げる）。1枚シートはスマホでは手順パネル内に全幅で出し、入れ子スクロールにしない
+  const showAside = desktop || step === 'place' || step === 'answers' || step === 'conditions'
+  const initCenter = useMemo<[number, number]>(() => (pin ? [pin.lon, pin.lat] : CENTER), [showAside]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const aside = (
+  const sheetWrap = (
+    <div className={cn('rs-sheet-wrap bg-muted/30 p-3', desktop && 'h-full overflow-y-auto', !showSheet && 'hidden')} data-testid="sheet-wrap">
+      {sheetEl}
+    </div>
+  )
+  const aside = showAside ? (
     <div className="relative h-full">
-      <div className={cn('h-full', showSheet && 'hidden')}>
+      <div className={cn('h-full', showSheet && desktop && 'hidden')}>
         <MapView
-          center={CENTER}
+          center={initCenter}
           zoom={14}
           layers={layers}
           onClick={step === 'place' ? onMapClick : undefined}
           onMapReady={onMapReady}
           basemap="std"
-          attribution="ハザードマップポータルサイト（国土地理院）／国土数値情報 用途地域（国土交通省）"
+          attribution="ハザードマップポータル（国土地理院）／国土数値情報 用途地域（国土交通省）"
           className={cn('h-full', step === 'place' && 'cursor-crosshair')}
           ariaLabel="地図。手順1ではクリックまたはタップで土地の位置を指定"
         />
       </div>
-      {/* 1枚シート: 手順5では画面に出す。それ以外でも印刷（Ctrl+P）に備えて DOM に残す */}
-      <div className={cn('rs-sheet-wrap h-full overflow-y-auto bg-muted/30 p-3', !showSheet && 'hidden')} data-testid="sheet-wrap">
-        {sheetEl}
-      </div>
+      {/* 1枚シート（パソコン）: 手順5では画面に出す。それ以外でも印刷（Ctrl+P）に備えて DOM に残す */}
+      {desktop && sheetWrap}
     </div>
-  )
+  ) : undefined
 
   return (
     <>
       <PageHeader appId="biz-realestate" compact actions={<SourceDialog sources={SOURCES} />} />
-      <p className="shrink-0 border-b bg-muted/40 px-4 py-1 text-xs text-muted-foreground print:hidden">
-        動く最小限のデモ（地図データは徳島市のみ）。金額の推定や「売るべき」は出さず、法律・税金の助言ではありません。
-      </p>
+      <div className="shrink-0 space-y-0.5 border-b bg-muted/40 px-4 py-1.5 text-xs print:hidden" data-testid="who-why">
+        <p className="font-bold text-foreground">{WHO}</p>
+        <p className="text-muted-foreground">動く最小限のデモ（地図データは徳島市のみ）。金額の推定や「売るべき」は出さず、法律・税金の助言ではありません。</p>
+      </div>
       <StepLayout title={meta.title} hint={meta.hint} aside={aside}>
         {panel}
+        {!desktop && <div className={showSheet ? 'mt-3' : undefined}>{sheetWrap}</div>}
       </StepLayout>
       <style>{`
 @media print {
@@ -556,6 +595,46 @@ export default function App() {
 }`}</style>
     </>
   )
+}
+
+function NextHint({ step, ready }: { step: string; ready: boolean }) {
+  const i = ORDER.indexOf(step as (typeof ORDER)[number])
+  const next = ORDER[i + 1]
+  if (!ready) return null
+  return (
+    <p className="rounded-md bg-sky-50 px-2 py-1.5 text-xs font-medium text-sky-900 print:hidden" data-testid="next-hint">
+      {next ? `次は手順${i + 2}：${STEP_META[next].title}（手順バーから選びます。スマホは画面上部、パソコンは左）` : 'これで最後の手順です。印刷は任意で、シートは画面で読めます。'}
+    </p>
+  )
+}
+
+function LibraryBox() {
+  return (
+    <section className="space-y-1.5 rounded-md border-2 border-sky-700 p-2 text-xs" aria-label="不動産情報ライブラリとの関係" data-testid="lib-box">
+      <h3 className="text-sm font-bold">不動産情報ライブラリ（国土交通省）との関係</h3>
+      <p>この画面の数値・判定は、ライブラリのAPIから取得したものではありません。同じ種類の情報がライブラリにもある項目と、ライブラリで確認する項目を分けて示します。</p>
+      <ul className="space-y-1">
+        {LIB_SCREEN.map((r) => (
+          <li key={r.item} className="rounded border p-1.5"><b>{r.item}</b>：{r.from}。<span className="text-sky-900">{r.lib}。</span></li>
+        ))}
+      </ul>
+      <p className="font-bold">ライブラリで確認する項目（この画面では取得していません）</p>
+      <ul className="list-disc pl-5">{LIB_ONLY.map((m) => <li key={m}>{m}</li>)}</ul>
+      <p>ライブラリ：<a className="text-primary underline" href={LIB_URL} target="_blank" rel="noreferrer">{LIB_URL}</a>（括弧内はライブラリのAPI名）</p>
+    </section>
+  )
+}
+
+function useIsDesktop() {
+  const q = '(min-width: 768px)'
+  const [v, setV] = useState(() => (typeof window === 'undefined' ? true : window.matchMedia(q).matches))
+  useEffect(() => {
+    const m = window.matchMedia(q)
+    const h = () => setV(m.matches)
+    m.addEventListener('change', h)
+    return () => m.removeEventListener('change', h)
+  }, [])
+  return v
 }
 
 function ExitBlock({ e }: { e: import('./lib').Exit }) {
@@ -584,7 +663,7 @@ function MissingList({ sheet, part }: { sheet: import('./lib').Sheet; part: 'mis
   const items = part === 'missing' ? sheet.missing : sheet.otherItems
   return (
     <section>
-      <h3 className="text-sm font-bold print:text-[9pt]">{part === 'missing' ? 'データにない項目（相談先で確かめる）' : '別の公的サイトで確認する項目（この画面では取得していません）'}</h3>
+      <h3 className="text-sm font-bold print:text-[9pt]">{part === 'missing' ? 'データにない項目（相談先で確かめる）' : '不動産情報ライブラリ（国土交通省）で確認する項目（この画面では取得していません）'}</h3>
       <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{items.map((m) => <li key={m}><Annotated text={m} /></li>)}</ul>
     </section>
   )

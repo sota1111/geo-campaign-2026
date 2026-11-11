@@ -4,6 +4,9 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { StepLayout } from '@/components/shared/StepLayout'
 import { useAppSteps } from '@/components/shared/AppSteps'
+import { downloadText, toCsv } from '@/components/shared/downloadText'
+import { markCsv } from '../_samples/mark'
+import { BusinessDialog } from './Business'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -102,9 +105,6 @@ export default function App() {
   useEffect(() => {
     if (round > 1 && step === 'round2') setViewedR2(true)
   }, [round, step])
-  useEffect(() => {
-    if (step === 'top') setViewedTop(true)
-  }, [step])
 
   useEffect(() => {
     let alive = true
@@ -134,6 +134,7 @@ export default function App() {
         setMsg(ap.msg)
         setW(ap.newW)
         setRound(2)
+        setViewedTop(true)
         setStep('round2')
       })
       .catch((e) => alive && setError(String(e)))
@@ -157,6 +158,19 @@ export default function App() {
   }
   const focusRow = (id: string) => {
     setFocus(id)
+    // 手順1は、区間を1つ選んで点数の内訳を見たら済
+    setViewedTop(true)
+  }
+  const exportTargets = () => {
+    const rk = new Map(candidates.map((s, i) => [s.id, i + 1]))
+    const rows = [...selected].map((id) => ranked.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s)
+      .sort((a, b) => (rk.get(a.id) ?? 999) - (rk.get(b.id) ?? 999))
+      .map((s) => [rk.get(s.id) ?? '', s.id, s.cell, s.lenM, s.year, s.score.toFixed(2), `${pct(w)}%`, '架空データ（サンプル市）'])
+    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
+  }
+  const exportRound2 = () => {
+    const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year, s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, '架空データ（サンプル市）'])
+    downloadText(`round${round}-ranking.csv`, markCsv(toCsv([['rank', 'segment_id', 'cell', 'length_m', 'laid_year', 'score', 'previous_rank', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
   }
   const onSegmentClick = (id: string) => {
     focusRow(id)
@@ -192,15 +206,15 @@ export default function App() {
   const scanned = results.size > 0
   useAppSteps(
     [
-      { id: 'top', title: '候補区間の点数を見る', hint: '最も高い区間を確かめる（データは架空）', done: viewedTop },
-      { id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで順位が変わる', optional: true, done: wTouched },
+      { id: 'top', title: '候補区間の点数を見る', hint: '表の行を選んで内訳を見る（データは架空）', action: '表の行を1つ選ぶと完了', done: viewedTop },
+      { id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで順位が変わる', action: 'スライダーを動かすと完了', optional: true, done: wTouched },
       {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
         done: scanned || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
       { id: 'scan', title: '走査結果を見る', hint: '結果は乱数のシミュレーション', done: scanned },
-      { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', done: round > 1 },
-      { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', done: round > 1 && viewedR2 },
+      { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', action: revealed ? 'ボタンを押すと完了' : undefined, done: round > 1 },
+      { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', action: round > 1 ? '第2回の順位ができました。ここを押して確かめる' : undefined, done: round > 1 && viewedR2 },
     ],
     {
       activeId: step,
@@ -215,11 +229,14 @@ export default function App() {
       appId="sat-a"
       compact
       actions={
-        <SourceDialog
-          title="出典・データの扱い・限界"
-          sources={SOURCES}
-          trigger={<Button variant="outline" size="sm"><Info className="size-4" />出典・限界</Button>}
-        />
+        <>
+          <BusinessDialog />
+          <SourceDialog
+            title="出典・データの扱い・限界"
+            sources={SOURCES}
+            trigger={<Button variant="outline" size="sm"><Info className="size-4" />出典・限界</Button>}
+          />
+        </>
       }
     />
   )
@@ -324,6 +341,7 @@ export default function App() {
                 onFocus={focusRow}
                 onAuto={() => setSelected(new Set(selectByBudget(ranked, budgetKm)))}
                 onClear={() => setSelected(new Set())}
+                onExport={exportTargets}
               />
             )}
             {step === 'scan' && (
@@ -350,7 +368,7 @@ export default function App() {
               />
             )}
             {step === 'round2' && (
-              <Round2Panel round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} />
+              <Round2Panel round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} onExport={exportRound2} />
             )}
           </>
         )}

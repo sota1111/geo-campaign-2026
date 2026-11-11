@@ -27,11 +27,15 @@ const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnB
 
 // [幅ラベル, 幅, 高さ, mobile, ハッシュ, 枠を開く, 全ページ撮影]
 const jobs = [
+  ['desktop', 1280, 800, false, 'udc-2026', false, true],
+  ['desktop', 1280, 800, false, 'satellite-2026', false, true],
+  ['desktop', 1280, 800, false, 'ichibiz-2026', false, true],
+  ['desktop', 1280, 800, false, 'odpt-2026', false, false],
   ['desktop', 1280, 800, false, 'eval', false, true],
-  ['desktop', 1280, 800, false, 'udc-2026', false, false],
-  ['desktop', 1280, 800, false, 'satellite-2026', true, true],
+  ['mobile', 390, 844, true, 'udc-2026', false, true],
+  ['mobile', 390, 844, true, 'satellite-2026', false, true],
+  ['mobile', 390, 844, true, 'ichibiz-2026', false, true],
   ['mobile', 390, 844, true, 'eval', false, true],
-  ['mobile', 390, 844, true, 'ichibiz-2026', true, true],
 ]
 for (const [label, w, h, mobile, hash, open, full] of jobs) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
@@ -42,6 +46,7 @@ for (const [label, w, h, mobile, hash, open, full] of jobs) {
   if (open) await ev("document.querySelectorAll('details[data-testid^=eval-]').forEach(d=>{d.open=true})")
   const m = JSON.parse(await ev('JSON.stringify({sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,sh:document.documentElement.scrollHeight})'))
   console.log(label, hash, open ? 'open' : 'closed', m, m.sw > m.cw ? 'HORIZONTAL OVERFLOW' : 'ok')
+  console.log('  first open button y =', await ev("(() => { const el = [...document.querySelectorAll('[role=tabpanel][data-state=active] [data-app-card] a')].find((x) => x.textContent.includes('開く')); return el ? Math.round(el.getBoundingClientRect().top + scrollY) : null })()"))
   const opts = { format: 'png' }
   if (full) Object.assign(opts, { captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: Math.min(m.sh, 4000), scale: 1 } })
   const shot = await send('Page.captureScreenshot', opts)

@@ -116,3 +116,22 @@ describe('元アプリ lib.js と同じ結果（富山市周辺の実データ�
     expect(L.compareRow(toyama, 'hospital', 'wd', 'm', 99)).toBeNull()
   })
 })
+
+describe('検索の並べ替えと代替条件', () => {
+  it('matchRank: 完全一致 < 前方一致 < その他', () => {
+    expect(L.matchRank('富山駅', '富山駅')).toBe(0)
+    expect(L.matchRank('富山駅前郵便局', '富山駅')).toBe(1)
+    expect(L.matchRank('南富山駅', '富山駅')).toBe(2)
+    const titles = ['南富山駅', '富山駅前郵便局', '電鉄富山駅', '富山駅']
+    expect([...titles].sort((a, b) => L.matchRank(a, '富山駅') - L.matchRank(b, '富山駅'))[0]).toBe('富山駅')
+  })
+  it('altConditions: 許容時間を延ばして初めて行ける区分を返す', () => {
+    const th = [20, 30, 45, 60]
+    // 公共交通の水準が 1（60分以内）だけ満たす区画 → 20/30/45分では行けず、60分なら行ける
+    const cell: L.Cell = ['00000000', 10, 3, '1'.repeat(12), '000', 0]
+    const a = L.altConditions(cell, { fi: 0, day: 'wd', per: 'm', w: 30, thresholds: th })
+    expect(a.periods.map((p) => p.per)).toEqual(['d', 'e'])
+    expect(a.longerW).toEqual({ w: 60, status: 'transit' })
+    expect(L.altConditions(cell, { fi: 0, day: 'wd', per: 'm', w: 60, thresholds: th }).longerW).toBeNull()
+  })
+})
