@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  OVERLAYS, circlePoly, createRecord, crossCheck, distanceM, fmtDist, isPublishable, kindsOf, nearby,
+  OVERLAYS, circlePoly, createRecord, crossCheck, distanceM, fmtDist, isPublishable, kindsOf, nearby, publishBlockers,
   overlayTileUrl, setVerified, toGeoJSON, validateRecord, type LoreItem, type SamplePlace,
 } from './logic'
 
@@ -93,6 +93,22 @@ describe('記録・確認・書き出し', () => {
     const pub = toGeoJSON([setVerified(a.record, 'x', 'y'), b.record], { onlyPublishable: true })
     expect(pub.features).toHaveLength(1)
     expect(pub.features[0].geometry.coordinates).toEqual([132.49, 34.48])
+  })
+})
+
+describe('公開範囲「未定」と公開分に入らない理由', () => {
+  it('未定は有効な値で、確認済みでも公開分に入らない。公開にすると入る', () => {
+    const r = createRecord({ ...good(), visibility: 'undecided' }, '2026-11-11T00:00:00.000Z')
+    if (!r.ok) throw new Error('x')
+    expect(publishBlockers(r.record)).toEqual(['未確認', expect.stringContaining('未定')])
+    const v = setVerified(r.record, 'x', 'y')
+    expect(isPublishable(v)).toBe(false)
+    expect(publishBlockers(v)).toHaveLength(1)
+    expect(toGeoJSON([v]).features).toHaveLength(1)
+    const pub = { ...v, visibility: 'public' as const }
+    expect(isPublishable(pub)).toBe(true)
+    expect(publishBlockers(pub)).toEqual([])
+    expect(publishBlockers({ ...pub, license: 'none' })).toEqual(['利用条件が「利用不可」'])
   })
 })
 

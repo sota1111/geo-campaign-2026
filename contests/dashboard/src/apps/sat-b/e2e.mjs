@@ -41,7 +41,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   R.banner = await ev('document.body.innerText.includes("実データ版（神奈川県横須賀市") && document.body.innerText.includes("未接続")')
   await ev(`document.querySelector("[role=tablist]").scrollIntoView()`); await sleep(500); await shot(`${label}-1-ledger.png`)
   R.rowClick = await click('tbody tr[data-id]')
-  await sleep(1500); await shot(`${label}-2-detail.png`)
+  await sleep(1500); await ev(`document.querySelector("[role=tablist]").scrollIntoView()`); await sleep(500); await shot(`${label}-2-detail.png`)
   R.detailText = await ev('document.body.innerText.includes("点数に含めない")')
   if (mobile) { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }) }
   await sleep(600)

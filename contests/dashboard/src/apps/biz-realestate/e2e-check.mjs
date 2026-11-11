@@ -55,16 +55,24 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await sleep(500)
   await shot(`${label}-2-overlay.png`)
   const r = JSON.parse(await ev(`JSON.stringify(document.querySelector('[role=region][aria-label^=地図]').getBoundingClientRect())`))
-  await click(r.x + r.width / 2, r.y + r.height / 2)
-  await sleep(4500)
+  console.log(label, 'marker label:', await ev(`document.querySelector('.maplibregl-marker')?.textContent`))
+  await shot(`${label}-2b-marker.png`)
+  if (mobile) {
+    await click(r.x + r.width / 2, r.y + r.height / 2)
+  } else {
+    await ev(`document.querySelector('[data-testid=use-hit] button').click()`)
+  }
+  await sleep(5000)
+  console.log(label, 'after choose: sheetTop', await ev(`Math.round(document.querySelector('[data-testid=sheet]').getBoundingClientRect().top)`), 'quick:', await ev(`document.querySelector('[data-testid=quick-result]')?.innerText`))
+  await shot(`${label}-2c-after-choose.png`)
+  console.log(label, 'legend:', await ev(`document.querySelector('[data-testid=legend]')?.innerText.slice(0,80)`))
+  console.log(label, 'meta:', await ev(`document.querySelector('[data-testid=sheet] p')?.innerText`))
   console.log(label, 'status after click:', await ev(`document.querySelector('[data-testid=status]').textContent`))
   await ev(`[...document.querySelectorAll('[role=radio]')].find(b=>b.textContent.trim()==='ある').click()`)
   await ev(`[...document.querySelectorAll('[role=radio]')].find(b=>b.textContent.trim()==='まだ').click()`)
   await sleep(500)
   console.log(label, 'summary:', await ev(`[...document.querySelectorAll('[data-testid=summary] > div')].map(d=>d.textContent).join(' | ')`))
   console.log(label, 'exit-sell:', await ev(`document.querySelector('[data-testid=exit-sell]').innerText.slice(0,300)`))
-  await ev(`document.querySelector('[data-testid=sheet]').scrollIntoView()`)
-  await sleep(500)
   await shot(`${label}-3-sheet.png`, true)
   if (!mobile) {
     for (const [name, act] of [['print', null], ['print-sample', `[...document.querySelectorAll('button')].find(b=>b.textContent.includes('サンプル（架空）の土地')).click()`]]) {

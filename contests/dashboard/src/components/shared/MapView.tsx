@@ -3,9 +3,9 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
-import { GSI_BASEMAPS, buildStyle, type BasemapId } from './mapStyle'
+import { GSI_BASEMAPS, buildStyle, type BasemapId, type MapBase } from './mapStyle'
 
-export type { BasemapId } from './mapStyle'
+export type { BasemapId, MapBase } from './mapStyle'
 
 export interface MapLayer {
   /** レイヤーID（アプリ内で一意）。同じ id で data を変えると更新される */
@@ -20,6 +20,23 @@ export interface MapLayer {
   maxzoom?: number
 }
 
+/** ラスタタイルの重ね合わせ（昔の航空写真など）。背景を切り替えても維持され、GeoJSON レイヤーの下に入る */
+export interface RasterOverlay {
+  /** 一意のID */
+  id: string
+  /** XYZ タイルURL（{z}/{x}/{y} を含む） */
+  tiles: string[]
+  tileSize?: number
+  /** 0〜1（既定 1）。変更すると反映される */
+  opacity?: number
+  /** false で非表示（既定 true） */
+  visible?: boolean
+  minzoom?: number
+  maxzoom?: number
+  /** 出典の表記。表示中のものが画面右下に追記される */
+  attribution?: string
+}
+
 export interface MapViewProps {
   /** [lng, lat] */
   center?: [number, number]
@@ -27,17 +44,21 @@ export interface MapViewProps {
   /** 指定すると初期表示をこの範囲に合わせる [[minLng,minLat],[maxLng,maxLat]]（変更時にも追従） */
   bounds?: [[number, number], [number, number]]
   layers?: MapLayer[]
+  /** ラスタ重ね合わせ。useMemo で安定させること */
+  rasterOverlays?: RasterOverlay[]
   /** 地図クリックで経度緯度を返す */
   onClick?: (lngLat: { lng: number; lat: number }) => void
   /** layers のうち clickableLayerIds のフィーチャをクリックした時（先頭の1件） */
   onFeatureClick?: (feature: GeoJSON.Feature, layerId: string, lngLat: { lng: number; lat: number }) => void
   clickableLayerIds?: string[]
-  /** 初期の背景。pale=淡色 / std=標準 / photo=写真 */
-  basemap?: BasemapId
-  /** 背景切替ボタンを出すか（既定 true） */
+  /** 初期の背景。pale=淡色 / std=標準 / photo=写真 / none=背景なし（白地。切替ボタンも出さない） */
+  basemap?: MapBase
+  /** 背景切替ボタンを出すか（既定 true。basemap="none" の時は常に非表示） */
   showBasemapSwitcher?: boolean
   /** 追加の出典表記（例: 「国土数値情報（国土交通省）」）。国土地理院は常に表示 */
   attribution?: string
+  /** 出典表示の全文を差し替える（指定すると国土地理院の既定表記・attribution・オーバーレイの出典は出ない）。空文字で非表示 */
+  attributionText?: string
   /** 地図オブジェクトが必要な時（マーカー・独自レイヤー追加など）。 */
   onMapReady?: (map: maplibregl.Map) => void
   className?: string
@@ -53,6 +74,49 @@ const DEFAULT_PAINT: Record<MapLayer['type'], Record<string, unknown>> = {
 
 function srcId(id: string) {
   return `src-${id}`
+}
+function rasterSrcId(id: string) {
+  return `rsrc-${id}`
+}
+function rasterLayerId(id: string) {
+  return `rlayer-${id}`
+}
+
+function syncRasters(map: maplibregl.Map, overlays: RasterOverlay[], firstVectorId: string | undefined, prevIds: Set<string>) {
+  const nextIds = new Set(overlays.map((o) => o.id))
+  for (const id of prevIds) {
+    if (!nextIds.has(id)) {
+      if (map.getLayer(rasterLayerId(id))) map.removeLayer(rasterLayerId(id))
+      if (map.getSource(rasterSrcId(id))) map.removeSource(rasterSrcId(id))
+    }
+  }
+  for (const o of overlays) {
+    const lid = rasterLayerId(o.id)
+    const visibility = o.visible === false ? 'none' : 'visible'
+    if (map.getLayer(lid)) {
+      map.setPaintProperty(lid, 'raster-opacity', o.opacity ?? 1)
+      map.setLayoutProperty(lid, 'visibility', visibility)
+    } else {
+      map.addSource(rasterSrcId(o.id), {
+        type: 'raster',
+        tiles: o.tiles,
+        tileSize: o.tileSize ?? 256,
+        ...(o.minzoom != null ? { minzoom: o.minzoom } : {}),
+        ...(o.maxzoom != null ? { maxzoom: o.maxzoom } : {}),
+      })
+      map.addLayer(
+        {
+          id: lid,
+          type: 'raster',
+          source: rasterSrcId(o.id),
+          paint: { 'raster-opacity': o.opacity ?? 1 },
+          layout: { visibility },
+        },
+        firstVectorId && map.getLayer(firstVectorId) ? firstVectorId : undefined,
+      )
+    }
+  }
+  return nextIds
 }
 
 function syncLayers(map: maplibregl.Map, layers: MapLayer[], prevIds: Set<string>) {
@@ -92,20 +156,23 @@ function syncLayers(map: maplibregl.Map, layers: MapLayer[], prevIds: Set<string
 }
 
 /**
- * 共通の地図。地理院タイル（淡色・標準・写真）＋ GeoJSON レイヤー。
+ * 共通の地図。地理院タイル（淡色・標準・写真）＋ ラスタ重ね合わせ ＋ GeoJSON レイヤー。
  * 親は高さを持つ要素に入れるか className で高さを与えること（既定 h-[420px]）。
+ * 親のサイズが変わると自動で追従する。
  */
 export function MapView({
   center = [137.0, 36.0],
   zoom = 5,
   bounds,
   layers = [],
+  rasterOverlays,
   onClick,
   onFeatureClick,
   clickableLayerIds,
   basemap = 'pale',
   showBasemapSwitcher = true,
   attribution,
+  attributionText,
   onMapReady,
   className,
   ariaLabel = '地図',
@@ -113,12 +180,23 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const layerIdsRef = useRef<Set<string>>(new Set())
+  const rasterIdsRef = useRef<Set<string>>(new Set())
   const layersRef = useRef(layers)
+  const overlaysRef = useRef<RasterOverlay[]>(rasterOverlays ?? [])
   const cbRef = useRef({ onClick, onFeatureClick, clickableLayerIds })
   layersRef.current = layers
+  overlaysRef.current = rasterOverlays ?? []
   cbRef.current = { onClick, onFeatureClick, clickableLayerIds }
-  const [base, setBase] = useState<BasemapId>(basemap)
+  const [base, setBase] = useState<MapBase>(basemap)
   const [ready, setReady] = useState(false)
+
+  /** ラスタ（下）→ GeoJSON（上）の順で全部同期する。引数 fresh=true はスタイル再読込後（既存IDなし） */
+  const syncAll = (map: maplibregl.Map, fresh: boolean) => {
+    // 先にラスタを入れる時、最初のGeoJSONレイヤーより下に挿入するため、GeoJSON を先に同期して id を取る
+    layerIdsRef.current = syncLayers(map, layersRef.current, fresh ? new Set() : layerIdsRef.current)
+    const first = layersRef.current.find((l) => map.getLayer(l.id))?.id
+    rasterIdsRef.current = syncRasters(map, overlaysRef.current, first, fresh ? new Set() : rasterIdsRef.current)
+  }
 
   // 初期化（1回）
   useEffect(() => {
@@ -134,11 +212,10 @@ export function MapView({
     mapRef.current = map
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
-    const apply = () => {
-      layerIdsRef.current = syncLayers(map, layersRef.current, new Set())
+    map.on('load', () => {
+      syncAll(map, true)
       setReady(true)
-    }
-    map.on('load', apply)
+    })
     map.on('click', (e) => {
       const { onClick: oc, onFeatureClick: ofc, clickableLayerIds: ids } = cbRef.current
       if (ofc && ids?.length) {
@@ -147,17 +224,22 @@ export function MapView({
       }
       oc?.({ lng: e.lngLat.lng, lat: e.lngLat.lat })
     })
+    // 親サイズ変化への追従（サイドバー開閉・パネル切替・画面回転など）
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => map.resize()) : undefined
+    ro?.observe(containerRef.current)
     onMapReady?.(map)
     return () => {
+      ro?.disconnect()
       map.remove()
       mapRef.current = null
       layerIdsRef.current = new Set()
+      rasterIdsRef.current = new Set()
       setReady(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 背景切替: スタイルを差し替え、レイヤーを再追加
+  // 背景切替: スタイルを差し替え、レイヤー・ラスタを再追加
   const firstBase = useRef(true)
   useEffect(() => {
     const map = mapRef.current
@@ -167,21 +249,21 @@ export function MapView({
       return
     }
     map.setStyle(buildStyle(base))
-    map.once('style.load', () => {
-      layerIdsRef.current = syncLayers(map, layersRef.current, new Set())
-    })
+    map.once('style.load', () => syncAll(map, true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base])
 
-  // レイヤー更新
+  // レイヤー・ラスタ更新
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
     try {
-      layerIdsRef.current = syncLayers(map, layers, layerIdsRef.current)
+      syncAll(map, false)
     } catch {
       /* 背景切替中。style.load で再同期される */
     }
-  }, [layers, ready])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers, rasterOverlays, ready])
 
   // 外部からの中心・範囲変更に追従
   const boundsKey = bounds ? bounds.flat().join(',') : ''
@@ -205,12 +287,17 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centerKey, zoom, ready])
 
+  const overlayAttrs = (rasterOverlays ?? [])
+    .filter((o) => o.visible !== false && o.attribution)
+    .map((o) => o.attribution as string)
+  const extra = [attribution, ...overlayAttrs].filter(Boolean).join('／')
+
   return (
     <div className={cn('relative h-[420px] w-full overflow-hidden rounded-md border', className)}>
       <div className="absolute inset-0">
         <div ref={containerRef} className="h-full w-full" role="region" aria-label={ariaLabel} />
       </div>
-      {showBasemapSwitcher && (
+      {showBasemapSwitcher && basemap !== 'none' && (
         <ToggleGroup
           type="single"
           size="sm"
@@ -227,18 +314,32 @@ export function MapView({
           ))}
         </ToggleGroup>
       )}
-      <div className="pointer-events-none absolute bottom-0 right-0 max-w-[80%] bg-white/80 px-1.5 py-0.5 text-[10px] leading-tight text-neutral-700">
-        出典：
-        <a
-          className="pointer-events-auto underline"
-          href="https://maps.gsi.go.jp/development/ichiran.html"
-          target="_blank"
-          rel="noreferrer"
-        >
-          国土地理院タイル（{GSI_BASEMAPS[base].label}）
-        </a>
-        {attribution ? `／${attribution}` : ''}
-      </div>
+      {attributionText !== undefined ? (
+        attributionText && (
+          <div className="pointer-events-none absolute bottom-0 right-0 max-w-[80%] bg-white/80 px-1.5 py-0.5 text-[10px] leading-tight text-neutral-700">
+            {attributionText}
+          </div>
+        )
+      ) : (
+        (base !== 'none' || extra) && (
+          <div className="pointer-events-none absolute bottom-0 right-0 max-w-[80%] bg-white/80 px-1.5 py-0.5 text-[10px] leading-tight text-neutral-700">
+            {base !== 'none' && (
+              <>
+                出典：
+                <a
+                  className="pointer-events-auto underline"
+                  href="https://maps.gsi.go.jp/development/ichiran.html"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  国土地理院タイル（{GSI_BASEMAPS[base].label}）
+                </a>
+              </>
+            )}
+            {extra ? `${base !== 'none' ? '／' : '出典：'}${extra}` : ''}
+          </div>
+        )
+      )}
     </div>
   )
 }

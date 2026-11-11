@@ -20,6 +20,8 @@ export interface AppMeta {
   deadline: string
   /** 締切の ISO 日時 */
   deadlineAt: string
+  /** 誰向けか（概要カード・サイドバーに表示） */
+  audience: string
   /** 使用目的の一文（概要ページのカードとページ見出しに表示） */
   purpose: string
   dataKind: DataKind
@@ -40,6 +42,7 @@ export const CONTESTS: ContestMeta[] = [
 export const APPS: AppMeta[] = [
   {
     id: 'odpt',
+    audience: '住民・家族向け',
     name: '生活アクセス診断マップ',
     contest: 'odpt-2026',
     division: '本応募（UDC 作品①としても提出）',
@@ -54,6 +57,7 @@ export const APPS: AppMeta[] = [
   },
   {
     id: 'udc-moritsuchi',
+    audience: '住民向け',
     name: 'みんなの盛土ウォッチ',
     contest: 'udc-2026',
     division: '作品②',
@@ -68,6 +72,7 @@ export const APPS: AppMeta[] = [
   },
   {
     id: 'sat-a',
+    audience: '道路管理者向け',
     name: '路面下リスクの二段階調査',
     contest: 'satellite-2026',
     division: '提案A',
@@ -82,6 +87,7 @@ export const APPS: AppMeta[] = [
   },
   {
     id: 'sat-b',
+    audience: '自治体職員向け',
     name: '盛土巡視台帳',
     contest: 'satellite-2026',
     division: '提案B',
@@ -96,6 +102,7 @@ export const APPS: AppMeta[] = [
   },
   {
     id: 'biz-business',
+    audience: '交通担当者向け',
     name: 'バス路線見直し案の比較',
     contest: 'ichibiz-2026',
     division: 'ビジネス部門',
@@ -110,6 +117,7 @@ export const APPS: AppMeta[] = [
   },
   {
     id: 'biz-idea',
+    audience: '聞き取り担当者向け',
     name: '地名の記憶マップ',
     contest: 'ichibiz-2026',
     division: 'アイデア部門',
@@ -124,6 +132,7 @@ export const APPS: AppMeta[] = [
   },
   {
     id: 'biz-realestate',
+    audience: '土地所有者向け',
     name: '相談前の1枚シート',
     contest: 'ichibiz-2026',
     division: '不動産情報活用部門',

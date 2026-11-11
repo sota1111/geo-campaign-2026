@@ -82,6 +82,23 @@ export async function analyze(data: AreaData | null, lon: number, lat: number, p
   return facts
 }
 
+const MUNI: Record<string, string> = { '36201': '徳島市', '36202': '鳴門市', '36321': '松茂町', '36322': '北島町', '36323': '藍住町' }
+/** 国土地理院の逆ジオコーダ（GET・キー不要）。町名まで。取得失敗は null */
+export async function reverseGeocode(lon: number, lat: number): Promise<string | null> {
+  try {
+    const r = await fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lon}`)
+    if (!r.ok) return null
+    const j = (await r.json()) as { results?: { muniCd?: string; lv01Nm?: string } }
+    const res = j.results
+    if (!res || !res.muniCd) return null
+    const muni = MUNI[res.muniCd] ? '徳島県' + MUNI[res.muniCd] : `市区町村コード${res.muniCd}`
+    const town = res.lv01Nm && res.lv01Nm !== '−' ? res.lv01Nm : ''
+    return muni + town
+  } catch {
+    return null
+  }
+}
+
 export interface SearchHit { lon: number; lat: number; title: string }
 /** 地理院の住所検索（GET）。失敗は例外 */
 export async function searchAddress(q: string): Promise<SearchHit[]> {

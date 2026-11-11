@@ -9,7 +9,13 @@ export const GSI_BASEMAPS: Record<BasemapId, { label: string; url: string; maxzo
   photo: { label: '写真', url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', maxzoom: 18 },
 }
 
-export function buildStyle(base: BasemapId): StyleSpecification {
+/** 'none' は背景地図なし（白地）。独自の画像・タイルだけを見せたい時 */
+export type MapBase = BasemapId | 'none'
+
+export function buildStyle(base: MapBase): StyleSpecification {
+  if (base === 'none') {
+    return { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#f4f4f5' } }] }
+  }
   const b = GSI_BASEMAPS[base]
   return {
     version: 8,

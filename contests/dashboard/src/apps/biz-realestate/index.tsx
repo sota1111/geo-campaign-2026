@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import maplibregl from 'maplibre-gl'
 import { AlertTriangle, CheckCircle2, HelpCircle, Printer, Search, Loader2, MapPin } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { fetchData } from '@/lib/data'
 import { cn } from '@/lib/utils'
-import { analyze, HAZ, OVERLAYS, searchAddress, type SearchHit } from './collect'
+import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
   buildSheet, inBBox, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
   type Answers, type AreaData, type Facts, type Tone, type Zone,
@@ -29,6 +29,7 @@ const SOURCES = [
   { name: '用途地域・建ぺい率・容積率', provider: '国土交通省 国土数値情報（A29-19 令和元年度版・徳島県）を加工して作成', license: 'CC BY 4.0（一部制限）。市区町村ごとの利用条件あり', note: '最新の都市計画とは異なる場合がある。徳島市分の利用条件は公開前に要確認。' },
   { name: 'バス停・鉄道駅', provider: 'GTFSデータリポジトリ掲載の徳島市営バス・徳島バス・上八万コミュニティバス・松茂町・北島町・鳴門市のGTFS', license: 'CC BY 4.0', note: '直線距離のみ。便数や運行日は含まない。' },
   { name: '住所検索', provider: '国土地理院 住所検索API', note: 'キー不要のGET。入力語が国土地理院に届く。' },
+  { name: '町名の表示（逆ジオコーダ）', provider: '国土地理院 逆ジオコーダ（LonLatToAddress）', url: 'https://maps.gsi.go.jp/development/api.html', note: 'キー不要のGET。指した位置の緯度経度が国土地理院に届く。町名までで、番地は出ない。利用条件は国土地理院サイトの利用規約に従う（出典: 国土地理院）。' },
   { name: 'この画面にないもの', provider: '国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）', note: '取引価格・地価・将来人口・医療機関・小学校区は、そちらで確認する項目として示すだけで、この画面では取得していない。' },
   { name: 'サンプル（架空）', note: '「サンプルの1枚シートを見る」で出るシートは架空の土地の例。実在の土地の情報ではない。' },
 ]
@@ -81,6 +82,8 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
   const [hit, setHit] = useState<SearchHit | null>(null)
+  const [address, setAddress] = useState<string | null | 'loading'>(null)
+  const hitMarker = useRef<maplibregl.Marker | null>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const seq = useRef(0)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -132,20 +135,45 @@ export default function App() {
     map.on('style.load', applyOverlay)
   }, [applyOverlay])
 
+  // 検索結果・駅のマーカーとラベル
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !hit) return
+    const el = document.createElement('div')
+    el.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none'
+    const lab = document.createElement('span')
+    lab.textContent = hit.title
+    lab.style.cssText = 'background:#fff;border:2px solid #0072B2;color:#003a5c;font:700 12px sans-serif;padding:1px 6px;border-radius:4px;white-space:nowrap'
+    const dot = document.createElement('span')
+    dot.style.cssText = 'width:12px;height:12px;background:#0072B2;border:2px solid #fff;border-radius:2px;margin-top:3px;box-shadow:0 0 0 1px #003a5c'
+    el.append(lab, dot)
+    const mk = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([hit.lon, hit.lat]).addTo(map)
+    hitMarker.current = mk
+    return () => { mk.remove() }
+  }, [hit])
+
+  const scrollToSheet = () => {
+    const el = sheetRef.current
+    if (!el) return
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior: 'smooth' })
+  }
+
   // ---- 操作 ----
   const choose = useCallback(async (lon: number, lat: number, label = '地図で指した土地') => {
     const mine = ++seq.current
     setPin({ lon, lat })
     setHit(null)
     setBusy(true)
-    setStatus('公開データを集めています…')
-    const f = await analyze(data, lon, lat, label)
+    setAddress('loading')
+    setStatus('公開データを集めています…（終わると自動で1枚シートへ移動します）')
+    const [f, addr] = await Promise.all([analyze(data, lon, lat, label), reverseGeocode(lon, lat)])
     if (mine !== seq.current) return
     setBusy(false)
     setFacts(f)
+    setAddress(addr)
     const bits = f.inArea ? '' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。'
-    setStatus(`位置を指定しました。${bits}${headline(f)}（くわしくは下の1枚シート）`)
-    setTimeout(() => sheetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    setStatus(`位置を指定しました。${bits}`)
+    setTimeout(scrollToSheet, 150)
   }, [data])
 
   const onMapClick = useCallback((ll: { lng: number; lat: number }) => { void choose(ll.lng, ll.lat) }, [choose])
@@ -174,13 +202,17 @@ export default function App() {
     setBusy(false)
     setFacts(SAMPLE_FACTS)
     setAnswers(SAMPLE_ANSWERS)
+    setAddress(null)
     setStatus('サンプル（架空）の土地の1枚シートです。実在の土地ではありません。')
-    setTimeout(() => sheetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    setTimeout(scrollToSheet, 150)
   }
 
   const sheet = useMemo(() => (facts ? buildSheet(facts, answers) : null), [facts, answers])
   const rows = useMemo(() => (facts ? summarize(facts) : []), [facts])
-  const where = facts && !facts.sample && pin ? `指定した位置: 北緯${pin.lat.toFixed(4)}度 東経${pin.lon.toFixed(4)}度` : ''
+  const coord = facts && !facts.sample && pin ? `（北緯${pin.lat.toFixed(4)}度 東経${pin.lon.toFixed(4)}度）` : ''
+  const addrText = address === 'loading' ? '住所を取得中…' : address ? address : '住所を取得できなかった'
+  const where = facts && !facts.sample && pin ? `指定した位置: ${addrText}付近${coord}` : ''
+  const keyRows = rows.filter((r) => r.key === 'zone' || r.key === 'flood')
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -243,6 +275,15 @@ export default function App() {
               className="h-[380px] cursor-crosshair sm:h-[460px]"
               ariaLabel="地図。クリックまたはタップで土地の位置を指定"
             />
+            {hit && (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border-2 border-sky-700 bg-sky-50 p-2" data-testid="use-hit">
+                <span className="text-sm">地図の「{hit.title}」の位置が土地ですか？</span>
+                <Button type="button" onClick={() => void choose(hit.lon, hit.lat, `検索した位置（${hit.title}）`)}>
+                  <MapPin className="size-4" />この位置を土地として使う
+                </Button>
+                <span className="text-xs text-muted-foreground">違う場合は、土地の場所を地図でクリックしてください。</span>
+              </div>
+            )}
             <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="用途地域の凡例">
               {[['#0072B2', '住居系'], ['#E69F00', '商業系'], ['#CC79A7', '工業系']].map(([c, t]) => (
                 <li key={t} className="flex items-center gap-1"><span className="inline-block size-3 rounded-sm border" style={{ background: c, opacity: 0.6 }} />{t}</li>
@@ -288,10 +329,16 @@ export default function App() {
                 {busy && <Loader2 className="mr-1 inline size-4 animate-spin" />}
                 {status}
               </p>
-              {hit && (
-                <Button type="button" variant="outline" size="sm" onClick={() => void choose(hit.lon, hit.lat, `検索した位置（${hit.title}）`)}>
-                  <MapPin className="size-4" />この位置を土地として使う
-                </Button>
+              {keyRows.length > 0 && facts && !busy && (
+                <dl className="rounded-md border bg-muted/40 p-2 text-sm" data-testid="quick-result">
+                  {keyRows.map((r) => (
+                    <div key={r.key} className="flex gap-2 py-0.5">
+                      <dt className="w-28 shrink-0 font-medium">{r.label}</dt>
+                      <dd className="min-w-0 flex-1">{r.value}</dd>
+                    </div>
+                  ))}
+                  <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={scrollToSheet}>下の1枚シートを見る</Button>
+                </dl>
               )}
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" disabled={!sheet} onClick={() => window.print()}><Printer className="size-4" />印刷・PDFで保存する</Button>
@@ -314,6 +361,17 @@ export default function App() {
               </p>
             </CardHeader>
             <CardContent className="space-y-3 print:space-y-1.5 print:p-0 print:text-[7.5pt] print:leading-tight">
+              <section aria-label="記号の見かた" data-testid="legend" className="rounded-md border bg-muted/30 p-2 text-xs print:p-1 print:text-[6.5pt]">
+                <p className="mb-0.5 font-bold">記号の見かた</p>
+                <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:grid-cols-2">
+                  <li className="flex items-center gap-1"><CheckCircle2 className="size-3.5 shrink-0 text-sky-700" aria-hidden />＝ 公開データを取得でき、特に注意点がない（「区域に入らない」を含む）</li>
+                  <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden />＝ 注意が必要（想定区域に入る）</li>
+                  <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden />＝ 分からない（データにない・範囲外・取得できなかった）</li>
+                  <li><span className="mr-1 inline-block rounded border px-1">データ</span>＝ 公開データから分かったこと</li>
+                  <li><span className="mr-1 inline-block rounded border px-1">あなたの回答</span>＝ 手順2で選んだ内容（未選択は「分からない」扱い）</li>
+                  <li><span className="mr-1 inline-block rounded border px-1">データなし</span>＝ 該当データがなく、一般的な確認のみ</li>
+                </ul>
+              </section>
               <section aria-label="この土地の条件">
                 <h3 className="mb-1 text-sm font-bold print:mb-0.5 print:text-[9pt]">この土地の条件（公開データから）</h3>
                 <dl className="grid gap-x-4 sm:grid-cols-2 print:grid-cols-2" data-testid="summary">
@@ -365,7 +423,7 @@ export default function App() {
               </div>
 
               <p className="text-xs text-muted-foreground print:text-[6.5pt] print:text-black">
-                出典: 国土地理院タイル、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
+                出典: 国土地理院タイル・住所検索・逆ジオコーダ（町名の表示）、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
                 取引価格・地価などは国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）で確認。
                 国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
               </p>

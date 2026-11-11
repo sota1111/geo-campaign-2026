@@ -15,6 +15,17 @@ import {
 const pct = (x: number) => Math.round(x * 100)
 const fmt1 = (x: number) => x.toFixed(1)
 
+export interface PrevInfo {
+  rank: Record<string, number>
+  topId: string
+  round: number
+  oldW: number
+  newW: number
+  newTopId: string
+  changed: number
+  calibrated: boolean
+}
+
 export type CalibResult = Calibration & { ex0: Exclusion | null; ex1: Exclusion | null; pastCount: number }
 
 function Metric({ label, value, sub, testId }: { label: string; value: string; sub?: string; testId?: string }) {
@@ -48,7 +59,7 @@ export function Step1({
   setW: (v: number) => void
   candidates: Scored[]
   msg: string
-  prev: { rank: Record<string, number>; topId: string; round: number } | null
+  prev: PrevInfo | null
   focus: string | null
   onFocus: (id: string) => void
   onNext: () => void
@@ -63,10 +74,22 @@ export function Step1({
         区間の点数は「衛星の指標」と「下水道台帳の布設年の古さ」の重み付き和です。衛星は空洞を直接見つけず、調べる順番を決める入口です。
       </StepIntro>
       <CardContent className="space-y-4">
-        {msg && (
+        {msg && prev && (
           <Alert className="border-primary/40 bg-primary/5" data-testid="calib-msg">
-            <AlertTitle>第{round}回の順位</AlertTitle>
-            <AlertDescription className="text-foreground">{msg}</AlertDescription>
+            <AlertTitle>第{prev.round}回 → 第{round}回：較正の反映結果</AlertTitle>
+            <AlertDescription className="w-full space-y-2 text-foreground">
+              <p>{msg}</p>
+              <Table>
+                <TableHeader>
+                  <TableRow><TableHead>項目</TableHead><TableHead className="text-right">第{prev.round}回</TableHead><TableHead className="text-right">第{round}回</TableHead></TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow><TableCell>衛星指標の重み</TableCell><TableCell className="text-right">{pct(prev.oldW)}%</TableCell><TableCell className="text-right">{pct(prev.newW)}%</TableCell></TableRow>
+                  <TableRow><TableCell>候補の1位（走査済みを除く）</TableCell><TableCell className="text-right">{prev.topId}</TableCell><TableCell className="text-right">{prev.newTopId}</TableCell></TableRow>
+                  <TableRow><TableCell>上位10区間で順位が入れ替わった数</TableCell><TableCell className="text-right">—</TableCell><TableCell className="text-right" data-testid="changed">{prev.changed} 区間</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </AlertDescription>
           </Alert>
         )}
 
@@ -180,11 +203,11 @@ export function Step2({
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-baseline justify-between gap-2">
-            <label className="text-sm font-medium" id="bud-label">走らせられる延長（予算の代わりの仮の値）</label>
+            <label className="text-sm font-medium" id="bud-label">走らせられる延長（予算＝走行延長に換算した仮の値）</label>
             <span className="text-lg font-bold" data-testid="bud-out">{fmt1(budgetKm)} km</span>
           </div>
           <Slider value={[budgetKm]} min={1} max={8} step={0.5} aria-labelledby="bud-label" onValueChange={([v]) => setBudgetKm(v)} />
-          <p className="text-xs text-muted-foreground">予算・車両台数などの制約を延長で置き換えた仮の値で、実際の調査能力を表すものではありません。</p>
+          <p className="text-xs text-muted-foreground">考え方: 調査費や車両台数の制約を「地中レーダ車が走れる道のり（km）」に置き換えています。金額への換算はしていません。仮の値で、実際の調査能力を表すものではありません。</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -204,7 +227,7 @@ export function Step2({
         </div>
 
         <div>
-          <div className="mb-1 text-sm font-medium">候補（点数の上位15区間と、選択した区間）</div>
+          <div className="mb-1 text-sm font-medium">候補 {rows.length} 区間（点数の高い順の上位15区間{rows.length > 15 ? `＋それ以外で選択中の ${rows.length - 15} 区間` : ''}。うち選択中 {selected.size} 区間）</div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -353,9 +376,9 @@ export function Step3({
                   </TableBody>
                 </Table>
                 <p className="text-xs text-muted-foreground">
-                  AUC: 空洞のあった区間が、なかった区間より高い点数になる確率（0.5=当てずっぽう、1=完全）。
+                  AUC: 空洞のあった区間が、なかった区間より高い点数になる確率。0.5＝でたらめ（当てずっぽう）と同じ、1.0＝完全に当たる。数字が大きいほど、その重みで調べる順番が当たりやすいという意味です。
                   {calib.ex1 && `点数が下位の半分とした区間（${calib.ex1.n}区間）のうち異常なしだった割合は ${pct(calib.ex1.rate)}%${calib.ex0 ? `（較正前の重みでは ${pct(calib.ex0.rate)}%）` : ''}。`}
-                  架空のサンプル上の数字であり、実際の精度や提案の効果を示すものではありません。
+                  架空データ上の値で、実際の精度や提案の効果を示すものではありません。
                 </p>
               </div>
             )}

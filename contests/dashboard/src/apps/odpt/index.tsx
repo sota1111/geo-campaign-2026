@@ -16,11 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { fetchData } from '@/lib/data'
 import { Conclusion, type CondState } from './Conclusion'
 import { Seg } from './Seg'
+import { TIPS, Term } from './Term'
 import {
   AboutPanel, COLORS, ComparePanel, RegionPanel, StopsPanel, WhatIfPanel, type WhatIfData,
 } from './panels'
 import {
-  DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
+  distM, condIndex, levelLabel, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
   needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
   type Day, type Lost, type Period, type RegionData, type RegionIndex,
 } from './lib'
@@ -36,6 +37,11 @@ const todayIso = () => {
   const t = new Date()
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
 }
+
+const STATIONS = [
+  { label: '熊本駅', q: '熊本駅' }, { label: '富山駅', q: '富山駅' }, { label: '徳島駅', q: '徳島駅' },
+  { label: '飯田駅', q: '飯田駅' }, { label: '王子駅', q: '王子駅' },
+]
 
 const SOURCES = [
   { name: '公共交通の時刻表（GTFS）', provider: 'GTFSデータリポジトリ／公共交通オープンデータセンター（各事業者）', license: 'フィードごとに CC0 1.0／CC BY 4.0 等（「出典・前提」タブに事業者別の一覧）', url: 'https://www.gtfs-data.jp/', note: '停留所の集約・本数集計・到達時間の計算という加工を行っています。' },
@@ -160,23 +166,32 @@ export default function App() {
       facLabel: data.facility_labels[data.facility_order[cond.fi]],
     })
     const near = nearbyNodes(data.nodes, pt[0], pt[1], data.params.walk_in_m, 6)
-    return { cell, v, near, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
+    const fk = data.facility_order[cond.fi]
+    let facility: { name: string; m: number; min: number } | null = null
+    for (const f of data.facilities[fk] ?? []) {
+      const d = distM(pt[0], pt[1], f[0], f[1])
+      if (!facility || d < facility.m) facility = { name: f[2], m: d, min: 0 }
+    }
+    if (facility) facility = { name: facility.name, m: Math.round(facility.m), min: Math.max(1, Math.ceil((facility.m * data.params.detour) / data.params.walk_m_per_min)) }
+    const lv = cell ? +cell[3][condIndex(cond.fi, cond.day, cond.per)] : 0
+    const transitLevel = v && v.status === 'transit' && lv > 0 ? levelLabel(lv, data.params.thresholds) : null
+    return { cell, v, near, facility, transitLevel, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
   }, [data, pt, cellIdx, cond])
 
   const copyText = useMemo(() => {
     if (!diag || !data) return ''
     const fmtLast = (l: ReturnType<typeof lastService>) => (l ? `${fmtMin(l.t)}（${l.name}・約${l.m}m）` : '運行なし')
+    const fl = data.facility_labels[data.facility_order[cond.fi]]
+    const n = diag.near[0] ? data.nodes[diag.near[0].i] : null
+    const lastTxt = n ? `／最寄りの停留所 ${diag.labels[0]}（約${Math.round(diag.near[0].d)}m）の最終 平日 ${n[3][3] > 0 ? fmtMin(n[3][5]) : '運行なし'}・休日 ${n[4][3] > 0 ? fmtMin(n[4][5]) : '運行なし'}` : ''
     const lines = [
-      `【生活アクセス診断】${placeLabel || '選んだ地点'}（${shortName(data.name)}）`,
-      diag.v ? `${diag.v.main}。${diag.v.cmp}${diag.v.extra}` : 'この地点は診断範囲外です（停留所から遠い、または人口データなし）。',
-      diag.near.length
-        ? `近くの停留所の最終便（${data.params.walk_in_m}m以内）: 平日 ${fmtLast(diag.lastWd)}／休日（日曜ダイヤ） ${fmtLast(diag.lastHol)}`
-        : `${data.params.walk_in_m}m以内に停留所がありません。`,
-      shareUrl + (isLocal() ? '\n※いまは手元の確認用アドレスです。公開後のアドレスで共有してください。' : ''),
-      '（生活アクセス診断マップ。時刻表データによる推計で、実際の運行を保証するものではありません）',
+      diag.v
+        ? `【${placeLabel || '選んだ地点'}から${fl}へ】${DAY_FULL[cond.day]}${PERIOD_LABEL[cond.per]}${data.params.start_hours[cond.per]}時発・${cond.w}分以内: ${diag.v.yesNo}。${DAY_FULL[diag.v.otherDay]}は ${diag.v.otherYesNo}${lastTxt}`
+        : `【${placeLabel || '選んだ地点'}】診断範囲外です（停留所から遠い、または人口データなし）`,
+      shareUrl,
     ]
     return lines.join('\n')
-  }, [diag, data, placeLabel, shareUrl])
+  }, [diag, data, placeLabel, shareUrl, cond])
 
   const writeClipboard = useCallback(async (text: string, ok: () => void) => {
     const fallback = () => {
@@ -198,7 +213,7 @@ export default function App() {
   }, [])
 
   const onCopy = useCallback(() => {
-    writeClipboard(copyText, () => { setCopied(true); toast.success('結論とリンクをコピーしました'); setTimeout(() => setCopied(false), 3000) })
+    writeClipboard(copyText, () => { setCopied(true); toast.success('コピーしました。LINEやメールに貼り付けて送れます'); setTimeout(() => setCopied(false), 3000) })
   }, [copyText, writeClipboard])
   useEffect(() => { setCopied(false) }, [copyText])
 
@@ -264,10 +279,9 @@ export default function App() {
     choosePoint(lng, lat, '', false)
   }, [choosePoint])
 
-  const onExample = () => {
-    setQuery('富山市大町')
-    if (regionId !== 'toyama') { pending.current = { pt: null, route: null }; setRegionId('toyama') }
-    doSearch('富山市大町')
+  const onStation = (q: string) => {
+    setQuery(q)
+    doSearch(q)
   }
 
   // 5地域比較: タブを開いた時に全地域を読み込む
@@ -346,7 +360,7 @@ export default function App() {
 
   const regionList = index?.regions ?? []
   const facLabel = data?.facility_labels[data.facility_order[cond.fi]] ?? ''
-  const exampleFor: Record<string, string> = { kumamoto: '熊本駅、熊本市中央区水前寺', toyama: '富山駅、富山市大町', tokushima: '徳島駅、徳島市幸町', iida: '飯田駅、飯田市主税町', tokyo: '王子駅、北区赤羽' }
+  const exampleFor: Record<string, string> = { kumamoto: '熊本駅', toyama: '富山駅', tokushima: '徳島駅', iida: '飯田駅', tokyo: '王子駅' }
 
   const setC = (p: Partial<CondState>) => setCond((c) => ({ ...c, ...p }))
 
@@ -391,6 +405,7 @@ export default function App() {
           <CardContent className="space-y-3 px-4">
             <div className="space-y-1">
               <div className="text-sm font-medium" id="odpt-region">診断地域（いまの地域: <b>{data ? shortName(data.name) : '読み込み中'}</b>）</div>
+              {!index && <Skeleton className="h-9 w-full" />}
               <Seg
                 label="診断地域"
                 value={regionId}
@@ -424,6 +439,11 @@ export default function App() {
                 )}
               </div>
             </form>
+            {!data && (
+              <div className="space-y-2 border-t pt-3" aria-busy="true" aria-label="読み込み中">
+                <Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton className="h-9 w-2/3" />
+              </div>
+            )}
             {data && (
               <div className="space-y-2 border-t pt-3">
                 <div className="grid grid-cols-[4.5rem_1fr] items-start gap-x-2 gap-y-2 text-sm">
@@ -460,7 +480,11 @@ export default function App() {
             copyText={copyText}
             onCopy={onCopy}
             copied={copied}
-            onExample={onExample}
+            onStation={onStation}
+            stations={STATIONS}
+            isLocal={isLocal()}
+            facility={diag?.facility ?? null}
+            transitLevel={diag?.transitLevel ?? null}
             loading={!data || searching}
           />
         </div>
@@ -496,7 +520,7 @@ export default function App() {
                 ))}
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <b>メッシュ（500m四方）の色</b>
+                <b>エリア（<Term tip={TIPS.mesh}>約500m四方</Term>）の色</b>
                 <Sw c={COLORS.walk} l="歩いて行ける" /><Sw c={COLORS.transit} l="公共交通で行ける" /><Sw c={COLORS.none} l="行けない" />
                 <Sw c={COLORS.rail} l="鉄道駅が近い（未評価）" />{lostIdx && <Sw c={COLORS.lost} l="路線を止めると行けなくなる" />}
                 <span className="text-muted-foreground">濃いほど人口が多い</span>
@@ -508,9 +532,9 @@ export default function App() {
                 <span className="flex items-center gap-1"><span className="inline-block size-3 rounded-full border-2 border-black bg-white" />選んだ地点</span>
               </div>
               <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
-                <li>メッシュ: 地図を約500m四方に区切った区画。人口はこの単位で数えています。</li>
-                <li>GTFS: バスなどの時刻表・停留所を、決まった形式で公開したオープンデータ。</li>
-                <li>行けない: 歩いても、収録した公共交通でも許容時間内に着けない（未収録の便は含まない）。</li>
+                <li><Term tip={TIPS.mesh}>エリア（メッシュ）</Term>: 地図を約500m四方に区切った区画。人口はこの単位で数えています。</li>
+                <li><Term tip={TIPS.gtfs}>GTFS</Term>: バスなどの時刻表・停留所のオープンデータ。</li>
+                <li><Term tip={TIPS.none}>行けない</Term>: 歩いても、収録した公共交通でも許容時間内に着けない。</li>
               </ul>
             </CardContent>
           </Card>

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import Overview from '@/pages/Overview'
 import { getApp } from '@/apps/registry'
+import { PageSkeleton } from '@/components/shared/PageSkeleton'
 
 function AppPage() {
   const { id = '' } = useParams()
@@ -10,7 +11,7 @@ function AppPage() {
   if (!app) return <Navigate to="/" replace />
   const C = app.Component
   return (
-    <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">読み込み中…</p>}>
+    <Suspense fallback={<PageSkeleton />}>
       <C />
     </Suspense>
   )

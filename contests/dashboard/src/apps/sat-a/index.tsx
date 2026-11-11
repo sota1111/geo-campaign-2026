@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SourceDialog } from '@/components/shared/SourceDialog'
@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { dataUrl } from '@/lib/data'
 import { SatMap } from './SatMap'
-import { Step1, Step2, Step3, type CalibResult } from './Steps'
+import { Step1, Step2, Step3, type CalibResult, type PrevInfo } from './Steps'
 import { About, SOURCES } from './About'
 import {
   NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, rank, satNorm, selectByBudget,
@@ -35,7 +35,13 @@ export default function App() {
   const [calib, setCalib] = useState<CalibResult | null>(null)
   const [focus, setFocus] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
-  const [prev, setPrev] = useState<{ rank: Record<string, number>; topId: string; round: number } | null>(null)
+  const [prev, setPrev] = useState<PrevInfo | null>(null)
+  const stepperRef = useRef<HTMLDivElement>(null)
+  const firstStep = useRef(true)
+  useEffect(() => {
+    if (firstStep.current) { firstStep.current = false; return }
+    stepperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [step])
 
   useEffect(() => {
     let alive = true
@@ -106,9 +112,9 @@ export default function App() {
     before.forEach((s, i) => (rankMap[s.id] = i + 1))
     const newW = calib && calib.w !== null ? calib.w : w
     const after = candidatesOf(rank(segs, cellSat, newW))
-    setPrev({ rank: rankMap, topId: before[0]?.id ?? '', round })
+    const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
+    setPrev({ rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed, calibrated: !!(calib && calib.w !== null) })
     if (calib && calib.w !== null) {
-      const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
       setMsg(
         `較正済み: 衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。走査した区間を除く候補の1位は ${before[0]?.id} → ${after[0]?.id}、上位10区間のうち ${changed} 区間で順位が入れ替わっています（表の「前回」列）。`,
       )
@@ -167,11 +173,11 @@ export default function App() {
       </Alert>
 
       <Tabs value={step} onValueChange={(v) => setStep(v as StepId)} className="gap-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div ref={stepperRef} className="flex scroll-mt-2 flex-wrap items-center gap-2">
           <TabsList className="h-auto w-full flex-1 sm:w-auto sm:flex-none" aria-label="調査の段階">
-            <TabsTrigger value="1" className="min-h-10 flex-1 px-3 sm:flex-none"><b>1</b> 絞る</TabsTrigger>
-            <TabsTrigger value="2" className="min-h-10 flex-1 px-3 sm:flex-none"><b>2</b> 選ぶ</TabsTrigger>
-            <TabsTrigger value="3" className="min-h-10 flex-1 px-3 sm:flex-none"><b>3</b> 戻す</TabsTrigger>
+            <TabsTrigger value="1" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>1</b> 絞る</TabsTrigger>
+            <TabsTrigger value="2" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>2</b> 選ぶ</TabsTrigger>
+            <TabsTrigger value="3" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>3</b> 戻す</TabsTrigger>
           </TabsList>
           <Badge variant="secondary" className="text-sm" data-testid="round">第{round}回</Badge>
           <span className="text-xs text-muted-foreground">

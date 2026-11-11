@@ -48,7 +48,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await ev(`document.querySelectorAll('[aria-label="案Bに止める路線を追加"]')[0].click()`); await sleep(400)
   await ev(`document.querySelectorAll('[role=option]')[0].click()`); await sleep(800)
   console.log(label, 'after add', await ev(alerts))
-  console.log(label, 'csvclick', await click('比較表をCSVでダウンロード')); await sleep(800)
+  console.log(label, 'csvclick', await click('会議資料用にCSVで書き出す')); await sleep(800)
   const csv = await ev('window.__csv[0]||"none"')
   fs.writeFileSync(path.join(outDir, `${label}.csv`), csv)
   console.log(label, 'csv head', csv.slice(0, 900))

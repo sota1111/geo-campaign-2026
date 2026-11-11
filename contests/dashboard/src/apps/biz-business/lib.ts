@@ -179,17 +179,30 @@ export function toCsvText(rows: unknown[][]) {
   return '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n'
 }
 
+export interface Verdict {
+  /** 影響が小さい案（losses の添字）。完全に同じなら複数 */
+  winners: number[]
+  /** 確定か。false=暫定（下限値どうしで大小が決まらない） */
+  firm: boolean
+}
 /**
- * 影響が小さい案の番号（losses は案ごとの「病院へ行けなくなる人」）。
- * 第1基準=行けなくなる人、同数ならうち65歳以上。完全に同じなら複数返す。
+ * 影響が小さい案の判定（losses は案ごとの「病院へ行けなくなる人」。exact=false は「少なくとも」の下限値）。
+ * 第1基準=行けなくなる人、同数ならうち65歳以上。
+ * 確定の条件: 勝ち案が確定値（exact）で、相手が確定値なら常に確定、相手が下限値なら相手の下限値が勝ち案より大きいとき確定
+ * （相手の実際の人数は下限値以上なので）。勝ち案が下限値、または相手の下限値が同数以下なら、実際の人数は上振れしうるので暫定。
  */
-export function pickSmaller(losses: { lost: number; lost65: number }[]): number[] {
-  if (!losses.length) return []
+export function pickSmaller(losses: { lost: number; lost65: number; exact: boolean }[]): Verdict {
+  if (!losses.length) return { winners: [], firm: true }
   let best = [0]
   for (let i = 1; i < losses.length; i++) {
     const a = losses[i], b = losses[best[0]]
     if (a.lost < b.lost || (a.lost === b.lost && a.lost65 < b.lost65)) best = [i]
     else if (a.lost === b.lost && a.lost65 === b.lost65) best.push(i)
   }
-  return best
+  const firm = best.every((w) => {
+    const x = losses[w]
+    if (!x.exact) return false
+    return losses.every((y, j) => best.includes(j) || y.exact || y.lost > x.lost)
+  })
+  return { winners: best, firm }
 }

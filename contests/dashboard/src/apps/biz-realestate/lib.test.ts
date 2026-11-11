@@ -5,7 +5,19 @@ import {
   buildSheet, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, SAMPLE_FACTS,
   summarize, tileOf, transitAround, worldToLonLat, type AreaData, type Facts,
 } from './lib'
-import { analyze } from './collect'
+import { analyze, reverseGeocode } from './collect'
+
+describe('逆ジオコーダ', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('町名まで返す', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: { muniCd: '36201', lv01Nm: '徳島町城内' } }) }))
+    expect(await reverseGeocode(134.5518, 34.0762)).toBe('徳島県徳島市徳島町城内')
+  })
+  it('失敗時は null（画面は「住所を取得できなかった」）', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('x')))
+    expect(await reverseGeocode(1, 1)).toBeNull()
+  })
+})
 
 const data = JSON.parse(readFileSync(resolve(process.cwd(), 'public/data/biz-realestate/tokushima.json'), 'utf8')) as AreaData
 

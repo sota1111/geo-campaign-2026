@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Download, Info, X, Copy, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Download, Info, X, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
@@ -122,7 +122,9 @@ export default function App() {
 
   const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0)
   const activePlan = ks.includes(selPlan) ? selPlan : (ks[0] ?? 0)
-  const smaller = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])).map((i) => ks[i]) : []
+  const verdict = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])) : null
+  const smaller = verdict ? verdict.winners.map((i) => ks[i]) : []
+  const firm = verdict?.firm ?? false
   const anyLowerBound = calc ? ks.some((k) => !calc.results[k][0].exact) : false
   const lostText = (l: { lost: number; exact: boolean }) => `${l.exact ? '' : '少なくとも'}${n(l.lost)}人`
   const lb = (exact: boolean) => (exact ? '' : '少なくとも')
@@ -191,9 +193,29 @@ export default function App() {
       return
     }
     const rows = buildCsvRows(data, condText, calc.base, planViews())
-    if (smaller.length) rows.splice(6, 0, ['影響が小さい案（病院へ行けなくなる人が少ない）', smaller.map((k) => plans[k].name).join('・')])
-    downloadText(`plan-comparison-${data.id}-${day}${per}${w}.csv`, toCsvText(rows), 'text/csv;charset=utf-8')
-    toast.success('CSVを書き出しました（この端末の中で作成。送信していません）')
+    if (smaller.length) {
+      rows.splice(6, 0, [
+        '影響が小さい案（病院へ行けなくなる人が少ない）',
+        smaller.length === ks.length ? '差なし（同数）' : smaller.map((k) => plans[k].name).join('・'),
+        firm ? '確定' : '暫定（下限値どうしの比較を含む）',
+      ])
+    }
+    const fname = `plan-comparison-${data.id}-${day}${per}${w}.csv`
+    downloadText(fname, toCsvText(rows), 'text/csv;charset=utf-8')
+    toast.success(`${fname} を書き出しました`, {
+      description: `中身: ${ks.map((k) => plans[k].name).join('・')}の比較表（病院・学校別の人数、うち65歳以上、割合、地区数）、地区別の内訳、診断の前提、出典。この端末で作成しただけで、送信していません。`,
+      duration: 9000,
+    })
+  }
+  const copySentences = () => {
+    if (!ks.length) { toast.error('止める路線を選んだ案がありません。'); return }
+    navigator.clipboard?.writeText(sentences.join('\n')).then(
+      () => {
+        setCopied(true)
+        toast.success('資料用の文章をコピーしました', { description: `${ks.map((k) => plans[k].name).join('・')}の${ks.length}件。各案で行けなくなる人（うち65歳以上）と最も多い地区を、条件つきで1段落ずつ入れています。貼り付け先で確認してください。`, duration: 9000 })
+      },
+      () => toast.error('コピーできませんでした'),
+    )
   }
 
   const sources: SourceItem[] = data
@@ -227,8 +249,8 @@ export default function App() {
         <CardContent className="space-y-3 text-sm">
           <ol className="list-decimal space-y-1 pl-5">
             <li><b>地域と条件</b>を確認する（初期値は徳島市周辺・平日朝・20分以内）。</li>
-            <li><b>案A・案B</b>に、廃止する路線を選ぶ（例として2路線が入っています。×で外し、プルダウンで追加・入れ替え）。</li>
-            <li><b>「3 案を比べる」</b>で、<b>病院へ行けなくなる人</b>と<b>うち65歳以上</b>、<b>影響が小さい案</b>を確認し、<b>CSV</b>で書き出す。</li>
+            <li><b>案A・案B</b>に、廃止する路線を選ぶ（案Aと案Bに1路線ずつ例を入れてあります。×で外し、プルダウンで別の路線に替えられます）。</li>
+            <li>すぐ下の<b>「結論」</b>で、<b>影響が小さい案</b>と各案の<b>病院へ行けなくなる人（うち65歳以上）</b>を確認し、<b>「会議資料用にCSVで書き出す」</b>を押す（文章のコピーも同じ場所）。</li>
           </ol>
           <Alert>
             <Info className="size-4" />
@@ -321,7 +343,7 @@ export default function App() {
                       <SelectContent className="max-h-72">
                         {calc.selectable.filter((r) => !p.routes.includes(r)).map((r) => (
                           <SelectItem key={r} value={String(r)}>
-                            {routeFull(r)}｜単独停止で{fl0}−{n(calc.single.get(r)!)}人
+                            {routeFull(r)}（この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -330,8 +352,71 @@ export default function App() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                路線は影響が大きい順（現在の条件・{fl0}）。選べるのは基準日に便がある{calc.selectable.length}路線／収録{data.routes.length}路線（全便の停止のみ。減便は未対応）。
-                地域を開いたとき、案A・案Bには例として病院・学校の合計で影響が大きい路線を仮に入れてあります。
+                プルダウンの路線は、その路線だけを止めたときの影響（{fl0}へ行けなくなる人）が大きい順です。選べるのは基準日に便がある{calc.selectable.length}路線／収録{data.routes.length}路線（全便の停止のみ。減便は未対応）。
+                地域を開いたとき、案Aと案Bに1路線ずつ、病院・学校の合計で影響が大きい路線を例として仮に入れてあります（案Cは空）。
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-2 border-primary/60" aria-live="polite">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">結論（会議資料用）</CardTitle>
+          <CardDescription>条件: {condText || '—'}。上の案を変えると、ここがすぐ更新されます。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!data || !calc ? <p className="text-sm text-muted-foreground">読み込み中…</p> : !ks.length ? (
+            <p className="text-sm text-muted-foreground">手順2で、止める路線を1つ以上選んでください。</p>
+          ) : (
+            <>
+              {ks.length >= 2 ? (
+                <div role="status" className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-lg font-bold">
+                      影響が小さい案: {smaller.length === ks.length ? '差がありません（同数）' : smaller.map((k) => plans[k].name).join('・')}
+                    </span>
+                    <Badge variant={firm ? 'default' : 'outline'}>{firm ? '確定' : '暫定'}</Badge>
+                  </div>
+                  <p className="text-sm">
+                    {fl0}へ行けなくなる人が少ない案です。同数なら65歳以上が少ない方を選んでいます。
+                  </p>
+                  {firm && anyLowerBound && (
+                    <p className="text-sm">
+                      複数路線の案は「少なくとも」の下限値ですが、その下限値がすでに相手の確定値を上回っているため、実際の人数に関わらずこの結論は変わりません。
+                    </p>
+                  )}
+                  {!firm && (
+                    <p className="text-sm font-medium">
+                      暫定: 複数路線の案は「少なくとも」の下限値で、実際の人数はこれ以上になりうるため、大小は確定できません（減便・同時停止の影響も含みません）。
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <Alert><Info className="size-4" /><AlertDescription>比較するには、もう1つの案にも路線を選んでください。</AlertDescription></Alert>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {ks.map((k) => {
+                  const l = calc.results[k][0]
+                  const win = smaller.includes(k) && smaller.length < ks.length
+                  return (
+                    <div key={k} className={`rounded-lg border p-3 ${win ? 'border-2 border-primary' : ''}`}>
+                      <div className="flex flex-wrap items-center gap-1.5 text-sm font-bold">
+                        {plans[k].name}{win && <Badge>影響が小さい案</Badge>}{!l.exact && <Badge variant="outline">下限値</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{fl0}へ行けなくなる人</div>
+                      <div className="text-2xl font-bold">{lostText(l)}</div>
+                      <div className="text-sm">うち65歳以上 <b>{lb(l.exact)}{n(l.lost65)}人</b></div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="lg" onClick={exportCsv}><Download className="size-4" />会議資料用にCSVで書き出す</Button>
+                <Button size="lg" variant="outline" onClick={copySentences}><Copy className="size-4" />{copied ? 'コピーしました' : '資料用の文章をコピー'}</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                CSVには、比較表（病院・学校別の人数・うち65歳以上・割合・地区数）、地区別の内訳、前提、出典が入ります。この端末の中で作るだけで、送信しません。
               </p>
             </>
           )}
@@ -342,7 +427,7 @@ export default function App() {
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">3</span>案を比べる</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">3</span>案を詳しく比べる（表）</CardTitle>
               <CardDescription>条件: {condText || '—'}</CardDescription>
             </div>
             <Button onClick={exportCsv} disabled={!calc || !ks.length}><Download className="size-4" />比較表をCSVでダウンロード</Button>
@@ -353,28 +438,6 @@ export default function App() {
             <p className="text-sm text-muted-foreground">手順2で、止める路線を1つ以上選んでください。（この条件では、止めても行けなくなる人が出る路線が無い地域もあります。許容時間を短くすると差が出ます。）</p>
           ) : (
             <>
-              {ks.length >= 2 ? (
-                <Alert className="border-primary/50 bg-primary/5" role="status">
-                  <CheckCircle2 className="size-4" />
-                  <AlertTitle className="text-base">
-                    影響が小さい案: {smaller.length === ks.length ? '差がありません（同数）' : smaller.map((k) => plans[k].name).join('・')}
-                  </AlertTitle>
-                  <AlertDescription className="space-y-1">
-                    <p>
-                      {fl0}へ行けなくなる人が少ない案です（{ks.map((k) => `${plans[k].name} ${lostText(calc.results[k][0])}・うち65歳以上${lb(calc.results[k][0].exact)}${n(calc.results[k][0].lost65)}人`).join('、')}）。
-                      同数なら65歳以上が少ない方を選びます。
-                    </p>
-                    {anyLowerBound && (
-                      <p className="font-medium">
-                        複数路線の案は「少なくとも」の下限値どうしの比較です。実際の人数はこれ以上になりうるため、この判定は暫定です（減便・同時停止の影響は含みません）。
-                      </p>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Alert><Info className="size-4" /><AlertDescription>比較するには、もう1つの案にも路線を選んでください。</AlertDescription></Alert>
-              )}
-
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {ks.map((k) => {
                   const win = smaller.includes(k) && smaller.length < ks.length
@@ -466,9 +529,7 @@ export default function App() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-bold">会議資料にそのまま使える文</h3>
-                  <Button variant="outline" size="sm" onClick={() => {
-                    navigator.clipboard?.writeText(sentences.join('\n')).then(() => { setCopied(true); toast.success('文章をコピーしました') }, () => toast.error('コピーできませんでした'))
-                  }}><Copy className="size-4" />{copied ? 'コピーしました' : 'コピー'}</Button>
+                  <Button variant="outline" size="sm" onClick={copySentences}><Copy className="size-4" />{copied ? 'コピーしました' : 'コピー'}</Button>
                 </div>
                 {sentences.map((s, i) => <p key={i} className="rounded-md border-l-4 border-primary bg-muted/40 p-2 text-sm">{s}</p>)}
               </div>

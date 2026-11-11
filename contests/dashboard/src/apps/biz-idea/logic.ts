@@ -1,7 +1,19 @@
 /* 地名の記憶マップ: 画面に依存しない処理（元アプリ contests/ichibiz-2026/app/idea/lib.js の移植） */
 
 export const CERTAINTY = ['定説', '諸説', '不明'] as const
-export const VISIBILITY = { public: '公開', local: '地域の関係者のみ', private: '非公開' } as const
+export const VISIBILITY = {
+  undecided: '未定（確認後に選ぶ）', public: '公開', local: '地域の関係者のみ', private: '非公開',
+} as const
+
+/** 公開分に入っていない理由（空なら公開分に入る）。画面での案内用 */
+export function publishBlockers(rec: MemoryRecord): string[] {
+  const out: string[] = []
+  if (!rec.verified) out.push('未確認')
+  if (rec.visibility !== 'public') out.push(`公開範囲が「${VISIBILITY[rec.visibility]}」（公開にする必要があります）`)
+  if (rec.license === 'none') out.push('利用条件が「利用不可」')
+  if (rec.sample) out.push('サンプル（架空）')
+  return out
+}
 export const LICENSES = {
   'CC BY 4.0': 'CC BY 4.0（出典を示せば利用可）',
   CC0: 'CC0（制限なし）',

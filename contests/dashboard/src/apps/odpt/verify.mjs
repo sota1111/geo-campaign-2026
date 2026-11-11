@@ -57,6 +57,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await sleep(4000)
   await shot(`${label}-1-initial`)
   console.log(`== ${label}`)
+  console.log('example-button-present:', await ev(`document.body.innerText.includes('で試す')`))
   console.log('search', await ev(`(()=>{const i=document.getElementById('odpt-q');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(i,'富山市大町');i.dispatchEvent(new Event('input',{bubbles:true}));i.form.requestSubmit();return 'sent'})()`))
   await sleep(4500)
   console.log('msg:', await ev(`document.querySelector('[data-testid=search-msg]').innerText`))

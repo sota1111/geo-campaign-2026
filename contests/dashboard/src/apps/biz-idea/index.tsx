@@ -16,13 +16,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
   CERTAINTY, CHECKS, KINDS, LICENSES, OVERLAYS, VISIBILITY,
-  circlePoly, createRecord, crossCheck, fmtDist, gsiLink, isPublishable, nearby, setVerified, toGeoJSON,
+  circlePoly, createRecord, crossCheck, fmtDist, gsiLink, isPublishable, nearby, publishBlockers, setVerified, toGeoJSON,
   type LoreItem, type MemoryRecord, type SamplePlace,
 } from './logic'
 import { applyOverlay, lorePopup, newPin, placePin, recordPin, recordPopup } from './mapHelpers'
@@ -37,7 +37,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = {
   placeName: '', placeType: '旧地名', teller: '', heardOn: '', story: '', basis: '',
-  claimedKinds: [], certainty: '不明', visibility: 'public', license: 'CC BY 4.0', checked: [],
+  claimedKinds: [], certainty: '不明', visibility: 'undecided', license: 'CC BY 4.0', checked: [],
 }
 const PLACE_TYPES = ['旧地名', '小字', '通称地名', 'その他']
 const EMPTY_RECORDS: MemoryRecord[] = []
@@ -64,6 +64,49 @@ const SOURCES = [
 /** 小さな見出し付きの注意書き */
 function Note({ children }: { children: React.ReactNode }) {
   return <p className="text-xs leading-relaxed text-muted-foreground">{children}</p>
+}
+
+/** ブラウザ標準の select（Radix Select は閉じた直後の操作を取りこぼすことがあるため、保存まわりでは使わない） */
+function NativeSelect({ id, value, onChange, options, className = '' }: {
+  id?: string; value: string; onChange: (v: string) => void; options: [string, string][]; className?: string
+}) {
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${className}`}
+    >
+      {options.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+    </select>
+  )
+}
+
+/** 公開までの流れ。current: 今どこか（record=記録, verify=確認, publish=書き出し） */
+function FlowDiagram({ current }: { current: 'record' | 'verify' | 'publish' }) {
+  const steps = [
+    { id: 'record', title: '① 記録', sub: '聞き取り担当（必ず「未確認」）' },
+    { id: 'verify', title: '② 確認', sub: '確認役が出典などを確かめる' },
+    { id: 'publish', title: '③ 公開分として書き出し', sub: '確認済み＋公開範囲「公開」＋利用条件あり' },
+  ]
+  return (
+    <div className="space-y-1.5 rounded-md border bg-muted/40 p-2" aria-label="公開までの流れ">
+      <ol className="flex flex-col items-stretch gap-1 sm:flex-row sm:items-center">
+        {steps.map((s, i) => (
+          <li key={s.id} className="flex flex-1 flex-col items-stretch gap-1 sm:flex-row sm:items-center">
+            <div className={`flex-1 rounded border p-2 text-xs ${current === s.id ? 'border-2 border-black bg-white font-bold' : 'bg-white/60'}`}>
+              <div>{s.title}{current === s.id && '（いまここ）'}</div>
+              <div className="font-normal text-muted-foreground">{s.sub}</div>
+            </div>
+            {i < steps.length - 1 && <span aria-hidden className="text-center text-muted-foreground">▼<span className="hidden sm:inline">　</span></span>}
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs leading-relaxed">
+        このデモでは、<b>あなたが確認役を兼ねて「確認済み」にできます</b>。実運用では図書館・郷土資料館等の担当者が行います。
+      </p>
+    </div>
+  )
 }
 
 function KindsField({ value, onChange, idPrefix }: { value: string[]; onChange: (v: string[]) => void; idPrefix: string }) {
@@ -99,6 +142,9 @@ export default function BizIdeaApp() {
   const [tab, setTab] = useState('pick')
   const [errors, setErrors] = useState<string[]>([])
   const [lastSaved, setLastSaved] = useState('')
+  const [lastSavedId, setLastSavedId] = useState('')
+  const [mapIdle, setMapIdle] = useState(false)
+  const tabsRef = useRef<HTMLDivElement>(null)
   const [exportNote, setExportNote] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
   const [map, setMap] = useState<maplibregl.Map | null>(null)
@@ -123,11 +169,27 @@ export default function BizIdeaApp() {
   /* 地図の準備: 重ね合わせの再適用（背景切替で style が作り直されるため）とズーム監視 */
   const onMapReady = useCallback((m: maplibregl.Map) => {
     setMap(m)
+    m.once('idle', () => setMapIdle(true))
     const reapply = () => applyOverlay(m, overlayRef.current.id, overlayRef.current.opacity / 100)
     m.on('load', reapply)
     m.on('style.load', reapply)
     m.on('zoomend', () => setZoom(Math.round(m.getZoom() * 10) / 10))
   }, [])
+
+  /* タブを切り替えたら、操作パネルの先頭が見える位置へ戻す（現在位置を見失わないように） */
+  const firstTab = useRef(true)
+  useEffect(() => {
+    if (firstTab.current) { firstTab.current = false; return }
+    const top = tabsRef.current?.getBoundingClientRect().top ?? 0
+    if (top < 0 || top > window.innerHeight * 0.6) tabsRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [tab])
+
+  /* 保存した記録の行を見える位置へ */
+  useEffect(() => {
+    if (tab !== 'list' || !lastSavedId) return
+    const t = setTimeout(() => document.getElementById(`rec-row-${lastSavedId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150)
+    return () => clearTimeout(t)
+  }, [tab, lastSavedId])
 
   useEffect(() => {
     if (!map) return
@@ -230,10 +292,15 @@ export default function BizIdeaApp() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     const r = createRecord({ ...form, lon: focus?.lon ?? null, lat: focus?.lat ?? null }, new Date().toISOString())
-    if (!r.ok) { setErrors(r.errors); return }
+    if (!r.ok) {
+      setErrors(r.errors)
+      toast.error(`記録できません: ${r.errors[0]}${r.errors.length > 1 ? ` ほか${r.errors.length - 1}件` : ''}`)
+      return
+    }
     setErrors([])
     setRecords((rs) => [...rs, r.record])
     setLastSaved(r.record.placeName)
+    setLastSavedId(r.record.id)
     setForm((f) => ({ ...f, story: '', basis: '' }))
     setTab('list')
     toast.success(`「${r.record.placeName}」を未確認の記録として地図に残しました`)
@@ -295,6 +362,15 @@ export default function BizIdeaApp() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
         {/* 地図 */}
         <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
+          <div className="relative">
+          {!mapIdle && (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-md bg-white/80" role="status">
+              <div className="space-y-2 text-center text-sm">
+                <Skeleton className="mx-auto h-24 w-48" />
+                地図を読み込み中…
+              </div>
+            </div>
+          )}
           <MapView
             center={CENTER}
             zoom={12}
@@ -308,6 +384,7 @@ export default function BizIdeaApp() {
             layers={layers}
             attribution={overlayId !== 'none' ? `国土地理院 地理院タイル（${overlay.label}）／自然災害伝承碑（国土地理院）` : '自然災害伝承碑（国土地理院）'}
           />
+          </div>
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="凡例">
             <li className="flex items-center gap-1.5"><span className="rounded bg-[#D55E00] px-1.5 py-0.5 font-bold text-white">名</span>地名（サンプル・架空）</li>
             <li className="flex items-center gap-1.5"><span className="inline-block size-3.5 rounded-full border-2 border-white bg-[#0072B2] ring-1 ring-[#0072B2]" />自然災害伝承碑（実データ）</li>
@@ -317,7 +394,7 @@ export default function BizIdeaApp() {
         </div>
 
         {/* 操作パネル */}
-        <Tabs value={tab} onValueChange={setTab} className="min-w-0">
+        <Tabs ref={tabsRef} value={tab} onValueChange={setTab} className="min-w-0 scroll-mt-2">
           <TabsList className="grid h-auto w-full grid-cols-4">
             <TabsTrigger value="pick" className="px-1 text-xs sm:text-sm">1 地名</TabsTrigger>
             <TabsTrigger value="check" className="px-1 text-xs sm:text-sm">2 確かめる</TabsTrigger>
@@ -331,7 +408,11 @@ export default function BizIdeaApp() {
               <CardHeader className="pb-2"><CardTitle className="text-base">1 地名を選ぶ（広島市安佐南区周辺）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <Note>地図上のオレンジの地名か、下の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>
-                {!places.length && <Note>読み込み中…</Note>}
+                {!places.length && (
+                  <div className="space-y-2" role="status" aria-label="地名を読み込み中">
+                    {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+                  </div>
+                )}
                 <ul className="space-y-2">
                   {places.map((p) => (
                     <li key={p.id}>
@@ -386,12 +467,8 @@ export default function BizIdeaApp() {
                   <CardContent className="space-y-3">
                     <div className="space-y-1">
                       <Label htmlFor="radius-select">伝承碑を探す範囲</Label>
-                      <Select value={String(radius)} onValueChange={(v) => setRadius(Number(v))}>
-                        <SelectTrigger id="radius-select" className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {[500, 1000, 2000, 5000].map((r) => <SelectItem key={r} value={String(r)}>半径 {fmtDist(r)}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <NativeSelect id="radius-select" value={String(radius)} onChange={(v) => setRadius(Number(v))}
+                        options={[500, 1000, 2000, 5000].map((r) => [String(r), `半径 ${fmtDist(r)}`])} />
                     </div>
                     <KindsField idPrefix="k-check" value={form.claimedKinds} onChange={(v) => set('claimedKinds', v)} />
                     <div aria-live="polite" className="space-y-2">
@@ -497,6 +574,7 @@ export default function BizIdeaApp() {
                 <CardHeader className="pb-2"><CardTitle className="text-base">3 聞き取りを記録して地図に残す</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={submit} noValidate className="space-y-3">
+                    <FlowDiagram current="record" />
                     <Note>この端末のブラウザ（localStorage）にだけ保存し、サーバーには送りません。実在の人の話を入力する場合は本人の同意を得てください（デモでは架空の内容を入力してください）。新しい記録は必ず<b>「未確認」</b>から始まります。</Note>
                     {focus.place && (
                       <Button
@@ -509,10 +587,7 @@ export default function BizIdeaApp() {
                     <div className="space-y-1"><Label htmlFor="f-name">地名</Label>
                       <Input id="f-name" maxLength={40} autoComplete="off" value={form.placeName} onChange={(e) => set('placeName', e.target.value)} /></div>
                     <div className="space-y-1"><Label htmlFor="f-type">種類</Label>
-                      <Select value={form.placeType} onValueChange={(v) => set('placeType', v)}>
-                        <SelectTrigger id="f-type" className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>{PLACE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                      </Select></div>
+                      <NativeSelect id="f-type" value={form.placeType} onChange={(v) => set('placeType', v)} options={PLACE_TYPES.map((t) => [t, t])} /></div>
                     <div className="space-y-1"><Label htmlFor="f-teller">語り手（仮名・匿名可）</Label>
                       <Input id="f-teller" maxLength={40} autoComplete="off" placeholder="例：語り手F（架空）" value={form.teller} onChange={(e) => set('teller', e.target.value)} /></div>
                     <div className="space-y-1"><Label htmlFor="f-date">聞いた日</Label>
@@ -523,26 +598,20 @@ export default function BizIdeaApp() {
                       <Input id="f-basis" maxLength={200} autoComplete="off" value={form.basis} onChange={(e) => set('basis', e.target.value)} /></div>
                     <KindsField idPrefix="k-rec" value={form.claimedKinds} onChange={(v) => set('claimedKinds', v)} />
                     <div className="space-y-1"><Label htmlFor="f-cert">確からしさ</Label>
-                      <Select value={form.certainty} onValueChange={(v) => set('certainty', v)}>
-                        <SelectTrigger id="f-cert" className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>{[...CERTAINTY].reverse().map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                      </Select></div>
+                      <NativeSelect id="f-cert" value={form.certainty} onChange={(v) => set('certainty', v)} options={[...CERTAINTY].reverse().map((c) => [c, c])} /></div>
                     <div className="space-y-1"><Label htmlFor="f-vis">公開範囲</Label>
-                      <Select value={form.visibility} onValueChange={(v) => set('visibility', v)}>
-                        <SelectTrigger id="f-vis" className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>{Object.entries(VISIBILITY).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                      </Select></div>
+                      <NativeSelect id="f-vis" value={form.visibility} onChange={(v) => set('visibility', v)} options={Object.entries(VISIBILITY)} />
+                      <Note>初期値は「未定」で、勝手に公開されることはありません。公開分に入るには「公開」を選び、さらに確認済みにする必要があります（あとで一覧からも変更できます）。</Note></div>
                     <div className="space-y-1"><Label htmlFor="f-lic">利用条件</Label>
-                      <Select value={form.license} onValueChange={(v) => set('license', v)}>
-                        <SelectTrigger id="f-lic" className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>{Object.entries(LICENSES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                      </Select></div>
+                      <NativeSelect id="f-lic" value={form.license} onChange={(v) => set('license', v)} options={Object.entries(LICENSES)} /></div>
                     <Note>位置: 経度 {focus.lon.toFixed(5)}・緯度 {focus.lat.toFixed(5)}{focus.place ? '（サンプル地名の位置）' : '（地図で指定）'}。「確かめたこと」で選んだ項目: {form.checked.length}件</Note>
                     {errors.length > 0 && (
                       <Alert variant="destructive" role="alert"><AlertTitle>記録できません</AlertTitle>
                         <AlertDescription>{errors.map((m) => <span key={m} className="block">{m}</span>)}</AlertDescription></Alert>
                     )}
-                    <Button type="submit" className="w-full">記録して地図に残す（未確認）</Button>
+                    <div className="sticky bottom-0 -mx-6 border-t bg-background/95 px-6 py-3 backdrop-blur">
+                      <Button type="submit" className="w-full">記録して地図に残す（未確認）</Button>
+                    </div>
                   </form>
                 </CardContent>
               </Card>
@@ -551,12 +620,13 @@ export default function BizIdeaApp() {
 
           {/* 4 一覧・書き出し */}
           <TabsContent value="list" className="space-y-3">
+            <FlowDiagram current={records.length === 0 ? 'record' : publishableCount > 0 ? 'publish' : 'verify'} />
             {lastSaved && (
               <Alert className="border-[#0072B2] bg-blue-50 text-blue-950">
                 <CircleHelp className="size-4" />
-                <AlertTitle>「{lastSaved}」を「未確認」の記録として残しました</AlertTitle>
+                <AlertTitle>「{lastSaved}」を「未確認」の記録として保存しました</AlertTitle>
                 <AlertDescription className="text-blue-950/90">
-                  未確認の記録は、公開用データには含まれません。確認役が確かめて「確認済み」になった記録のうち、公開範囲が「公開」で利用条件が「利用不可」以外のものだけが公開分です。
+                  下の一覧で強調している行が今回の記録です。未確認の記録は公開用データには入りません。次は「確認済みにする（デモ）」を押してください。
                 </AlertDescription>
               </Alert>
             )}
@@ -566,9 +636,14 @@ export default function BizIdeaApp() {
                 {!records.length && <Note>まだありません。「3 記録」で記録すると、ここに並びます。</Note>}
                 <ul className="space-y-2">
                   {records.map((r) => (
-                    <li key={r.id} className="space-y-1.5 rounded-md border p-3 text-sm">
+                    <li
+                      key={r.id}
+                      id={`rec-row-${r.id}`}
+                      className={`space-y-1.5 rounded-md border p-3 text-sm ${r.id === lastSavedId ? 'border-2 border-[#0072B2] bg-blue-50' : ''}`}
+                    >
                       <div className="flex flex-wrap items-center gap-1.5">
                         <b>{r.placeName}</b>
+                        {r.id === lastSavedId && <Badge className="bg-black text-white hover:bg-black">いま保存</Badge>}
                         {r.verified
                           ? <Badge className="bg-[#0072B2] text-white hover:bg-[#0072B2]">✓ 確認済み</Badge>
                           : <Badge variant="outline" className="border-dashed border-[#D55E00] text-[#7a3000]">？ 未確認</Badge>}
@@ -579,14 +654,23 @@ export default function BizIdeaApp() {
                       </div>
                       <p>{r.story}</p>
                       <Note>出典: {r.basis}／語り手: {r.teller}／{r.license}</Note>
+                      {!isPublishable(r) && <Note>公開分に入っていない理由: {publishBlockers(r).join('、')}</Note>}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-0.5"><Label htmlFor={`vis-${r.id}`} className="text-xs">公開範囲</Label>
+                          <NativeSelect id={`vis-${r.id}`} value={r.visibility} options={Object.entries(VISIBILITY)}
+                            onChange={(v) => updateRecord(r.id, (x) => ({ ...x, visibility: v as MemoryRecord['visibility'] }))} /></div>
+                        <div className="space-y-0.5"><Label htmlFor={`lic-${r.id}`} className="text-xs">利用条件</Label>
+                          <NativeSelect id={`lic-${r.id}`} value={r.license} options={Object.entries(LICENSES)}
+                            onChange={(v) => updateRecord(r.id, (x) => ({ ...x, license: v }))} /></div>
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onClick={() => {
                           map?.flyTo({ center: [r.lon, r.lat], zoom: 15, duration: 500 })
                           if (r.visibility !== 'private' && map) { closePopup(); popupRef.current = recordPopup(map, r) }
                         }}>地図で見る</Button>
                         {!r.verified && (
-                          <Button size="sm" variant="outline" onClick={() => updateRecord(r.id, (x) => setVerified(x, '確認役（デモ）', new Date().toISOString()))}>
-                            確認役として確認済みにする（デモ）
+                          <Button size="sm" onClick={() => updateRecord(r.id, (x) => setVerified(x, '確認役（デモ）', new Date().toISOString()))}>
+                            確認済みにする（デモ・確認役を兼ねる）
                           </Button>
                         )}
                         {r.visibility !== 'private' && (
@@ -606,13 +690,46 @@ export default function BizIdeaApp() {
 
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">書き出し（GeoJSON）</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button onClick={() => exportGeo(true)}><Download className="size-4" />公開分を書き出し（{publishableCount}件）</Button>
-                  <Button variant="outline" onClick={() => exportGeo(false)}><Download className="size-4" />非公開以外すべて</Button>
+              <CardContent className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="space-y-2 rounded-md border-2 border-[#0072B2] p-3">
+                    <b className="text-sm">公開分（確認済みのみ）</b>
+                    <Note>確認済み・公開範囲「公開」・利用条件あり（「利用不可」以外）の記録だけ。公開用にはこちらを使います。</Note>
+                    <p className="text-sm">いまの公開分: <b>{publishableCount}件</b></p>
+                    <Button className="w-full" onClick={() => exportGeo(true)}><Download className="size-4" />公開分を書き出し</Button>
+                  </div>
+                  <div className="space-y-2 rounded-md border border-dashed p-3">
+                    <b className="text-sm">全記録（未確認を含む・内部用）</b>
+                    <Note>非公開を除くすべて（未確認を含む）。確認作業や内部の見直し用で、<b>公開には使いません</b>。</Note>
+                    <p className="text-sm">対象: <b>{records.filter((r) => r.visibility !== 'private').length}件</b></p>
+                    <Button variant="outline" className="w-full" onClick={() => exportGeo(false)}><Download className="size-4" />全記録を書き出し</Button>
+                  </div>
                 </div>
-                <Note>「公開分」は、確認済み・公開・利用条件ありの記録だけです。「非公開以外すべて」は未確認も含む内部確認用で、公開には使いません。ファイルは端末内で作成し、送信しません。</Note>
-                <Note>※ 地名に「（架空）」が付く記録は、このデモのための架空の内容です。実際の公開データとしては使わないでください。</Note>
+                {records.length > 0 && publishableCount === 0 && (
+                  <Alert className="border-[#D55E00] bg-orange-50 text-orange-950">
+                    <AlertTriangle className="size-4" />
+                    <AlertTitle>公開分は0件です</AlertTitle>
+                    <AlertDescription className="space-y-2 text-orange-950/90">
+                      <p className="font-bold">確認済みにすると公開分に入ります（公開範囲が「公開」であることも必要です）。</p>
+                      {records.map((r) => (
+                        <div key={r.id} className="flex flex-wrap items-center gap-2">
+                          <span>「{r.placeName}」: {publishBlockers(r).join('、')}</span>
+                          {!r.verified && (
+                            <Button size="sm" onClick={() => updateRecord(r.id, (x) => setVerified(x, '確認役（デモ）', new Date().toISOString()))}>
+                              確認済みにする
+                            </Button>
+                          )}
+                          {r.verified && r.visibility !== 'public' && (
+                            <Button size="sm" variant="outline" onClick={() => updateRecord(r.id, (x) => ({ ...x, visibility: 'public' }))}>
+                              公開範囲を「公開」にする
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <Note>ファイルは端末内で作成し、送信しません。地名に「（架空）」が付く記録は、このデモのための架空の内容です。実際の公開データとしては使わないでください。</Note>
                 {exportNote && <p className="rounded bg-muted p-2 text-sm" role="status">{exportNote}</p>}
                 <Button variant="outline" size="sm" className="border-red-700 text-red-800" disabled={!records.length} onClick={() => setConfirmClear(true)}>
                   この端末の記録を全消去

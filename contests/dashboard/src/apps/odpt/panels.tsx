@@ -68,7 +68,7 @@ function DiagTable({ data, cell }: { data: RegionData; cell: Cell }) {
   const th = data.params.thresholds
   return (
     <section>
-      <h3 className="mb-1 font-semibold">この地点（500mメッシュ）の診断表</h3>
+      <h3 className="mb-1 font-semibold">この地点（約500m四方のエリア）の診断表</h3>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>

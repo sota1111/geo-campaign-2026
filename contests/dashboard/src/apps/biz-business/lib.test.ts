@@ -45,9 +45,23 @@ describe('合成データ', () => {
     expect(L.planLoss(cells, W, [], 0, 'wd', 'm', 2).lost).toBe(0)
   })
   it('影響が小さい案: 人数、同数なら65歳以上、完全同数は複数', () => {
-    expect(L.pickSmaller([{ lost: 10, lost65: 5 }, { lost: 8, lost65: 7 }])).toEqual([1])
-    expect(L.pickSmaller([{ lost: 8, lost65: 7 }, { lost: 8, lost65: 2 }])).toEqual([1])
-    expect(L.pickSmaller([{ lost: 8, lost65: 2 }, { lost: 8, lost65: 2 }])).toEqual([0, 1])
+    const e = (lost: number, lost65: number, exact = true) => ({ lost, lost65, exact })
+    expect(L.pickSmaller([e(10, 5), e(8, 7)]).winners).toEqual([1])
+    expect(L.pickSmaller([e(8, 7), e(8, 2)]).winners).toEqual([1])
+    expect(L.pickSmaller([e(8, 2), e(8, 2)]).winners).toEqual([0, 1])
+  })
+  it('判定の確定/暫定: 下限値の案の下限が相手の確定値を上回れば確定', () => {
+    const e = (lost: number, lost65: number, exact = true) => ({ lost, lost65, exact })
+    // 案A=少なくとも5,371（2路線）、案B=確定2,190 → 案Bで確定
+    expect(L.pickSmaller([e(5371, 900, false), e(2190, 797)])).toEqual({ winners: [1], firm: true })
+    // 下限値の案の下限が確定値より小さい → 実際は上振れしうるので暫定
+    expect(L.pickSmaller([e(1000, 100, false), e(2190, 797)])).toEqual({ winners: [0], firm: false })
+    // 下限値どうし → 暫定
+    expect(L.pickSmaller([e(3000, 1, false), e(5000, 2, false)])).toEqual({ winners: [0], firm: false })
+    // 確定値どうし → 確定
+    expect(L.pickSmaller([e(10, 5), e(8, 7)]).firm).toBe(true)
+    // 同数の下限値と確定値 → 暫定
+    expect(L.pickSmaller([e(2190, 1, false), e(2190, 797)]).firm).toBe(false)
   })
   it('CSVは数式として解釈される先頭文字を無効化する', () => {
     expect(L.csvCell('=1+1')).toBe("'=1+1")

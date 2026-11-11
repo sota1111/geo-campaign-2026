@@ -245,8 +245,8 @@ function ResultTag({ r }: { r: PatrolResult | null }) {
   const mark = { 是正対象: '▲', 要継続観察: '◆', 問題なし: '○', '立入不可・再訪': '■' }[r.result] ?? '・'
   return (
     <span className="whitespace-nowrap">
-      <Badge variant="outline" className="mr-1 gap-1"><span aria-hidden>{mark}</span>{r.result}</Badge>
-      <span className="text-xs">{r.date}</span>
+      <Badge variant="outline" className="gap-1"><span aria-hidden>{mark}</span>{r.result}</Badge>
+      {r.date && <span className="block text-xs">{r.date}</span>}
     </span>
   )
 }
@@ -285,7 +285,7 @@ function LedgerTab({ ds, mode, ranked, sel, onSelect, isDesktop, note, onRecord,
     'text/csv;charset=utf-8')
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
@@ -316,7 +316,8 @@ function LedgerTab({ ds, mode, ranked, sel, onSelect, isDesktop, note, onRecord,
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {rows.length}件中 {Math.min(rows.length, shown)}件を表示（点数の高い順）。行を選ぶと地図と内訳が出ます。写真の「前」は1974〜78年、「現在」は地理院のシームレス写真です。
         </p>
-        <div className="overflow-x-auto rounded-md border">
+        <p className="text-xs text-muted-foreground sm:hidden">表は左右にスクロールできます →</p>
+        <div className="overflow-x-auto rounded-md border [&_td]:px-2 [&_th]:px-2">
           <Table>
             <TableHeader>
               <TableRow>
@@ -377,8 +378,8 @@ function LedgerTab({ ds, mode, ranked, sel, onSelect, isDesktop, note, onRecord,
         {rows.length > shown && <Button variant="outline" onClick={() => setShown(shown + PAGE)}>さらに表示（+{PAGE}件）</Button>}
       </div>
 
-      <div className="min-w-0 space-y-3 lg:sticky lg:top-4 lg:self-start">
-        <SiteMap ds={ds} rows={rows} sel={sel} onSelect={onSelect} className="h-64 lg:h-[380px]" />
+      <div className="min-w-0 space-y-3 lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto">
+        <SiteMap ds={ds} rows={rows} sel={sel} onSelect={onSelect} className="h-64 lg:h-[220px]" />
         <p className="text-xs text-muted-foreground">
           {real
             ? '造成地の位置（国土数値情報 A54）と規制区域（A56）の概略図。濃い茶ほど優先度が高い（淡い橙＝低い）。大きい点は上位20か所。'
@@ -478,6 +479,8 @@ function PlanTab({ ds, mode, ranked, cap, setCap, note, onRecord, onSelect, sel 
       'text/csv;charset=utf-8')
     toast.success(`巡視計画 ${plan.route.length}か所を patrol-plan.csv として書き出しました`)
   }
+  const header = ['order', 'id', 'score', 'type_or_change', 'zone', 'data_note']
+  const csvRows = plan.route.map((s, i) => [i + 1, s.id, s.score, real ? s.type : s.change, s.zone, note])
   return (
     <div className="space-y-3">
       <Card>
@@ -493,46 +496,82 @@ function PlanTab({ ds, mode, ranked, cap, setCap, note, onRecord, onSelect, sel 
               ? '点数の高い順に上位N件を選び、市役所付近からの回り順（地図上の直線距離の最近傍法）で並べます。道路事情・立入可否は考慮しません。'
               : '点数の高い順に上位N件を選び、役所からの回り順（地図上の直線距離の最近傍法）で並べます。実際の道路事情・立入可否は考慮しません。'}
           </p>
+          <p className="basis-full text-sm">
+            <b>同点のときの並べ方</b>: 点数が同じ場合は面積の大きい順、面積も同じなら ID の順で順位を付けています（台帳と同じ順位です）。
+            下の表の「点数の内訳」で、なぜその地点が選ばれたかを確認できます。
+          </p>
         </CardContent>
       </Card>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-2">
-          <p className="text-sm font-medium">優先度の上位 {plan.route.length}か所（回る順）</p>
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>回る順</TableHead><TableHead>ID</TableHead><TableHead>点数（順位）</TableHead>
-                  <TableHead className="hidden sm:table-cell">{real ? '型・面積' : '変化・許可届出'}</TableHead><TableHead className="hidden 2xl:table-cell">区域</TableHead><TableHead>記録</TableHead>
+
+      <div className="min-w-0 space-y-2">
+        <p className="text-sm font-medium">優先度の上位 {plan.route.length}か所（回る順）</p>
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>回る順</TableHead><TableHead>ID</TableHead><TableHead>点数（順位）</TableHead>
+                <TableHead className="hidden sm:table-cell">{real ? '型・面積' : '変化・許可届出'}</TableHead>
+                <TableHead className="hidden md:table-cell">点数の内訳</TableHead><TableHead>記録</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {plan.route.map((s, i) => (
+                <TableRow key={s.id} data-state={s.id === sel ? 'selected' : undefined} className="cursor-pointer" onClick={() => onSelect(s.id)}>
+                  <TableCell className="font-bold">{i + 1}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {s.id}
+                    <div className="mt-1 whitespace-normal md:hidden"><PartsInline parts={s.parts} /></div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">{s.score}（{s.rank}位）</TableCell>
+                  <TableCell className="hidden whitespace-nowrap sm:table-cell">{real ? `${s.type}・${s.areaM2} m²` : `${s.change}・${s.permit}`}</TableCell>
+                  <TableCell className="hidden whitespace-normal md:table-cell"><PartsInline parts={s.parts} /></TableCell>
+                  <TableCell><Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onRecord(s.id) }}>記録する</Button></TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plan.route.map((s, i) => (
-                  <TableRow key={s.id} data-state={s.id === sel ? 'selected' : undefined} className="cursor-pointer" onClick={() => onSelect(s.id)}>
-                    <TableCell className="font-bold">{i + 1}</TableCell>
-                    <TableCell className="whitespace-nowrap">{s.id}</TableCell>
-                    <TableCell className="whitespace-nowrap">{s.score}（{s.rank}位）</TableCell>
-                    <TableCell className="hidden whitespace-nowrap sm:table-cell">{real ? `${s.type}・${s.areaM2} m²` : `${s.change}・${s.permit}`}</TableCell>
-                    <TableCell className="hidden 2xl:table-cell">{s.zone}</TableCell>
-                    <TableCell><Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onRecord(s.id) }}>記録する</Button></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {real
-              ? `地図上の周回距離の目安: 約${(plan.total / 1000).toFixed(1)} km（直線距離の合計。道路距離ではありません）`
-              : `地図上の周回距離の目安: ${Math.round(plan.total)}（模式図の単位。実距離ではありません）`}
-          </p>
-          <p className="text-xs text-muted-foreground">{NOT_CONNECTED}。順位は型・区域・面積・標高差・傾斜だけで決まっています。</p>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-        <div className="min-w-0 space-y-1">
-          <SiteMap ds={ds} rows={ranked} sel={sel} onSelect={onSelect} route={plan.route} className="h-72 lg:h-[420px]" />
-          <p className="text-xs text-muted-foreground">青い丸の番号が回る順、「起」が出発地（{ds.origin.name}）。点線は直線で結んだ目安の経路です。</p>
+        <p className="text-sm text-muted-foreground">
+          {real
+            ? `地図上の周回距離の目安: 約${(plan.total / 1000).toFixed(1)} km（直線距離の合計。道路距離ではありません）`
+            : `地図上の周回距離の目安: ${Math.round(plan.total)}（模式図の単位。実距離ではありません）`}
+        </p>
+        <p className="text-xs text-muted-foreground">{NOT_CONNECTED}。順位は型・区域・面積・標高差・傾斜だけで決まっています。</p>
+      </div>
+
+      <div className="min-w-0 space-y-1">
+        <SiteMap ds={ds} rows={ranked} sel={sel} onSelect={onSelect} route={plan.route} className="h-72 lg:h-[400px]" />
+        <p className="text-xs text-muted-foreground">青い丸の番号が回る順、「起」が出発地（{ds.origin.name}）。点線は直線で結んだ目安の経路です。</p>
+      </div>
+
+      <div className="min-w-0 space-y-2">
+        <p className="text-sm font-medium">書き出す内容のプレビュー（patrol-plan.csv・{csvRows.length}行）</p>
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader><TableRow>{header.map((h) => <TableHead key={h} className="font-mono text-xs">{h}</TableHead>)}</TableRow></TableHeader>
+            <TableBody>
+              {csvRows.map((r) => (
+                <TableRow key={String(r[1])}>{r.map((c, j) => <TableCell key={j} className="whitespace-nowrap text-xs">{c}</TableCell>)}</TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
+        <p className="text-xs text-muted-foreground">この表がそのままCSV（UTF-8・BOM付き）の中身です。「計画をCSVで書き出す」で保存されます。</p>
       </div>
     </div>
+  )
+}
+
+/** 点数の内訳を短く並べる（例: 型 +25）。未接続は点数に含めない旨を出す */
+function PartsInline({ parts }: { parts: Ranked['parts'] }) {
+  return (
+    <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+      {parts.map(([label, p]) => (
+        <li key={label} className="whitespace-nowrap">
+          {p == null ? <span className="text-amber-800">衛星由来の変化 未接続（点数外）</span> : <>{label.split('（')[0]} <b className="font-mono">{p >= 0 ? '+' : ''}{p}</b></>}
+        </li>
+      ))}
+    </ul>
   )
 }
 
