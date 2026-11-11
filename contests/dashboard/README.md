@@ -217,3 +217,9 @@ return (
 - [ ] 手順間の自動スクロール（`scrollIntoView` など。原則禁止）
 - [ ] PageHeader の長い説明文（サイドバーの `description` へ）
 - [ ] 縦に長く伸びるカードの積み重ね（手順ごとに切り替える。表・リストは枠内スクロール）
+
+## 実行サンプル（?sample=1）
+- `apps/<id>/index.html?sample=1#/` で、初見ユーザー試験の被験者が操作した結果を再現した状態で開く。通常の使い方は `?sample` なしの URL（従来どおり）。ポータルのカードに「実行サンプル」、各アプリのヘッダーに「実行サンプルを見る」。
+- 判定は `isSampleMode()`（src/lib/sample.ts）。サンプル中は localStorage／sessionStorage に書き込まない（`useLocalStorage` の第3引数でサンプルの初期値を渡せる）。
+- 被験者の記録は `src/apps/<id>/sample.ts`（SampleRun）。`notes` は手順 id ごとの「被験者がこの手順でしたこと」で、StepLayout が本文の先頭に紫の枠で出す。出典は reports/aggressor/20261111-r6/<id>.md。
+- サンプル中も手順は操作できる（保存はしない）。帯の「通常の使い方に切り替える」で初期状態の通常ページへ。

@@ -1,6 +1,7 @@
-import { appUrl } from '@/lib/data'
 import { ArrowRight, CalendarClock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { getSample } from '@/apps/_samples'
+import { normalUrl, sampleUrl } from '@/components/layout/SampleBar'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CONTESTS } from '@/apps/registry'
@@ -44,11 +45,18 @@ export default function Overview() {
                     締切 {a.deadline.replace(/（.*/, '')}
                   </span>
                 </span>
-                <Button asChild size="sm">
-                  <a href={appUrl(a.id)}>
-                    開く <ArrowRight className="size-4" />
-                  </a>
-                </Button>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {getSample(a.id) && (
+                    <Button asChild size="sm" variant="outline" title="初見ユーザー試験で被験者が操作した結果を再現して開きます">
+                      <a href={sampleUrl(a.id)}>実行サンプル</a>
+                    </Button>
+                  )}
+                  <Button asChild size="sm">
+                    <a href={normalUrl(a.id)}>
+                      開く <ArrowRight className="size-4" />
+                    </a>
+                  </Button>
+                </span>
               </CardFooter>
             </Card>
           )

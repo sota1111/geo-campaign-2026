@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { stepBadgeText } from './AppSteps'
 import { useLayoutActiveFlag, useRegisteredSteps } from './AppSteps'
+import { useAppId } from './AppIdContext'
+import { SampleStepNote } from '@/components/layout/SampleBar'
 
 /**
  * 手順ごとの画面レイアウト。サイドバーで選んだ手順の内容だけをメインに出す（スクロールで移動しない）。
@@ -19,6 +21,7 @@ export function StepLayout({
 }: { title: string; hint?: string; aside?: ReactNode; notice?: ReactNode; children: ReactNode }) {
   useLayoutActiveFlag()
   const { steps, activeId } = useRegisteredSteps()
+  const appId = useAppId()
   const badge = stepBadgeText(steps, activeId)
   const shownHint = hint ?? steps.find((x) => x.id === activeId)?.hint
   return (
@@ -48,6 +51,7 @@ export function StepLayout({
             {shownHint && <p className="mt-0.5 text-xs text-muted-foreground">{shownHint}</p>}
           </div>
           <div className="min-h-0 flex-1 p-4 md:overflow-y-auto" data-testid="step-panel-body">
+            <SampleStepNote appId={appId} stepId={activeId} />
             {children}
           </div>
         </section>
