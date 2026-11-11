@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
-import { AlertTriangle, Copy, Crosshair, Download, History, LocateFixed, MapPin, Search, Trash2, Upload } from 'lucide-react'
+import { AlertTriangle, Copy, Crosshair, Download, CheckCircle2, Circle, History, LocateFixed, MapPin, Search, Trash2, Upload } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog } from '@/components/shared/SourceDialog'
@@ -121,18 +121,23 @@ export default function App() {
   const [mapReady, setMapReady] = useState(false)
   const [ioMsg, setIoMsg] = useState('')
   const [clearOpen, setClearOpen] = useState(false)
-  const [origin, setOrigin] = useState<{ label: string; lng: number; lat: number }>({ label: '熱海駅（目安の位置）', ...ATAMI_STATION })
+  const [origin, setOrigin] = useState<{ label: string; lng: number; lat: number }>({ label: '熱海駅（例・目安の位置）', ...ATAMI_STATION })
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<PlaceHit[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchMsg, setSearchMsg] = useState('')
   const [justSaved, setJustSaved] = useState(false)
+  const [didCompare, setDidCompare] = useState(false)
+  const [didPrepare, setDidPrepare] = useState(false)
   const reportRef = useRef<HTMLDivElement>(null)
 
   const [base, setBase] = useHashState('base', 'std')
   const [old, setOld] = useHashState('old', 'none')
   const [opStr, setOp] = useHashState('op', '60')
   const op = Math.min(100, Math.max(0, Number(opStr) || 60))
+  useEffect(() => {
+    if (old !== 'none') setDidCompare(true)
+  }, [old])
 
   // フォーム
   const [kind, setKind] = useState('crack')
@@ -229,7 +234,7 @@ export default function App() {
       {
         id: 'pick', type: 'circle',
         data: pick ? { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [pick.lng, pick.lat] } } : EMPTY_FC,
-        paint: { 'circle-radius': 12, 'circle-color': '#CC79A7', 'circle-stroke-color': '#000', 'circle-stroke-width': 4 },
+        paint: { 'circle-radius': 16, 'circle-color': 'rgba(204,121,167,0.2)', 'circle-stroke-color': '#CC79A7', 'circle-stroke-width': 5 },
       },
     ]
   }, [fills, records, selRec, selFill, pick, origin])
@@ -253,7 +258,7 @@ export default function App() {
     mapRef.current?.flyTo({ center: [o.lng, o.lat], zoom: 14.5, duration: 600 })
     if (window.innerWidth < 1024) mapWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
-  const goStation = () => goOrigin({ label: '熱海駅（目安の位置）', ...ATAMI_STATION })
+  const goStation = () => goOrigin({ label: '熱海駅（例・目安の位置）', ...ATAMI_STATION })
 
   const doSearch = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -387,9 +392,10 @@ export default function App() {
   const selectedRecord = records.find((r) => r.id === selRec) ?? null
   const report = selectedRecord ? reportText(selectedRecord) : ''
 
-  const copy = async (text: string, okMsg: string) => {
+  const copy = async (text: string, okMsg: string, prepared = false) => {
     try {
       await navigator.clipboard.writeText(text)
+      if (prepared) setDidPrepare(true)
       toast.success(okMsg)
     } catch {
       toast.error('コピーできませんでした。文面を手動で選択してコピーしてください。')
@@ -414,11 +420,13 @@ export default function App() {
   const exportGeo = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
     downloadGeoJson(`moritsuchi-records-${stamp()}.geojson`, toGeoJSON(records))
+    setDidPrepare(true)
     setIoMsg('GeoJSONを書き出しました。')
   }
   const exportCsv = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
     downloadText(`moritsuchi-records-${stamp()}.csv`, toCSV(records), 'text/csv;charset=utf-8')
+    setDidPrepare(true)
     setIoMsg('CSVを書き出しました。')
   }
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -457,6 +465,24 @@ export default function App() {
   }
 
   const outOfCoverage = pick ? !inCoverage(pick.lng, pick.lat) : false
+
+  const checklist = [
+    { key: 'look', label: '近くの盛土造成地を確かめた', done: selFill !== null, next: '近くの盛土造成地を1つ選んで、型を確かめる', button: '一覧から選ぶ',
+      go: () => { changeTab('look'); setTimeout(() => document.querySelector('ul[aria-label="近い盛土造成地"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100) } },
+    { key: 'compare', label: '昔の写真と見比べた', done: didCompare, next: '昔の写真と今を見比べる', button: selFill ? '昔の写真で見る（1961〜69年）' : '造成地を選ぶ',
+      go: () => (selFill ? viewOld(selFill, 'ort_old10') : changeTab('look')) },
+    { key: 'rec', label: '気づいたことを記録した', done: records.length > 0, next: '気づいた変化を1件記録する', button: '記録する画面へ',
+      go: () => changeTab('rec') },
+    { key: 'prep', label: '市に伝える文面を用意した（コピーまたは書き出し）', done: didPrepare, next: '通報文をコピーするか、記録を書き出す', button: '通報文を開く',
+      go: () => {
+        const last = records[records.length - 1]
+        if (!last) return changeTab('rec')
+        setSelRec(last.id)
+        changeTab('out')
+        setJustSaved(true)
+      } },
+  ]
+  const nextItem = checklist.find((c) => !c.done)
 
   const fillCard = (actions: boolean) => (
     <Card aria-live="polite">
@@ -509,11 +535,33 @@ export default function App() {
       <nav aria-label="手順" className="sticky top-0 z-20 -mx-1 bg-background/95 px-1 py-2 backdrop-blur">
         <TabsList className="grid h-auto w-full grid-cols-4 gap-1 p-1">
           <TabsTrigger value="look" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>1 確かめる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">場所と型</span></TabsTrigger>
-          <TabsTrigger value="compare" className="flex-col gap-0 py-1.5 text-xs font-bold sm:text-sm data-[state=inactive]:border-primary/60 data-[state=inactive]:text-primary"><span className="flex items-center gap-1"><History className="size-3.5" />2 見比べる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">昔の航空写真</span></TabsTrigger>
+          <TabsTrigger value="compare" className="flex-col gap-0 py-1.5 text-xs font-bold sm:text-sm"><span className="flex items-center gap-1"><History className="size-3.5" />2 見比べる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">昔の航空写真</span></TabsTrigger>
           <TabsTrigger value="rec" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>3 記録する</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">変化を保存</span></TabsTrigger>
-          <TabsTrigger value="out" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>4 届ける{records.length > 0 && <Badge variant="secondary" className="ml-1 px-1">{records.length}</Badge>}</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">通報文・書き出し</span></TabsTrigger>
+          <TabsTrigger value="out" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>4 届ける{records.length > 0 && <Badge variant="secondary" className="ml-1 px-1 text-[10px]">記録{records.length}件</Badge>}</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">通報文・書き出し</span></TabsTrigger>
         </TabsList>
       </nav>
+
+      <section aria-label="目的の達成状況" className="rounded-md border bg-card p-3" data-testid="checklist">
+        <div className="mb-2 text-sm font-semibold">あなたの目的の達成状況</div>
+        <ul className="grid gap-1 text-sm sm:grid-cols-2">
+          {checklist.map((c) => (
+            <li key={c.key} className={`flex items-center gap-2 ${c.done ? 'text-foreground' : 'text-muted-foreground'}`} data-done={c.done ? '1' : '0'}>
+              {c.done ? <CheckCircle2 className="size-4 shrink-0 text-primary" aria-label="完了" /> : <Circle className="size-4 shrink-0" aria-label="未完了" />}
+              <span>{c.label}{c.done ? '（完了）' : ''}</span>
+            </li>
+          ))}
+        </ul>
+        {nextItem ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border-2 border-primary bg-accent/50 p-2" data-testid="next-action">
+            <span className="text-sm font-semibold">次にやること: {nextItem.next}</span>
+            <Button size="sm" onClick={nextItem.go}>{nextItem.button}</Button>
+          </div>
+        ) : (
+          <p className="mt-2 rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-semibold" data-testid="all-done">
+            すべて完了です。コピーした文面は、市の窓口へ電話・メール・フォームで伝えるときに使えます。
+          </p>
+        )}
+      </section>
 
       <Alert>
         <AlertTriangle className="size-4" />
@@ -533,8 +581,15 @@ export default function App() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div ref={mapWrapRef} className="scroll-mt-16 space-y-2 lg:sticky lg:top-4 lg:self-start">
+          <div data-testid="near-banner" className="rounded-md border-2 border-primary bg-accent/50 p-2">
+            <div className="text-xs text-muted-foreground">
+              「{origin.label}」からの結果。自宅の住所を入れると、その地点からの距離で出ます（熱海駅は例です）。
+            </div>
+            <div className="text-sm font-semibold sm:text-base" data-testid="near-summary">{nearSummary(stationList)}</div>
+          </div>
+          <div className="relative">
           <MapView
-            className="h-[340px] sm:h-[480px] lg:h-[calc(100vh-9rem)] lg:min-h-[480px]"
+            className="h-[340px] sm:h-[460px] lg:h-[calc(100vh-17rem)] lg:min-h-[420px]"
             center={initialView.center}
             zoom={initialView.zoom}
             basemap="pale"
@@ -547,10 +602,16 @@ export default function App() {
             attribution="大規模盛土造成地：国土数値情報（国土交通省）"
             ariaLabel="盛土ウォッチの地図"
           />
+          {old !== 'none' && (
+            <div className="pointer-events-none absolute left-2 top-2 z-10 max-w-[70%] rounded-md bg-white/95 px-2 py-1 text-xs font-medium shadow" data-testid="compare-badge">
+              スライダー: 左＝今（{BASES.find((b) => b.id === base)?.label}）／右＝昔（{OLDS.find((o) => o.id === old)?.label}）。昔の写真 {op}%
+            </div>
+          )}
+          </div>
           <p className="text-xs text-muted-foreground">
             背景：国土地理院（{BASES.find((b) => b.id === base)?.label ?? '標準'}
-            {old !== 'none' ? `＋昔の写真 ${OLDS.find((o) => o.id === old)?.label}` : ''}）。白丸＝探した地点（初期は熱海駅の目安の位置）。
-            {tab === 'rec' && (pick ? '　ピンク色の丸＝選んだ位置。' : '　▶ 地図をタップして記録の位置を決めてください。')}
+            {old !== 'none' ? `＋昔の写真 ${OLDS.find((o) => o.id === old)?.label}` : ''}）。白丸＝探した地点（初期は熱海駅の目安。例です）。
+            {tab === 'rec' && (pick ? '　ピンク色の大きな輪＝いま選んだ位置（黄色い丸は保存済みの記録）。' : '　▶ 地図をタップして記録の位置を決めてください。')}
           </p>
         </div>
 
@@ -610,7 +671,6 @@ export default function App() {
                   <CardTitle className="text-base">② 「{origin.label}」から近い盛土造成地</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-sm" data-testid="near-summary">{nearSummary(stationList)}</p>
                   <p className="text-xs text-muted-foreground">
                     距離は地図上の直線距離の目安です（白丸が起点。熱海駅の位置は案内用の目安）。選ぶと地図が移動し、型が下に出ます。
                   </p>
@@ -649,10 +709,13 @@ export default function App() {
                       </li>
                     ))}
                     <li className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-[#F0E442]" />自分の記録
+                      <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-[#F0E442]" />黄色い丸＝保存した自分の記録
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-white" />探した地点（初期は熱海駅の目安）
+                      <span className="inline-block size-4 shrink-0 rounded-full border-[3px] border-[#CC79A7] bg-[#CC79A7]/20" />ピンクの輪＝記録する位置（保存前に選んだ場所）
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-white" />白丸＝探した地点（住所を入れるとその地点。熱海駅は例）
                     </li>
                   </ul>
                   <Button size="sm" variant="outline" onClick={copyLink}><Copy className="size-4" />いまの表示のURLをコピー</Button>
@@ -695,10 +758,10 @@ export default function App() {
                   <div className={old === 'none' ? 'opacity-50' : ''}>
                     <Label htmlFor="mw-op" className="text-xs text-muted-foreground">見比べ（左＝現在の背景、右＝昔の写真）</Label>
                     <div className="mt-2 flex items-center gap-2 text-sm">
-                      <span>今</span>
+                      <span className="shrink-0 font-medium">今</span>
                       <Slider id="mw-op" min={0} max={100} step={5} value={[op]} disabled={old === 'none'}
                         onValueChange={(v) => setOp(String(v[0]))} aria-label="昔の写真の濃さ" />
-                      <span>昔</span>
+                      <span className="shrink-0 font-medium">昔{old !== 'none' ? `（${OLDS.find((o) => o.id === old)?.label}）` : ''}</span>
                     </div>
                     {old === 'none' && <p className="mt-1 text-xs">先に「昔の写真」の年代を選んでください。</p>}
                   </div>
@@ -737,7 +800,7 @@ export default function App() {
               <Card>
                 <CardContent className="space-y-3 pt-4">
                   <p className={`rounded-md border-2 p-2 text-sm font-medium ${pick ? 'border-primary bg-accent/40' : 'border-dashed border-primary'}`}>
-                    {pick ? '① 位置を選びました（地図のピンク色の丸）。違えば、もう一度地図をタップ。' : '① 地図をタップして位置を決めてください（まだ選ばれていません）'}
+                    {pick ? '① 位置を選びました（地図のピンク色の大きな輪）。違えば、もう一度地図をタップ。' : '① 地図をタップして位置を決めてください（まだ選ばれていません）'}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
@@ -791,7 +854,7 @@ export default function App() {
             {/* ---- 3 届ける ---- */}
             <TabsContent value="out" className="space-y-3">
               <p className="text-sm">
-                記録 <b data-testid="rec-count">{records.length}</b> 件。地図上の黄色い丸（黒ふち）が自分の記録です。
+                記録 <b data-testid="rec-count">{records.length}</b> 件（上のバッジ「記録○件」は保存済みの件数）。地図上の黄色い丸（黒ふち）が自分の記録です。
               </p>
               <ul className="space-y-2" aria-label="記録の一覧">
                 {!records.length && (
@@ -814,10 +877,10 @@ export default function App() {
 
               {selectedRecord && (
                 <Card ref={reportRef} className="scroll-mt-20 border-2 border-primary">
-                  <CardHeader className="pb-2"><CardTitle className="text-base">通報文のたたき台</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">通報文のたたき台</CardTitle><p className="text-sm font-medium">この文面をコピーすると準備完了です{didPrepare ? '（準備できました）' : ''}。GeoJSON／CSVの書き出しでも完了になります。</p></CardHeader>
                   <CardContent className="space-y-3">
                     <Textarea readOnly rows={10} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
-                    <Button size="lg" className="w-full" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます')}><Copy className="size-5" />文面をコピー</Button>
+                    <Button size="lg" className="w-full" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピー</Button>
                     <Button size="lg" variant="outline" className="w-full" onClick={exportGeo}><Download className="size-5" />GeoJSONで書き出す（記録をファイルに保存）</Button>
                     <p className="text-xs text-muted-foreground">
                       このページは送信しません。文面をコピーして、自治体の窓口（電話・メール・フォーム）へ。通報先は市町村・県で異なるため、各自治体の案内を確認してください。静岡県の例は国のガイドライン2.3に紹介されています。

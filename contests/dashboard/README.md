@@ -14,15 +14,33 @@ npm run preview      # dist/ の確認
 npm run typecheck    # 型検査
 npm test             # 共通部品の単体テスト（vitest）
 npm run copy-data    # 元アプリのデータを public/data/<id>/ にコピー
-node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots / /apps/odpt   # ヘッドレスChromeで撮影＋コンソールエラー確認（要 preview 起動）
+node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots '' apps/odpt/   # 撮影＋コンソールエラー確認（要 preview 起動。'' はポータル）
+node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # ポータル→各アプリ→「← 統合ダッシュボード」の往復確認
 ```
 
-`vite.config.ts` の `base` は `./`、ルーティングは HashRouter なので、`dist/` を任意のサブパスに置くだけで動きます。
+`vite.config.ts` の `base` は `./` で、ルーターは使いません（ポータルは通常の `<a>` リンク）。`dist/` を任意のサブパスに置くだけで動きます。
+
+## ページ構成（マルチページ。アプリごとに独立）
+
+ポータル（概要のカード一覧）と7アプリは別 URL・別エントリ・別バンドルです。各アプリは単独で開いて完結し（サイドバーなし）、上部の細いヘッダーの「← 統合ダッシュボード」でポータルに戻れます。
+
+| URL（dist/ 直下から。dev でも同じ） | ページ |
+|---|---|
+| `index.html` | ポータル（統合ダッシュボード） |
+| `apps/odpt/` | 生活アクセス診断マップ |
+| `apps/udc-moritsuchi/` | みんなの盛土ウォッチ |
+| `apps/sat-a/` | 路面下リスクの二段階調査 |
+| `apps/sat-b/` | 盛土巡視台帳 |
+| `apps/biz-business/` | バス路線見直し案の比較 |
+| `apps/biz-idea/` | 地名の記憶マップ |
+| `apps/biz-realestate/` | 相談前の1枚シート |
+
+仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
 
 ## 構成と、工兵が触ってよい範囲
 
 ```
-src/apps/registry.ts          7アプリのメタデータ（名前・目的・締切・データ種別）  ← 触らない
+src/apps/registry.ts          7アプリのメタデータ（名前・目的・対象者・締切・データ種別）  ← 触らない
 src/apps/<id>/index.tsx       各アプリのページ。default export の React コンポーネント ← 自分の id だけ編集
 src/apps/<id>/**              そのアプリ専用の部品・ロジック（自由に追加）           ← 自分の id だけ
 public/data/<id>/             そのアプリのデータ（JSON/GeoJSON）                      ← 自分の id だけ
@@ -46,7 +64,7 @@ src/components/layout/, src/pages/, src/App.tsx  シェル                      
 
 ## ページの書き方
 
-`src/apps/<id>/index.tsx` は `export default function ...` でコンポーネントを返します（`registry.ts` が `lazy(() => import('./<id>/index'))` で読み込む）。
+`src/apps/<id>/index.tsx` は `export default function ...` でコンポーネントを返します（`src/standalone/<id>.tsx` が読み込む）。
 先頭に `<PageHeader appId="<id>" />` を置くと、アプリ名・目的・データ種別が registry の文言で表示されます（日本語UI。赤緑の対比を避け、地図の既定色は青・橙）。
 shadcn のコンポーネントは `@/components/ui/...`、共通部品は `@/components/shared/...` から import します（`@` は `src/`）。
 
@@ -99,7 +117,7 @@ const url = dataUrl('odpt', 'tokushima.json')   // 'fetch' や MapView の GeoJS
 | `PageHeader` | `<PageHeader appId="odpt" actions={<SourceDialog .../>} />` |
 | `downloadText` ほか | `downloadText(filename, text, mime?)`、`downloadCsv(filename, rows)`（BOM付きCSV。`rows` は2次元配列）、`downloadGeoJson(filename, obj)`、`toCsv(rows)` |
 | `useLocalStorage` | `const [v, setV, reset] = useLocalStorage('<id>:records', [])`（JSON保存。キーは `<id>:` で始める） |
-| `useHashState` | `const [q, setQ] = useHashState('q', '')` → URL が `#/apps/<id>?q=...` に。共有リンク用。文字列のみ（数値や配列は呼び出し側で変換）。`setQ` は履歴を増やさない |
+| `useHashState` | `const [q, setQ] = useHashState('q', '')` → URL が `apps/<id>/index.html#/?q=...` に。共有リンク用。文字列のみ（数値や配列は呼び出し側で変換）。`setQ` は履歴を増やさない |
 
 - 地図の背景は国土地理院タイル（淡色 pale・標準 std・写真 seamlessphoto）で、左上のボタンで切り替わります。右下に出典表示が常に出ます。独自の背景が必要なら `onMapReady` で `map` を受け取って操作します。
 - 親要素に高さが必要です（`MapView` の既定は `h-[420px]`。`className` で変更）。

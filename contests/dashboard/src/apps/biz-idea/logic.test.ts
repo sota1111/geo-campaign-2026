@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  OVERLAYS, circlePoly, createRecord, crossCheck, distanceM, fmtDist, isPublishable, kindsOf, nearby, publishBlockers,
+  OVERLAYS, circlePoly, createRecord, crossCheck, distanceM, fmtDist, isPublishable, kindsOf, nearby, publishBlockers, recommendOverlays,
   overlayTileUrl, setVerified, toGeoJSON, validateRecord, type LoreItem, type SamplePlace,
 } from './logic'
 
@@ -109,6 +109,16 @@ describe('公開範囲「未定」と公開分に入らない理由', () => {
     expect(isPublishable(pub)).toBe(true)
     expect(publishBlockers(pub)).toEqual([])
     expect(publishBlockers({ ...pub, license: 'none' })).toEqual(['利用条件が「利用不可」'])
+  })
+})
+
+describe('おすすめの重ね地図', () => {
+  it('洪水は低湿地・治水地形分類図、土砂災害は色別標高図・空中写真。未選択でも出る', () => {
+    expect(recommendOverlays(['洪水']).map((o) => o.id)).toEqual(['swale', 'lcmfc2'])
+    expect(recommendOverlays(['土砂災害']).map((o) => o.id)).toEqual(['relief', 'ort_USA10'])
+    expect(recommendOverlays(['洪水', '土砂災害']).map((o) => o.id)).toEqual(['swale', 'lcmfc2', 'relief', 'ort_USA10'])
+    expect(recommendOverlays([]).length).toBe(2)
+    recommendOverlays(['地震', '津波', 'その他']).forEach((o) => expect(OVERLAYS.some((x) => x.id === o.id)).toBe(true))
   })
 })
 

@@ -44,8 +44,12 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await sleep(2500)
   await shot(`${label}-1-initial.png`, true)
   console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth > window.innerWidth'))
-  await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('徳島駅付近を表示')).click()`)
-  await sleep(2500)
+  // 検索欄に「徳島駅」と入力して検索
+  await ev(`document.querySelector('#rs-q').focus()`)
+  await send('Input.insertText', { text: '徳島駅' })
+  await ev(`document.querySelector('form[role=search] button[type=submit]').click()`)
+  await sleep(3000)
+  console.log(label, 'digest:', await ev(`document.querySelector('[data-testid=digest]')?.innerText`))
   console.log(label, 'status after search:', await ev(`document.querySelector('[data-testid=status]').textContent`))
   await ev(`document.querySelector('#rs-overlay').scrollIntoView({block:'center'})`)
   await ev(`document.querySelector('#rs-overlay').click()`); await sleep(500)
@@ -62,9 +66,10 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   } else {
     await ev(`document.querySelector('[data-testid=use-hit] button').click()`)
   }
-  await sleep(5000)
+  await sleep(10000)
   console.log(label, 'after choose: sheetTop', await ev(`Math.round(document.querySelector('[data-testid=sheet]').getBoundingClientRect().top)`), 'quick:', await ev(`document.querySelector('[data-testid=quick-result]')?.innerText`))
   await shot(`${label}-2c-after-choose.png`)
+  console.log(label, 'digest:', await ev(`document.querySelector('[data-testid=digest]')?.innerText`))
   console.log(label, 'legend:', await ev(`document.querySelector('[data-testid=legend]')?.innerText.slice(0,80)`))
   console.log(label, 'meta:', await ev(`document.querySelector('[data-testid=sheet] p')?.innerText`))
   console.log(label, 'status after click:', await ev(`document.querySelector('[data-testid=status]').textContent`))

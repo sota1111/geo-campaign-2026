@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
   CERTAINTY, CHECKS, KINDS, LICENSES, OVERLAYS, VISIBILITY,
-  circlePoly, createRecord, crossCheck, fmtDist, gsiLink, isPublishable, nearby, publishBlockers, setVerified, toGeoJSON,
+  circlePoly, createRecord, crossCheck, fmtDist, gsiLink, isPublishable, nearby, publishBlockers, recommendOverlays, setVerified, toGeoJSON,
   type LoreItem, type MemoryRecord, type SamplePlace,
 } from './logic'
 import { applyOverlay, lorePopup, newPin, placePin, recordPin, recordPopup } from './mapHelpers'
@@ -79,6 +79,41 @@ function NativeSelect({ id, value, onChange, options, className = '' }: {
     >
       {options.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
     </select>
+  )
+}
+
+interface ProgressItem { key: string; label: string; done: boolean; action: string; go: () => void }
+
+/** 目的の達成状況チェックリスト。操作に応じて自動でチェックされ、次の1項目を強調する */
+function ProgressCard({ items, next }: { items: ProgressItem[]; next: ProgressItem | null }) {
+  const n = items.filter((i) => i.done).length
+  return (
+    <Card>
+      <CardContent className="space-y-2 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <b className="text-sm">やることの進み具合（{n}/{items.length}）</b>
+          <span className="text-xs text-muted-foreground">操作すると自動でチェックされます</span>
+        </div>
+        <ol className="grid gap-1 text-sm sm:grid-cols-2 lg:grid-cols-3" aria-label="達成状況">
+          {items.map((i) => (
+            <li key={i.key} className={`flex items-center gap-1.5 ${i === next ? 'font-bold' : ''}`}>
+              <span aria-hidden className={`inline-flex size-4 shrink-0 items-center justify-center rounded border ${i.done ? 'border-[#0072B2] bg-[#0072B2] text-white' : 'border-neutral-500'}`}>
+                {i.done && <Check className="size-3" />}
+              </span>
+              <span>{i.label}<span className="sr-only">{i.done ? '（完了）' : '（未完了）'}</span></span>
+            </li>
+          ))}
+        </ol>
+        {next ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border-2 border-black bg-yellow-50 p-2">
+            <span className="text-sm font-bold">次にやること</span>
+            <Button size="sm" onClick={next.go}>{next.action} →</Button>
+          </div>
+        ) : (
+          <p className="rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm font-bold">すべて完了しました。別の地名でも試せます。</p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -149,6 +184,10 @@ export default function BizIdeaApp() {
   const [confirmClear, setConfirmClear] = useState(false)
   const [map, setMap] = useState<maplibregl.Map | null>(null)
   const [zoom, setZoom] = useState(12)
+  const [done, setDone] = useState({ cross: false, overlay: false, published: false })
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [dlgVis, setDlgVis] = useState('')
+  const [dlgLic, setDlgLic] = useState('CC BY 4.0')
   const popupRef = useRef<maplibregl.Popup | null>(null)
   const featureClickedRef = useRef(false)
   const overlayRef = useRef({ id: overlayId, opacity })
@@ -176,20 +215,20 @@ export default function BizIdeaApp() {
     m.on('zoomend', () => setZoom(Math.round(m.getZoom() * 10) / 10))
   }, [])
 
-  /* タブを切り替えたら、操作パネルの先頭が見える位置へ戻す（現在位置を見失わないように） */
-  const firstTab = useRef(true)
-  useEffect(() => {
-    if (firstTab.current) { firstTab.current = false; return }
-    const top = tabsRef.current?.getBoundingClientRect().top ?? 0
-    if (top < 0 || top > window.innerHeight * 0.6) tabsRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-  }, [tab])
+  /* 画面の移動は、利用者が「次にやること」などのボタンを押した結果としてだけ行う。
+     タブ見出しを直接押したとき、地名の選択・保存・書き出しのときは、タブもスクロールも動かさない */
+  const goTab = useCallback((t: string, anchorId?: string) => {
+    setTab(t)
+    setTimeout(() => {
+      const target = (anchorId && document.getElementById(anchorId)) || tabsRef.current
+      target?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }, 120)
+  }, [])
 
-  /* 保存した記録の行を見える位置へ */
+  /* 「伝承碑と突き合わせた」: 地名があり、災害の種類を選んだ状態で「確かめる」を開いた */
   useEffect(() => {
-    if (tab !== 'list' || !lastSavedId) return
-    const t = setTimeout(() => document.getElementById(`rec-row-${lastSavedId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150)
-    return () => clearTimeout(t)
-  }, [tab, lastSavedId])
+    if (tab === 'check' && focus && form.claimedKinds.length) setDone((d) => (d.cross ? d : { ...d, cross: true }))
+  }, [tab, focus, form.claimedKinds.length])
 
   useEffect(() => {
     if (!map) return
@@ -199,7 +238,8 @@ export default function BizIdeaApp() {
   const overlay = OVERLAYS.find((o) => o.id === overlayId) ?? OVERLAYS[0]
   const chooseOverlay = (id: string) => {
     setOverlayId(id)
-    const o = OVERLAYS.find((x) => x.id === id)
+    if (id !== 'none') setDone((d) => ({ ...d, overlay: true }))
+    const o =OVERLAYS.find((x) => x.id === id)
     // ズームが小さすぎると何も見えないので、見える縮尺まで寄せる
     if (map && o?.minzoom != null && map.getZoom() < o.minzoom) map.easeTo({ zoom: o.minzoom, duration: 400 })
   }
@@ -219,7 +259,7 @@ export default function BizIdeaApp() {
       certainty: p.certainty,
     })
     setErrors([])
-    setTab('check')
+    toast.success(`「${p.name}」を選びました。画面上部の「次にやること」から進めます`)
     map?.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 14), duration: 600 })
   }, [map, closePopup])
 
@@ -228,7 +268,7 @@ export default function BizIdeaApp() {
     setFocus({ lon, lat, place: null })
     setForm((f) => (!f.placeName || /（架空）$/.test(f.placeName) ? { ...f, placeName: '', claimedKinds: [] } : f))
     setErrors([])
-    setTab('check')
+    toast.success('新しい地名の位置を指定しました。「次にやること」から進めます')
   }, [closePopup])
 
   const selectRef = useRef({ selectPlace, setPin })
@@ -302,12 +342,27 @@ export default function BizIdeaApp() {
     setLastSaved(r.record.placeName)
     setLastSavedId(r.record.id)
     setForm((f) => ({ ...f, story: '', basis: '' }))
-    setTab('list')
     toast.success(`「${r.record.placeName}」を未確認の記録として地図に残しました`)
   }
   const updateRecord = (id: string, fn: (r: MemoryRecord) => MemoryRecord) => {
     closePopup()
     setRecords((rs) => rs.map((r) => (r.id === id ? fn(r) : r)))
+  }
+  const openConfirm = (r: MemoryRecord) => {
+    setConfirmId(r.id)
+    setDlgVis(r.visibility === 'undecided' ? '' : r.visibility)
+    setDlgLic(r.license)
+  }
+  const doConfirm = () => {
+    const rec = records.find((r) => r.id === confirmId)
+    if (!rec || !dlgVis) return
+    updateRecord(rec.id, (x) => ({ ...setVerified(x, '確認役（デモ）', new Date().toISOString()), visibility: dlgVis as MemoryRecord['visibility'], license: dlgLic }))
+    toast.success(
+      dlgVis === 'public' && dlgLic !== 'none'
+        ? `「${rec.placeName}」を確認済み・公開にしました。公開分に入ります`
+        : `「${rec.placeName}」を確認済みにしました（公開範囲「${VISIBILITY[dlgVis as keyof typeof VISIBILITY]}」のため、公開分には入りません）`,
+    )
+    setConfirmId(null)
   }
   const removeRecord = (id: string) => { closePopup(); setRecords((rs) => rs.filter((r) => r.id !== id)) }
 
@@ -320,9 +375,22 @@ export default function BizIdeaApp() {
       return
     }
     downloadGeoJson(`chimei-kioku-${onlyPub ? 'public' : 'all'}.geojson`, gj)
-    setExportNote(`${gj.features.length}件を書き出しました（端末内で作成。送信はしていません）。`)
+    const fname = `chimei-kioku-${onlyPub ? 'public' : 'all'}.geojson`
+    setExportNote(`${gj.features.length}件を GeoJSON で書き出しました（${fname}）。${onlyPub ? '公開分です。' : '未確認を含む内部用です。公開には使いません。'}端末内で作成し、送信はしていません。`)
+    toast.success(`${gj.features.length}件を書き出しました（${fname}）`)
+    if (onlyPub) setDone((d) => ({ ...d, published: true }))
   }
   const publishableCount = records.filter(isPublishable).length
+  const progressItems: ProgressItem[] = [
+    { key: 'pick', label: '地名を選んだ', done: !!focus, action: '地名を選ぶ（下の一覧か地図のピン）', go: () => goTab('pick') },
+    { key: 'cross', label: '伝承碑と突き合わせた', done: done.cross, action: '近くの伝承碑と突き合わせる', go: () => goTab('check', 'step-2-1') },
+    { key: 'overlay', label: '昔の地図・写真と重ねて見た', done: done.overlay, action: '昔の地図・写真を重ねて見る', go: () => goTab('check', 'step-2-2') },
+    { key: 'record', label: '聞き取りを記録した', done: records.length > 0, action: '聞き取りを記録する', go: () => goTab('rec') },
+    { key: 'publish', label: '確認して公開分として書き出した', done: done.published, action: '確認して公開分として書き出す', go: () => goTab('list', 'step-publish') },
+  ]
+  const nextItem = progressItems.find((i) => !i.done) ?? null
+  const savedRec = records.find((r) => r.id === lastSavedId) ?? null
+  const confirmRec =records.find((r) => r.id === confirmId) ?? null
 
   if (loadError) {
     return (
@@ -348,16 +416,7 @@ export default function BizIdeaApp() {
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardContent className="py-3">
-          <ol className="grid gap-2 text-sm sm:grid-cols-4">
-            <li><b>1 地名を選ぶ</b><br /><span className="text-muted-foreground">一覧か地図のオレンジのピン。何もない所をクリックすると新しい位置</span></li>
-            <li><b>2 公開データで確かめる</b><br /><span className="text-muted-foreground">近くの伝承碑との突き合わせ、昔の空中写真などを重ねる</span></li>
-            <li><b>3 聞き取りを記録</b><br /><span className="text-muted-foreground">記録は必ず「未確認」から始まる</span></li>
-            <li><b>4 確認・書き出し</b><br /><span className="text-muted-foreground">確認済み・公開の記録だけが公開用データになる</span></li>
-          </ol>
-        </CardContent>
-      </Card>
+      <ProgressCard items={progressItems} next={nextItem} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
         {/* 地図 */}
@@ -394,12 +453,16 @@ export default function BizIdeaApp() {
         </div>
 
         {/* 操作パネル */}
+        <div className="min-w-0 space-y-3">
         <Tabs ref={tabsRef} value={tab} onValueChange={setTab} className="min-w-0 scroll-mt-2">
           <TabsList className="grid h-auto w-full grid-cols-4">
             <TabsTrigger value="pick" className="px-1 text-xs sm:text-sm">1 地名</TabsTrigger>
             <TabsTrigger value="check" className="px-1 text-xs sm:text-sm">2 確かめる</TabsTrigger>
             <TabsTrigger value="rec" className="px-1 text-xs sm:text-sm">3 記録</TabsTrigger>
-            <TabsTrigger value="list" className="px-1 text-xs sm:text-sm">4 一覧・書出{records.length ? `(${records.length})` : ''}</TabsTrigger>
+            <TabsTrigger value="list" className="flex-col gap-0 px-1 text-xs sm:text-sm">
+              4 一覧・書出
+              <span className="text-[10px] font-normal text-muted-foreground">記録 {records.length}件</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* 1 地名 */}
@@ -407,6 +470,12 @@ export default function BizIdeaApp() {
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">1 地名を選ぶ（広島市安佐南区周辺）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
+                {focus && (
+                  <p className="rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm" role="status">
+                    選択中: <b>{focus.place ? focus.place.name : `新しい位置（経度 ${focus.lon.toFixed(4)}・緯度 ${focus.lat.toFixed(4)}）`}</b>
+                    <span className="block text-xs">ほかの地名を押すと選び直せます。次は、画面上部の「次にやること」を押してください。</span>
+                  </p>
+                )}
                 <Note>地図上のオレンジの地名か、下の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>
                 {!places.length && (
                   <div className="space-y-2" role="status" aria-label="地名を読み込み中">
@@ -435,6 +504,14 @@ export default function BizIdeaApp() {
 
           {/* 2 確かめる */}
           <TabsContent value="check" className="space-y-3">
+            <div className="flex flex-wrap gap-2" role="navigation" aria-label="2 の小段階">
+              <Button size="sm" variant="outline" onClick={() => document.getElementById('step-2-1')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+                {done.cross ? '✓ ' : ''}2-1 伝承碑と突き合わせる
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => document.getElementById('step-2-2')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
+                {done.overlay ? '✓ ' : ''}2-2 昔の地図・写真と重ねる
+              </Button>
+            </div>
             {!focus ? (
               <Alert><MapPin className="size-4" /><AlertTitle>先に地名を選んでください</AlertTitle>
                 <AlertDescription>
@@ -462,8 +539,8 @@ export default function BizIdeaApp() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base">近くの自然災害伝承碑との突き合わせ</CardTitle></CardHeader>
+                <Card id="step-2-1" className="scroll-mt-2">
+                  <CardHeader className="pb-2"><CardTitle className="text-base">2-1 伝承碑と突き合わせる（近くの自然災害伝承碑）</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-1">
                       <Label htmlFor="radius-select">伝承碑を探す範囲</Label>
@@ -510,9 +587,26 @@ export default function BizIdeaApp() {
               </>
             )}
 
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">重ねて見る地図（国土地理院）</CardTitle></CardHeader>
+            <Card id="step-2-2" className="scroll-mt-2">
+              <CardHeader className="pb-2"><CardTitle className="text-base">2-2 昔の地図・写真と重ねる（国土地理院）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
+                <div className="space-y-1.5 rounded-md border-2 border-black bg-yellow-50 p-2">
+                  <p className="text-sm font-bold">
+                    おすすめ{form.claimedKinds.length ? `（語られている災害: ${form.claimedKinds.join('・')}）` : ''}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {recommendOverlays(form.claimedKinds).map((rec) => {
+                      const o = OVERLAYS.find((x) => x.id === rec.id)!
+                      return (
+                        <Button key={rec.id} size="sm" variant={overlayId === rec.id ? 'default' : 'outline'} onClick={() => chooseOverlay(rec.id)}>
+                          {overlayId === rec.id && <Check className="size-3.5" />}{o.label}
+                          <span className="text-[10px] font-normal opacity-80">（{rec.because}）</span>
+                        </Button>
+                      )
+                    })}
+                  </div>
+                  <Note>地図が重なって見えたら、下の「見て気づいたこと」にチェックします。見えなくても、話が誤りという意味ではありません。</Note>
+                </div>
                 <div role="radiogroup" aria-label="重ねる地図" className="grid grid-cols-2 gap-2">
                   {OVERLAYS.map((o) => (
                     <button
@@ -546,7 +640,7 @@ export default function BizIdeaApp() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">確かめたこと（自分の目で見て選ぶ）</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">2-2 で見て気づいたこと（自分の目で見て選ぶ）</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {CHECKS.map((c, i) => (
                   <label key={c} htmlFor={`chk-${i}`} className="flex items-start gap-2 text-sm">
@@ -559,7 +653,7 @@ export default function BizIdeaApp() {
                   </label>
                 ))}
                 <Note>ここで選ぶのは、人が地図を見て気づいたことの記録です。当てはまらなくても、話が誤りという意味ではありません。</Note>
-                <Button onClick={() => setTab('rec')} disabled={!focus}>3 聞き取りを記録する</Button>
+                <Button onClick={() => goTab('rec')} disabled={!focus}>3 聞き取りを記録する</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -609,7 +703,23 @@ export default function BizIdeaApp() {
                       <Alert variant="destructive" role="alert"><AlertTitle>記録できません</AlertTitle>
                         <AlertDescription>{errors.map((m) => <span key={m} className="block">{m}</span>)}</AlertDescription></Alert>
                     )}
-                    <div className="sticky bottom-0 -mx-6 border-t bg-background/95 px-6 py-3 backdrop-blur">
+                    <div className="sticky bottom-0 -mx-6 space-y-2 border-t bg-background/95 px-6 py-3 backdrop-blur">
+                      {savedRec && (
+                        <div className="space-y-1.5 rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm text-blue-950" role="status">
+                          <p>
+                            <b>✓ 「{savedRec.placeName}」を保存しました</b>（
+                            {savedRec.verified ? '確認済み' : '未確認'}・公開範囲「{VISIBILITY[savedRec.visibility]}」）。
+                            {!savedRec.verified && '未確認のままでは公開分に入りません。'}
+                            {savedRec.visibility === 'undecided' && '公開範囲は未定のままです。確認済みにするときに一緒に選びます。'}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {!savedRec.verified && (
+                              <Button type="button" size="sm" onClick={() => openConfirm(savedRec)}>確認済みにする…（確認役を兼ねる）</Button>
+                            )}
+                            <Button type="button" size="sm" variant="outline" onClick={() => goTab('list')}>記録の一覧を見る</Button>
+                          </div>
+                        </div>
+                      )}
                       <Button type="submit" className="w-full">記録して地図に残す（未確認）</Button>
                     </div>
                   </form>
@@ -626,7 +736,7 @@ export default function BizIdeaApp() {
                 <CircleHelp className="size-4" />
                 <AlertTitle>「{lastSaved}」を「未確認」の記録として保存しました</AlertTitle>
                 <AlertDescription className="text-blue-950/90">
-                  下の一覧で強調している行が今回の記録です。未確認の記録は公開用データには入りません。次は「確認済みにする（デモ）」を押してください。
+                  下の一覧で強調している行が今回の記録です。未確認の記録は公開用データには入りません。次は「確認済みにする…」を押してください（公開範囲もそこで選びます）。
                 </AlertDescription>
               </Alert>
             )}
@@ -669,8 +779,8 @@ export default function BizIdeaApp() {
                           if (r.visibility !== 'private' && map) { closePopup(); popupRef.current = recordPopup(map, r) }
                         }}>地図で見る</Button>
                         {!r.verified && (
-                          <Button size="sm" onClick={() => updateRecord(r.id, (x) => setVerified(x, '確認役（デモ）', new Date().toISOString()))}>
-                            確認済みにする（デモ・確認役を兼ねる）
+                          <Button size="sm" onClick={() => openConfirm(r)}>
+                            確認済みにする…（確認役を兼ねる）
                           </Button>
                         )}
                         {r.visibility !== 'private' && (
@@ -688,7 +798,7 @@ export default function BizIdeaApp() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card id="step-publish" className="scroll-mt-2">
               <CardHeader className="pb-2"><CardTitle className="text-base">書き出し（GeoJSON）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -705,6 +815,11 @@ export default function BizIdeaApp() {
                     <Button variant="outline" className="w-full" onClick={() => exportGeo(false)}><Download className="size-4" />全記録を書き出し</Button>
                   </div>
                 </div>
+                {exportNote && (
+                  <div className={`rounded-md border-2 p-3 text-sm font-bold ${/書き出しました/.test(exportNote) ? 'border-[#0072B2] bg-blue-50 text-blue-950' : 'border-[#D55E00] bg-orange-50 text-orange-950'}`} role="status">
+                    {/書き出しました/.test(exportNote) ? '✓ ' : '△ '}{exportNote}
+                  </div>
+                )}
                 {records.length > 0 && publishableCount === 0 && (
                   <Alert className="border-[#D55E00] bg-orange-50 text-orange-950">
                     <AlertTriangle className="size-4" />
@@ -715,8 +830,8 @@ export default function BizIdeaApp() {
                         <div key={r.id} className="flex flex-wrap items-center gap-2">
                           <span>「{r.placeName}」: {publishBlockers(r).join('、')}</span>
                           {!r.verified && (
-                            <Button size="sm" onClick={() => updateRecord(r.id, (x) => setVerified(x, '確認役（デモ）', new Date().toISOString()))}>
-                              確認済みにする
+                            <Button size="sm" onClick={() => openConfirm(r)}>
+                              確認済みにする…
                             </Button>
                           )}
                           {r.verified && r.visibility !== 'public' && (
@@ -730,7 +845,6 @@ export default function BizIdeaApp() {
                   </Alert>
                 )}
                 <Note>ファイルは端末内で作成し、送信しません。地名に「（架空）」が付く記録は、このデモのための架空の内容です。実際の公開データとしては使わないでください。</Note>
-                {exportNote && <p className="rounded bg-muted p-2 text-sm" role="status">{exportNote}</p>}
                 <Button variant="outline" size="sm" className="border-red-700 text-red-800" disabled={!records.length} onClick={() => setConfirmClear(true)}>
                   この端末の記録を全消去
                 </Button>
@@ -738,7 +852,31 @@ export default function BizIdeaApp() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
+
+      <Dialog open={!!confirmRec} onOpenChange={(o) => { if (!o) setConfirmId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>確認済みにして、公開範囲を選ぶ</DialogTitle>
+            <DialogDescription>
+              「{confirmRec?.placeName}」の出典などを確かめたものとして「確認済み」にします。このデモでは、あなたが確認役を兼ねます（実運用では図書館・郷土資料館等の担当者が行います）。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><Label htmlFor="dlg-vis">公開範囲（必ず選んでください）</Label>
+              <NativeSelect id="dlg-vis" value={dlgVis} onChange={setDlgVis}
+                options={[...(dlgVis ? [] : [['', '選んでください']] as [string, string][]), ...(Object.entries(VISIBILITY).filter(([k]) => k !== 'undecided') as [string, string][])]} /></div>
+            <div className="space-y-1"><Label htmlFor="dlg-lic">利用条件</Label>
+              <NativeSelect id="dlg-lic" value={dlgLic} onChange={setDlgLic} options={Object.entries(LICENSES)} /></div>
+            <Note>公開分として書き出されるのは、「公開」を選び、利用条件が「利用不可」以外のときだけです。</Note>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmId(null)}>やめる</Button>
+            <Button disabled={!dlgVis} onClick={doConfirm}>確認済みにする</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
         <DialogContent>

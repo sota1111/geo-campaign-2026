@@ -1,5 +1,4 @@
-// 7アプリのメタデータ。工兵は編集しない（シェル担当のみ）。
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
+// 7アプリのメタデータ。各アプリは apps/<id>/index.html の独立ページ（本体は src/standalone/<id>.tsx が読み込む）。
 
 export type DataKind = 'real' | 'fictional' | 'partial'
 export type ContestId = 'odpt-2026' | 'udc-2026' | 'satellite-2026' | 'ichibiz-2026'
@@ -29,7 +28,6 @@ export interface AppMeta {
   dataNote: string
   /** 元の静的アプリ（リポジトリ内の相対パス。プレースホルダ表示用） */
   originalPath: string
-  Component: LazyExoticComponent<ComponentType>
 }
 
 export const CONTESTS: ContestMeta[] = [
@@ -53,7 +51,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'real',
     dataNote: '公共交通オープンデータ（GTFS）・国土数値情報などの実データ',
     originalPath: 'contests/odpt-2026/app/web/',
-    Component: lazy(() => import('./odpt/index')),
   },
   {
     id: 'udc-moritsuchi',
@@ -68,7 +65,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'real',
     dataNote: '大規模盛土造成地（熱海市）は公開データ。記録は利用者が入力した内容をこの端末にだけ保存',
     originalPath: 'contests/udc-2026/app/moritsuchi-watch/',
-    Component: lazy(() => import('./udc-moritsuchi/index')),
   },
   {
     id: 'sat-a',
@@ -83,7 +79,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'fictional',
     dataNote: '道路・指標・調査結果はすべて架空のサンプル',
     originalPath: 'contests/satellite-2026/app/proposal-a/',
-    Component: lazy(() => import('./sat-a/index')),
   },
   {
     id: 'sat-b',
@@ -98,7 +93,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'partial',
     dataNote: '横須賀市の造成地データは実データ、衛星由来の変化量は未接続（架空サンプル）',
     originalPath: 'contests/satellite-2026/app/proposal-b/',
-    Component: lazy(() => import('./sat-b/index')),
   },
   {
     id: 'biz-business',
@@ -113,7 +107,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'real',
     dataNote: '公共交通オープンデータ・人口メッシュなどの実データ',
     originalPath: 'contests/ichibiz-2026/app/business/web/',
-    Component: lazy(() => import('./biz-business/index')),
   },
   {
     id: 'biz-idea',
@@ -128,7 +121,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'partial',
     dataNote: '自然災害伝承碑は実データ、地名と語りはサンプル（架空）',
     originalPath: 'contests/ichibiz-2026/app/idea/',
-    Component: lazy(() => import('./biz-idea/index')),
   },
   {
     id: 'biz-realestate',
@@ -143,7 +135,6 @@ export const APPS: AppMeta[] = [
     dataKind: 'partial',
     dataNote: '徳島市の用途地域・災害想定区域などは実データ。「サンプルの土地」は架空',
     originalPath: 'contests/ichibiz-2026/app/realestate/web/',
-    Component: lazy(() => import('./biz-realestate/index')),
   },
 ]
 

@@ -52,7 +52,7 @@ function StepIntro({ n, title, children }: { n: number; title: string; children:
 
 /* ---------- 1 絞る ---------- */
 export function Step1({
-  round, w, setW, candidates, msg, prev, focus, onFocus, onNext,
+  round, w, setW, candidates, msg, prev, focus, onFocus, onNext, detail,
 }: {
   round: number
   w: number
@@ -63,6 +63,7 @@ export function Step1({
   focus: string | null
   onFocus: (id: string) => void
   onNext: () => void
+  detail: React.ReactNode
 }) {
   const km = candidates.reduce((a, s) => a + s.lenM, 0) / 1000
   const top = candidates.slice(0, 10)
@@ -166,8 +167,18 @@ export function Step1({
           </Table>
         </div>
 
+        {detail && (
+          <div>
+            <div className="mb-1 text-sm font-medium">選んだ区間の内訳</div>
+            {detail}
+          </div>
+        )}
+
+        {round > 1 && (
+          <p className="text-xs text-muted-foreground">第{round}回の順位ができました。続けて、この順位で地中レーダの対象をもう一度選べます。</p>
+        )}
         <Button className="w-full" onClick={onNext} data-testid="to2">
-          次へ：確かめる区間を選ぶ <ArrowRight />
+          {round > 1 ? `第${round}回の候補で、もう一度選ぶ` : '次へ：確かめる区間を選ぶ'} <ArrowRight />
         </Button>
       </CardContent>
     </Card>
@@ -195,6 +206,8 @@ export function Step2({
   const over = km > budgetKm + 1e-9
   const rows = candidates.filter((s, i) => i < 15 || selected.has(s.id))
   const canNext = selected.size > 0 && !over
+  const top15 = new Set(candidates.slice(0, 15).map((s) => s.id))
+  const inTop = [...selected].filter((id) => top15.has(id)).length
   return (
     <Card>
       <StepIntro n={2} title="選ぶ：地中レーダを走らせる区間を、予算（走行延長）内で決める">
@@ -214,6 +227,9 @@ export function Step2({
           <Button onClick={onAuto} data-testid="auto"><Wand2 />点数の上位から自動で選ぶ</Button>
           <Button variant="outline" onClick={onClear} data-testid="clear">選択をクリア</Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          延長の上限（{fmt1(budgetKm)}km）に収まるまで、点数の高い順に選びます。表の上位15区間に入らない区間も含まれます。
+        </p>
 
         <div className="space-y-1" aria-live="polite">
           <div className="flex items-baseline justify-between text-sm">
@@ -223,6 +239,11 @@ export function Step2({
             </span>
           </div>
           <Progress value={Math.min(100, (km / budgetKm) * 100)} className={over ? '[&>div]:bg-[#b45309]' : ''} />
+          {selected.size > 0 && (
+            <div className="text-xs text-muted-foreground" data-testid="sel-breakdown">
+              上位15区間のうち {inTop} 区間＋それ以外 {selected.size - inTop} 区間を選びました。
+            </div>
+          )}
           {over && <div className="text-sm font-medium text-[#b45309]">▲ 上限を超えています。区間を外すか、延長を増やしてください。</div>}
         </div>
 

@@ -304,3 +304,39 @@ export function summarize(f: Facts): SummaryRow[] {
   }
   return rows
 }
+
+// ---- 検索結果の選び方 ----
+export interface Hit { lon: number; lat: number; title: string }
+/** 検索語に「駅」を含む場合は、駅名の候補（title が「〜駅」）→同梱の駅データの順に優先。それ以外は徳島市周辺の候補を優先 */
+export function pickSearchHit(q: string, hits: Hit[], data: Pick<AreaData, 'bbox' | 'rail'> | null): Hit | null {
+  const inArea = (h: Hit) => !data || inBBox(data.bbox, h.lon, h.lat)
+  if (q.includes('駅')) {
+    const st = hits.filter((h) => h.title.endsWith('駅'))
+    const hit = st.find(inArea) || (data ? null : st[0])
+    if (hit) return hit
+    if (data) {
+      const key = q.replace(/\s/g, '').replace(/^徳島県|^徳島市/, '').replace(/駅$/, '') || q.replace(/駅/g, '')
+      const r = data.rail.find((s) => s[2] === key) || data.rail.find((s) => key && (s[2].includes(key) || key.includes(s[2])))
+      if (r) return { lon: r[0], lat: r[1], title: r[2] + '駅' }
+    }
+    if (st[0]) return st[0]
+  }
+  return hits.find(inArea) || hits[0] || null
+}
+
+// ---- シート最上部の要約（4出口の内容から機械的に組み立てる。助言はしない） ----
+export function buildDigest(f: Facts, sheet: Sheet): string[] {
+  const lines: string[] = []
+  const rows = summarize(f)
+  const strip = (l: string) => l.replace('（想定最大規模）', '').replace('警戒区域', '')
+  const warn = rows.filter((r) => r.tone === 'warn').map((r) => strip(r.label))
+  const unknown = rows.filter((r) => /取得できなかった（通信失敗/.test(r.value)).map((r) => strip(r.label))
+  if (warn.length) lines.push('注意が必要な項目: ' + warn.join('・') + 'の想定区域に入る。')
+  else if (!unknown.length && f.flood) lines.push('この地点では、洪水・高潮・津波・土砂災害の想定区域には入らなかった（国の公開タイルによる）。')
+  if (unknown.length) lines.push('取得できなかった項目: ' + unknown.join('・') + '（ハザードマップポータルで確認）。')
+  const count = new Map<string, number>()
+  for (const e of sheet.exits) for (const it of e.items) for (const w of it.who.split('・')) if (w !== '相談先') count.set(w, (count.get(w) ?? 0) + 1)
+  const top = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([w]) => w)
+  if (top.length) lines.push('まず相談する先の候補（4つの出口で多く出る相手）: ' + top.join('・') + '（くわしくは下の各出口）。')
+  return lines.slice(0, 3)
+}

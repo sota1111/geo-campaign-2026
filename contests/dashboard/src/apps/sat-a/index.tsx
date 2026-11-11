@@ -141,6 +141,34 @@ export default function App() {
   }
 
   const focusSeg = focus ? ranked.find((s) => s.id === focus) : undefined
+  const detailCard = (
+    <Card aria-live="polite" data-testid="detail">
+      <CardContent className="space-y-1 text-sm">
+                      {focusSeg ? (
+                        <>
+                          <div className="font-medium">
+                            区間 {focusSeg.id}（{focusSeg.cls === 'arterial' ? '幹線・調査済み' : '生活道路'}）
+                          </div>
+                          <div>区画 {focusSeg.cell}／長さ {focusSeg.lenM} m／布設 {focusSeg.year}年（経過 {NOW_YEAR - focusSeg.year}年）</div>
+                          <div>
+                            点数 <b>{focusSeg.score.toFixed(2)}</b> ＝ 衛星 {pct(w)}% × 区画値 {cellSat[focusSeg.cell].toFixed(2)} ＋ 台帳 {pct(1 - w)}% × 古さ {ageNorm(focusSeg.year).toFixed(2)}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {focusSeg.cls === 'arterial'
+                              ? '過去に調査済み（サンプル）。点数の対象外。'
+                              : focusSeg.surveyed
+                                ? results.has(focusSeg.id)
+                                  ? `走査結果: ${results.get(focusSeg.id) ? '▲ 空洞の疑い' : '○ 異常なし'}（シミュレーション）`
+                                  : '過去に調査済み（サンプル）。'
+                                : selected.has(focusSeg.id) ? '選択中。' : '未調査。'}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">地図の道路、または表の行をタップすると、点数の内訳を表示します。</span>
+                      )}
+                    </CardContent>
+    </Card>
+  )
   const mapNode = data ? (
     <SatMap
       cells={data.cells}
@@ -201,6 +229,7 @@ export default function App() {
                   focus={focus}
                   onFocus={setFocus}
                   onNext={() => setStep('2')}
+                  detail={focusSeg ? detailCard : null}
                 />
               )}
               {step === '2' && (
@@ -241,32 +270,7 @@ export default function App() {
             <div className="order-1 min-w-0 space-y-3 lg:order-2">
               <div className="lg:sticky lg:top-2 space-y-3">
                 {mapNode}
-                <Card aria-live="polite" data-testid="detail">
-                  <CardContent className="space-y-1 text-sm">
-                    {focusSeg ? (
-                      <>
-                        <div className="font-medium">
-                          区間 {focusSeg.id}（{focusSeg.cls === 'arterial' ? '幹線・調査済み' : '生活道路'}）
-                        </div>
-                        <div>区画 {focusSeg.cell}／長さ {focusSeg.lenM} m／布設 {focusSeg.year}年（経過 {NOW_YEAR - focusSeg.year}年）</div>
-                        <div>
-                          点数 <b>{focusSeg.score.toFixed(2)}</b> ＝ 衛星 {pct(w)}% × 区画値 {cellSat[focusSeg.cell].toFixed(2)} ＋ 台帳 {pct(1 - w)}% × 古さ {ageNorm(focusSeg.year).toFixed(2)}
-                        </div>
-                        <div className="text-muted-foreground">
-                          {focusSeg.cls === 'arterial'
-                            ? '過去に調査済み（サンプル）。点数の対象外。'
-                            : focusSeg.surveyed
-                              ? results.has(focusSeg.id)
-                                ? `走査結果: ${results.get(focusSeg.id) ? '▲ 空洞の疑い' : '○ 異常なし'}（シミュレーション）`
-                                : '過去に調査済み（サンプル）。'
-                              : selected.has(focusSeg.id) ? '選択中。' : '未調査。'}
-                        </div>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">地図の道路、または表の行をタップすると、点数の内訳を表示します。</span>
-                    )}
-                  </CardContent>
-                </Card>
+                {detailCard}
                 <Legend />
               </div>
             </div>

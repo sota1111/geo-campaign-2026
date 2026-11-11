@@ -17,7 +17,7 @@ import { fetchData } from '@/lib/data'
 import { cn } from '@/lib/utils'
 import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
-  buildSheet, inBBox, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
+  buildDigest, buildSheet, pickSearchHit, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
   type Answers, type AreaData, type Facts, type Tone, type Zone,
 } from './lib'
 
@@ -183,17 +183,22 @@ export default function App() {
     if (!q) return
     setStatus('検索しています…')
     setHit(null)
+    let hits: SearchHit[] = []
+    let failed = false
     try {
-      const hits = await searchAddress(q)
-      if (!hits.length) { setStatus('見つかりませんでした。地図を直接クリックしてください。'); return }
-      // 徳島市周辺の候補を優先（例:「徳島駅」の先頭が他県の地名になるため）
-      const h = (data && hits.find((x) => inBBox(data.bbox, x.lon, x.lat))) || hits[0]
-      mapRef.current?.jumpTo({ center: [h.lon, h.lat], zoom: 16 })
-      setHit(h)
-      setStatus(`「${h.title}」付近に移動しました。土地の位置を地図でクリックしてください（この位置をそのまま土地として使うこともできます）。`)
+      hits = await searchAddress(q)
     } catch {
-      setStatus('検索に失敗しました（通信できませんでした）。地図を直接クリックしてください。')
+      failed = true
     }
+    // 「駅」を含む検索語は駅名の候補を優先。それ以外は徳島市周辺の候補を優先
+    const h = pickSearchHit(q, hits, data)
+    if (!h) {
+      setStatus(failed ? '検索に失敗しました（通信できませんでした）。地図を直接クリックしてください。' : '見つかりませんでした。地図を直接クリックしてください。')
+      return
+    }
+    mapRef.current?.jumpTo({ center: [h.lon, h.lat], zoom: 15 })
+    setHit(h)
+    setStatus(`「${h.title}」の位置（地図のマーカー）に移動しました。土地の位置を地図でクリックするか、この位置をそのまま土地として使うこともできます。`)
   }
 
   const showSample = () => {
@@ -212,7 +217,8 @@ export default function App() {
   const coord = facts && !facts.sample && pin ? `（北緯${pin.lat.toFixed(4)}度 東経${pin.lon.toFixed(4)}度）` : ''
   const addrText = address === 'loading' ? '住所を取得中…' : address ? address : '住所を取得できなかった'
   const where = facts && !facts.sample && pin ? `指定した位置: ${addrText}付近${coord}` : ''
-  const keyRows = rows.filter((r) => r.key === 'zone' || r.key === 'flood')
+  const digest = useMemo(() => (facts && sheet ? buildDigest(facts, sheet) : []), [facts, sheet])
+  const keyRows =rows.filter((r) => r.key === 'zone' || r.key === 'flood')
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -244,9 +250,9 @@ export default function App() {
               <Button type="submit"><Search className="size-4" />検索</Button>
               <Button type="button" variant="outline" onClick={() => {
                 const h = { lon: 134.5518, lat: 34.0762, title: '徳島駅' }
-                mapRef.current?.jumpTo({ center: [h.lon, h.lat], zoom: 16 })
+                mapRef.current?.jumpTo({ center: [h.lon, h.lat], zoom: 15 })
                 setHit(h)
-                setStatus('「徳島駅」付近に移動しました。土地の位置を地図でクリックしてください（この位置をそのまま土地として使うこともできます）。')
+                setStatus('「徳島駅」の位置（地図のマーカー）に移動しました。土地の位置を地図でクリックするか、この位置をそのまま土地として使うこともできます。')
               }}>徳島駅付近を表示</Button>
             </form>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -299,7 +305,7 @@ export default function App() {
           <Card>
             <CardHeader>
               <CardTitle>2. 地図では分からないことを選ぶ（任意）</CardTitle>
-              <CardDescription>選んだ内容は、この端末の中だけで使います。送信・保存はしません。</CardDescription>
+              <CardDescription>選ぶと、下の1枚シートの「手放す」「売る」などの内容が変わります（未選択でもシートは作れます）。選んだ内容は、この端末の中だけで使い、送信・保存はしません。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {QUESTIONS.map((q) => (
@@ -361,6 +367,12 @@ export default function App() {
               </p>
             </CardHeader>
             <CardContent className="space-y-3 print:space-y-1.5 print:p-0 print:text-[7.5pt] print:leading-tight">
+              {digest.length > 0 && (
+                <section aria-label="まず確認すること" data-testid="digest" className="rounded-md border-2 border-sky-700 bg-sky-50 p-2 print:border print:bg-white print:p-1">
+                  <h3 className="text-sm font-bold print:text-[9pt]">まず確認すること（要約）</h3>
+                  <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{digest.map((d) => <li key={d}>{d}</li>)}</ul>
+                </section>
+              )}
               <section aria-label="記号の見かた" data-testid="legend" className="rounded-md border bg-muted/30 p-2 text-xs print:p-1 print:text-[6.5pt]">
                 <p className="mb-0.5 font-bold">記号の見かた</p>
                 <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:grid-cols-2">

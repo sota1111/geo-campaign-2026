@@ -222,6 +222,27 @@ export const OVERLAYS: Overlay[] = [
   { id: 'lcmfc2', label: '治水地形分類図', ext: 'png', minzoom: 11, maxzoom: 16, note: '河川沿いの地形（旧河道・氾濫原など）を分類した図。凡例は国土地理院の公開ページで確認できます。' },
   { id: 'relief', label: '色別標高図', ext: 'png', minzoom: 5, maxzoom: 15, note: '標高を色で表した図。谷・低地の位置関係を見る手がかりになります。' },
 ]
+/** 語られている災害の種類に応じた、おすすめの重ね地図（OVERLAYS の id と理由）。種類が未選択なら昔の空中写真と低湿地 */
+const RECOMMEND: Record<string, string[]> = {
+  洪水: ['swale', 'lcmfc2'],
+  土砂災害: ['relief', 'ort_USA10'],
+  地震: ['relief', 'ort_USA10'],
+  津波: ['relief', 'swale'],
+  高潮: ['relief', 'swale'],
+  火山: ['relief', 'ort_USA10'],
+  その他: ['ort_USA10', 'ort_old10'],
+}
+export function recommendOverlays(kinds: string[]): { id: string; because: string }[] {
+  const out: { id: string; because: string }[] = []
+  for (const k of kinds) {
+    for (const id of RECOMMEND[k] ?? []) {
+      if (!out.some((o) => o.id === id)) out.push({ id, because: `${k}の話なら` })
+    }
+  }
+  if (!out.length) return ['ort_USA10', 'swale'].map((id) => ({ id, because: '災害の種類が未選択でも、まず' }))
+  return out.slice(0, 4)
+}
+
 export const overlayTileUrl = (o: Overlay) => `${GSI_XYZ}${o.id}/{z}/{x}/{y}.${o.ext}`
 
 export const CHECKS = [

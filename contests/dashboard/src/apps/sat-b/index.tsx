@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -120,13 +121,22 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
 
   const ranked = useMemo(() => rank(ds.sites, weights, ds.refDate, results, mode), [ds, weights, results, mode])
   const selSite = ranked.find((s) => s.id === sel) ?? null
+  const plan = useMemo(() => planRoute(ranked, ds.origin, Math.max(1, Math.min(30, cap || 1))), [ranked, ds, cap])
+  const resetAll = () => {
+    setResults([])
+    setWeights(clone(real ? DEFAULT_WEIGHTS_REAL : DEFAULT_WEIGHTS))
+    toast.success('この端末に保存された記録と重みを消して、最初の状態に戻しました')
+  }
 
   const visited = ranked.filter((s) => s.latest).length
   const hits = ranked.filter((s) => s.latest?.result === '是正対象').length
   const note = real ? '実データ: 国土数値情報A54/A56・地理院DEM。衛星由来の変化は未接続' : 'サンプル（架空）'
 
   const select = (id: string) => { setSel(id); if (!isDesktop) setDetailOpen(true) }
-  const goRecord = (id: string) => { setRecSite(id); setDetailOpen(false); setTab('record') }
+  const goRecord = (id: string) => {
+    setRecSite(id); setDetailOpen(false); setTab('record')
+    toast(`③ 結果の記録に切り替えました（地点: ${id}）`)
+  }
 
   return (
     <>
@@ -139,21 +149,26 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
         </AlertTitle>
         <AlertDescription className="text-foreground">
           {real ? (
-            <>造成地の位置・型・規制区域は国土数値情報、標高差と傾斜は地理院DEM、写真は地理院タイルの実データです。
+            <p>造成地の位置・型・規制区域は国土数値情報、標高差と傾斜は地理院DEM、写真は地理院タイルの実データです。
               <b>{NOT_CONNECTED}</b>。実運用では Sentinel-1/2 で算出する想定で、今の点数は実指標（型・区域・面積・標高差・傾斜）だけの暫定です。
-              衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。巡視結果は利用者の入力です。</>
+              衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。巡視結果は利用者の入力です。</p>
           ) : (
-            <>地点・区域・変化量・許可届出・巡視結果はすべて架空で、実在の盛土や衛星解析結果ではありません。</>
+            <p>地点・区域・変化量・許可届出・巡視結果はすべて架空で、実在の盛土や衛星解析結果ではありません。</p>
           )}
         </AlertDescription>
       </Alert>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="台帳の件数" value={`${ranked.length}か所`} sub={real ? '横須賀市（A54）' : '架空'} />
-        <Metric label="巡視を記録済み" value={`${visited}か所`} sub={`未巡視 ${ranked.length - visited}か所`} />
+        <Metric label="巡視を記録済み" value={`${visited}か所`} sub={`未巡視 ${ranked.length - visited}か所／この端末のブラウザに保存された記録です`} />
         <Metric label="最新の結果が是正対象" value={`${hits}か所`} sub="記録した結果から集計" />
         <Metric label="衛星由来の変化量" value={real ? '未接続' : '架空'} sub={real ? '点数に含まれない' : 'サンプルの値'} warn={real} />
       </div>
+
+      <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+        記録（{results.length}件）はこの端末のブラウザ（localStorage）に保存されたもので、外部へは送信されません。前の利用者の記録が残っている場合があります。
+        <ResetDialog onReset={resetAll} count={results.length} />
+      </p>
 
       <section aria-label="使い方（3ステップ）" className="space-y-1.5">
         <p className="text-sm font-medium">使い方: 今月の巡視先を決めて、計画を書き出し、結果を記録します</p>
@@ -180,12 +195,12 @@ function Body({ mode, ds }: { mode: Mode; ds: Dataset }) {
           />
         </TabsContent>
         <TabsContent value="plan">
-          <PlanTab ds={ds} mode={mode} ranked={ranked} cap={cap} setCap={setCap} note={note} onRecord={goRecord} onSelect={select} sel={sel} />
+          <PlanTab ds={ds} mode={mode} ranked={ranked} plan={plan} cap={cap} setCap={setCap} note={note} onRecord={goRecord} onSelect={select} sel={sel} />
         </TabsContent>
         <TabsContent value="record">
           <RecordTab
             ds={ds} mode={mode} ranked={ranked} results={results} setResults={setResults}
-            recSite={recSite || ranked[0]?.id || ''} setRecSite={setRecSite}
+            recSite={recSite || ranked[0]?.id || ''} setRecSite={setRecSite} plan={plan.route} onReset={resetAll}
             onShowLedger={(id) => { setSel(id); setTab('ledger') }}
           />
         </TabsContent>
@@ -465,13 +480,11 @@ function SiteDetail({ s, mode, results, onRecord }: { s: Ranked; mode: Mode; res
 }
 
 // ---------------- ② 巡視計画 ----------------
-function PlanTab({ ds, mode, ranked, cap, setCap, note, onRecord, onSelect, sel }: {
-  ds: Dataset; mode: Mode; ranked: Ranked[]; cap: number; setCap: (n: number) => void; note: string
+function PlanTab({ ds, mode, ranked, plan, cap, setCap, note, onRecord, onSelect, sel }: {
+  ds: Dataset; mode: Mode; ranked: Ranked[]; plan: ReturnType<typeof planRoute<Ranked>>; cap: number; setCap: (n: number) => void; note: string
   onRecord: (id: string) => void; onSelect: (id: string) => void; sel: string | null
 }) {
   const real = mode === 'real'
-  const n = Math.max(1, Math.min(30, cap || 1))
-  const plan = useMemo(() => planRoute(ranked, ds.origin, n), [ranked, ds, n])
   const exportPlan = () => {
     downloadText('patrol-plan.csv',
       toCSV(['order', 'id', 'score', 'type_or_change', 'zone', 'data_note'],
@@ -520,6 +533,7 @@ function PlanTab({ ds, mode, ranked, cap, setCap, note, onRecord, onSelect, sel 
                   <TableCell className="font-bold">{i + 1}</TableCell>
                   <TableCell className="whitespace-nowrap">
                     {s.id}
+                    {s.latest && <Badge variant="outline" className="ml-1 gap-1 align-middle"><span aria-hidden>✔</span>巡視済み（{s.latest.date}）</Badge>}
                     <div className="mt-1 whitespace-normal md:hidden"><PartsInline parts={s.parts} /></div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">{s.score}（{s.rank}位）</TableCell>
@@ -576,9 +590,10 @@ function PartsInline({ parts }: { parts: Ranked['parts'] }) {
 }
 
 // ---------------- ③ 結果の記録 ----------------
-function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite, onShowLedger }: {
+function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite, onShowLedger, plan, onReset }: {
   ds: Dataset; mode: Mode; ranked: Ranked[]; results: PatrolResult[]; setResults: (r: PatrolResult[]) => void
   recSite: string; setRecSite: (id: string) => void; onShowLedger: (id: string) => void
+  plan: Ranked[]; onReset: () => void
 }) {
   const real = mode === 'real'
   const [date, setDate] = useState(dateStr())
@@ -586,7 +601,19 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
   const [result, setResult] = useState<string>(RESULTS[0])
   const [memo, setMemo] = useState('')
   const [saved, setSaved] = useState<PatrolResult | null>(null)
-  const [confirmReset, setConfirmReset] = useState(false)
+  const shownSaved = saved && results.length > 0 ? saved : null
+  // 計画の中で、いま保存した地点より後ろの未記録の地点（なければ先頭から探す）
+  const nextSite = useMemo(() => {
+    if (!saved) return null
+    const i = plan.findIndex((s) => s.id === saved.siteId)
+    const order = [...plan.slice(i + 1), ...plan.slice(0, Math.max(0, i + 1))]
+    return order.find((s) => !s.latest && s.id !== saved.siteId) ?? null
+  }, [plan, saved])
+  const goNext = () => {
+    if (!nextSite) return
+    setRecSite(nextSite.id); setSaved(null)
+    toast(`次の地点に切り替えました: ${nextSite.id}`)
+  }
   const rec = ranked.find((s) => s.id === recSite)
 
   const submit = (e: React.FormEvent) => {
@@ -646,12 +673,17 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
             </div>
             <Button type="submit" className="w-full sm:w-auto">記録する</Button>
           </form>
-          {saved && (
+          {shownSaved && (
             <Alert className="mt-3 border-sky-300 bg-sky-50">
-              <AlertTitle>記録しました: {saved.siteId}</AlertTitle>
+              <AlertTitle>記録しました: {shownSaved.siteId}</AlertTitle>
               <AlertDescription className="text-foreground">
-                {saved.date}「{saved.result}」。台帳の「最新の巡視」に反映されています。
-                <Button variant="link" className="h-auto p-0 pl-1" onClick={() => onShowLedger(saved.siteId)}>台帳で確認する</Button>
+                <p>{shownSaved.date}「{shownSaved.result}」。台帳の「最新の巡視」に反映されています。</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => onShowLedger(shownSaved.siteId)}>台帳で確認する</Button>
+                  {nextSite
+                    ? <Button size="sm" onClick={goNext}>計画の次の地点を記録する（{nextSite.id}）</Button>
+                    : <span className="self-center text-xs text-muted-foreground">計画の地点はすべて記録済みです</span>}
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -660,25 +692,24 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
 
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="mr-auto text-sm font-medium">記録一覧（{results.length}件）</p>
+          <div className="mr-auto">
+            <p className="text-sm font-medium">記録一覧（{results.length}件）</p>
+            <p className="text-xs text-muted-foreground">この端末のブラウザに保存された記録です（外部へ送信されません）。前の利用者の記録が残っている場合があります。</p>
+          </div>
           <Button variant="outline" size="sm" onClick={exportRec} disabled={!results.length}><Download className="size-4" />記録をCSVで書き出す</Button>
-          {!confirmReset
-            ? <Button variant="outline" size="sm" disabled={!results.length} onClick={() => setConfirmReset(true)}>記録を全消去</Button>
-            : (
-              <>
-                <Button variant="destructive" size="sm" onClick={() => { setResults([]); setSaved(null); setConfirmReset(false) }}>本当に全て消す</Button>
-                <Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>やめる</Button>
-              </>
-            )}
+          <ResetDialog onReset={onReset} count={results.length} />
         </div>
         <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader><TableRow><TableHead>巡視日</TableHead><TableHead>ID</TableHead><TableHead>巡視者</TableHead><TableHead>結果</TableHead><TableHead>メモ</TableHead></TableRow></TableHeader>
             <TableBody>
-              {results.slice().reverse().map((r, i) => (
+              {results.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => (
                 <TableRow key={i}>
                   <TableCell className="whitespace-nowrap">{r.date}</TableCell>
-                  <TableCell className="whitespace-nowrap">{r.siteId}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {r.siteId}
+                    {isLatestOfMany(results, i) && <Badge className="ml-1 align-middle">最新</Badge>}
+                  </TableCell>
                   <TableCell>{r.who}</TableCell>
                   <TableCell><ResultTag r={{ ...r, date: '' }} /></TableCell>
                   <TableCell className="whitespace-normal">{r.memo}</TableCell>
@@ -781,5 +812,36 @@ function SourceList() {
         </li>
       ))}
     </ul>
+  )
+}
+
+/** 同じ地点に複数の記録があり、i 番目がその地点の最新のとき true */
+function isLatestOfMany(results: PatrolResult[], i: number): boolean {
+  const id = results[i].siteId
+  let n = 0, last = -1
+  for (let k = 0; k < results.length; k++) if (results[k].siteId === id) { n++; last = k }
+  return n > 1 && last === i
+}
+
+function ResetDialog({ onReset, count }: { onReset: () => void; count: number }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={count === 0}>記録をすべて消して最初の状態に戻す</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>記録をすべて消して最初の状態に戻しますか</DialogTitle>
+          <DialogDescription>
+            このデータ（実データ／架空サンプルのうち表示中の側）について、この端末のブラウザに保存された巡視記録 {count}件と、検出条件の重みの変更を消します。元に戻せません。
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>やめる</Button>
+          <Button variant="destructive" onClick={() => { onReset(); setOpen(false) }}>すべて消す</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

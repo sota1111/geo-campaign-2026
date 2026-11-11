@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Download, Info, X, Copy } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Circle, Download, Info, X, Copy, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
@@ -60,6 +60,9 @@ export default function App() {
   const [selPlan, setSelPlan] = useState(0)
   const [selFac, setSelFac] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [exported, setExported] = useState(false)
+  const exportBtn = useRef<HTMLButtonElement>(null)
+  const [seen, setSeen] = useState(false)
 
   useEffect(() => {
     fetchData<{ regions: RegionInfo[] }>(APP, 'index.json').then((i) => setRegions(i.regions)).catch((e) => setError(String(e.message)))
@@ -98,7 +101,8 @@ export default function App() {
     const r = data!.routes[i]
     return r[0] + (r[1] ? `（${r[1]}）` : '')
   }
-  const routeFull = (i: number) => `${routeName(i)}｜${data!.routes[i][2]}`
+  /** 事業者名を先頭に（同名路線の見分け用） */
+  const routeFull = (i: number) => `${data!.routes[i][2]}｜${routeName(i)}`
   const condText = data
     ? `${DAY_LABEL[day]}${PERIOD_LABEL[per]}${data.params.start_hours[per]}時発・${w}分以内`
     : ''
@@ -125,6 +129,15 @@ export default function App() {
   const verdict = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])) : null
   const smaller = verdict ? verdict.winners.map((i) => ks[i]) : []
   const firm = verdict?.firm ?? false
+  const canJudge = ks.length >= 2 && !!calc
+  useEffect(() => {
+    if (!canJudge || seen) return
+    const el = document.getElementById('biz-verdict')
+    if (!el) return
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setSeen(true) }, { threshold: 0.6 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [canJudge, seen])
   const anyLowerBound = calc ? ks.some((k) => !calc.results[k][0].exact) : false
   const lostText = (l: { lost: number; exact: boolean }) => `${l.exact ? '' : '少なくとも'}${n(l.lost)}人`
   const lb = (exact: boolean) => (exact ? '' : '少なくとも')
@@ -137,7 +150,7 @@ export default function App() {
         const top = l.groups[0]
         return `${data.facility_labels[fk]}へ行けなくなる人は${lostText(l)}（うち65歳以上${lb(l.exact)}${n(l.lost65)}人）${top ? `、最も多い地区は「${top.name}」付近の${n(top.lost)}人` : ''}`
       })
-      return `${plans[k].name}（${plans[k].routes.map(routeName).join('・')}を廃止）: ${condText}で、${parts.join('。')}。`
+      return `${plans[k].name}（${plans[k].routes.map(routeFull).join('・')}を廃止）: ${condText}で、${parts.join('。')}。`
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, calc, plans, condText])
@@ -189,7 +202,7 @@ export default function App() {
   const planViews = (): PlanView[] => ks.map((k) => ({ name: plans[k].name, routes: plans[k].routes.map(routeFull), per: calc!.results[k] }))
   const exportCsv = () => {
     if (!data || !calc || !ks.length) {
-      toast.error('止める路線を選んだ案がありません。手順2で路線を選んでください。')
+      toast.error('止める路線を選んだ案がありません。「① 見直し案をつくる」で路線を選んでください。')
       return
     }
     const rows = buildCsvRows(data, condText, calc.base, planViews())
@@ -202,6 +215,7 @@ export default function App() {
     }
     const fname = `plan-comparison-${data.id}-${day}${per}${w}.csv`
     downloadText(fname, toCsvText(rows), 'text/csv;charset=utf-8')
+    setExported(true)
     toast.success(`${fname} を書き出しました`, {
       description: `中身: ${ks.map((k) => plans[k].name).join('・')}の比較表（病院・学校別の人数、うち65歳以上、割合、地区数）、地区別の内訳、診断の前提、出典。この端末で作成しただけで、送信していません。`,
       duration: 9000,
@@ -212,6 +226,7 @@ export default function App() {
     navigator.clipboard?.writeText(sentences.join('\n')).then(
       () => {
         setCopied(true)
+        setExported(true)
         toast.success('資料用の文章をコピーしました', { description: `${ks.map((k) => plans[k].name).join('・')}の${ks.length}件。各案で行けなくなる人（うち65歳以上）と最も多い地区を、条件つきで1段落ずつ入れています。貼り付け先で確認してください。`, duration: 9000 })
       },
       () => toast.error('コピーできませんでした'),
@@ -247,11 +262,12 @@ export default function App() {
           <CardTitle className="text-base">このページの使い方（3ステップ）</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <ol className="list-decimal space-y-1 pl-5">
-            <li><b>地域と条件</b>を確認する（初期値は徳島市周辺・平日朝・20分以内）。</li>
-            <li><b>案A・案B</b>に、廃止する路線を選ぶ（案Aと案Bに1路線ずつ例を入れてあります。×で外し、プルダウンで別の路線に替えられます）。</li>
-            <li>すぐ下の<b>「結論」</b>で、<b>影響が小さい案</b>と各案の<b>病院へ行けなくなる人（うち65歳以上）</b>を確認し、<b>「会議資料用にCSVで書き出す」</b>を押す（文章のコピーも同じ場所）。</li>
+          <ol className="space-y-1.5">
+            <li><b>① 案を作る</b>: 案Aと案Bに廃止する路線を選ぶ（1路線ずつ例を入れてあります。×で外し、プルダウンで替え・追加。路線を足すと複数路線を同時に止める案になります）。地域・条件は初期値（徳島市周辺・平日朝・20分以内）のままで構いません。</li>
+            <li><b>② 比べる</b>: 「結論」で、<b>影響が小さい案</b>と各案の<b>病院へ行けなくなる人（うち65歳以上）</b>を確認する。</li>
+            <li><b>③ 資料にまとめる（省略しない）</b>: 結論カードの<b>「会議資料用にCSVで書き出す」</b>または<b>「資料用の文章をコピー」</b>を押す。比べただけでは会議資料はできません。</li>
           </ol>
+          <p className="text-xs text-muted-foreground">人数は、500m四方の区画ごとの令和2年国勢調査の人口を合計した推計です（実際の利用者数ではありません）。</p>
           <Alert>
             <Info className="size-4" />
             <AlertTitle>できること／できないこと</AlertTitle>
@@ -269,7 +285,7 @@ export default function App() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">1</span>地域と診断の条件</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">準</span>地域と診断の条件（初期値のままで可）</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-1.5 sm:max-w-md">
@@ -306,11 +322,11 @@ export default function App() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="biz-plans" className="scroll-mt-16">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">2</span>見直し案をつくる（路線の廃止）</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">①</span>見直し案をつくる（路線の廃止）</CardTitle>
           <CardDescription>
-            案ごとに、止める路線を選びます。2案以上に路線が入ると比較されます。案名は書き換えられます。
+            案ごとに、止める路線を選びます。2案以上に路線が入ると比較されます。案名は書き換えられます。「＋ 止める路線を追加」で路線を足すと、複数路線を同時に止める案になります（人数は「少なくとも」の下限値）。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -343,7 +359,7 @@ export default function App() {
                       <SelectContent className="max-h-72">
                         {calc.selectable.filter((r) => !p.routes.includes(r)).map((r) => (
                           <SelectItem key={r} value={String(r)}>
-                            {routeFull(r)}（この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
+                            {routeFull(r)}（平日{data.routes[r][3]}本・休日{data.routes[r][4]}本｜この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -362,16 +378,54 @@ export default function App() {
 
       <Card className="border-2 border-primary/60" aria-live="polite">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">結論（会議資料用）</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">②</span>比べる ― 結論（会議資料用）</CardTitle>
           <CardDescription>条件: {condText || '—'}。上の案を変えると、ここがすぐ更新されます。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {data && calc && (() => {
+            const items = [
+              { done: ks.length >= 2, label: '案を2つ作った', todo: '案を2つ作る（案Aと案Bに止める路線を選ぶ）', optional: false },
+              { done: plans.some((p) => p.routes.length >= 2), label: '少なくとも1案を複数路線にした（任意。下限値の意味を確かめられます）', todo: '', optional: true },
+              { done: ks.length >= 2 && seen, label: 'どちらの影響が小さいか確かめた', todo: 'どちらの影響が小さいか確かめる（2案に路線を選ぶと結論が出ます）', optional: false },
+              { done: exported, label: '会議資料用に書き出した（CSVまたは文章コピー）', todo: '会議資料用に書き出す（CSVまたは文章コピー）', optional: false },
+            ]
+            const next = items.findIndex((it) => !it.done && !it.optional)
+            const goNext = () => {
+              if (next === 0) document.getElementById('biz-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              else if (next === 2) document.getElementById('biz-verdict')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              else { exportBtn.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); exportBtn.current?.focus() }
+            }
+            return (
+              <div className="rounded-lg border bg-muted/30 p-3" aria-label="目的の達成状況">
+                <div className="mb-1 text-sm font-bold">目的の達成状況（操作すると自動でチェックされます）</div>
+                <ul className="space-y-1 text-sm">
+                  {items.map((it, i) => (
+                    <li key={i} className={`flex items-start gap-2 rounded px-1 py-0.5 ${i === next ? 'bg-primary/10 font-bold ring-1 ring-primary' : ''}`}>
+                      {it.done ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-label="完了" /> : <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label="未完了" />}
+                      <span>{it.done ? '済: ' : '未: '}{it.label}</span>
+                    </li>
+                  ))}
+                </ul>
+                {next >= 0 ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold">次にやること: {items[next].todo}</span>
+                    <Button size="sm" onClick={goNext}><ArrowRight className="size-4" />{next === 3 ? '書き出しボタンへ' : next === 2 ? '結論の表示へ' : '案を作る場所へ'}</Button>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm font-bold">必要な項目はすべて完了しました。書き出したCSV／文章を会議資料に貼り付けてください。</p>
+                )}
+                {!exported && (
+                  <p role="status" className="mt-2 text-sm font-medium text-foreground">まだ資料用に書き出していません。会議資料にするには、下の「会議資料用にCSVで書き出す」または「資料用の文章をコピー」を押してください。</p>
+                )}
+              </div>
+            )
+          })()}
           {!data || !calc ? <p className="text-sm text-muted-foreground">読み込み中…</p> : !ks.length ? (
-            <p className="text-sm text-muted-foreground">手順2で、止める路線を1つ以上選んでください。</p>
+            <p className="text-sm text-muted-foreground">「① 見直し案をつくる」で、止める路線を1つ以上選んでください。</p>
           ) : (
             <>
               {ks.length >= 2 ? (
-                <div role="status" className="space-y-1">
+                <div id="biz-verdict" role="status" className="space-y-1 scroll-mt-16">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-lg font-bold">
                       影響が小さい案: {smaller.length === ks.length ? '差がありません（同数）' : smaller.map((k) => plans[k].name).join('・')}
@@ -412,11 +466,11 @@ export default function App() {
                 })}
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="lg" onClick={exportCsv}><Download className="size-4" />会議資料用にCSVで書き出す</Button>
+                <Button size="lg" ref={exportBtn} onClick={exportCsv}><Download className="size-4" />会議資料用にCSVで書き出す</Button>
                 <Button size="lg" variant="outline" onClick={copySentences}><Copy className="size-4" />{copied ? 'コピーしました' : '資料用の文章をコピー'}</Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                CSVには、比較表（病院・学校別の人数・うち65歳以上・割合・地区数）、地区別の内訳、前提、出典が入ります。この端末の中で作るだけで、送信しません。
+                人数は、500m四方の区画ごとの令和2年国勢調査の人口を合計した推計です（実際の利用者数ではありません）。CSVには、比較表（病院・学校別の人数・うち65歳以上・割合・地区数）、地区別の内訳、前提、出典が入ります。この端末の中で作るだけで、送信しません。
               </p>
             </>
           )}
@@ -427,7 +481,7 @@ export default function App() {
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">3</span>案を詳しく比べる（表）</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">詳</span>案を詳しく比べる（表）</CardTitle>
               <CardDescription>条件: {condText || '—'}</CardDescription>
             </div>
             <Button onClick={exportCsv} disabled={!calc || !ks.length}><Download className="size-4" />比較表をCSVでダウンロード</Button>
@@ -435,7 +489,7 @@ export default function App() {
         </CardHeader>
         <CardContent className="space-y-4">
           {!data || !calc ? null : !ks.length ? (
-            <p className="text-sm text-muted-foreground">手順2で、止める路線を1つ以上選んでください。（この条件では、止めても行けなくなる人が出る路線が無い地域もあります。許容時間を短くすると差が出ます。）</p>
+            <p className="text-sm text-muted-foreground">「① 見直し案をつくる」で、止める路線を1つ以上選んでください。（この条件では、止めても行けなくなる人が出る路線が無い地域もあります。許容時間を短くすると差が出ます。）</p>
           ) : (
             <>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -449,7 +503,7 @@ export default function App() {
                           {win && <Badge>影響が小さい案</Badge>}
                           {!calc.results[k][0].exact && <Badge variant="outline">下限値</Badge>}
                         </CardTitle>
-                        <CardDescription>{plans[k].routes.map(routeName).join('、')}を廃止</CardDescription>
+                        <CardDescription>{plans[k].routes.map(routeFull).join('、')}を廃止</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-2">
                         {data.facility_order.map((fk, fi) => {
@@ -488,7 +542,7 @@ export default function App() {
                       <TableCell className="text-right">なし</TableCell>
                       {ks.map((k) => (
                         <TableCell key={k} className="whitespace-normal text-right text-xs">
-                          {plans[k].routes.map(routeName).join('、')}
+                          {plans[k].routes.map(routeFull).join('、')}
                           {plans[k].routes.length > 1 && <div className="text-muted-foreground">{plans[k].routes.length}路線</div>}
                         </TableCell>
                       ))}
@@ -619,7 +673,7 @@ export default function App() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">4</span>資料用に書き出す</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">③</span>資料にまとめる（CSV）</CardTitle>
           <CardDescription>
             比較表・地区別の内訳・診断の前提・出典を1つのCSV（UTF-8、Excelで開けるBOM付き）にします。この端末の中で作るだけで、どこにも送信しません。
           </CardDescription>

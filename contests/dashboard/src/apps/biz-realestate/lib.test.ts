@@ -2,10 +2,46 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  buildSheet, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, SAMPLE_FACTS,
+  buildDigest, buildSheet, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, SAMPLE_FACTS,
   summarize, tileOf, transitAround, worldToLonLat, type AreaData, type Facts,
 } from './lib'
 import { analyze, reverseGeocode } from './collect'
+
+describe('検索結果の選び方', () => {
+  const hits = [
+    { lon: 140.6, lat: 35.9, title: '茨城県潮来市徳島' },
+    { lon: 134.5547, lat: 34.0701, title: '徳島県徳島市' },
+    { lon: 134.5485, lat: 34.0735, title: '徳島駅前郵便局' },
+    { lon: 134.5518, lat: 34.0762, title: '徳島駅' },
+  ]
+  it('「駅」を含む語は title が「〜駅」の候補を優先', () => {
+    expect(pickSearchHit('徳島駅', hits, data)?.title).toBe('徳島駅')
+  })
+  it('駅候補がなければ同梱の駅データの座標', () => {
+    const h = pickSearchHit('徳島駅', hits.slice(0, 3), data)
+    expect(h?.title).toBe('徳島駅')
+    expect(Math.abs(h!.lat - 34.07)).toBeLessThan(0.02)
+  })
+  it('駅を含まない語は徳島市周辺の候補を優先', () => {
+    expect(pickSearchHit('徳島市', hits, data)?.title).toBe('徳島県徳島市')
+  })
+})
+
+describe('要約', () => {
+  it('注意項目と相談先の候補を最大3行で出す', () => {
+    const f = base({ flood: { status: 'inside', depth: '0.5〜3m' }, hightide: { status: 'inside' }, tsunami: { status: 'inside' } })
+    const d = buildDigest(f, buildSheet(f, { building: 'あり' }))
+    expect(d.length).toBeGreaterThan(0)
+    expect(d.length).toBeLessThanOrEqual(3)
+    expect(d[0]).toMatch(/洪水.*高潮.*津波/)
+    expect(d.join('')).toMatch(/不動産会社|市役所/)
+    expect(d.join('')).not.toMatch(/すべき|おすすめ/)
+  })
+  it('通信失敗は「取得できなかった」と出す', () => {
+    const f = base({ flood: { status: 'error' } })
+    expect(buildDigest(f, buildSheet(f, {})).join('')).toMatch(/取得できなかった項目/)
+  })
+})
 
 describe('逆ジオコーダ', () => {
   afterEach(() => vi.unstubAllGlobals())

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { appUrl } from '@/lib/data'
 import { ArrowRight, CalendarClock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,9 +45,9 @@ export default function Overview() {
                   </span>
                 </span>
                 <Button asChild size="sm">
-                  <Link to={`/apps/${a.id}`}>
+                  <a href={appUrl(a.id)}>
                     開く <ArrowRight className="size-4" />
-                  </Link>
+                  </a>
                 </Button>
               </CardFooter>
             </Card>
