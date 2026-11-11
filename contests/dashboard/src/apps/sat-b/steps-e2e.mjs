@@ -38,7 +38,7 @@ const heights = () => ev('JSON.stringify({doc: document.documentElement.scrollHe
 for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: base }); await sleep(500)
-  await ev('localStorage.clear()'); await send('Page.navigate', { url: 'about:blank' }); await sleep(200)
+  await ev('localStorage.clear(); sessionStorage.clear()'); await send('Page.navigate', { url: 'about:blank' }); await sleep(200)
   await send('Page.navigate', { url: base }); await sleep(4000)
   const R = { log: [], heights: {} }
   const openTop = async () => {
@@ -46,10 +46,10 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
     const open = await ev('document.querySelector("[data-testid=steps-topbar] button")?.getAttribute("aria-expanded")')
     if (open !== 'true') { await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); await sleep(300) }
   }
-  const step = async (sid) => { await openTop(); R.log.push(sid + ':' + await click(`[data-step=${sid}]`)); await sleep(1000); R.heights[sid] = await heights(); await shot(`steps-${label}-${sid}.png`) }
+  const step = async (sid) => { await openTop(); R.log.push(sid + ':' + await click(`[data-step=${sid}]`)); await sleep(1000); R.heights[sid] = await heights(); R.trace = (R.trace || []).concat(sid + '→current=' + (await ev('document.querySelector("[data-status=current]")?.dataset.step ?? "none"'))); await shot(`steps-${label}-${sid}.png`) }
   R.initial = await (async () => { await openTop(); const s = await statuses(); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })()
   await step('data'); R.confirm = await click('button[aria-pressed]', '確認した'); await sleep(300)
-  await step('ledger'); R.ledgerScroll = await ev('(()=>{const c=[...document.querySelectorAll("[data-testid=step-panel-body] div")].find(d=>d.scrollHeight>d.clientHeight+20&&getComputedStyle(d).overflowY!=="visible");return c?c.scrollHeight+">"+c.clientHeight:"none"})()'); R.row = await click('tbody tr[data-id]'); await sleep(1500); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
+  await step('ledger'); R.ledgerDoneNoClick = await (async () => { await openTop(); const s = await ev('document.querySelector("[data-step=ledger]").dataset.status'); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })(); R.ledgerScroll = await ev('(()=>{const c=[...document.querySelectorAll("[data-testid=step-panel-body] div")].find(d=>d.scrollHeight>d.clientHeight+20&&getComputedStyle(d).overflowY!=="visible");return c?c.scrollHeight+">"+c.clientHeight:"none"})()'); R.row = 'skipped (selection optional)'; await sleep(300); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
   if (mobile) { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(500) }
   await step('plan'); R.cap = await ev('document.querySelector("#sat-b-cap")?.value')
   await ev('window.__dlname=[];HTMLAnchorElement.prototype.click=function(){window.__dlname.push(this.download)}')

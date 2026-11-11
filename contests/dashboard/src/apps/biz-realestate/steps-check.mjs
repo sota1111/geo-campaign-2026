@@ -61,6 +61,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await sleep(1500)
   await openList(); console.log(label, 'after place (no auto switch; active panel title):', await statuses(), await ev(`document.querySelector('[data-testid=step-layout] h2').textContent`))
   await pick('answers')
+  await openList(); console.log(label, 'sidebar order+status after viewing answers (no answer chosen yet):', await statuses())
   await ev(`[...document.querySelectorAll('[role=radio]')].find(b=>b.textContent.trim()==='ある').click()`)
   await sleep(500)
   console.log(label, 'scroll@answers', await scrollInfo())

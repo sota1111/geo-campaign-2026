@@ -47,7 +47,7 @@ const BASIS = { data: 'データ', answer: 'あなたの回答による', none: 
 
 const STEP_META: Record<string, { title: string; hint: string }> = {
   place: { title: '土地の場所を決める', hint: '住所・駅名で検索して「この位置を土地として使う」、または地図をクリック' },
-  answers: { title: '地図では分からないことに答える（任意）', hint: '建物・地目・接道・相続登記。選ぶとシートに反映されます' },
+  answers: { title: '地図では分からないことに答える', hint: '建物・地目・接道・相続登記。分からなければそのままで構いません' },
   conditions: { title: '土地の条件を確かめる', hint: '用途地域・災害の想定区域など（公開データから）' },
   exits: { title: '4つの出口の「聞くこと」を読む', hint: '売る・貸す・活かす・手放す。相談先に聞くことの一覧です' },
   print: { title: '印刷・PDFで保存する', hint: '印刷すると1枚シートだけがA4・1ページで出ます' },
@@ -258,21 +258,20 @@ export default function App() {
   // 土地が変わったら閲覧・印刷の記録をリセット。条件・4出口は、その手順を実際に開いたら「読んだ」とする
   useEffect(() => { setSeen({}); setPrinted(false) }, [facts])
   useEffect(() => {
-    if (facts && (step === 'conditions' || step === 'exits')) setSeen((s) => (s[step] ? s : { ...s, [step]: true }))
+    if (facts && (step === 'answers' || step === 'conditions' || step === 'exits')) setSeen((s) => (s[step] ? s : { ...s, [step]: true }))
   }, [facts, step])
   useEffect(() => {
     const h = () => setPrinted(true)
     window.addEventListener('afterprint', h)
     return () => window.removeEventListener('afterprint', h)
   }, [])
-  const answered = QUESTIONS.some((q) => (answers[q.key] ?? '不明') !== '不明')
   useAppSteps(
     (['place', 'answers', 'conditions', 'exits', 'print'] as const).map((id) => ({
       id,
-      title: STEP_META[id].title.replace('（任意）', ''),
+      title: STEP_META[id].title,
       hint: STEP_META[id].hint.split('。')[0],
-      optional: id === 'answers',
-      done: id === 'place' ? !!facts : id === 'answers' ? answered : id === 'print' ? !!facts && printed : !!facts && !!seen[id],
+      // 手順1・5は操作で済、2〜4は「土地が決まった状態で表示したら済」（回答そのものは任意）
+      done: id === 'place' ? !!facts : id === 'print' ? !!facts && printed : !!facts && !!seen[id],
     })),
     { activeId: step, onSelectStep: setStep, description: DESCRIPTION },
   )
@@ -419,7 +418,7 @@ export default function App() {
       case 'answers':
         return (
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">選んだ内容は、この端末の中だけで使い、送信・保存はしません。未選択でもシートは作れます。</p>
+            <p className="text-sm">答えると各出口の聞くことが具体的になります。分からなければそのままで構いません。<span className="block text-xs text-muted-foreground">選んだ内容は、この端末の中だけで使い、送信・保存はしません。</span></p>
             {QUESTIONS.map((q) => (
               <div key={q.key} role="group" aria-label={q.legend}>
                 <p className="mb-1 text-sm font-medium">{q.legend}</p>

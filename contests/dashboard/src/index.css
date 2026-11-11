@@ -66,6 +66,22 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* キーボードのフォーカス表示: 全体を不透明な3pxの濃い青リング＋内側の白縁（どんな背景でも見える。赤緑に依存しない）。
+   shadcn の各 ui コンポーネントの focus-visible:ring 系クラスは外してあり、ここに統一する。 */
+:root {
+  --focus-ring: oklch(0.38 0.17 262);
+}
+:focus-visible {
+  outline: 3px solid var(--focus-ring) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px #fff !important;
+}
+.maplibregl-canvas:focus-visible,
+.maplibregl-map:focus-visible {
+  box-shadow: none !important;
+  outline-offset: -3px !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

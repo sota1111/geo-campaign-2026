@@ -7,6 +7,16 @@ import {
 } from './lib'
 import { analyze, reverseGeocode } from './collect'
 
+describe('距離の言い方', () => {
+  it('50m未満は「直線約0m」ではなく「すぐ近く（50m未満）」', () => {
+    const f = base({ transit: { radius: 500, busNames: 1, bus: { name: 'A', dist: 20 }, rail: { name: '徳島', dist: 4 } } })
+    const r = summarize(f).find((x) => x.key === 'rail')!
+    expect(r.value).toBe('徳島まですぐ近く（50m未満）')
+    expect(JSON.stringify(buildSheet(f, {}))).not.toMatch(/直線約0m|直線約10m/)
+    expect(summarize(base({ transit: { radius: 500, busNames: 1, bus: null, rail: { name: 'B', dist: 190 } } })).find((x) => x.key === 'rail')!.value).toBe('Bまで直線約190m')
+  })
+})
+
 describe('検索結果の選び方', () => {
   const hits = [
     { lon: 140.6, lat: 35.9, title: '茨城県潮来市徳島' },

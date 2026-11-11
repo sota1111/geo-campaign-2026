@@ -443,7 +443,7 @@ export default function App() {
         <details className="rounded-lg border p-2" data-testid="detail-table">
           <summary className="cursor-pointer text-sm font-bold">詳細比較表（{condText}）</summary>
           <div className="mt-2">
-          <div className="max-h-72 overflow-auto rounded border">
+          <div className="rounded border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -498,7 +498,7 @@ export default function App() {
             <p className="text-sm text-muted-foreground">この条件では、{plans[actPlan].name}で{fl}へ行けなくなる人はいません（他の路線で代替できる、歩いて行ける、または元から到達できない地区です）。</p>
           ) : (
             <>
-              <div className="max-h-56 overflow-auto rounded border">
+              <div className="rounded border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -546,14 +546,14 @@ export default function App() {
           <div className="mt-2 space-y-3">
         <div>
           <div className="mb-1 text-xs font-bold text-muted-foreground">資料用の文章（コピーされる全文）</div>
-          <div className="max-h-52 space-y-1 overflow-auto">
+          <div className="space-y-1">
             {sentences.map((t, i) => <p key={i} className="rounded border-l-4 border-primary bg-muted/40 p-2 text-sm">{t}</p>)}
           </div>
         </div>
         {previewRows && (
           <div>
             <div className="mb-1 text-xs font-bold text-muted-foreground">CSVの先頭{Math.min(14, previewRows.length)}行（全{previewRows.length}行。以降は地区別の内訳・前提・出典）</div>
-            <div className="max-h-52 overflow-auto rounded border">
+            <div className="overflow-x-auto rounded border">
               <table className="w-full text-xs">
                 <tbody>
                   {previewRows.slice(0, 14).map((r, i) => (

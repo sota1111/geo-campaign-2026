@@ -57,6 +57,10 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
     if (id === 'export') { console.log(label, 'csv', await click('CSVで書き出す')); await sleep(600) }
     console.log(label, id, r, 'scrollH/innerH/body', await scrollH(), '->', await ev(status))
     console.log(label, '  legend:', await ev(`(document.querySelector('[data-testid=map-legend]')||{innerText:''}).innerText.slice(0,30)`), '| details open:', await ev(`[...document.querySelectorAll('details')].map(d=>d.open).join(',')`))
+    if (id === 'verdict' || id === 'export') {
+      await ev(`document.querySelectorAll('details').forEach(d=>d.open=true)`); await sleep(500)
+      console.log(label, '  nested vertical scrollers (details open):', await ev(`(()=>{const body=document.querySelector('[data-testid=step-panel-body]');const out=[];body.querySelectorAll('*').forEach(e=>{const cs=getComputedStyle(e);if((cs.overflowY==='auto'||cs.overflowY==='scroll')&&e.scrollHeight>e.clientHeight+1)out.push(e.tagName+':'+e.scrollHeight+'/'+e.clientHeight)});return 'panel '+body.scrollHeight+'/'+body.clientHeight+' nested='+JSON.stringify(out)})()`))
+    }
     await shot(`${label}-step-${id}.png`)
   }
   console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth - window.innerWidth'))

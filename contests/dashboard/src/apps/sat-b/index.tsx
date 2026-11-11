@@ -164,7 +164,8 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   const lastRecorded = prog.last
   const setDataChecked = (b: boolean) => setProg({ data: b })
   useEffect(() => { if (step === 'plan' && !prog.plan) setProg({ plan: true }) }, [step, prog.plan, setProg])
-  useEffect(() => { if (sel && !prog.ledger) setProg({ ledger: true }) }, [sel, prog.ledger, setProg])
+  // 「見る」手順: 台帳を表示したら済（行の選択は任意の深掘り）
+  useEffect(() => { if ((step === 'ledger' || sel) && !prog.ledger) setProg({ ledger: true }) }, [step, sel, prog.ledger, setProg])
   useEffect(() => { if (step === 'check' && prog.record && !prog.check) setProg({ check: true }) }, [step, prog.record, prog.check, setProg])
 
   const ranked = useMemo(() => rank(ds.sites, weights, ds.refDate, results, mode), [ds, weights, results, mode])
@@ -186,7 +187,7 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   useAppSteps(
     [
       { id: 'data', title: 'データを確かめる', hint: real ? '実データ・未接続の確認' : '「実データ（横須賀市）」を選ぶ', done: real && dataChecked },
-      { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '行を選ぶと内訳が出る', done: prog.ledger },
+      { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '台帳を開く。行を選ぶと内訳も見られる', done: prog.ledger },
       { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', done: planSeen },
       { id: 'csv', title: '計画をCSVで書き出す', done: planExported },
       { id: 'record', title: '巡視結果を記録する', done: recordedNow },

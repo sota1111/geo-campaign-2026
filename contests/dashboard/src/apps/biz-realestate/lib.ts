@@ -141,6 +141,10 @@ export const SAMPLE_ANSWERS: Answers = { building: 'あり', landUse: '不明', 
 export function fmtDist(m: number) {
   return m >= 1000 ? (m / 1000).toFixed(1) + 'km' : Math.round(m / 10) * 10 + 'm'
 }
+/** 「まで〜」に続ける距離の言い方。50m未満は「直線約0m」にせず「すぐ近く（50m未満）」 */
+export function fmtNear(m: number) {
+  return m < 50 ? 'すぐ近く（50m未満）' : '直線約' + fmtDist(m)
+}
 
 export interface Item { basis: 'data' | 'answer' | 'none'; fact: string; ask: string; who: string }
 export interface Exit { key: 'sell' | 'rent' | 'use' | 'release'; label: string; items: Item[] }
@@ -209,8 +213,8 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
   if (f.transit) {
     const t = f.transit
     const parts: string[] = []
-    if (t.bus) parts.push('最寄りのバス停「' + t.bus.name + '」まで直線約' + fmtDist(t.bus.dist) + '（半径' + t.radius + 'm内に' + t.busNames + '停留所名）')
-    if (t.rail) parts.push('最寄り駅「' + t.rail.name + '」まで直線約' + fmtDist(t.rail.dist))
+    if (t.bus) parts.push('最寄りのバス停「' + t.bus.name + '」まで' + fmtNear(t.bus.dist) + '（半径' + t.radius + 'm内に' + t.busNames + '停留所名）')
+    if (t.rail) parts.push('最寄り駅「' + t.rail.name + '」まで' + fmtNear(t.rail.dist))
     if (parts.length) {
       const far = t.bus && t.bus.dist > t.radius
       exits.rent.push({ basis: 'data', fact: parts.join('。') + '。便数・運行日は含まない。', ask: far ? '歩いて使える停留所が近くにない場合、借り手の足をどう想定するかを不動産会社に聞く。' : '借り手の通勤・通学の足として十分かを不動産会社に聞く。', who: '不動産会社' })
@@ -297,8 +301,8 @@ export function summarize(f: Facts): SummaryRow[] {
     : { key: 'elev', label: '標高（参考）', value: f.sample ? 'サンプルでは出さない' : '取得できなかった・値なし', tone: 'unknown' })
   if (f.transit) {
     const t = f.transit
-    rows.push({ key: 'bus', label: '最寄りバス停', value: t.bus ? `${t.bus.name}まで直線約${fmtDist(t.bus.dist)}（便数・運行日は含まない）` : 'データなし', tone: t.bus ? 'ok' : 'unknown' })
-    rows.push({ key: 'rail', label: '最寄り駅', value: t.rail ? `${t.rail.name}まで直線約${fmtDist(t.rail.dist)}` : 'データなし', tone: t.rail ? 'ok' : 'unknown' })
+    rows.push({ key: 'bus', label: '最寄りバス停', value: t.bus ? `${t.bus.name}まで${fmtNear(t.bus.dist)}（便数・運行日は含まない）` : 'データなし', tone: t.bus ? 'ok' : 'unknown' })
+    rows.push({ key: 'rail', label: '最寄り駅', value: t.rail ? `${t.rail.name}まで${fmtNear(t.rail.dist)}` : 'データなし', tone: t.rail ? 'ok' : 'unknown' })
   } else {
     rows.push({ key: 'bus', label: '最寄りバス停・駅', value: '出せない（地図データは徳島市のみ。範囲外）', tone: 'unknown' })
   }

@@ -59,9 +59,13 @@ function StepItem({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block leading-snug">{step.title}</span>
-          {status === 'current' && <span className="block text-[11px] font-normal text-primary">いまここ（次にやる手順）</span>}
-          {active && <span className="block text-[11px] font-normal text-muted-foreground">表示中</span>}
-          {step.hint && !small && <span className="block text-xs font-normal text-muted-foreground">{step.hint}</span>}
+          {(status === 'current' || active) && (
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] font-normal leading-tight">
+              {active && <span className="text-muted-foreground">表示中</span>}
+              {status === 'current' && <span className="text-primary">いまここ（次にやる手順）</span>}
+            </span>
+          )}
+          {step.hint && !small && <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">{step.hint}</span>}
         </span>
       </button>
     </li>
@@ -175,8 +179,8 @@ export function StepsTopbar() {
             </span>
           )}
         </span>
-        <span className="max-w-[40%] shrink-0 text-right text-xs leading-tight text-muted-foreground">
-          {progressLabel(all)}
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground" data-testid="steps-topbar-progress" title={progressLabel(all)}>
+          {p.done}/{p.total}
         </span>
         <ChevronDown className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
