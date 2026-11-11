@@ -31,6 +31,7 @@ import {
 import { isSampleMode } from '@/lib/sample'
 import { SAMPLE_RECORD } from './sample'
 import { SampleFrame, SiteMap, TilePhoto } from './parts'
+import { markCsv } from '../_samples/mark'
 
 
 const PAGE = 25
@@ -355,7 +356,7 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
         </Button>
       )}
       <div className="space-y-1.5 rounded-md border p-2 text-xs text-muted-foreground">
-        <p>記録（{results.length}件）はこの端末のブラウザ（localStorage）に保存されたもので、外部へは送信されません。前の利用者の記録が残っている場合があります。</p>
+        <p>{isSampleMode() ? `記録（${results.length}件）は実行サンプルの再現で、どこにも保存されません。` : `記録（${results.length}件）はこの端末のブラウザ（localStorage）に保存されたもので、外部へは送信されません。前の利用者の記録が残っている場合があります。`}</p>
         <ResetDialog onReset={onReset} count={results.length} />
       </div>
       {real && (
@@ -389,11 +390,11 @@ function LedgerPanel({ mode, rows, ranked, sel, onSelect, note, zone, setZone, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel])
   const exportLedger = () =>
-    downloadText('ledger.csv', real
+    downloadText('ledger.csv', markCsv(real
       ? toCSV(['rank', 'score', 'id', 'type', 'area_m2', 'relief_m', 'slope_deg', 'zone', 'lat', 'lon', 'latest_result', 'data_note'],
           ranked.map((s) => [s.rank, s.score, s.id, s.type, s.areaM2, s.reliefM, s.slopeDeg, s.zone, s.lat, s.lon, s.latest?.result ?? '', note]))
       : toCSV(['rank', 'score', 'id', 'name', 'change', 'zone', 'permit', 'detected', 'latest_result', 'data_note'],
-          ranked.map((s) => [s.rank, s.score, s.id, s.name, s.change, s.zone, s.permit, s.detected, s.latest?.result ?? '', note])),
+          ranked.map((s) => [s.rank, s.score, s.id, s.name, s.change, s.zone, s.permit, s.detected, s.latest?.result ?? '', note]))),
     'text/csv;charset=utf-8')
   return (
     <div className="flex flex-col gap-2 md:h-full">
@@ -522,7 +523,7 @@ function CsvPanel({ mode, plan, note, onExported }: { mode: Mode; plan: Plan; no
   const header = ['order', 'id', 'score', 'type_or_change', 'zone', 'data_note']
   const csvRows = plan.route.map((s, i) => [i + 1, s.id, s.score, real ? s.type : s.change, s.zone, note])
   const exportPlan = () => {
-    downloadText('patrol-plan.csv', toCSV(header, csvRows), 'text/csv;charset=utf-8')
+    downloadText('patrol-plan.csv', markCsv(toCSV(header, csvRows)), 'text/csv;charset=utf-8')
     onExported()
     toast.success(`巡視計画 ${csvRows.length}か所を patrol-plan.csv として書き出しました`)
   }
@@ -590,7 +591,7 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
   return (
     <form onSubmit={submit} noValidate className="space-y-3 text-sm">
       <p className="text-xs text-muted-foreground">
-        記録はこのブラウザの localStorage にだけ保存され、外部へ送信しません。氏名等の個人情報は入れないでください。実データ版と架空サンプルで記録は別に保存されます。
+        {isSampleMode() ? '実行サンプルでは記録はどこにも保存されません（再読み込みで元に戻ります）。' : '記録はこのブラウザの localStorage にだけ保存され、外部へ送信しません。'}氏名等の個人情報は入れないでください。実データ版と架空サンプルで記録は別に保存されます。
       </p>
       <div className="space-y-1">
         <Label htmlFor="sat-b-site">地点{rec ? `（順位 ${rec.rank}／点数 ${rec.score}）` : ''}</Label>
@@ -661,7 +662,7 @@ function CheckPanel({ plan, ranked, results, sel, onSelect, onReset }: {
   const planDone = plan.filter((s) => s.latest).length
   const exportRec = () =>
     downloadText('patrol-records.csv',
-      toCSV(['site_id', 'patrol_date', 'patroller', 'result', 'memo'], results.map((r) => [r.siteId, r.date, r.who, r.result, r.memo])),
+      markCsv(toCSV(['site_id', 'patrol_date', 'patroller', 'result', 'memo'], results.map((r) => [r.siteId, r.date, r.who, r.result, r.memo]))),
       'text/csv;charset=utf-8')
   return (
     <div className="space-y-3 text-sm">
@@ -700,7 +701,7 @@ function CheckPanel({ plan, ranked, results, sel, onSelect, onReset }: {
           <p className="mr-auto text-xs font-medium">記録一覧（{results.length}件）</p>
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={exportRec} disabled={!results.length}><Download className="size-3.5" />巡視記録の一覧をCSVで保存（patrol-records.csv）</Button>
         </div>
-        <p className="text-xs text-muted-foreground">この端末のブラウザに保存された記録です（外部へ送信されません）。前の利用者の記録が残っている場合があります。</p>
+        <p className="text-xs text-muted-foreground">{isSampleMode() ? '実行サンプルの再現した記録です（保存されません）。' : 'この端末のブラウザに保存された記録です（外部へ送信されません）。前の利用者の記録が残っている場合があります。'}</p>
         <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
           <Table>
             <TableHeader><TableRow><TableHead>巡視日</TableHead><TableHead>ID</TableHead><TableHead>巡視者</TableHead><TableHead>結果</TableHead><TableHead>メモ</TableHead></TableRow></TableHeader>

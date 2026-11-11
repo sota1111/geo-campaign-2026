@@ -9,7 +9,7 @@ import { downloadText } from '@/components/shared/downloadText'
 import { useHashState } from '@/components/shared/useHashState'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { fetchData } from '@/lib/data'
-import { isSampleMode } from '@/lib/sample'
+import { isSampleMode, withSampleMark } from '@/lib/sample'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ import {
 } from './lib'
 import { buildCsvRows, type PlanView } from './csv'
 import { SOURCE_LINES, limitLines } from './text'
+import { markCsv } from '../_samples/mark'
 
 const APP = 'biz-business'
 const SAMPLE_MODE = isSampleMode()
@@ -151,7 +152,8 @@ export default function App() {
     return { base, results, selectable, single }
   }, [data, W, plans, day, per, need])
 
-  const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0)
+  // 案Bの初期値は例（病院への影響が大きい路線）。手順「案Bを作る」を開く（または作る）まで、案Bは比較に入れない
+  const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0 && (k !== 1 || !!visited.planB))
   const verdict = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])) : null
   const smaller = verdict ? verdict.winners.map((i) => ks[i]) : []
   const firm = verdict?.firm ?? false
@@ -254,7 +256,7 @@ export default function App() {
       return
     }
     const fname = `plan-comparison-${data.id}-${day}${per}${w}.csv`
-    downloadText(fname, toCsvText(makeRows()!), 'text/csv;charset=utf-8')
+    downloadText(fname, markCsv(toCsvText(makeRows()!)), 'text/csv;charset=utf-8')
     setExported(true)
     setLastAction(`ダウンロードフォルダに ${fname} を保存しました（保存先はブラウザの設定によります）。Excelで開けます。`)
     toast.success(`${fname} を書き出しました`, {
@@ -264,7 +266,7 @@ export default function App() {
   }
   const copySentences = () => {
     if (!ks.length) { toast.error('止める路線を選んだ案がありません。'); return }
-    navigator.clipboard?.writeText(sentences.join('\n')).then(
+    navigator.clipboard?.writeText(withSampleMark(sentences.join('\n'))).then(
       () => {
         setExported(true)
         setLastAction(`クリップボードにコピーしました（${ks.map((k) => plans[k].name).join('・')}の${sentences.length}段落、${sentences.join('\n').length}文字）。報告書や議事録の本文に貼り付け（Ctrl+V / ⌘V）してください。`)
@@ -283,7 +285,7 @@ export default function App() {
   })
   // 実行サンプル: 被験者は全手順を開きCSVを書き出したので、前提が満たされたら済にする（実際のダウンロードはしない）
   useEffect(() => {
-    if (!SAMPLE_MODE || !data || !calc || ks.length < 2) return
+    if (!SAMPLE_MODE || !data || !calc || (plans[0]?.routes.length ?? 0) === 0 || (plans[1]?.routes.length ?? 0) === 0) return
     setVisited((v) => (v.cond && v.planA && v.planB && v.verdict ? v : { cond: true, planA: true, planB: true, verdict: true }))
     setExported(true)
     setLastAction(`実行サンプル: 被験者が plan-comparison-${data.id}-${day}${per}${w}.csv を書き出しました（この画面ではダウンロードは行っていません）。`)
@@ -424,7 +426,7 @@ export default function App() {
   const verdictPanel = () => {
     if (!data || !calc) return loading
     if (ks.length < 2) {
-      return <Alert><Info className="size-4" /><AlertDescription>比較するには、案Aと案Bの両方に路線を選んでください（左の手順から）。</AlertDescription></Alert>
+      return <Alert><Info className="size-4" /><AlertDescription>比較するには、案Aと案Bの両方に路線を選び、手順「案Bを作る」を開いてください（左の手順から）。</AlertDescription></Alert>
     }
     const actPlan = ks.includes(mapPlan) ? mapPlan : ks[0]
     const lg = calc.results[actPlan][selFac]

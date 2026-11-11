@@ -14,6 +14,9 @@ export default function Overview() {
         <p className="text-xs text-muted-foreground">
           目的と「誰向けか」に合うカードを開いてください。バッジは実データ／架空データ／一部架空の区別です。
         </p>
+        <p className="text-xs text-muted-foreground" data-testid="overview-sample-note">
+          「実行サンプル」は、AI（Sonnet）が使用目的だけを与えられて操作した模擬利用を再現した画面です。実在の住民・職員の利用実績ではなく、何も保存されません。
+        </p>
       </header>
       <section aria-label="アプリ一覧" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {APPS.map((a) => {
@@ -47,7 +50,7 @@ export default function Overview() {
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
                   {getSample(a.id) && (
-                    <Button asChild size="sm" variant="outline" title="初見ユーザー試験で被験者が操作した結果を再現して開きます">
+                    <Button asChild size="sm" variant="outline" title="AI（Sonnet）の模擬利用を再現して開きます（実在の利用ではありません）">
                       <a href={sampleUrl(a.id)}>実行サンプル</a>
                     </Button>
                   )}

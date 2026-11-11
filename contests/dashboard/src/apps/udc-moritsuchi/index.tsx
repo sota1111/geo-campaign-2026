@@ -12,7 +12,7 @@ import { useHashState } from '@/components/shared/useHashState'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { parseHashQuery } from '@/components/shared/hashState'
 import { fetchData } from '@/lib/data'
-import { isSampleMode } from '@/lib/sample'
+import { isSampleMode, withSampleMark } from '@/lib/sample'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ import {
   type FillFeature, type MwRecord, type NearFill,
 } from './lib'
 import { KIND_HELP, NEAR_M, nearSummary, searchPlaces, type PlaceHit } from './search'
+import { markCsv, markGeoJson } from '../_samples/mark'
 
 const TILE = 'https://cyberjapandata.gsi.go.jp/xyz/'
 const KIND_COLOR: Record<string, string> = { 谷埋め型: '#D55E00', 腹付け型: '#56B4E9', 区分なし: '#999999' }
@@ -476,13 +477,13 @@ export default function App() {
 
   const exportGeo = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
-    downloadGeoJson(`moritsuchi-records-${stamp()}.geojson`, toGeoJSON(records))
+    downloadGeoJson(`moritsuchi-records-${stamp()}.geojson`, markGeoJson(toGeoJSON(records)))
     setDidPrepare(true)
     setIoMsg('GeoJSONを書き出しました。')
   }
   const exportCsv = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
-    downloadText(`moritsuchi-records-${stamp()}.csv`, toCSV(records), 'text/csv;charset=utf-8')
+    downloadText(`moritsuchi-records-${stamp()}.csv`, markCsv(toCSV(records)), 'text/csv;charset=utf-8')
     setDidPrepare(true)
     setIoMsg('CSVを書き出しました。')
   }
@@ -764,8 +765,9 @@ export default function App() {
   )
 
   const panelRec = (
-    <form onSubmit={save} autoComplete="off" className="flex flex-col gap-3 md:h-full">
-      <div className="space-y-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+    <form onSubmit={save} autoComplete="off" className="relative flex flex-col gap-3 md:min-h-full">
+      {/* 本文は手順パネル側の1本のスクロールにまかせる（内側にスクロール枠を重ねない）。保存ボタンの枠は下端に固定 */}
+      <div className="space-y-3">
         <ul className="list-disc space-y-0.5 rounded-md border bg-accent/30 p-2 pl-6 text-xs">
           <li>公道など立ち入ってよい場所から。盛土や私有地、立入禁止の場所には入らない。</li>
           <li>人や車のナンバーが写る写真は共有しない。</li>
@@ -814,7 +816,7 @@ export default function App() {
           記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真は保存しません。
         </p>
       </div>
-      <div className="shrink-0 space-y-2 border-t pt-3">
+      <div className="mt-auto shrink-0 space-y-2 border-t bg-background pt-3 md:sticky md:bottom-0">
         {(savedMsg || records.length > 0) && (
           <p className="rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-medium" data-testid="saved-note" role="status">
             {savedMsg ? `✔ ${savedMsg}` : ''} 保存済みの記録: {records.length}件
@@ -832,7 +834,7 @@ export default function App() {
           <p className="text-sm font-medium" data-testid="prep-status">
             {didPrepare ? '✔ 完了しました（文面のコピーまたは書き出しをしました）。' : 'この手順は、文面をコピー（または書き出し）すると完了します。'}
           </p>
-          <Button size="lg" className="h-14 w-full text-base" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピーする</Button>
+          <Button size="lg" className="h-14 w-full text-base" onClick={() => copy(withSampleMark(report), 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピーする</Button>
           <div className="text-sm font-semibold">通報文のたたき台</div>
           <Textarea readOnly rows={7} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
           <div className="grid grid-cols-2 gap-2">

@@ -39,7 +39,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
     <AppIdContext.Provider value={appId}>
     <HeaderSlotContext.Provider value={{ el: slot }}>
       <div className={layoutActive ? 'md:flex md:h-dvh md:flex-col md:overflow-hidden' : undefined}>
-        <div className="sticky top-0 z-30 bg-background">
+        <div className="sticky top-0 z-30 bg-background md:shrink-0">
           <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-sm md:h-10 md:flex-nowrap md:overflow-hidden md:py-0">
             <a
               href={portalUrl()}
@@ -64,9 +64,10 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
             )}
             <div ref={setSlot} className="flex min-w-0 flex-wrap items-center gap-2 max-md:basis-full md:ml-auto md:flex-nowrap" />
           </header>
-          <SampleBar appId={appId} />
           <StepsTopbar />
         </div>
+        {/* 帯は固定領域の外（スマホでは固定されずスクロールで消える）。デスクトップでは flex の残りを main が埋める */}
+        <SampleBar appId={appId} />
         <div className={layoutActive ? 'flex md:min-h-0 md:flex-1' : 'flex'}>
           <StepsSidebar appName={app?.name} />
           <main

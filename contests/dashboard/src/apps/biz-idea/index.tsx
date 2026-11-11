@@ -29,6 +29,7 @@ import {
 } from './logic'
 import { SAMPLE_OVERLAY_ID, SAMPLE_PLACE_NAME, SAMPLE_VISIBILITY } from './sample'
 import { applyOverlay, lorePopup, newPin, placePin, recordPin, recordPopup } from './mapHelpers'
+import { markGeoJson } from '../_samples/mark'
 
 interface SamplesFile { notice: string; places: SamplePlace[] }
 interface LoreFile { source: string; items: LoreItem[] }
@@ -47,6 +48,9 @@ const PLACE_TYPES = ['旧地名', '小字', '通称地名', 'その他']
 const EMPTY_RECORDS: MemoryRecord[] = []
 const CENTER: [number, number] = [132.485, 34.475]
 const DESCRIPTION = '地域の聞き取り担当として、地名にまつわる災害の言い伝えを公開データで確かめ、聞き取った話を記録して地図に残す。'
+
+const BEFORE_CONFIRM: StepId[] = ['place', 'cross', 'overlay', 'record']
+const beforeConfirm = (s: StepId) => BEFORE_CONFIRM.includes(s)
 
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   place: { title: '地名を選ぶ', hint: '地名と語りは架空のサンプル。地図のオレンジのピンでも選べます' },
@@ -158,6 +162,9 @@ export default function BizIdeaApp() {
   const [mapIdle, setMapIdle] = useState(false)
   const [exportNote, setExportNote] = useState('')
   const sampleMapRef = useRef(false)
+  const sampleRecs = useRef<{ unverified: MemoryRecord; verified: MemoryRecord } | null>(null)
+  const stepRef = useRef<StepId>(step)
+  stepRef.current = step
   const [confirmClear, setConfirmClear] = useState(false)
   const [map, setMap] = useState<maplibregl.Map | null>(null)
   const [zoom, setZoom] = useState(12)
@@ -185,7 +192,9 @@ export default function BizIdeaApp() {
     setForm(base)
     if (!made.ok) return
     const rec = { ...setVerified(made.record, '確認役（デモ）', now), visibility: SAMPLE_VISIBILITY as MemoryRecord['visibility'] }
-    setRecords([rec])
+    // 報告の時系列に合わせる: 手順4（記録）までは「未確認」、手順5（確認）からは確認済み・公開
+    sampleRecs.current = { unverified: made.record, verified: rec }
+    setRecords([beforeConfirm(stepRef.current) ? made.record : rec])
     setLastSavedId(rec.id)
     const n = toGeoJSON([rec], { onlyPublishable: true, exportedAt: now }).features.length
     setExportNote(`${n}件を GeoJSON で書き出しました（chimei-kioku-public.geojson）。公開分です。端末内で作成し、送信はしていません。`)
@@ -202,6 +211,15 @@ export default function BizIdeaApp() {
       })
       .catch((e: Error) => setLoadError(e.message))
   }, [])
+
+  // 実行サンプル: 手順4（記録）以前を開いている間は「未確認で保存」、手順5以降は「確認済み・公開」の状態で見せる（被験者の報告の時系列）
+  const isBefore = beforeConfirm(step)
+  useEffect(() => {
+    const r = sampleRecs.current
+    if (!sample || !r) return
+    setRecords((rs) => (rs.length === 1 && rs[0].id === r.verified.id ? [isBefore ? r.unverified : r.verified] : rs))
+    setLastSavedId(r.verified.id)
+  }, [isBefore])
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
   const closePopup = useCallback(() => { popupRef.current?.remove(); popupRef.current = null }, [])
@@ -379,7 +397,7 @@ export default function BizIdeaApp() {
       return
     }
     const fname = `chimei-kioku-${onlyPub ? 'public' : 'all'}.geojson`
-    downloadGeoJson(fname, gj)
+    downloadGeoJson(fname, markGeoJson(gj))
     setExportNote(`${gj.features.length}件を GeoJSON で書き出しました（${fname}）。${onlyPub ? '公開分です。' : '未確認を含む内部用です。公開には使いません。'}端末内で作成し、送信はしていません。`)
     toast.success(`${gj.features.length}件を書き出しました（${fname}）`)
     if (onlyPub) setDone((d) => ({ ...d, published: true }))
@@ -574,7 +592,7 @@ export default function BizIdeaApp() {
           <p><b>必須</b>: 地名／聞き取った話／話の出典／位置（選択済み）</p>
           <p className="text-xs text-muted-foreground"><b>任意</b>: 語り手・聞いた日・種類・災害の種類・確からしさ。公開範囲は「未定」のまま保存でき、確認のときに決めます。</p>
         </div>
-        <Note>この端末のブラウザ（localStorage）にだけ保存し、サーバーには送りません。実在の人の話を入力する場合は本人の同意を得てください（デモでは架空の内容を入力してください）。</Note>
+        <Note>{isSampleMode() ? '実行サンプルでは記録はどこにも保存されません（再読み込みで元に戻ります）。' : 'この端末のブラウザ（localStorage）にだけ保存し、サーバーには送りません。'}実在の人の話を入力する場合は本人の同意を得てください（デモでは架空の内容を入力してください）。</Note>
         {focus.place && (
           <Button type="button" variant="outline" size="sm" onClick={() => fillSample(focus.place!)}>
             サンプルの語り（架空）を入力欄に写す

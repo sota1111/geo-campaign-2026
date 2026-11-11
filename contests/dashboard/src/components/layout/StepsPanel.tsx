@@ -140,12 +140,16 @@ function StepList({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
 
 /** デスクトップ（md 以上）の左サイドバー。手順が未登録なら何も出さない。手順リストはこの中でスクロールする */
 export function StepsSidebar({ appName }: { appName?: string }) {
-  const { steps, description } = useRegisteredSteps()
+  const { steps, description, layoutActive } = useRegisteredSteps()
   if (!steps.length) return null
   return (
     <aside
       aria-label="進め方"
-      className="sticky top-10 hidden h-[calc(100dvh-2.5rem)] w-60 shrink-0 flex-col self-start border-r bg-sidebar md:flex"
+      // 手順レイアウト中は親の flex が高さを決める（帯の有無に依存しない）。それ以外は従来どおりヘッダー下に固定
+      className={cn(
+        'hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex',
+        layoutActive ? 'min-h-0 self-stretch overflow-hidden' : 'sticky top-10 h-[calc(100dvh-2.5rem)] self-start',
+      )}
     >
       <div className="shrink-0 space-y-3 p-3 pb-2">
         <div>

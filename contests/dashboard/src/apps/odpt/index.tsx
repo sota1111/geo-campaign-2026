@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { fetchData } from '@/lib/data'
-import { isSampleMode } from '@/lib/sample'
+import { isSampleMode, withSampleMark } from '@/lib/sample'
 import { SAMPLE_PLACE, SAMPLE_PT } from './sample'
 import { CopyPanel, HolPanel, LastPanel, MapSummary, NoPoint, VerdictPanel, type CondState, type DiagView } from './Conclusion'
 import { Seg } from './Seg'
@@ -143,7 +143,11 @@ export default function App() {
   }, [queryStr])
   const shareUrl = useMemo(() => {
     const path = (window.location.hash || '#/').split('?')[0]
-    return `${window.location.origin}${window.location.pathname}${window.location.search}${path}?${queryStr}`
+    // サンプル指定（?sample=1）は共有リンクに残さない
+    const qs = new URLSearchParams(window.location.search)
+    qs.delete('sample')
+    const search = qs.toString() ? `?${qs.toString()}` : ''
+    return `${window.location.origin}${window.location.pathname}${search}${path}?${queryStr}`
   }, [queryStr])
 
   // 路線を止めたら？
@@ -201,7 +205,7 @@ export default function App() {
         : `【${placeLabel || '選んだ地点'}】診断範囲外です（停留所から遠い、または人口データなし）`,
       shareUrl,
     ]
-    return lines.join('\n')
+    return withSampleMark(lines.join('\n'))
   }, [diag, data, placeLabel, shareUrl, cond])
 
   const writeClipboard = useCallback(async (text: string, ok: () => void) => {
