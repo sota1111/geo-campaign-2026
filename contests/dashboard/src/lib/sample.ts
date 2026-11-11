@@ -25,3 +25,16 @@ export interface SampleRun {
   /** 被験者が迷った点・要望（短文の配列。最大5件程度） */
   feedback: string[]
 }
+
+/** サンプル中にコピー・書き出しされる内容の先頭に付ける印（実在の記録と誤認されないため） */
+export const SAMPLE_MARK = '【実行サンプル：AI（Sonnet）による模擬利用の再現。記録は架空で、実際の調査・通報ではありません】'
+
+/** サンプル中なら text の先頭に SAMPLE_MARK の行を付ける（通常の使い方では text をそのまま返す） */
+export function withSampleMark(text: string): string {
+  return isSampleMode() ? `${SAMPLE_MARK}\n${text}` : text
+}
+
+/** CSV 用。サンプル中なら先頭に印の行（1列）を付ける */
+export function withSampleMarkCsv(csv: string): string {
+  return isSampleMode() ? `"${SAMPLE_MARK}"\n${csv}` : csv
+}
