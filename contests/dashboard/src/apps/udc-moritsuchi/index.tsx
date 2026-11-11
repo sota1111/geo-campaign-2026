@@ -12,6 +12,7 @@ import { useHashState } from '@/components/shared/useHashState'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { parseHashQuery } from '@/components/shared/hashState'
 import { fetchData } from '@/lib/data'
+import { isSampleMode } from '@/lib/sample'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -83,6 +84,14 @@ const SOURCES = [
   },
 ]
 
+/** 実行サンプル（?sample=1）: 第6回の被験者の到達状態。値は reports/aggressor/20261111-r6/udc-moritsuchi.md による。
+ *  報告にない位置は、地図の初期表示の中心（被験者が最初に見た地図の中心付近）で代用している */
+const SAMPLE_REC_ID = 'sample-r6'
+const SAMPLE_RECORD: MwRecord = makeRecord({
+  id: SAMPLE_REC_ID, lng: 139.0765, lat: 35.1035, kind: 'crack', memo: '擁壁',
+  observedAt: '2026-11-11 12:54', blurred: false, nearFill: null,
+})
+
 function stamp() {
   return fmtDate(new Date()).replace(/[- :]/g, '').slice(0, 12)
 }
@@ -112,11 +121,12 @@ function KindBadge({ kind }: { kind: string }) {
 export default function App() {
   const [fills, setFills] = useState<FillFeature[]>([])
   const [loadError, setLoadError] = useState('')
-  const [rawRecords, setRawRecords] = useLocalStorage<MwRecord[]>('udc-moritsuchi:records', [])
+  const [rawRecords, setRawRecords] = useLocalStorage<MwRecord[]>('udc-moritsuchi:records', [], [SAMPLE_RECORD])
   const records = useMemo(() => sanitizeRecords(rawRecords), [rawRecords])
-  const [step, setStep] = useState('place')
+  const sample = isSampleMode()
+  const [step, setStep] = useState(sample ? 'prep' : 'place')
   const [selFill, setSelFill] = useState<string | null>(null)
-  const [selRec, setSelRec] = useState<string | null>(null)
+  const [selRec, setSelRec] = useState<string | null>(sample ? SAMPLE_REC_ID : null)
   const [pick, setPick] = useState<{ lng: number; lat: number; nearFill: NearFill | null } | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [ioMsg, setIoMsg] = useState('')
@@ -126,11 +136,11 @@ export default function App() {
   const [hits, setHits] = useState<PlaceHit[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchMsg, setSearchMsg] = useState('')
-  const [didCompare, setDidCompare] = useState(false)
-  const [didLook, setDidLook] = useState(false)
-  const [savedMsg, setSavedMsg] = useState('')
-  const [originChosen, setOriginChosen] = useState(false)
-  const [didPrepare, setDidPrepare] = useState(false)
+  const [didCompare, setDidCompare] = useState(sample)
+  const [didLook, setDidLook] = useState(sample)
+  const [savedMsg, setSavedMsg] = useState(sample ? `保存しました（${KIND_LABEL[SAMPLE_RECORD.kind]}／${SAMPLE_RECORD.observedAt}）。地図の黄色い丸が記録です。` : '')
+  const [originChosen, setOriginChosen] = useState(sample)
+  const [didPrepare, setDidPrepare] = useState(sample)
 
   const [base, setBase] = useHashState('base', 'std')
   const [old, setOld] = useHashState('old', 'none')
@@ -161,6 +171,21 @@ export default function App() {
       .then((fc) => setFills(fc.features))
       .catch(() => setLoadError('盛土データを読み込めませんでした。ページを再読み込みしてください。'))
   }, [])
+
+  // 実行サンプル: 被験者が選んだ造成地（最寄り）・昔の写真（1974〜78年）・保存した記録の近傍造成地を、実データから再計算して入れる
+  useEffect(() => {
+    if (!sample) return
+    setOld('gazo1')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (!sample || !fills.length) return
+    const first = nearbyFills(origin.lng, origin.lat, fills, 1)[0]
+    if (first) setSelFill(first.id)
+    const nf = nearestFill(SAMPLE_RECORD.lng, SAMPLE_RECORD.lat, fills)
+    setRawRecords((prev) => prev.map((r) => (r.id === SAMPLE_REC_ID ? { ...r, nearFill: nf } : r)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fills])
 
   /* ---------- 地図 ---------- */
   const onMapReady = useCallback((map: maplibregl.Map) => {

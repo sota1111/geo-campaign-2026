@@ -21,7 +21,7 @@ export function SampleBar({ appId }: { appId: string }) {
     >
       <PlayCircle className="size-4 shrink-0" />
       <span className="min-w-0 flex-1 md:truncate">
-        <b>実行サンプル</b>：{run.round}の試験で {run.tester} 被験者が操作した結果を再現しています。手順を押すと、被験者がその手順でしたことが出ます。操作しても保存されません。
+        <b>実行サンプル</b>：{run.tester} 被験者（{run.round.replace(/（.*/, '')}の試験）の操作結果を再現。手順を押すと被験者の操作が出ます（保存されません）
       </span>
       <Dialog>
         <DialogTrigger asChild>

@@ -9,6 +9,7 @@ import { downloadText } from '@/components/shared/downloadText'
 import { useHashState } from '@/components/shared/useHashState'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { fetchData } from '@/lib/data'
+import { isSampleMode } from '@/lib/sample'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ import { buildCsvRows, type PlanView } from './csv'
 import { SOURCE_LINES, limitLines } from './text'
 
 const APP = 'biz-business'
+const SAMPLE_MODE = isSampleMode()
 const PLAN_IDS = ['A', 'B', 'C']
 const n = (x: number) => x.toLocaleString('ja-JP')
 
@@ -101,7 +103,14 @@ export default function App() {
         const sel = d.routes.map((_, i) => i).filter((i) => d.routes[i][3] + d.routes[i][4] > 0)
         const both = (i: number) => [0, 1].reduce((s, fi) => s + planLoss(d.cells, wi, [i], fi, day, per, need).lost, 0)
         const ranked = sel.filter((i) => both(i) > 0).sort((a, b) => both(b) - both(a))
-        setPlans(PLAN_IDS.map((id, k) => ({ name: `案${id}`, routes: k < 2 && ranked[k] != null ? [ranked[k]] : [] })))
+        let init = PLAN_IDS.map((id, k) => ({ name: `案${id}`, routes: k < 2 && ranked[k] != null ? [ranked[k]] : [] }))
+        if (SAMPLE_MODE) {
+          // 実行サンプル: 被験者の到達状態（案A＝28 鍛冶屋原線＋21 鳴門線、案B＝21 鳴門線）。路線名で実データから引く
+          const find = (name: string) => d.routes.findIndex((r) => r[0] === name && !r[1])
+          const kaji = find('28 鍛冶屋原線'), naruto = find('21 鳴門線')
+          if (kaji >= 0 && naruto >= 0) init = init.map((p, k) => (k === 0 ? { ...p, routes: [kaji, naruto] } : k === 1 ? { ...p, routes: [naruto] } : p))
+        }
+        setPlans(init)
       })
       .catch((e) => alive && setError(`地域データを読み込めませんでした: ${e.message}`))
     return () => {
@@ -272,6 +281,14 @@ export default function App() {
   useEffect(() => {
     if (prereq[step]) setVisited((v) => (v[step] ? v : { ...v, [step]: true }))
   })
+  // 実行サンプル: 被験者は全手順を開きCSVを書き出したので、前提が満たされたら済にする（実際のダウンロードはしない）
+  useEffect(() => {
+    if (!SAMPLE_MODE || !data || !calc || ks.length < 2) return
+    setVisited((v) => (v.cond && v.planA && v.planB && v.verdict ? v : { cond: true, planA: true, planB: true, verdict: true }))
+    setExported(true)
+    setLastAction(`実行サンプル: 被験者が plan-comparison-${data.id}-${day}${per}${w}.csv を書き出しました（この画面ではダウンロードは行っていません）。`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, calc === null])
   useAppSteps(
     [
       { id: 'cond', title: TITLES.cond.title, hint: '初期値のままで可', done: !!visited.cond },

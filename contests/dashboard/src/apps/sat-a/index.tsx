@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { dataUrl } from '@/lib/data'
+import { isSampleMode } from '@/lib/sample'
 import { SatMap } from './SatMap'
 import {
   ApplyPanel, PickPanel, Round2Panel, ScanPanel, TopPanel, WeightPanel, type CalibResult, type PrevInfo,
@@ -36,6 +37,46 @@ const HINTS: Record<StepId, string> = {
   scan: '結果は乱数のシミュレーション',
   apply: '重みが更新され、順位が作り直される',
   round2: '第1回との対比を見る',
+}
+
+/** 第1回の走査: 選んだ区間を走査済みにして、較正の結果を作る（通常操作と実行サンプルで共通） */
+function scanOf(segs: Segment[], selected: Set<string>, results: Map<string, boolean>, cellSat: Record<string, number>, w: number) {
+  const nextResults = new Map(results)
+  const nextSegs = segs.map((s) => {
+    if (!selected.has(s.id)) return s
+    nextResults.set(s.id, s.sim_cavity)
+    return { ...s, surveyed: true }
+  })
+  const data3 = nextSegs.filter((s) => s.surveyed).map((s) => ({ ...s, hit: s.sim_cavity }))
+  const c = calibrate(data3, cellSat)
+  const calib: CalibResult = {
+    ...c,
+    ex0: exclusionAccuracy(data3, cellSat, w),
+    ex1: c.w === null ? null : exclusionAccuracy(data3, cellSat, c.w),
+    pastCount: data3.length - nextResults.size,
+  }
+  return { nextResults, nextSegs, calib }
+}
+
+/** 較正の反映: 次回の重み・比較用の情報・説明文を作る */
+function applyOf(segs: Segment[], cellSat: Record<string, number>, w: number, round: number, calib: CalibResult | null, scannedCount: number) {
+  const before = candidatesOf(rank(segs, cellSat, w))
+  const rankMap: Record<string, number> = {}
+  before.forEach((s, i) => (rankMap[s.id] = i + 1))
+  const newW = calib && calib.w !== null ? calib.w : w
+  const after = candidatesOf(rank(segs, cellSat, newW))
+  const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
+  const prev: PrevInfo = {
+    rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed,
+    calibrated: !!(calib && calib.w !== null), scanned: scannedCount,
+  }
+  let msg: string
+  if (calib && calib.w !== null) {
+    msg = `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（調査結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `走査した区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `走査した区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
+  } else {
+    msg = '較正に使える結果が不足していたため、重みは変えていません（走査済みの区間が候補から外れた分だけ順位が繰り上がります）。'
+  }
+  return { prev, msg, newW }
 }
 
 export default function App() {
@@ -75,7 +116,25 @@ export default function App() {
       .then((d) => {
         if (!alive) return
         setData(d)
-        setSegs(d.segments.map((s) => ({ ...s })))
+        const base = d.segments.map((s) => ({ ...s }))
+        if (!isSampleMode()) {
+          setSegs(base)
+          return
+        }
+        // 実行サンプル: 被験者の操作（初期の重み 50%・予算 3.0 km で「点数の上位から自動で選ぶ」→ 走査 → 較正を反映 →
+        // 第2回の順位を確認）を、実データで同じ計算にかけて再現する。表示値は直書きしない。
+        const cs = Object.fromEntries(d.cells.map((c) => [c.id, satNorm(c.disp)]))
+        const w0 = 0.5
+        const ids = new Set(selectByBudget(rank(base, cs, w0), 3))
+        const sc = scanOf(base, ids, new Map(), cs, w0)
+        const ap = applyOf(sc.nextSegs, cs, w0, 1, sc.calib, ids.size)
+        setSegs(sc.nextSegs)
+        setResults(sc.nextResults)
+        setPrev(ap.prev)
+        setMsg(ap.msg)
+        setW(ap.newW)
+        setRound(2)
+        setStep('round2')
       })
       .catch((e) => alive && setError(String(e)))
     return () => {
@@ -108,20 +167,8 @@ export default function App() {
 
   const doScan = () => {
     const ids = [...selected]
-    const nextResults = new Map(results)
-    const nextSegs = segs.map((s) => {
-      if (!selected.has(s.id)) return s
-      nextResults.set(s.id, s.sim_cavity)
-      return { ...s, surveyed: true }
-    })
-    const data3 = nextSegs.filter((s) => s.surveyed).map((s) => ({ ...s, hit: s.sim_cavity }))
-    const c = calibrate(data3, cellSat)
-    setCalib({
-      ...c,
-      ex0: exclusionAccuracy(data3, cellSat, w),
-      ex1: c.w === null ? null : exclusionAccuracy(data3, cellSat, c.w),
-      pastCount: data3.length - nextResults.size,
-    })
+    const { nextResults, nextSegs, calib: c } = scanOf(segs, selected, results, cellSat, w)
+    setCalib(c)
     setResults(nextResults)
     setSegs(nextSegs)
     setLastBatch(ids)
@@ -131,24 +178,10 @@ export default function App() {
 
   const applyCalib = () => {
     // 反映前の順位（走査済みを除いた候補の順位）を記録して、第2回との比較に使う
-    const before = candidatesOf(rank(segs, cellSat, w))
-    const rankMap: Record<string, number> = {}
-    before.forEach((s, i) => (rankMap[s.id] = i + 1))
-    const newW = calib && calib.w !== null ? calib.w : w
-    const after = candidatesOf(rank(segs, cellSat, newW))
-    const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
-    setPrev({
-      rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed,
-      calibrated: !!(calib && calib.w !== null), scanned: lastBatch.length,
-    })
-    if (calib && calib.w !== null) {
-      setMsg(
-        `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（調査結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `走査した区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `走査した区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`,
-      )
-    } else {
-      setMsg('較正に使える結果が不足していたため、重みは変えていません（走査済みの区間が候補から外れた分だけ順位が繰り上がります）。')
-    }
-    setW(newW)
+    const r = applyOf(segs, cellSat, w, round, calib, lastBatch.length)
+    setPrev(r.prev)
+    setMsg(r.msg)
+    setW(r.newW)
     setRound(round + 1)
     setRevealed(false)
     setCalib(null)

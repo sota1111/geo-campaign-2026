@@ -10,6 +10,7 @@ import { useAppSteps } from '@/components/shared/AppSteps'
 import { downloadGeoJson } from '@/components/shared/downloadText'
 import { useLocalStorage } from '@/components/shared/useLocalStorage'
 import { fetchData } from '@/lib/data'
+import { isSampleMode } from '@/lib/sample'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ import {
   setVerified, toGeoJSON,
   type LoreItem, type MemoryRecord, type SamplePlace,
 } from './logic'
+import { SAMPLE_OVERLAY_ID, SAMPLE_PLACE_NAME, SAMPLE_VISIBILITY } from './sample'
 import { applyOverlay, lorePopup, newPin, placePin, recordPin, recordPopup } from './mapHelpers'
 
 interface SamplesFile { notice: string; places: SamplePlace[] }
@@ -139,6 +141,7 @@ function SavedNotice({ rec }: { rec: MemoryRecord }) {
 }
 
 export default function BizIdeaApp() {
+  const sample = isSampleMode()
   const [lore, setLore] = useState<LoreItem[] | null>(null)
   const [places, setPlaces] = useState<SamplePlace[]>([])
   const [loadError, setLoadError] = useState('')
@@ -146,18 +149,19 @@ export default function BizIdeaApp() {
   const [focus, setFocus] = useState<Focus | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [radius, setRadius] = useState(1000)
-  const [overlayId, setOverlayId] = useState('none')
+  const [overlayId, setOverlayId] = useState(sample ? SAMPLE_OVERLAY_ID : 'none')
   const [opacity, setOpacity] = useState(70)
-  const [step, setStep] = useState<StepId>('place')
+  const [step, setStep] = useState<StepId>(sample ? 'export' : 'place')
   const [errors, setErrors] = useState<string[]>([])
   const [lastSavedId, setLastSavedId] = useState('')
   const [flash, setFlash] = useState(false)
   const [mapIdle, setMapIdle] = useState(false)
   const [exportNote, setExportNote] = useState('')
+  const sampleMapRef = useRef(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [map, setMap] = useState<maplibregl.Map | null>(null)
   const [zoom, setZoom] = useState(12)
-  const [done, setDone] = useState({ cross: false, overlay: false, published: false })
+  const [done, setDone] = useState({ cross: sample, overlay: sample, published: sample })
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [dlgVis, setDlgVis] = useState('')
   const [dlgLic, setDlgLic] = useState('CC BY 4.0')
@@ -166,12 +170,36 @@ export default function BizIdeaApp() {
   const overlayRef = useRef({ id: overlayId, opacity })
   overlayRef.current = { id: overlayId, opacity }
 
+  /* 実行サンプル: 被験者が最後に到達した状態（地名を選び、語りを写して保存し、確認済み・公開にして書き出した）をデータから再現する。
+     クリップボード・ダウンロードは行わない（書き出しは「済」の表示だけ） */
+  const applySample = (all: SamplePlace[]) => {
+    const p = all.find((x) => x.name === SAMPLE_PLACE_NAME)
+    if (!p) return
+    const base: FormState = {
+      ...EMPTY_FORM, placeName: p.name, placeType: PLACE_TYPES.includes(p.type) ? p.type : 'その他',
+      claimedKinds: p.claimedKinds, certainty: p.certainty,
+    }
+    const now = new Date().toISOString()
+    const made = createRecord({ ...base, story: p.story, basis: p.basis, teller: p.teller, lon: p.lon, lat: p.lat }, now)
+    setFocus({ lon: p.lon, lat: p.lat, place: p })
+    setForm(base)
+    if (!made.ok) return
+    const rec = { ...setVerified(made.record, '確認役（デモ）', now), visibility: SAMPLE_VISIBILITY as MemoryRecord['visibility'] }
+    setRecords([rec])
+    setLastSavedId(rec.id)
+    const n = toGeoJSON([rec], { onlyPublishable: true, exportedAt: now }).features.length
+    setExportNote(`${n}件を GeoJSON で書き出しました（chimei-kioku-public.geojson）。公開分です。端末内で作成し、送信はしていません。`)
+  }
+
   useEffect(() => {
     Promise.all([
       fetchData<SamplesFile>('biz-idea', 'samples.json'),
       fetchData<LoreFile>('biz-idea', 'lore.json'),
     ])
-      .then(([s, l]) => { setPlaces(s.places); setLore(l.items) })
+      .then(([s, l]) => {
+        setPlaces(s.places); setLore(l.items)
+        if (sample) applySample(s.places)
+      })
       .catch((e: Error) => setLoadError(e.message))
   }, [])
 
@@ -186,6 +214,12 @@ export default function BizIdeaApp() {
     m.on('style.load', reapply)
     m.on('zoomend', () => setZoom(Math.round(m.getZoom() * 10) / 10))
   }, [])
+
+  useEffect(() => {
+    if (!map || !sample || !focus || sampleMapRef.current) return
+    sampleMapRef.current = true
+    map.jumpTo({ center: [focus.lon, focus.lat], zoom: 14 })
+  }, [map, sample, focus])
 
   useEffect(() => {
     if (!map) return

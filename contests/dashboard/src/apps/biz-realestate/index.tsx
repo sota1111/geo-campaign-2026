@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { fetchData } from '@/lib/data'
+import { isSampleMode } from '@/lib/sample'
 import { cn } from '@/lib/utils'
 import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
@@ -101,18 +102,24 @@ const TONE: Record<Tone, { icon: typeof CheckCircle2; cls: string; sr: string }>
   unknown: { icon: HelpCircle, cls: 'text-neutral-600', sr: '分からない・取得できない' },
 }
 
+// 実行サンプル（?sample=1）: 第6回試験の被験者の到達状態。検索語・答えた項目は報告のとおり（表示値は実データで再計算）
+const SAMPLE_MODE = isSampleMode()
+const SUBJECT_QUERY = '徳島駅'
+const SUBJECT_ANSWERS: Answers = { landUse: 'その他', registered: '未' }
+const SUBJECT_SEEN = { answers: true, conditions: true, exits: true }
+
 export default function App() {
-  const [step, setStep] = useState('place')
+  const [step, setStep] = useState(SAMPLE_MODE ? 'print' : 'place')
   const [data, setData] = useState<AreaData | null>(null)
   const [dataError, setDataError] = useState(false)
   const [pin, setPin] = useState<{ lon: number; lat: number } | null>(null)
   const [facts, setFacts] = useState<Facts | null>(null)
-  const [answers, setAnswers] = useState<Answers>({})
+  const [answers, setAnswers] = useState<Answers>(SAMPLE_MODE ? SUBJECT_ANSWERS : {})
   const [overlay, setOverlay] = useState('none')
   const [showZones, setShowZones] = useState(true)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(SAMPLE_MODE ? SUBJECT_QUERY : '')
   const [hit, setHit] = useState<SearchHit | null>(null)
   const [address, setAddress] = useState<string | null | 'loading'>(null)
   const [seen, setSeen] = useState<Record<string, boolean>>({})
@@ -203,6 +210,15 @@ export default function App() {
     setStatus(f.inArea ? '' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。')
   }, [data])
 
+  // 実行サンプル: データが読めたら、被験者と同じく「徳島駅」の位置を土地として確定する（実データで再計算）
+  const sampleDone = useRef(false)
+  useEffect(() => {
+    if (!SAMPLE_MODE || sampleDone.current || !data) return
+    sampleDone.current = true
+    const h = pickSearchHit(SUBJECT_QUERY, [], data)
+    if (h) void choose(h.lon, h.lat, `検索した位置（${h.title}）`)
+  }, [data, choose])
+
   const onMapClick = useCallback((ll: { lng: number; lat: number }) => { void choose(ll.lng, ll.lat) }, [choose])
 
   const moveTo = (h: SearchHit) => {
@@ -256,7 +272,7 @@ export default function App() {
 
   // ---- 手順（サイドバー） ----
   // 土地が変わったら閲覧・印刷の記録をリセット。条件・4出口は、その手順を実際に開いたら「読んだ」とする
-  useEffect(() => { setSeen({}); setPrinted(false) }, [facts])
+  useEffect(() => { setSeen(SAMPLE_MODE && facts ? SUBJECT_SEEN : {}); setPrinted(false) }, [facts])
   useEffect(() => {
     if (facts && (step === 'answers' || step === 'conditions' || step === 'exits')) setSeen((s) => (s[step] ? s : { ...s, [step]: true }))
   }, [facts, step])

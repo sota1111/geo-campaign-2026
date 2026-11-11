@@ -28,6 +28,8 @@ import {
   rank, toCSV, type Dataset, type Mode, type PatrolResult, type RealRaw, type Ranked, type RealWeights,
   type SampleRaw, type SampleWeights, type Weights,
 } from './lib'
+import { isSampleMode } from '@/lib/sample'
+import { SAMPLE_RECORD } from './sample'
 import { SampleFrame, SiteMap, TilePhoto } from './parts'
 
 
@@ -71,18 +73,24 @@ const dateStr = (d = new Date()) =>
 
 interface Progress { data: boolean; ledger: boolean; plan: boolean; csv: boolean; record: boolean; check: boolean; last: string }
 const NO_PROGRESS: Progress = { data: false, ledger: false, plan: false, csv: false, record: false, check: false, last: '' }
+/** 被験者が済にした手順（報告: 手順1〜6を操作。CSV書き出しと巡視記録を実行） */
+const SAMPLE_PROGRESS: Partial<Progress> = { data: true, ledger: true, plan: true, csv: true, record: true, check: true, last: SAMPLE_RECORD.siteId }
 function useProgress(mode: Mode) {
   const key = `sat-b:progress:${mode}`
+  const sample = isSampleMode()
   const [p, setP] = useState<Progress>(() => {
+    // 実行サンプル: 被験者が済にした手順を済で始め、sessionStorage は読まない
+    if (sample) return mode === 'real' ? { ...NO_PROGRESS, ...SAMPLE_PROGRESS } : NO_PROGRESS
     try { return { ...NO_PROGRESS, ...(JSON.parse(window.sessionStorage.getItem(key) ?? 'null') ?? {}) } } catch { return NO_PROGRESS }
   })
   const set = useCallback((patch: Partial<Progress>) => {
     setP((cur) => {
       const next = { ...cur, ...patch }
+      if (sample) return next
       try { window.sessionStorage.setItem(key, JSON.stringify(next)) } catch { /* 無視 */ }
       return next
     })
-  }, [key])
+  }, [key, sample])
   return [p, set] as const
 }
 
@@ -146,10 +154,12 @@ function ModeToggle({ mode, setMode }: { mode: Mode; setMode: (m: string) => voi
 
 function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: string) => void }) {
   const real = mode === 'real'
-  const [step, setStep] = useState<StepId>('data')
-  const [results, setResults] = useLocalStorage<PatrolResult[]>(`sat-b:results:${mode}`, [])
+  // 実行サンプル（実データ版）: 被験者が最後に見た手順6の状態から始める
+  const seed = isSampleMode() && real
+  const [step, setStep] = useState<StepId>(seed ? 'check' : 'data')
+  const [results, setResults] = useLocalStorage<PatrolResult[]>(`sat-b:results:${mode}`, [], seed ? [SAMPLE_RECORD] : [])
   const [weights, setWeights] = useLocalStorage<Weights>(`sat-b:weights:${mode}`, clone(real ? DEFAULT_WEIGHTS_REAL : DEFAULT_WEIGHTS))
-  const [sel, setSel] = useState<string | null>(null)
+  const [sel, setSel] = useState<string | null>(seed ? SAMPLE_RECORD.siteId : null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [recSite, setRecSite] = useState<string>('')
   const [cap, setCap] = useState(5)

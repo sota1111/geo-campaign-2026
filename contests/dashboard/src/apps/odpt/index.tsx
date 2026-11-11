@@ -14,6 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { fetchData } from '@/lib/data'
+import { isSampleMode } from '@/lib/sample'
+import { SAMPLE_PLACE, SAMPLE_PT } from './sample'
 import { CopyPanel, HolPanel, LastPanel, MapSummary, NoPoint, VerdictPanel, type CondState, type DiagView } from './Conclusion'
 import { Seg } from './Seg'
 import { TIPS, Term } from './Term'
@@ -51,9 +53,14 @@ const SOURCES = [
   { name: '住所・駅名の検索', provider: '国土地理院 地名検索API（GETのみ）', url: 'https://msearch.gsi.go.jp/address-search/AddressSearch', note: '検索したときだけ入力文字列を国土地理院へ送ります。' },
 ]
 
+const ptKeyOf = (p: Pt) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`
+
 function readInit() {
   const q = window.location.hash.split('?')[1] ?? ''
-  return parseQuery(q)
+  const r = parseQuery(q)
+  // 実行サンプル: 被験者が診断した地点から始める（URLに地点があればそちらを優先）
+  if (isSampleMode() && !r.pt) r.pt = SAMPLE_PT
+  return r
 }
 
 export default function App() {
@@ -65,11 +72,11 @@ export default function App() {
   const [loadErr, setLoadErr] = useState<string | null>(null)
   const [cond, setCond] = useState<CondState>({ fi: init.fi ?? 0, day: init.day ?? 'wd', per: init.per ?? 'm', w: init.w ?? 30 })
   const [pt, setPt] = useState<Pt | null>(null)
-  const [placeLabel, setPlaceLabel] = useState('')
+  const [placeLabel, setPlaceLabel] = useState(isSampleMode() ? SAMPLE_PLACE : '')
   const [route, setRoute] = useState<string | null>(null)
   const [view, setView] = useState<View>({})
   const [vis, setVis] = useState({ cells: true, nodes: true, routes: true, fac: true, rail: true })
-  const [step, setStep] = useState('place')
+  const [step, setStep] = useState(isSampleMode() ? 'copy' : 'place')
   const [legendOpen, setLegendOpen] = useState(false)
   const [stopsOpen, setStopsOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -78,8 +85,8 @@ export default function App() {
   const [searching, setSearching] = useState(false)
   const [copied, setCopied] = useState(false)
   const [condTouched, setCondTouched] = useState(false)
-  const [seen, setSeen] = useState({ pt: '', verdict: false, cmp: false, last: false })
-  const [copiedPt, setCopiedPt] = useState('')
+  const [seen, setSeen] = useState(() => (isSampleMode() ? { pt: ptKeyOf(SAMPLE_PT), verdict: true, cmp: true, last: true } : { pt: '', verdict: false, cmp: false, last: false }))
+  const [copiedPt, setCopiedPt] = useState(isSampleMode() ? ptKeyOf(SAMPLE_PT) : '')
   const [all, setAll] = useState<RegionData[] | null>(null)
   const [allErr, setAllErr] = useState<string | null>(null)
   const pending = useRef<{ pt: Pt | null; route: string | null }>({ pt: init.pt ?? null, route: init.route ?? null })
