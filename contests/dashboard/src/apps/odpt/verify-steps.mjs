@@ -82,6 +82,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
     if (id === 'verdict') console.log('  verdict:', (await ev(`document.querySelector('[data-testid=verdict-main]')?.innerText`)))
     if (id === 'hol') console.log('  hol:', (await ev(`document.querySelector('[data-testid=compare-days]')?.innerText`)).replace(/\n+/g, ' / '))
     if (id === 'last') console.log('  last:', (await ev(`document.querySelector('[data-testid=last-bus]')?.innerText`)).replace(/\n+/g, ' / '))
+    if (id === 'last') console.log('  panel body scrollH/clientH:', await ev(`(()=>{const e=document.querySelector('[data-testid=step-panel-body]');return e.scrollHeight+'/'+e.clientHeight})()`), 'stops-detail open?', await ev(`!!document.querySelector('[data-testid=stops-detail]')`))
     if (id === 'copy') {
       await realClick('[data-testid=copy-conclusion]'); await sleep(1000)
       console.log('  copy status:', await ev(`document.querySelector('[data-testid=copy-done]')?.innerText`))

@@ -60,7 +60,10 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 800, false], ['mobile', 3
     const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnByValue: true })).result?.result?.value
     const canvas = await ev('!!document.querySelector(".maplibregl-canvas")')
     const back = await ev('document.querySelector("header a[href$=\\"index.html\\"]")?.getAttribute("href") ?? null')
-    result.push({ viewport: label, route, canvas, back, h1: title, shot: name, consoleErrors: [...logs] })
+    const sw = await ev('document.documentElement.scrollWidth')
+    const sh = await ev('document.documentElement.scrollHeight')
+    const topbar = await ev('document.querySelector("[data-testid=steps-topbar-main]")?.textContent ?? null')
+    result.push({ viewport: label, route, scrollWidth: sw, scrollHeight: sh, topbar, canvas, back, h1: title, shot: name, consoleErrors: [...logs] })
   }
 }
 console.log(JSON.stringify(result, null, 2))

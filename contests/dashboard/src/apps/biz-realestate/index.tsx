@@ -50,7 +50,7 @@ const STEP_META: Record<string, { title: string; hint: string }> = {
   answers: { title: '地図では分からないことに答える（任意）', hint: '建物・地目・接道・相続登記。選ぶとシートに反映されます' },
   conditions: { title: '土地の条件を確かめる', hint: '用途地域・災害の想定区域など（公開データから）' },
   exits: { title: '4つの出口の「聞くこと」を読む', hint: '売る・貸す・活かす・手放す。相談先に聞くことの一覧です' },
-  print: { title: '印刷・PDFで保存する', hint: '右のシートがA4・1ページで印刷されます' },
+  print: { title: '印刷・PDFで保存する', hint: '印刷すると1枚シートだけがA4・1ページで出ます' },
 }
 
 // ---- 専門用語のその場の説明（ツールチップ。タップでも開閉） ----
@@ -359,7 +359,7 @@ export default function App() {
 
   const noLand = (
     <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground" data-testid="no-land">
-      土地の位置がまだ決まっていません。手順1で位置を決めると、ここに内容が出ます。
+      土地の位置がまだ決まっていません。土地の位置を決める手順を済ませると、内容が出ます。
     </p>
   )
 
@@ -369,12 +369,14 @@ export default function App() {
       case 'place':
         return (
           <div className="space-y-3">
-            <form className="flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); void runSearch(query) }} role="search">
-              <Label htmlFor="rs-q" className="sr-only">住所・目印を検索</Label>
-              <Input id="rs-q" type="search" className="min-w-0 flex-1 basis-40" placeholder="例: 徳島駅、徳島市役所、徳島市幸町" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)} />
-              <Button type="submit"><Search className="size-4" />検索</Button>
-              <Button type="button" variant="outline" onClick={() => moveTo(pickSearchHit('徳島駅', [], data) ?? { lon: 134.5515, lat: 34.07451, title: '徳島駅' })}>徳島駅付近を表示</Button>
-            </form>
+            <div className="space-y-1.5">
+              <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void runSearch(query) }} role="search">
+                <Label htmlFor="rs-q" className="sr-only">住所・目印を検索</Label>
+                <Input id="rs-q" type="search" className="min-w-0 flex-1" placeholder="例: 徳島駅、徳島市役所、幸町" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <Button type="submit"><Search className="size-4" />検索</Button>
+              </form>
+              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => moveTo(pickSearchHit('徳島駅', [], data) ?? { lon: 134.5515, lat: 34.07451, title: '徳島駅' })}>検索せずに徳島駅付近を表示</Button>
+            </div>
             {hit && (
               <div className="space-y-2 rounded-lg border-2 border-sky-700 bg-sky-50 p-3" data-testid="use-hit" role="status">
                 <p className="text-sm font-bold">「{hit.title}」の位置が土地ですか？（地図の青いマーカー）</p>

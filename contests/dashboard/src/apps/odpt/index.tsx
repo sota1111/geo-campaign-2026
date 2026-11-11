@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type maplibregl from 'maplibre-gl'
-import { Search } from 'lucide-react'
+import { ChevronDown, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { useAppSteps } from '@/components/shared/AppSteps'
@@ -9,7 +9,6 @@ import { SourceDialog } from '@/components/shared/SourceDialog'
 import { parseHashQuery, withHashQuery } from '@/components/shared/hashState'
 import { StepLayout } from '@/components/shared/StepLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -72,13 +71,14 @@ export default function App() {
   const [vis, setVis] = useState({ cells: true, nodes: true, routes: true, fac: true, rail: true })
   const [step, setStep] = useState('place')
   const [legendOpen, setLegendOpen] = useState(false)
+  const [stopsOpen, setStopsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [searchMsg, setSearchMsg] = useState('')
   const [cands, setCands] = useState<Cand[]>([])
   const [searching, setSearching] = useState(false)
   const [copied, setCopied] = useState(false)
   const [condTouched, setCondTouched] = useState(false)
-  const [seen, setSeen] = useState({ pt: '', cmp: false, last: false })
+  const [seen, setSeen] = useState({ pt: '', verdict: false, cmp: false, last: false })
   const [copiedPt, setCopiedPt] = useState('')
   const [all, setAll] = useState<RegionData[] | null>(null)
   const [allErr, setAllErr] = useState<string | null>(null)
@@ -380,13 +380,13 @@ export default function App() {
   // ---- 左サイドバー（手順）。メインには選んだ手順の内容だけを出す。done は画面の状態・実際の操作で判定する ----
   const hasPt = Boolean(pt && data)
   const verdictShown = hasPt && diag?.v != null
-  // 「比べた」「最終便を見た」は、その手順のパネルを開いた時点で済にする（自動では切り替えない）。地点を変えたらやり直し
+  // 「見る」手順は、前提（診断できる地点）がある状態でその手順を表示したら済。自動では切り替えない。地点を変えたらやり直し
   useEffect(() => {
-    if (!verdictShown || (step !== 'hol' && step !== 'last')) return
-    const k = step === 'hol' ? 'cmp' : 'last'
-    setSeen((v) => (v.pt === ptKey ? { ...v, [k]: true } : { pt: ptKey, cmp: false, last: false, [k]: true }))
+    if (!verdictShown || (step !== 'verdict' && step !== 'hol' && step !== 'last')) return
+    setSeen((v) => ({ ...(v.pt === ptKey ? v : { pt: ptKey, verdict: false, cmp: false, last: false }), [step === 'hol' ? 'cmp' : step]: true }))
   }, [step, verdictShown, ptKey])
   const seenHere = seen.pt === ptKey
+  const seenVerdict = hasPt && seenHere && seen.verdict
   const seenCmp = hasPt && seenHere && seen.cmp
   const seenLast = hasPt && seenHere && seen.last
   const condHint = data
@@ -395,8 +395,8 @@ export default function App() {
   const stepDefs = [
     { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: hasPt },
     { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true },
-    { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: verdictShown },
-    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp || (verdictShown && cond.day === 'hol') },
+    { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: seenVerdict },
+    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp },
     { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
     { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', done: hasPt && copiedPt === ptKey },
     { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
@@ -492,6 +492,9 @@ export default function App() {
               )}
             </div>
           </form>
+          <p className="text-xs text-muted-foreground">
+            <Term tip={coverageTip}>診断の範囲</Term>: 収録した事業者のバスだけが対象です（実データに基づく推計）。
+          </p>
           {!hasPt && (
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-xs text-muted-foreground">駅名の例:</span>
@@ -520,9 +523,19 @@ export default function App() {
       {step === 'verdict' && (hasPt ? <VerdictPanel d={dv} /> : needPt)}
       {step === 'hol' && (hasPt ? <HolPanel d={dv} /> : needPt)}
       {step === 'last' && (hasPt ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           <LastPanel d={dv} />
-          <StopsPanel data={data} cond={cond} cell={diag?.cell ?? null} near={diag?.near ?? []} labels={diag?.labels ?? []} />
+          <div className="rounded-md border">
+            <Button type="button" variant="ghost" className="h-auto w-full justify-between px-3 py-2 text-sm font-medium" aria-expanded={stopsOpen} data-testid="stops-toggle"
+              onClick={() => setStopsOpen((o) => !o)}>
+              近くの停留所の一覧と診断表{stopsOpen ? '（閉じる）' : '（開く）'}<ChevronDown className={`size-4 transition-transform ${stopsOpen ? 'rotate-180' : ''}`} />
+            </Button>
+            {stopsOpen && (
+              <div className="border-t p-3" data-testid="stops-detail">
+                <StopsPanel data={data} cond={cond} cell={diag?.cell ?? null} near={diag?.near ?? []} labels={diag?.labels ?? []} />
+              </div>
+            )}
+          </div>
         </div>
       ) : needPt)}
       {step === 'copy' && (hasPt ? <CopyPanel copyText={copyText} onCopy={onCopy} copied={copied} isLocal={isLocal()} /> : needPt)}
@@ -594,12 +607,7 @@ export default function App() {
       <PageHeader
         appId="odpt"
         compact
-        actions={
-          <>
-            <Term tip={coverageTip}><Badge variant="outline" className="cursor-help">収録した範囲のバスのみ</Badge></Term>
-            <SourceDialog sources={SOURCES} />
-          </>
-        }
+        actions={<SourceDialog sources={SOURCES} />}
       />
       <StepLayout title={stepTitle} hint={stepDefs.find((x) => x.id === step)?.hint} aside={mapAside}>
         {panel}

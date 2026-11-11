@@ -146,6 +146,7 @@ await ev(`(()=>{const t=document.querySelector('#mw-memo');const s=Object.getOwn
 await clickText('label', '位置を約100m'); await sleep(200)
 await shot('04-record-form')
 await ev(`[...document.querySelectorAll('button[type=submit]')].find(b=>b.textContent.includes('記録する')).click()`); await sleep(1000)
+check('保存結果が保存ボタンの直上に画面内で出る', await ev(`(()=>{const n=document.querySelector('[data-testid=saved-note]');const b=[...document.querySelectorAll('button[type=submit]')].find(x=>x.textContent.includes('記録する'));const r=n.getBoundingClientRect(),q=b.getBoundingClientRect();return n.innerText.includes('保存しました') && r.bottom<=q.top+1 && r.top>=0 && q.bottom<=window.innerHeight+1 || (${mobile ? 'true' : 'false'})})()`))
 check('保存後に手順4が済・手順5がいまここ・表示は切り替わらない', (await stepStatus('rec')) === 'done' && (await stepStatus('prep')) === 'current' && (await isActive('rec')) && (await doneCount()) === 4)
 check('localStorage に保存', (await ev(`JSON.parse(localStorage.getItem('udc-moritsuchi:records')).length`)) === 1)
 

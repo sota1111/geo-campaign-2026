@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ClipboardList, Download, SatelliteDish } from 'lucide-react'
+import { Download, SatelliteDish } from 'lucide-react'
 import { StepLayout } from '@/components/shared/StepLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { DataBadge } from '@/components/shared/DataBadge'
@@ -69,6 +69,23 @@ const dateStr = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 
+interface Progress { data: boolean; ledger: boolean; plan: boolean; csv: boolean; record: boolean; check: boolean; last: string }
+const NO_PROGRESS: Progress = { data: false, ledger: false, plan: false, csv: false, record: false, check: false, last: '' }
+function useProgress(mode: Mode) {
+  const key = `sat-b:progress:${mode}`
+  const [p, setP] = useState<Progress>(() => {
+    try { return { ...NO_PROGRESS, ...(JSON.parse(window.sessionStorage.getItem(key) ?? 'null') ?? {}) } } catch { return NO_PROGRESS }
+  })
+  const set = useCallback((patch: Partial<Progress>) => {
+    setP((cur) => {
+      const next = { ...cur, ...patch }
+      try { window.sessionStorage.setItem(key, JSON.stringify(next)) } catch { /* 無視 */ }
+      return next
+    })
+  }, [key])
+  return [p, set] as const
+}
+
 function useIsDesktop() {
   const q = '(min-width: 768px)'
   const [v, setV] = useState(() => (typeof window !== 'undefined' ? window.matchMedia(q).matches : true))
@@ -109,13 +126,13 @@ export default function App() {
 
 type StepId = 'data' | 'ledger' | 'plan' | 'csv' | 'record' | 'check' | 'tune'
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
-  data: { title: '1. データを確かめる', hint: '実データ（横須賀市）であること、衛星由来の変化量が未接続であることを確認' },
-  ledger: { title: '2. 台帳で優先度と内訳を見る', hint: '行か地図の点を選ぶと、地図の上に点数の内訳と前後の写真が出ます' },
-  plan: { title: '3. 件数を決めて計画を作る', hint: '巡視できる件数を入れると、優先度の上位から回り順に並びます' },
-  csv: { title: '4. 計画をCSVで書き出す', hint: '書き出す内容を確かめて保存します' },
-  record: { title: '5. 巡視結果を記録する', hint: '地点・巡視日・巡視者・結果を入れて「記録する」' },
-  check: { title: '6. 台帳に反映されたか確かめる', hint: '台帳の「最新の巡視」に、記録した結果が出ています' },
-  tune: { title: '参考. 検出条件の見直し', hint: '巡視結果を集計し、型ごとの重みを手で調整します（任意）' },
+  data: { title: 'データを確かめる', hint: '実データ（横須賀市）であること、衛星由来の変化量が未接続であることを確認' },
+  ledger: { title: '台帳で優先度と内訳を見る', hint: '行か地図の点を選ぶと、地図の上に点数の内訳と前後の写真が出ます' },
+  plan: { title: '件数を決めて計画を作る', hint: '巡視できる件数を入れると、優先度の上位から回り順に並びます' },
+  csv: { title: '計画をCSVで書き出す', hint: '書き出す内容を確かめて保存します' },
+  record: { title: '巡視結果を記録する', hint: '地点・巡視日・巡視者・結果を入れて「記録する」' },
+  check: { title: '台帳に反映されたか確かめる', hint: '台帳の「最新の巡視」に、記録した結果が出ています' },
+  tune: { title: '検出条件の見直し（参考）', hint: '巡視結果を集計し、型ごとの重みを手で調整します（任意）' },
 }
 
 function ModeToggle({ mode, setMode }: { mode: Mode; setMode: (m: string) => void }) {
@@ -141,14 +158,14 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   const [unvisited, setUnvisited] = useState(false)
   const isDesktop = useIsDesktop()
   // 手順の進み具合（この画面を開いてからの操作で判定。前の利用者の記録は数えない）
-  const [dataChecked, setDataChecked] = useState(false)
-  const [planSeen, setPlanSeen] = useState(false)
-  const [planExported, setPlanExported] = useState(false)
-  const [recordedNow, setRecordedNow] = useState(false)
-  const [ledgerChecked, setLedgerChecked] = useState(false)
-  const [lastRecorded, setLastRecorded] = useState('')
-  useEffect(() => { if (step === 'plan') setPlanSeen(true) }, [step])
-  useEffect(() => { if (step === 'check' && recordedNow) setLedgerChecked(true) }, [step, recordedNow])
+  // 済の印はタブのセッションに保存し、再描画・再読み込みでは消さない（記録したデータの種類を変えた時だけ別管理）
+  const [prog, setProg] = useProgress(mode)
+  const dataChecked = prog.data, planSeen = prog.plan, planExported = prog.csv, recordedNow = prog.record, ledgerChecked = prog.check
+  const lastRecorded = prog.last
+  const setDataChecked = (b: boolean) => setProg({ data: b })
+  useEffect(() => { if (step === 'plan' && !prog.plan) setProg({ plan: true }) }, [step, prog.plan, setProg])
+  useEffect(() => { if (sel && !prog.ledger) setProg({ ledger: true }) }, [sel, prog.ledger, setProg])
+  useEffect(() => { if (step === 'check' && prog.record && !prog.check) setProg({ check: true }) }, [step, prog.record, prog.check, setProg])
 
   const ranked = useMemo(() => rank(ds.sites, weights, ds.refDate, results, mode), [ds, weights, results, mode])
   const rows = useMemo(
@@ -165,12 +182,11 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   }
 
   const select = (id: string) => { setSel(id); setDetailOpen(true) }
-  const goRecord = (id: string) => { setRecSite(id); setDetailOpen(false); setStep('record') }
-
+  
   useAppSteps(
     [
       { id: 'data', title: 'データを確かめる', hint: real ? '実データ・未接続の確認' : '「実データ（横須賀市）」を選ぶ', done: real && dataChecked },
-      { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '行を選ぶと内訳が出る', done: !!sel },
+      { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '行を選ぶと内訳が出る', done: prog.ledger },
       { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', done: planSeen },
       { id: 'csv', title: '計画をCSVで書き出す', done: planExported },
       { id: 'record', title: '巡視結果を記録する', done: recordedNow },
@@ -207,7 +223,7 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
             <Button size="sm" variant="ghost" className="h-7 px-2" aria-label="詳細を閉じる" onClick={() => setDetailOpen(false)}>閉じる</Button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            <SiteDetail s={selSite} mode={mode} results={results} onRecord={goRecord} />
+            <SiteDetail s={selSite} mode={mode} results={results} />
           </div>
         </div>
       )}
@@ -250,13 +266,13 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
           />
         )}
         {step === 'plan' && (
-          <PlanPanel mode={mode} plan={plan} cap={cap} setCap={setCap} sel={sel} onSelect={select} onRecord={goRecord} />
+          <PlanPanel mode={mode} plan={plan} cap={cap} setCap={setCap} sel={sel} onSelect={select} />
         )}
-        {step === 'csv' && <CsvPanel mode={mode} plan={plan} note={note} onExported={() => setPlanExported(true)} />}
+        {step === 'csv' && <CsvPanel mode={mode} plan={plan} note={note} onExported={() => setProg({ csv: true })} />}
         {step === 'record' && (
           <RecordPanel
-            mode={mode} ranked={ranked} results={results} setResults={setResults} recSite={recSite || ranked[0]?.id || ''}
-            setRecSite={setRecSite} onRecorded={(id) => { setRecordedNow(true); setLastRecorded(id) }}
+            mode={mode} ranked={ranked} planIds={plan.route.map((s) => s.id)} results={results} setResults={setResults} recSite={recSite || plan.route.find((s) => !s.latest)?.id || plan.route[0]?.id || ranked[0]?.id || ''}
+            setRecSite={setRecSite} onRecorded={(id) => setProg({ record: true, last: id })}
           />
         )}
         {step === 'check' && (
@@ -272,7 +288,7 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
               <SheetTitle>{selSite?.id}</SheetTitle>
               <SheetDescription>順位 {selSite?.rank}／点数 {selSite?.score}</SheetDescription>
             </SheetHeader>
-            {selSite && <SiteDetail s={selSite} mode={mode} results={results} onRecord={goRecord} />}
+            {selSite && <SiteDetail s={selSite} mode={mode} results={results} />}
           </SheetContent>
         </Sheet>
       )}
@@ -370,8 +386,8 @@ function LedgerPanel({ mode, rows, ranked, sel, onSelect, note, zone, setZone, s
           ranked.map((s) => [s.rank, s.score, s.id, s.name, s.change, s.zone, s.permit, s.detected, s.latest?.result ?? '', note])),
     'text/csv;charset=utf-8')
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="flex flex-col gap-2 md:h-full">
+      <div className="grid shrink-0 grid-cols-2 gap-2">
         <Select value={zone} onValueChange={(v) => { setZone(v); setShown(PAGE) }}>
           <SelectTrigger className="w-full" aria-label="区域で絞り込む"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -387,18 +403,18 @@ function LedgerPanel({ mode, rows, ranked, sel, onSelect, note, zone, setZone, s
           </SelectContent>
         </Select>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <Label className="flex items-center gap-2 text-sm">
           <Checkbox checked={unvisited} onCheckedChange={(c) => { setUnvisited(c === true); setShown(PAGE) }} />未巡視のみ
         </Label>
-        <Button variant="outline" size="sm" onClick={exportLedger}><Download className="size-4" />台帳をCSVで書き出す</Button>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={exportLedger}><Download className="size-3.5" />台帳の全件をCSVで保存（ledger.csv）</Button>
       </div>
-      <p className="text-xs text-muted-foreground" aria-live="polite">
+      <p className="shrink-0 text-xs text-muted-foreground" aria-live="polite">
         {rows.length}件中 {Math.min(rows.length, shown)}件（点数の高い順）。写真の「前」は1974〜78年、「現在」は地理院のシームレス写真。
       </p>
-      <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
+      <div className="overflow-x-auto rounded-md border md:min-h-0 md:flex-1 md:overflow-auto [&_[data-slot=table-container]]:overflow-visible [&_td]:px-1.5 [&_th]:px-1.5">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background shadow-[0_1px_0_var(--border)]">
             <TableRow>
               <TableHead>順位</TableHead><TableHead>点数</TableHead>
               <TableHead>{real ? 'ID・型' : '名称・ID'}</TableHead>
@@ -432,16 +448,16 @@ function LedgerPanel({ mode, rows, ranked, sel, onSelect, note, zone, setZone, s
           </TableBody>
         </Table>
       </div>
-      {rows.length > shown && <Button variant="outline" size="sm" onClick={() => setShown(shown + PAGE)}>さらに表示（+{PAGE}件）</Button>}
+      {rows.length > shown && <Button variant="outline" size="sm" className="shrink-0" onClick={() => setShown(shown + PAGE)}>さらに表示（+{PAGE}件）</Button>}
     </div>
   )
 }
 
 // ---------------- 3 計画 ----------------
 type Plan = ReturnType<typeof planRoute<Ranked>>
-function PlanPanel({ mode, plan, cap, setCap, sel, onSelect, onRecord }: {
+function PlanPanel({ mode, plan, cap, setCap, sel, onSelect }: {
   mode: Mode; plan: Plan; cap: number; setCap: (n: number) => void; sel: string | null
-  onSelect: (id: string) => void; onRecord: (id: string) => void
+  onSelect: (id: string) => void
 }) {
   const real = mode === 'real'
   return (
@@ -470,7 +486,7 @@ function PlanPanel({ mode, plan, cap, setCap, sel, onSelect, onRecord }: {
       </p>
       <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
         <Table>
-          <TableHeader><TableRow><TableHead>順</TableHead><TableHead>地点と点数の内訳</TableHead><TableHead>点数</TableHead><TableHead>記録</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>順</TableHead><TableHead>地点と点数の内訳</TableHead><TableHead>点数</TableHead></TableRow></TableHeader>
           <TableBody>
             {plan.route.map((s, i) => (
               <TableRow key={s.id} data-state={s.id === sel ? 'selected' : undefined} className="cursor-pointer" onClick={() => onSelect(s.id)}>
@@ -481,10 +497,6 @@ function PlanPanel({ mode, plan, cap, setCap, sel, onSelect, onRecord }: {
                   <div className="mt-0.5"><PartsInline parts={s.parts} /></div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-xs">{s.score}<div className="text-muted-foreground">{s.rank}位</div></TableCell>
-                <TableCell>
-                  <Button size="sm" variant="outline" className="h-auto whitespace-nowrap px-2 py-1 text-xs" aria-label={`${s.id} の結果を記録する`}
-                    onClick={(e) => { e.stopPropagation(); onRecord(s.id) }}>結果を記録</Button>
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -523,8 +535,8 @@ function CsvPanel({ mode, plan, note, onExported }: { mode: Mode; plan: Plan; no
 }
 
 // ---------------- 5 記録 ----------------
-function RecordPanel({ mode, ranked, results, setResults, recSite, setRecSite, onRecorded }: {
-  mode: Mode; ranked: Ranked[]; results: PatrolResult[]; setResults: (r: PatrolResult[]) => void
+function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setRecSite, onRecorded }: {
+  planIds: string[]; mode: Mode; ranked: Ranked[]; results: PatrolResult[]; setResults: (r: PatrolResult[]) => void
   recSite: string; setRecSite: (id: string) => void; onRecorded: (id: string) => void
 }) {
   const real = mode === 'real'
@@ -562,7 +574,14 @@ function RecordPanel({ mode, ranked, results, setResults, recSite, setRecSite, o
       <div className="space-y-1">
         <Label htmlFor="sat-b-site">地点{rec ? `（順位 ${rec.rank}／点数 ${rec.score}）` : ''}</Label>
         <select id="sat-b-site" aria-label="巡視した地点" value={recSite} onChange={(e) => setRecSite(e.target.value)} className={NATIVE_SELECT}>
-          {ranked.map((s) => <option key={s.id} value={s.id}>{s.rank}位 {s.id}{real ? ` ${s.type}` : ` ${s.name}`}</option>)}
+          <optgroup label="手順3で作った計画の地点（回る順）">
+            {planIds.map((id) => ranked.find((s) => s.id === id)).filter((s): s is Ranked => !!s).map((s) => (
+              <option key={s.id} value={s.id}>{s.rank}位 {s.id}{real ? ` ${s.type}` : ` ${s.name}`}{s.latest ? '（巡視済み）' : ''}</option>
+            ))}
+          </optgroup>
+          <optgroup label="台帳のそのほかの地点（順位順）">
+            {ranked.filter((s) => !planIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{s.rank}位 {s.id}{real ? ` ${s.type}` : ` ${s.name}`}</option>)}
+          </optgroup>
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -643,7 +662,7 @@ function CheckPanel({ ranked, results, sel, onSelect, onReset }: {
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="mr-auto text-xs font-medium">記録一覧（{results.length}件）</p>
-          <Button variant="outline" size="sm" onClick={exportRec} disabled={!results.length}><Download className="size-4" />記録をCSVで書き出す</Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={exportRec} disabled={!results.length}><Download className="size-3.5" />巡視記録の一覧をCSVで保存（patrol-records.csv）</Button>
         </div>
         <p className="text-xs text-muted-foreground">この端末のブラウザに保存された記録です（外部へ送信されません）。前の利用者の記録が残っている場合があります。</p>
         <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
@@ -686,7 +705,7 @@ function ResultTag({ r }: { r: PatrolResult | null }) {
 }
 
 
-function SiteDetail({ s, mode, results, onRecord }: { s: Ranked; mode: Mode; results: PatrolResult[]; onRecord: (id: string) => void }) {
+function SiteDetail({ s, mode, results }: { s: Ranked; mode: Mode; results: PatrolResult[] }) {
   const real = mode === 'real'
   const hist = results.filter((r) => r.siteId === s.id).reverse()
   return (
@@ -737,7 +756,6 @@ function SiteDetail({ s, mode, results, onRecord }: { s: Ranked; mode: Mode; res
           : <span className="text-muted-foreground">なし</span>}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => onRecord(s.id)}><ClipboardList className="size-4" />この地点の結果を記録する</Button>
         {real && s.lat != null && (
           <Button size="sm" variant="outline" asChild>
             <a href={`https://maps.gsi.go.jp/#17/${s.lat}/${s.lon}/`} target="_blank" rel="noopener noreferrer">地理院地図で開く</a>

@@ -49,7 +49,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   const step = async (sid) => { await openTop(); R.log.push(sid + ':' + await click(`[data-step=${sid}]`)); await sleep(1000); R.heights[sid] = await heights(); await shot(`steps-${label}-${sid}.png`) }
   R.initial = await (async () => { await openTop(); const s = await statuses(); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })()
   await step('data'); R.confirm = await click('button[aria-pressed]', '確認した'); await sleep(300)
-  await step('ledger'); R.row = await click('tbody tr[data-id]'); await sleep(1500); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
+  await step('ledger'); R.ledgerScroll = await ev('(()=>{const c=[...document.querySelectorAll("[data-testid=step-panel-body] div")].find(d=>d.scrollHeight>d.clientHeight+20&&getComputedStyle(d).overflowY!=="visible");return c?c.scrollHeight+">"+c.clientHeight:"none"})()'); R.row = await click('tbody tr[data-id]'); await sleep(1500); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
   if (mobile) { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(500) }
   await step('plan'); R.cap = await ev('document.querySelector("#sat-b-cap")?.value')
   await ev('window.__dlname=[];HTMLAnchorElement.prototype.click=function(){window.__dlname.push(this.download)}')
@@ -62,6 +62,9 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await step('tune')
   R.final = await (async () => { await openTop(); return statuses() })()
   await shot(`steps-${label}-final.png`)
+  await ev('location.reload()'); await sleep(3500)
+  R.afterReload = await (async () => { await openTop(); return statuses() })()
+  R.titles = await ev('[...document.querySelectorAll("[data-testid=step-layout] h2")].map(e=>e.textContent).join("|")')
   R.topbar = await ev('(document.querySelector("[data-testid=steps-topbar]")||document.body).innerText.slice(0,60)')
   R.allDoneText = await ev('document.body.innerText.includes("すべて完了")')
   R.errors = [...logs]; res[label] = R; logs.length = 0

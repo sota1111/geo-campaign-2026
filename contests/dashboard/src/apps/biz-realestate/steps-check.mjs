@@ -38,11 +38,11 @@ const click = async (x, y) => { for (const t of ['mousePressed', 'mouseReleased'
 const pages = (b) => (b.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length
 // usage: node src/apps/biz-realestate/steps-check.mjs <out_dir>   （要: vite preview --port 8847。独立ページ /apps/biz-realestate/）
 const statuses = () => ev(`JSON.stringify([...document.querySelectorAll('[data-step]')].filter(b=>b.offsetParent!==null).map(b=>b.dataset.step+':'+b.dataset.status))`)
-const scrollInfo = () => ev(`JSON.stringify({docH: document.documentElement.scrollHeight, bodyH: document.body.scrollHeight, vh: innerHeight})`)
+const scrollInfo = () => ev(`JSON.stringify({docH: document.documentElement.scrollHeight, bodyH: document.body.scrollHeight, vh: innerHeight, panel: (p=>p&&[p.scrollHeight,p.clientHeight])(document.querySelector('[data-testid=step-panel-body]')), title: document.querySelector('[data-testid=step-layout] h2')?.textContent, sidebarHint: [...document.querySelectorAll('[data-step=print]')].map(b=>b.innerText.replace(/\\n/g,' / '))[0]})`)
 for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   logs.length = 0
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
-  await send('Page.navigate', { url: 'http://127.0.0.1:8847/apps/biz-realestate/' })
+  await send('Page.navigate', { url: `http://127.0.0.1:${process.env.PORT || 8847}/apps/biz-realestate/` })
   await sleep(3000)
   const openList = async () => { if (mobile && !(await ev(`!!document.querySelector('[data-step]')?.offsetParent`))) { await ev(`document.querySelector('[data-testid=steps-topbar] button').click()`); await sleep(300) } }
   const pick = async (id) => { await openList(); await ev(`document.querySelector('[data-step=${id}]').click()`); await sleep(1000) }

@@ -105,6 +105,9 @@ export function TopPanel({
 }: { candidates: Scored[]; focus: string | null; onFocus: (id: string) => void }) {
   const km = candidates.reduce((a, s) => a + s.lenM, 0) / 1000
   const best = candidates[0]
+  // 表示（小数2桁）で同点の区間
+  const ties = best ? candidates.filter((s) => s.score.toFixed(2) === best.score.toFixed(2)) : []
+  const tieIds = ties.slice(0, 3).map((s) => s.id).join('・') + (ties.length > 3 ? ` ほか${ties.length - 3}` : '')
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
@@ -113,9 +116,9 @@ export function TopPanel({
       <div className="grid grid-cols-2 gap-2">
         <Metric label="未調査の生活道路" value={`${candidates.length} 区間`} sub={`合計 ${fmt1(km)} km`} testId="m-count" />
         <Metric
-          label="点数が最も高い区間"
-          value={best ? best.id : '—'}
-          sub={best ? `点数 ${best.score.toFixed(2)}／区画 ${best.cell}／布設 ${best.year}年` : ''}
+          label={ties.length > 1 ? `点数が最も高い区間（同点 ${ties.length} 区間）` : '点数が最も高い区間'}
+          value={best ? (ties.length > 1 ? tieIds : best.id) : '—'}
+          sub={best ? `点数 ${best.score.toFixed(2)}${ties.length > 1 ? `（小数2桁で同点。表の1位は ${best.id}）` : `／区画 ${best.cell}／布設 ${best.year}年`}` : ''}
           testId="m-top"
         />
       </div>
@@ -387,7 +390,7 @@ export function Round2Panel({
         <TableBody>
           <TableRow><TableCell>衛星指標の重み</TableCell><TableCell className="text-right">{pct(prev.oldW)}%</TableCell><TableCell className="text-right">{pct(prev.newW)}%</TableCell></TableRow>
           <TableRow>
-            <TableCell>候補の1位</TableCell>
+            <TableCell>走査済みを除いた候補の1位</TableCell>
             <TableCell className="text-right">{prev.topId}</TableCell>
             <TableCell className="text-right">{prev.topId === prev.newTopId ? '変わらず' : prev.newTopId}</TableCell>
           </TableRow>

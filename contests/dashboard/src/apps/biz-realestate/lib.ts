@@ -339,7 +339,7 @@ export function buildDigest(f: Facts, sheet: Sheet): string[] {
   const count = new Map<string, number>()
   for (const e of sheet.exits) for (const it of e.items) for (const w of it.who.split('・')) if (w !== '相談先') count.set(w, (count.get(w) ?? 0) + 1)
   const top = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([w]) => w)
-  if (top.length) lines.push('まず相談する先の候補（4つの出口で多く出る相手）: ' + top.join('・') + '（くわしくは下の各出口）。')
+  if (top.length) lines.push('まず相談する先の候補（4つの出口で多く出る相手）: ' + top.join('・') + '（くわしくは各出口の項目）。')
   return lines.slice(0, 3)
 }
 

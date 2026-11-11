@@ -22,12 +22,12 @@ type StepId = 'top' | 'weight' | 'pick' | 'scan' | 'apply' | 'round2'
 const pct = (x: number) => Math.round(x * 100)
 
 const TITLES: Record<StepId, string> = {
-  top: '1 候補区間の点数を見る',
-  weight: '2 衛星指標の重みを変えてみる（任意）',
-  pick: '3 予算（走行延長）内で調査対象を選ぶ',
-  scan: '4 走査結果を見る',
-  apply: '5 較正を反映して第2回へ進む',
-  round2: '6 第2回の順位を確かめる',
+  top: '候補区間の点数を見る',
+  weight: '衛星指標の重みを変えてみる（任意）',
+  pick: '予算（走行延長）内で調査対象を選ぶ',
+  scan: '走査結果を見る',
+  apply: '較正を反映して第2回へ進む',
+  round2: '第2回の順位を確かめる',
 }
 const HINTS: Record<StepId, string> = {
   top: '最も点数の高い区間を確かめる（データはすべて架空）',
@@ -98,7 +98,6 @@ export default function App() {
   }
   const focusRow = (id: string) => {
     setFocus(id)
-    setViewedTop(true)
   }
   const onSegmentClick = (id: string) => {
     focusRow(id)
@@ -160,7 +159,7 @@ export default function App() {
   const scanned = results.size > 0
   useAppSteps(
     [
-      { id: 'top', title: '候補区間の点数を見る', hint: '最も高い区間を確かめる（データは架空）', done: viewedTop || scanned || round > 1 },
+      { id: 'top', title: '候補区間の点数を見る', hint: '最も高い区間を確かめる（データは架空）', done: viewedTop },
       { id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで順位が変わる', optional: true, done: wTouched },
       {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',

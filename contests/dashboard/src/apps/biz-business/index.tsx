@@ -59,7 +59,8 @@ function Seg<T extends string>({ value, options, onChange, label }: {
 
 export default function App() {
   const [step, setStep] = useState<StepId>('cond')
-  const [visited, setVisited] = useState<Record<string, boolean>>({ cond: true })
+  const [visited, setVisited] = useState<Record<string, boolean>>({})
+  const [mapOverride, setMapOverride] = useState<number | null>(null)
   const [regions, setRegions] = useState<RegionInfo[]>([])
   const [regionId, setRegionId] = useHashState('region', 'tokushima')
   const [data, setData] = useState<RegionData | null>(null)
@@ -69,7 +70,6 @@ export default function App() {
   const [per, setPer] = useState<Period>('m')
   const [w, setWmin] = useState(20)
   const [plans, setPlans] = useState<Plan[]>([])
-  const [selPlan, setSelPlan] = useState(0)
   const [selFac, setSelFac] = useState(0)
   const [exported, setExported] = useState(false)
   const [lastAction, setLastAction] = useState('')
@@ -77,7 +77,7 @@ export default function App() {
 
   const pick = (s: StepId) => {
     setStep(s)
-    setVisited((v) => (v[s] ? v : { ...v, [s]: true }))
+    setMapOverride(null)
   }
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function App() {
         setData(d)
         setW(wi)
         setSelFac(0)
-        setSelPlan(0)
+        setMapOverride(null)
         // 例として、病院・学校の合計で影響が大きい2路線を案A・案Bに1路線ずつ仮に入れる（開いた時点の条件）
         const need = needLevel(d.params.thresholds, w)
         const sel = d.routes.map((_, i) => i).filter((i) => d.routes[i][3] + d.routes[i][4] > 0)
@@ -171,7 +171,8 @@ export default function App() {
   }, [data, calc, plans, condText, reversalText])
 
   // 地図に出す案: 案A・案Bの手順ではその案、それ以外は選択中の案
-  const mapPlan = step === 'planA' ? 0 : step === 'planB' ? 1 : ks.includes(selPlan) ? selPlan : (ks[0] ?? 0)
+  const defaultMapPlan = step === 'cond' || step === 'planA' ? 0 : step === 'planB' ? 1 : (smaller[0] ?? ks[0] ?? 0)
+  const mapPlan = mapOverride !== null && plans[mapOverride] ? mapOverride : defaultMapPlan
   const mapLayers = useMemo<MapLayer[]>(() => {
     if (!data || !calc || !plans[mapPlan] || !plans[mapPlan].routes.length) return []
     const l = calc.results[mapPlan]?.[selFac]
@@ -260,12 +261,17 @@ export default function App() {
 
   const hasA = (plans[0]?.routes.length ?? 0) > 0
   const hasB = (plans[1]?.routes.length ?? 0) > 0
+  // 「済」の共通ルール: 見る手順・初期値で成り立つ手順は、前提が満たされた状態で表示したら済。する手順（書き出し）は主操作で済
+  const prereq: Record<StepId, boolean> = { cond: !!data, planA: hasA, planB: hasB, verdict: ks.length >= 2, export: false }
+  useEffect(() => {
+    if (prereq[step]) setVisited((v) => (v[step] ? v : { ...v, [step]: true }))
+  })
   useAppSteps(
     [
-      { id: 'cond', title: TITLES.cond.title, hint: '初期値のままで可', done: !!data && !!visited.cond },
-      { id: 'planA', title: TITLES.planA.title, hint: '止める路線を選ぶ', done: !!visited.planA && hasA },
-      { id: 'planB', title: TITLES.planB.title, hint: '複数路線にする場合は路線を足す', done: !!visited.planB && hasB },
-      { id: 'verdict', title: TITLES.verdict.title, hint: '結論と詳細表', done: !!visited.verdict && ks.length >= 2 },
+      { id: 'cond', title: TITLES.cond.title, hint: '初期値のままで可', done: !!visited.cond },
+      { id: 'planA', title: TITLES.planA.title, hint: '止める路線を選ぶ', done: !!visited.planA },
+      { id: 'planB', title: TITLES.planB.title, hint: '複数路線にする場合は路線を足す', done: !!visited.planB },
+      { id: 'verdict', title: TITLES.verdict.title, hint: '結論と詳細表', done: !!visited.verdict },
       { id: 'export', title: TITLES.export.title, hint: 'CSVまたは文章コピー', done: exported },
     ],
     {
@@ -357,10 +363,9 @@ export default function App() {
               if (!e.target.value) return
               const r = +e.target.value
               updatePlan(k, (qq) => ({ ...qq, routes: [...qq.routes, r] }))
-              setSelPlan(k)
               setRouteQ((qs) => qs.map((v, i) => (i === k ? '' : v)))
             }}>
-            <option value="">＋ 止める路線を追加…（{opts.length}路線）</option>
+            <option value="">＋ 止める路線を追加…（{q ? `候補${opts.length}路線` : `残り${opts.length}路線`}）</option>
             {opts.map((r) => (
               <option key={r} value={String(r)}>
                 {routeFull(r)}（平日{data.routes[r][3]}本・休日{data.routes[r][4]}本｜この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
@@ -388,7 +393,7 @@ export default function App() {
     if (ks.length < 2) {
       return <Alert><Info className="size-4" /><AlertDescription>比較するには、案Aと案Bの両方に路線を選んでください（左の手順から）。</AlertDescription></Alert>
     }
-    const actPlan = ks.includes(selPlan) ? selPlan : ks[0]
+    const actPlan = ks.includes(mapPlan) ? mapPlan : ks[0]
     const lg = calc.results[actPlan][selFac]
     const fl = data.facility_labels[data.facility_order[selFac]]
     return (
@@ -435,8 +440,9 @@ export default function App() {
           })}
         </div>
 
-        <div>
-          <h3 className="mb-1 text-sm font-bold">詳細比較（{condText}）</h3>
+        <details className="rounded-lg border p-2" data-testid="detail-table">
+          <summary className="cursor-pointer text-sm font-bold">詳細比較表（{condText}）</summary>
+          <div className="mt-2">
           <div className="max-h-72 overflow-auto rounded border">
             <Table>
               <TableHeader>
@@ -479,12 +485,13 @@ export default function App() {
           <p className="mt-1 text-xs text-muted-foreground">
             診断範囲の人口: {n(calc.base[0].pop)}人（うち65歳以上 {n(calc.base[0].pop65)}人、令和2年国勢調査）。「地区」は最寄り停留所の名前でまとめた500mメッシュの集まり（行政区画ではない）。
           </p>
-        </div>
+          </div>
+        </details>
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-bold">地区ごとの内訳（地図にも表示）</h3>
+        <details className="space-y-2 rounded-lg border p-2" data-testid="district-table">
+          <summary className="cursor-pointer text-sm font-bold">地区ごとの内訳（地図にも表示）</summary>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <Seg label="案" value={String(actPlan)} onChange={(v) => setSelPlan(+v)} options={ks.map((k) => ({ value: String(k), label: plans[k].name }))} />
+            <Seg label="案" value={String(actPlan)} onChange={(v) => setMapOverride(+v)} options={ks.map((k) => ({ value: String(k), label: plans[k].name }))} />
             <Seg label="行き先" value={String(selFac)} onChange={(v) => setSelFac(+v)} options={data.facility_order.map((fk, fi) => ({ value: String(fi), label: data.facility_labels[fk] }))} />
           </div>
           {!lg.groups.length ? (
@@ -518,7 +525,7 @@ export default function App() {
               </p>
             </>
           )}
-        </div>
+        </details>
       </div>
     )
   }
@@ -534,6 +541,9 @@ export default function App() {
         </div>
         <p className="text-sm">使い分け: <b>表に貼る・集計に使う → CSV</b>／<b>報告書や議事録の本文に貼る → 文章</b>。この端末の中で作るだけで、送信しません。</p>
         {lastAction && <p role="status" className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium">{lastAction}</p>}
+        <details className="rounded-lg border p-2" data-testid="export-preview">
+          <summary className="cursor-pointer text-sm font-bold">書き出す内容のプレビュー（文章全文・CSV先頭）</summary>
+          <div className="mt-2 space-y-3">
         <div>
           <div className="mb-1 text-xs font-bold text-muted-foreground">資料用の文章（コピーされる全文）</div>
           <div className="max-h-52 space-y-1 overflow-auto">
@@ -556,6 +566,8 @@ export default function App() {
             </div>
           </div>
         )}
+          </div>
+        </details>
       </div>
     )
   }
@@ -571,9 +583,22 @@ export default function App() {
         ariaLabel="地図（選んだ案で行けなくなる500mメッシュをオレンジで表示）"
         className="h-full"
       />
-      <div className="pointer-events-none absolute bottom-7 left-2 max-w-[75%] rounded-md bg-background/90 p-2 text-xs shadow" data-testid="map-legend">
+      {data && (
+        <div className="absolute left-[8.5rem] right-14 top-2 flex flex-wrap items-center gap-1 rounded-md bg-background/90 p-1 shadow" data-testid="map-plan-toggle">
+          <span className="px-1 text-xs font-bold">表示中:</span>
+          <ToggleGroup type="single" variant="outline" size="sm" value={String(mapPlan)} aria-label="地図に表示する案"
+            onValueChange={(v) => v && setMapOverride(+v)}>
+            {plans.map((p, k) => p.routes.length ? (
+              <ToggleGroupItem key={k} value={String(k)} className="h-7 px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                {p.name}
+              </ToggleGroupItem>
+            ) : null)}
+          </ToggleGroup>
+        </div>
+      )}
+      <div className="pointer-events-none absolute left-2 right-14 top-12 max-w-[22rem] rounded-md bg-background/90 p-1.5 text-xs shadow" data-testid="map-legend">
         {legendPlan && legendPlan.routes.length > 0 && data
-          ? <><b>{legendPlan.name}・{data.facility_labels[data.facility_order[selFac]]}</b>: オレンジ＝行けなくなる500mメッシュ／青の破線＝止める路線／灰色＝その他の路線</>
+          ? <><b>{legendPlan.name}・{data.facility_labels[data.facility_order[selFac]]}</b>: オレンジ＝行けなくなる地区（500m）／青の破線＝止める路線</>
           : '路線を選ぶと、行けなくなる地区が表示されます'}
       </div>
     </div>

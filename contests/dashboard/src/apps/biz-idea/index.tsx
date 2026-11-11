@@ -44,7 +44,7 @@ const EMPTY_FORM: FormState = {
 const PLACE_TYPES = ['旧地名', '小字', '通称地名', 'その他']
 const EMPTY_RECORDS: MemoryRecord[] = []
 const CENTER: [number, number] = [132.485, 34.475]
-const DESCRIPTION = '地域の聞き取り担当として、地名にまつわる災害の言い伝えを公開データで確かめ、聞き取った話を記録して地図に残す。上から順に進めます。'
+const DESCRIPTION = '地域の聞き取り担当として、地名にまつわる災害の言い伝えを公開データで確かめ、聞き取った話を記録して地図に残す。'
 
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   place: { title: '地名を選ぶ', hint: '地名と語りは架空のサンプル。地図のオレンジのピンでも選べます' },
@@ -122,10 +122,10 @@ function SavedNotice({ rec }: { rec: MemoryRecord }) {
   let body: string
   if (!rec.verified) {
     title = `「${rec.placeName}」を「未確認」の記録として保存しました`
-    body = '未確認のままでは公開分に入りません。次は左の手順「確認して公開範囲を選ぶ」です。'
+    body = '未確認のままでは公開分に入りません。次は手順「確認して公開範囲を選ぶ」です。'
   } else if (publishable) {
     title = `「${rec.placeName}」は確認済み・公開です。公開分に入りました`
-    body = '次は左の手順「公開分を書き出す」です。'
+    body = '次は手順「公開分を書き出す」です。'
   } else {
     title = `「${rec.placeName}」は確認済みですが、公開分には入っていません`
     body = `理由: ${publishBlockers(rec).join('、')}。`
@@ -378,7 +378,7 @@ export default function BizIdeaApp() {
   const selectedLabel = focus ? (focus.place ? focus.place.name : `新しい位置（経度 ${focus.lon.toFixed(4)}・緯度 ${focus.lat.toFixed(4)}）`) : ''
   const needPlace = (
     <Alert><MapPin className="size-4" /><AlertTitle>先に地名を選んでください</AlertTitle>
-      <AlertDescription>左の手順「地名を選ぶ」で、地名（サンプル）か地図上の位置を選びます。</AlertDescription></Alert>
+      <AlertDescription>手順「地名を選ぶ」で、地名（サンプル）か地図上の位置を選びます。</AlertDescription></Alert>
   )
 
   /* ---- 手順ごとのパネル ---- */
@@ -395,7 +395,7 @@ export default function BizIdeaApp() {
           )}
         </div>
       )}
-      <Note>オレンジの地名か、下の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>
+      <Note>オレンジの地名か、地名の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>
       {!places.length && (
         <div className="space-y-2" role="status" aria-label="地名を読み込み中">
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
@@ -582,7 +582,7 @@ export default function BizIdeaApp() {
     <div className="space-y-3">
       <Note>記録は必ず「未確認」から始まります。確認役が出典などを確かめて「確認済み」にし、公開範囲を選びます。このデモでは、あなたが確認役を兼ねます（実運用では図書館・郷土資料館等の担当者が行います）。</Note>
       {savedRec && <SavedNotice rec={savedRec} />}
-      {!records.length && <div className="rounded-md border p-3 text-sm">まだ記録がありません。左の手順「聞き取りを記録する」で1件保存してください。</div>}
+      {!records.length && <div className="rounded-md border p-3 text-sm">まだ記録がありません。手順「聞き取りを記録する」で1件保存してください。</div>}
       <ul className="space-y-2">
         {records.map((r) => (
           <li
@@ -652,17 +652,9 @@ export default function BizIdeaApp() {
           <AlertTriangle className="size-4" />
           <AlertTitle>公開分は0件です</AlertTitle>
           <AlertDescription className="space-y-2 text-orange-950/90">
-            <p className="font-bold">確認済みにすると公開分に入ります（公開範囲が「公開」であることも必要です）。</p>
+            <p className="font-bold">手順「確認して公開範囲を選ぶ」で、確認済み・公開範囲「公開」にすると公開分に入ります。</p>
             {records.map((r) => (
-              <div key={r.id} className="flex flex-wrap items-center gap-2">
-                <span>「{r.placeName}」: {publishBlockers(r).join('、')}</span>
-                {!r.verified && <Button size="sm" onClick={() => openConfirm(r)}>確認済みにする…</Button>}
-                {r.verified && r.visibility !== 'public' && (
-                  <Button size="sm" variant="outline" onClick={() => updateRecord(r.id, (x) => ({ ...x, visibility: 'public' }))}>
-                    公開範囲を「公開」にする
-                  </Button>
-                )}
-              </div>
+              <p key={r.id}>「{r.placeName}」: {publishBlockers(r).join('、')}</p>
             ))}
           </AlertDescription>
         </Alert>

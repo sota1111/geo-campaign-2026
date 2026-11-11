@@ -56,6 +56,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
     const r = await pick(id); await sleep(900)
     if (id === 'export') { console.log(label, 'csv', await click('CSVで書き出す')); await sleep(600) }
     console.log(label, id, r, 'scrollH/innerH/body', await scrollH(), '->', await ev(status))
+    console.log(label, '  legend:', await ev(`(document.querySelector('[data-testid=map-legend]')||{innerText:''}).innerText.slice(0,30)`), '| details open:', await ev(`[...document.querySelectorAll('details')].map(d=>d.open).join(',')`))
     await shot(`${label}-step-${id}.png`)
   }
   console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth - window.innerWidth'))
@@ -77,6 +78,9 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   console.log(label, 'B verdict', await ev(`(document.querySelector('[data-testid=verdict-main]')||{innerText:'none'}).innerText.replace(/\\n/g,' ')`))
   console.log(label, 'B reversal', await ev(`(document.querySelector('[role=alert]')||{innerText:'none'}).innerText.replace(/\\n/g,' ')`))
   console.log(label, 'B scrollH', await scrollH())
+  console.log(label, 'B legend(default)', await ev(`document.querySelector('[data-testid=map-legend]').innerText.slice(0,12)`))
+  console.log(label, 'B toggle->B', await ev(`(()=>{const b=[...document.querySelectorAll('[data-testid=map-plan-toggle] button')].find(x=>x.textContent.trim()==='案B');b.click();return 'ok'})()`)); await sleep(500)
+  console.log(label, 'B legend(after toggle)', await ev(`document.querySelector('[data-testid=map-legend]').innerText.slice(0,12)`))
   await shot(`${label}-B-reversal.png`)
   if (mobile) { await click('完了'); await sleep(300) }
   await pick('export'); await sleep(600)

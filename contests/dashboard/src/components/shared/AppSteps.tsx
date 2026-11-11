@@ -145,3 +145,17 @@ export function useAppSteps(steps: AppStep[], opts?: AppStepsOptions) {
   })
   useEffect(() => () => reg.current?.([]), [])
 }
+
+/** 手順の番号。必須手順だけに 1,2,3… を振り（「必須 n のうち」と一致）、任意（参考）は null */
+export function stepNumbers(steps: Pick<AppStep, 'optional'>[]): (number | null)[] {
+  let n = 0
+  return steps.map((s) => (s.optional ? null : ++n))
+}
+
+/** 手順の見出し用ラベル: 「3」または「参考」。見つからなければ null（サイドバーの番号と同じ規則） */
+export function stepBadgeText(steps: Pick<AppStep, 'id' | 'optional'>[], id: string | undefined): string | null {
+  const i = steps.findIndex((s) => s.id === id)
+  if (i < 0) return null
+  const num = stepNumbers(steps)[i]
+  return num == null ? '参考' : String(num)
+}

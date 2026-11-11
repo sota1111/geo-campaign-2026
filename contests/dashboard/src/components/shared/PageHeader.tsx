@@ -1,21 +1,32 @@
-import type { ReactNode } from 'react'
+import { useContext, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { CONTESTS, getApp } from '@/apps/registry'
 import { DataBadge } from './DataBadge'
+import { HeaderSlotContext } from './HeaderSlot'
 
 /**
  * 各アプリページの先頭に置く。registry.ts の名前・データ種別を表示する。actions に出典ボタン等を渡せる。
- * compact: 1行の小さい形（アプリ名・データ種別バッジ・出典ボタンのみ。説明文はサイドバーへ: useAppSteps の description）
+ * compact: 自分の行を持たず、データ種別バッジと actions を StandaloneShell の細いヘッダー（「← 統合ダッシュボード」の行）の
+ *   右側に描画する（アプリ名はサイドバー上端／スマホは上部バー。説明文は useAppSteps の description）。
+ *   Shell の外で使うと、従来どおり1行で自分の場所に出す。
  */
 export function PageHeader({ appId, actions, compact }: { appId: string; actions?: ReactNode; compact?: boolean }) {
+  const slot = useContext(HeaderSlotContext)
   const app = getApp(appId)
   if (!app) return null
   const contest = CONTESTS.find((c) => c.id === app.contest)
   if (compact) {
-    return (
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b px-4" data-testid="page-header-compact">
-        <h1 className="truncate text-base font-bold">{app.name}</h1>
+    const content = (
+      <>
         <DataBadge kind={app.dataKind} />
-        {actions && <div className="ml-auto flex shrink-0 gap-2">{actions}</div>}
+        {actions}
+      </>
+    )
+    if (slot) return slot.el ? createPortal(content, slot.el) : null
+    return (
+      <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b px-4 py-1" data-testid="page-header-compact">
+        <h1 className="min-w-[8rem] truncate text-base font-bold">{app.name}</h1>
+        {content}
       </header>
     )
   }

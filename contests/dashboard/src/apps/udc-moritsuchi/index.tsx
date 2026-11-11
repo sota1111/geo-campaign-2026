@@ -127,6 +127,8 @@ export default function App() {
   const [searching, setSearching] = useState(false)
   const [searchMsg, setSearchMsg] = useState('')
   const [didCompare, setDidCompare] = useState(false)
+  const [didLook, setDidLook] = useState(false)
+  const [savedMsg, setSavedMsg] = useState('')
   const [originChosen, setOriginChosen] = useState(false)
   const [didPrepare, setDidPrepare] = useState(false)
 
@@ -134,9 +136,6 @@ export default function App() {
   const [old, setOld] = useHashState('old', 'none')
   const [opStr, setOp] = useHashState('op', '60')
   const op = Math.min(100, Math.max(0, Number(opStr) || 60))
-  useEffect(() => {
-    if (old !== 'none') setDidCompare(true)
-  }, [old])
 
   // フォーム
   const [kind, setKind] = useState('crack')
@@ -251,11 +250,60 @@ export default function App() {
     mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
   }, [fills])
 
+  /** 起点と、起点に近い造成地5件がすべて入る範囲に地図を合わせる */
+  const fitOrigin = (o: { lng: number; lat: number }, duration = 600) => {
+    const map = mapRef.current
+    if (!map) return
+    const near = nearbyFills(o.lng, o.lat, fills, 5)
+    let w = o.lng, e = o.lng, so = o.lat, n = o.lat
+    for (const d of near) {
+      const f = fills.find((x) => x.properties.id === d.id)
+      if (!f) continue
+      for (const p of f.geometry.coordinates[0]) {
+        w = Math.min(w, p[0]); e = Math.max(e, p[0]); so = Math.min(so, p[1]); n = Math.max(n, p[1])
+      }
+    }
+    if (near.length) map.fitBounds([[w, so], [e, n]], { padding: 50, maxZoom: 15.5, duration })
+    else map.flyTo({ center: [o.lng, o.lat], zoom: 14.5, duration })
+  }
   const goOrigin = (o: { label: string; lng: number; lat: number }) => {
     setOrigin(o)
     setOriginChosen(true)
-    mapRef.current?.flyTo({ center: [o.lng, o.lat], zoom: 14.5, duration: 600 })
+    fitOrigin(o)
   }
+
+  // 最初の表示でも、熱海駅（例）と近い造成地が入る範囲にする（URLで表示範囲を指定した場合を除く）
+  const fittedInitial = useRef(false)
+  useEffect(() => {
+    if (fittedInitial.current || !mapReady || !fills.length) return
+    fittedInitial.current = true
+    if (!parseHashQuery(window.location.hash).get('z')) fitOrigin(origin, 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, fills])
+
+  // 「確かめる」: 起点を決めたうえで表示したら済。造成地が未選択なら最寄りを選んだ状態で見せる
+  useEffect(() => {
+    if (step !== 'look' || !originChosen || !fills.length) return
+    setDidLook(true)
+    if (selFill === null) {
+      const first = nearbyFills(origin.lng, origin.lat, fills, 1)[0]
+      if (first) setSelFill(first.id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, originChosen, fills])
+
+  // 「見比べる」: 造成地を選んだうえで表示したら済。昔の写真が未選択なら1961〜69年を重ねて見せる
+  useEffect(() => {
+    if (step !== 'compare' || selFill === null) return
+    setDidCompare(true)
+    if (old === 'none') {
+      setOld('ort_old10')
+      setOp('50')
+    }
+    const f = fills.find((x) => x.properties.id === selFill)
+    if (f) mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selFill])
   const goStation = () => goOrigin({ label: '熱海駅（例・目安の位置）', ...ATAMI_STATION })
 
   const doSearch = async (e?: React.FormEvent) => {
@@ -283,6 +331,7 @@ export default function App() {
 
   /* ---------- 位置の選択 ---------- */
   const choosePos = useCallback((lng: number, lat: number) => {
+    setSavedMsg('')
     const nf = nearestFill(lng, lat, fills)
     setPick({ lng, lat, nearFill: nf })
     setPickMsg(
@@ -356,6 +405,7 @@ export default function App() {
     setWhen(fmtDate(new Date()).replace(' ', 'T'))
     setSelRec(rec.id)
     setIoMsg('')
+    setSavedMsg(`保存しました（${KIND_LABEL[rec.kind]}／${rec.observedAt}）。地図の黄色い丸が記録です。`)
     toast.success('記録を保存しました')
     mapRef.current?.easeTo({ center: [rec.lng, rec.lat], duration: 400 })
   }
@@ -462,7 +512,7 @@ export default function App() {
   useAppSteps(
     [
       { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: originChosen },
-      { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: selFill !== null },
+      { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: didLook },
       { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今', done: didCompare },
       { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて保存', done: records.length > 0 },
       { id: 'prep', title: STEP_META.prep.title, hint: 'コピーまたは書き出し', done: didPrepare },
@@ -680,31 +730,31 @@ export default function App() {
   )
 
   const panelRec = (
-    <div className="space-y-3">
-      <ul className="list-disc space-y-0.5 rounded-md border bg-accent/30 p-2 pl-6 text-xs">
-        <li>公道など立ち入ってよい場所から。盛土や私有地、立入禁止の場所には入らない。</li>
-        <li>人や車のナンバーが写る写真は共有しない。</li>
-        <li>差し迫った危険（崩れそう・水が噴き出す等）は、記録より先に119番・110番や市の防災窓口へ。</li>
-      </ul>
-      <div className="space-y-2">
-        <p className={`rounded-md border-2 p-2 text-sm font-medium ${pick ? 'border-primary bg-accent/40' : 'border-dashed border-primary'}`}>
-          {pick ? '位置を選びました（地図のピンク色の大きな輪）。違えば、もう一度地図をタップ。' : '地図をタップして位置を決めてください（まだ選ばれていません）'}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
-          <Button size="sm" variant="outline" onClick={useCenter}><Crosshair className="size-4" />地図の中心を使う</Button>
+    <form onSubmit={save} autoComplete="off" className="flex flex-col gap-3 md:h-full">
+      <div className="space-y-3 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
+        <ul className="list-disc space-y-0.5 rounded-md border bg-accent/30 p-2 pl-6 text-xs">
+          <li>公道など立ち入ってよい場所から。盛土や私有地、立入禁止の場所には入らない。</li>
+          <li>人や車のナンバーが写る写真は共有しない。</li>
+          <li>差し迫った危険（崩れそう・水が噴き出す等）は、記録より先に119番・110番や市の防災窓口へ。</li>
+        </ul>
+        <div className="space-y-2">
+          <p className={`rounded-md border-2 p-2 text-sm font-medium ${pick ? 'border-primary bg-accent/40' : 'border-dashed border-primary'}`}>
+            {pick ? '位置を選びました（地図のピンク色の大きな輪）。違えば、もう一度地図をタップ。' : '地図をタップして位置を決めてください（まだ選ばれていません）'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
+            <Button type="button" size="sm" variant="outline" onClick={useCenter}><Crosshair className="size-4" />地図の中心を使う</Button>
+          </div>
+          <p className="text-sm" data-testid="pick-pos">位置: {pick ? `${pick.lat.toFixed(5)}, ${pick.lng.toFixed(5)}` : '未選択'}</p>
+          {pickMsg && <p className="text-sm text-muted-foreground" role="status">{pickMsg}</p>}
+          {outOfCoverage && (
+            <Alert variant="destructive" data-testid="out-of-coverage">
+              <AlertTriangle className="size-4" />
+              <AlertTitle>対象範囲の外です</AlertTitle>
+              <AlertDescription>熱海市・伊東市の外のため、盛土造成地データとの比較はできません（記録は可能です）。</AlertDescription>
+            </Alert>
+          )}
         </div>
-        <p className="text-sm" data-testid="pick-pos">位置: {pick ? `${pick.lat.toFixed(5)}, ${pick.lng.toFixed(5)}` : '未選択'}</p>
-        {pickMsg && <p className="text-sm text-muted-foreground" role="status">{pickMsg}</p>}
-        {outOfCoverage && (
-          <Alert variant="destructive" data-testid="out-of-coverage">
-            <AlertTriangle className="size-4" />
-            <AlertTitle>対象範囲の外です</AlertTitle>
-            <AlertDescription>熱海市・伊東市の外のため、盛土造成地データとの比較はできません（記録は可能です）。</AlertDescription>
-          </Alert>
-        )}
-      </div>
-      <form onSubmit={save} autoComplete="off" className="space-y-3">
         <div className="space-y-1.5">
           <Label htmlFor="mw-kind">気づいたこと</Label>
           <Select value={kind} onValueChange={setKind}>
@@ -726,15 +776,19 @@ export default function App() {
           <Checkbox id="mw-blur" checked={blurred} onCheckedChange={(v) => setBlurred(v === true)} />
           <Label htmlFor="mw-blur">位置を約100mにぼかして保存する</Label>
         </div>
+        <p className="text-xs text-muted-foreground">
+          記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真は保存しません。
+        </p>
+      </div>
+      <div className="shrink-0 space-y-2 border-t pt-3">
+        {(savedMsg || records.length > 0) && (
+          <p className="rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-medium" data-testid="saved-note" role="status">
+            {savedMsg ? `✔ ${savedMsg}` : ''} 保存済みの記録: {records.length}件
+          </p>
+        )}
         <Button type="submit" disabled={!pick} className="w-full">この場所を記録する（この端末に保存）</Button>
-      </form>
-      {records.length > 0 && (
-        <p className="rounded-md border border-primary bg-accent/40 p-2 text-sm font-medium" data-testid="saved-note">保存済みの記録: {records.length}件（地図の黄色い丸）</p>
-      )}
-      <p className="text-xs text-muted-foreground">
-        記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真は保存しません。
-      </p>
-    </div>
+      </div>
+    </form>
   )
 
   const panelPrep = (
