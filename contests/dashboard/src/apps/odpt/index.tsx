@@ -7,15 +7,15 @@ import { useAppSteps } from '@/components/shared/AppSteps'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { parseHashQuery, withHashQuery } from '@/components/shared/hashState'
+import { StepLayout } from '@/components/shared/StepLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { fetchData } from '@/lib/data'
-import { Conclusion, type CondState } from './Conclusion'
+import { CopyPanel, HolPanel, LastPanel, MapSummary, NoPoint, VerdictPanel, type CondState, type DiagView } from './Conclusion'
 import { Seg } from './Seg'
 import { TIPS, Term } from './Term'
 import {
@@ -70,7 +70,8 @@ export default function App() {
   const [route, setRoute] = useState<string | null>(null)
   const [view, setView] = useState<View>({})
   const [vis, setVis] = useState({ cells: true, nodes: true, routes: true, fac: true, rail: true })
-  const [tab, setTab] = useState('stops')
+  const [step, setStep] = useState('place')
+  const [legendOpen, setLegendOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [searchMsg, setSearchMsg] = useState('')
   const [cands, setCands] = useState<Cand[]>([])
@@ -83,7 +84,6 @@ export default function App() {
   const [allErr, setAllErr] = useState<string | null>(null)
   const pending = useRef<{ pt: Pt | null; route: string | null }>({ pt: init.pt ?? null, route: init.route ?? null })
   const mapRef = useRef<maplibregl.Map | null>(null)
-  const conclusionRef = useRef<HTMLDivElement>(null)
   const reqRef = useRef(0)
 
   // 地域の一覧
@@ -223,18 +223,17 @@ export default function App() {
   useEffect(() => { setCopied(false) }, [copyText])
 
   // 地点の選択・移動
-  const showConclusion = () => setTimeout(() => conclusionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+  const showConclusion = () => {}
   const choosePoint = useCallback((lon: number, lat: number, label: string, zoomTo: boolean) => {
     setPt([lon, lat])
     setPlaceLabel(label)
-    setTab('stops')
     if (zoomTo) mapRef.current?.easeTo({ center: [lon, lat], zoom: Math.max(mapRef.current.getZoom(), 14), duration: 500 })
     showConclusion()
   }, [])
 
   const goCand = useCallback((c: Cand) => {
     if (!c.rid) return
-    setSearchMsg(`「${c.title}」を調べました。結果は「この地点の結論」のカードに出ています。`)
+    setSearchMsg(`「${c.title}」を調べました。地図の左上に結論の要点を出しました。詳しくは左のサイドバーの「行けるか結論を見る」へ。`)
     if (data && c.rid === data.id) choosePoint(c.lon, c.lat, c.title, true)
     else {
       pending.current = { pt: [c.lon, c.lat], route: null }
@@ -280,7 +279,7 @@ export default function App() {
     const others = rs.filter((r) => r !== first)
     setCands(others)
     if (others.length && !(first.rid === cur && !first.inCell)) {
-      setSearchMsg(`「${first.title}」を調べました（結果は「この地点の結論」のカード）。同じ名前の候補が他にもあります。場所が違う場合は、下の候補から選んでください。`)
+      setSearchMsg(`「${first.title}」を調べました（結論の要点は地図の左上）。同じ名前の候補が他にもあります。場所が違う場合は、下の候補から選んでください。`)
     }
     if (first.rid === cur && !first.inCell) {
       setSearchMsg(`「${first.title}」は診断範囲外でした。別の地域の「${q}」かもしれません。${others.length ? '下の候補から選んでください。' : ''}`)
@@ -288,7 +287,7 @@ export default function App() {
   }, [index, data, goCand, cellIdx])
 
   const onMapClick = useCallback(({ lng, lat }: { lng: number; lat: number }) => {
-    setSearchMsg('地図で選んだ地点を調べました。結果は「この地点の結論」のカードに出ています。')
+    setSearchMsg('地図で選んだ地点を調べました。地図の左上に結論の要点を出しました。詳しくは左のサイドバーの「行けるか結論を見る」へ。')
     setCands([])
     choosePoint(lng, lat, '', false)
   }, [choosePoint])
@@ -300,9 +299,9 @@ export default function App() {
 
   // 5地域比較: タブを開いた時に全地域を読み込む
   useEffect(() => {
-    if (tab !== 'compare' || all || !index) return
+    if (step !== 'compare' || all || !index) return
     Promise.all(index.regions.map((r) => fetchData<RegionData>('odpt', `${r.id}.json`))).then(setAll).catch((e: Error) => setAllErr(e.message))
-  }, [tab, all, index])
+  }, [step, all, index])
 
   // ---------- 地図レイヤー ----------
   const staticGeo = useMemo(() => {
@@ -378,50 +377,39 @@ export default function App() {
 
   const setC = (p: Partial<CondState>) => { setCondTouched(true); setCond((c) => ({ ...c, ...p })) }
 
-  // ---- 左サイドバー（手順）。done は画面の状態・実際の操作で判定する ----
+  // ---- 左サイドバー（手順）。メインには選んだ手順の内容だけを出す。done は画面の状態・実際の操作で判定する ----
   const hasPt = Boolean(pt && data)
   const verdictShown = hasPt && diag?.v != null
-  // 「比べた」「最終便を見た」は、該当の表示が画面に（9割以上）入った時点で済にする。地点を変えたらやり直し
+  // 「比べた」「最終便を見た」は、その手順のパネルを開いた時点で済にする（自動では切り替えない）。地点を変えたらやり直し
+  useEffect(() => {
+    if (!verdictShown || (step !== 'hol' && step !== 'last')) return
+    const k = step === 'hol' ? 'cmp' : 'last'
+    setSeen((v) => (v.pt === ptKey ? { ...v, [k]: true } : { pt: ptKey, cmp: false, last: false, [k]: true }))
+  }, [step, verdictShown, ptKey])
   const seenHere = seen.pt === ptKey
   const seenCmp = hasPt && seenHere && seen.cmp
   const seenLast = hasPt && seenHere && seen.last
-  useEffect(() => {
-    if (!verdictShown) return
-    const sels = ['[data-testid=compare-days]', '[data-testid=last-bus]']
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue
-        const k = (e.target as HTMLElement).dataset.testid === 'compare-days' ? 'cmp' : 'last'
-        setSeen((v) => (v.pt === ptKey ? { ...v, [k]: true } : { pt: ptKey, cmp: false, last: false, [k]: true }))
-      }
-    }, { threshold: 0.9 })
-    sels.forEach((sel) => { const el = document.querySelector(sel); if (el) io.observe(el) })
-    return () => io.disconnect()
-  }, [verdictShown, ptKey, diag?.near.length])
-  // スマホの手順一覧は選ぶと閉じて高さが変わるので、閉じた後にスクロールする
-  const later = (fn: () => void) => { window.setTimeout(fn, 250) }
-  const focusSearch = () => later(() => {
-    const el = document.getElementById('odpt-q') as HTMLInputElement | null
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    el?.focus({ preventScroll: true })
-  })
-  const goTo = (sel: string) => {
-    if (!hasPt) { focusSearch(); return }
-    later(() => document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
-  }
   const condHint = data
     ? `いま: ${DAY_FULL[cond.day]}・${PERIOD_LABEL[cond.per]}${data.params.start_hours[cond.per]}時・${cond.w}分以内・${data.facility_labels[data.facility_order[cond.fi]]}`
     : '行き先・曜日・時刻・許容時間'
-  useAppSteps([
-    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: hasPt, onSelect: focusSearch },
-    { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true,
-      onSelect: () => { setCondTouched(true); later(() => document.getElementById('odpt-cond')?.scrollIntoView({ behavior: 'smooth', block: 'center' })) } },
-    { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: verdictShown, onSelect: () => goTo('[data-testid=verdict-main]') },
-    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp || (verdictShown && cond.day === 'hol'), onSelect: () => goTo('[data-testid=compare-days]') },
-    { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast, onSelect: () => goTo('[data-testid=last-bus]') },
-    { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', done: hasPt && copiedPt === ptKey,
-      onSelect: () => { goTo('[data-testid=copy-conclusion]'); later(() => (document.querySelector('[data-testid=copy-conclusion]') as HTMLElement | null)?.focus({ preventScroll: true })) } },
-  ])
+  const stepDefs = [
+    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: hasPt },
+    { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true },
+    { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: verdictShown },
+    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp || (verdictShown && cond.day === 'hol') },
+    { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
+    { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', done: hasPt && copiedPt === ptKey },
+    { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
+    { id: 'whatif', title: '参考: 路線を止めたら？', hint: '行けなくなる人の数', done: false, optional: true },
+    { id: 'compare', title: '参考: 5地域を比べる', hint: '同じ条件で並べる', done: false, optional: true },
+    { id: 'about', title: '参考: 出典・前提', hint: 'データの出典・ライセンス・診断の前提', done: false, optional: true },
+  ]
+  useAppSteps(stepDefs, {
+    activeId: step,
+    onSelectStep: (id) => { setStep(id); if (id === 'cond') setCondTouched(true) },
+    description: '車を運転しない家族が、公共交通か徒歩で病院などへ行けるかを、曜日・時間帯ごとに確かめ、結果を家族に送る。',
+  })
+  const stepTitle = stepDefs.find((x) => x.id === step)?.title ?? ''
 
   // 診断範囲の注記・データ期限
   const dataWarn = useMemo(() => {
@@ -450,203 +438,173 @@ export default function App() {
   }
 
   const bounds = view.bounds
+  const dv: DiagView | null = data
+    ? {
+        data, cond, placeLabel, verdict: diag?.v ?? null,
+        popInfo: diag?.cell ? { pop: diag.cell[1], pop65: diag.cell[2] } : null,
+        lastWd: diag?.lastWd ?? null, lastHol: diag?.lastHol ?? null, nearCount: diag?.near.length ?? 0,
+        nearest: diag && diag.near[0] ? { name: diag.labels[0], m: Math.round(diag.near[0].d), wd: data.nodes[diag.near[0].i][3], hol: data.nodes[diag.near[0].i][4] } : null,
+        facility: diag?.facility ?? null, transitLevel: diag?.transitLevel ?? null, walkInM: data.params.walk_in_m,
+      }
+    : null
+  const coverageTip = data
+    ? `収録しているのは${data.coverage.sources.join('・')}のGTFS ${data.coverage.feeds}件（${data.coverage.modes.join('・')}）のみ。` +
+      (data.coverage.modes.filter((m) => m !== 'バス').length ? `鉄道は${data.coverage.modes.filter((m) => m !== 'バス').join('・')}のみ収録し、JR等は未収録。` : '鉄道（JR等）は未収録。') +
+      'デマンド交通・予約制の便も未収録です。実データに基づく推計。' + (dataWarn ? `【データの期限】${dataWarn}` : '')
+    : '収録した事業者のバスのみが対象です。'
+  const needPt = <NoPoint />
 
-  return (
-    <div className="mx-auto max-w-7xl space-y-4">
-      <PageHeader appId="odpt" actions={<SourceDialog sources={SOURCES} />} />
-
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
-        {/* 1. 場所と条件 */}
-        <Card className="min-w-0 gap-3 py-4 lg:col-start-1 lg:row-start-1">
-          <CardHeader className="px-4">
-            <CardTitle className="text-base">場所と条件</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 px-4">
-            <div className="space-y-1">
-              <div className="text-sm font-medium" id="odpt-region">診断地域（いまの地域: <b>{data ? shortName(data.name) : '読み込み中'}</b>）</div>
-              {!index && <Skeleton className="h-9 w-full" />}
-              <Seg
-                label="診断地域"
-                value={regionId}
-                options={regionList.map((r) => ({ value: r.id, label: shortName(r.name) }))}
-                onChange={(id) => { pending.current = { pt: null, route: null }; setPt(null); setPlaceLabel(''); setRegionId(id) }}
-              />
-              {data && <p className="text-xs text-muted-foreground">{data.reason}</p>}
-            </div>
-            <form
-              role="search"
-              className="space-y-1"
-              onSubmit={(e) => { e.preventDefault(); doSearch(query) }}
-            >
-              <label htmlFor="odpt-q" className="text-sm font-medium">住所・駅名で探す（または地図をタップ）</label>
-              <div className="flex gap-2">
-                <Input id="odpt-q" type="search" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={80} autoComplete="off"
-                  placeholder={`例: ${exampleFor[regionId] ?? '駅名や住所'}`} />
-                <Button type="submit" disabled={searching || !index}><Search className="size-4" />探す</Button>
-              </div>
-              <div className="text-sm" aria-live="polite" data-testid="search-msg">
-                {searchMsg}
-                {cands.length > 0 && (
-                  <div className="mt-2 space-y-1.5" data-testid="cands">
-                    <p className="text-sm font-medium">他の候補（押すと、その場所を診断します）</p>
-                    {cands.map((c, i) => (
-                      <Button key={i} type="button" variant="outline" disabled={!c.rid} onClick={() => goCand(c)}
-                        className="h-auto w-full justify-start whitespace-normal py-2 text-left text-sm">
-                        {c.title}{c.rid ? (c.rid === data?.id && !c.inCell ? '（診断範囲外）' : `（${shortName(index?.regions.find((x) => x.id === c.rid)?.name ?? '')}）`) : '（収録範囲外）'}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </form>
-            {!data && (
-              <div className="space-y-2 border-t pt-3" aria-busy="true" aria-label="読み込み中">
-                <Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-3/4" /><Skeleton className="h-9 w-2/3" />
-              </div>
-            )}
-            {data && (
-              <div className="space-y-2 border-t pt-3" id="odpt-cond">
-                <div className="grid grid-cols-[4.5rem_1fr] items-start gap-x-2 gap-y-2 text-sm">
-                  <span className="pt-2 font-medium">行き先</span>
-                  <Seg label="行き先" value={cond.fi} options={data.facility_order.map((k, i) => ({ value: i, label: data.facility_labels[k] }))} onChange={(fi) => setC({ fi })} />
-                  <span className="pt-2 font-medium">曜日</span>
-                  <Seg label="曜日" value={cond.day} options={DAYS.map((k) => ({ value: k as Day, label: DAY_FULL[k] }))} onChange={(day) => setC({ day })} />
-                  <span className="pt-2 font-medium">出発</span>
-                  <Seg label="出発時刻" value={cond.per} options={PERIODS.map((k) => ({ value: k as Period, label: `${PERIOD_LABEL[k]}${data.params.start_hours[k]}時` }))} onChange={(per) => setC({ per })} />
-                  <span className="pt-2 font-medium">許容時間</span>
-                  <Seg label="許容時間" value={cond.w} options={data.params.thresholds.map((w) => ({ value: w, label: `${w}分以内` }))} onChange={(w) => setC({ w })} />
-                </div>
-                <p className="text-xs text-muted-foreground">平日＝水曜のダイヤ、休日＝日曜のダイヤで計算（祝日・臨時ダイヤは未反映）。</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 3. 結論 */}
-        <div className="min-w-0 lg:col-start-2 lg:row-start-1">
-          <Conclusion
-            ref={conclusionRef}
-            data={data}
-            cond={cond}
-            hasPoint={Boolean(pt) && Boolean(data)}
-            placeLabel={placeLabel}
-            verdict={diag?.v ?? null}
-            popInfo={diag?.cell ? { pop: diag.cell[1], pop65: diag.cell[2] } : null}
-            lastWd={diag?.lastWd ?? null}
-            lastHol={diag?.lastHol ?? null}
-            nearest={diag && data && diag.near[0] ? { name: diag.labels[0], m: Math.round(diag.near[0].d), wd: data.nodes[diag.near[0].i][3], hol: data.nodes[diag.near[0].i][4] } : null}
-            nearCount={diag?.near.length ?? 0}
-            walkInM={data?.params.walk_in_m ?? 600}
-            copyText={copyText}
-            onCopy={onCopy}
-            copied={copied}
-            onStation={onStation}
-            stations={STATIONS}
-            isLocal={isLocal()}
-            facility={diag?.facility ?? null}
-            transitLevel={diag?.transitLevel ?? null}
-            loading={!data || searching}
-          />
-        </div>
-
-        {/* 地図 */}
-        <div className="min-w-0 space-y-2 lg:col-start-1 lg:row-start-2">
-          {!data ? (
-            <Skeleton className="h-[360px] w-full lg:h-[520px]" />
-          ) : (
-            <MapView
-              className="h-[380px] lg:h-[520px]"
-              center={view.center ?? data.center}
-              zoom={view.zoom ?? 10}
-              bounds={bounds}
-              layers={layers}
-              onClick={onMapClick}
-              onMapReady={(m) => {
-                mapRef.current = m
-                // 親の幅が後から決まっても地図がはみ出さない・欠けないようにする
-                new ResizeObserver(() => m.resize()).observe(m.getContainer())
-              }}
-              attribution="国勢調査・国土数値情報・各事業者GTFS（加工して作成）"
-              ariaLabel="診断マップ（地図をタップするとその地点を診断します）"
+  const panel = !data || !dv ? (
+    <div className="space-y-3" aria-busy="true" aria-label="読み込み中"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-24 w-full" /></div>
+  ) : (
+    <>
+      {step === 'place' && (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <div className="text-sm font-medium" id="odpt-region">診断地域（いま: <b>{shortName(data.name)}</b>）</div>
+            <Seg
+              label="診断地域"
+              value={regionId}
+              options={regionList.map((r) => ({ value: r.id, label: shortName(r.name) }))}
+              onChange={(id) => { pending.current = { pt: null, route: null }; setPt(null); setPlaceLabel(''); setRegionId(id) }}
             />
-          )}
-          <Card className="gap-2 py-3">
-            <CardContent className="space-y-2 px-4 text-xs">
-              <div className="flex flex-wrap gap-x-4 gap-y-1" role="group" aria-label="表示切替">
-                {([['cells', '診断メッシュ'], ['nodes', '停留所（本数）'], ['routes', '路線'], ['fac', `施設（${facLabel || '病院'}）`], ['rail', '鉄道駅（未収録）']] as const).map(([k, l]) => (
-                  <label key={k} className="flex items-center gap-1.5 text-sm">
-                    <Checkbox checked={vis[k]} onCheckedChange={(c) => setVis((v) => ({ ...v, [k]: c === true }))} />{l}
-                  </label>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <b>エリア（<Term tip={TIPS.mesh}>約500m四方</Term>）の色</b>
-                <Sw c={COLORS.walk} l="歩いて行ける" /><Sw c={COLORS.transit} l="公共交通で行ける" /><Sw c={COLORS.none} l="行けない" />
-                <Sw c={COLORS.rail} l="鉄道駅が近い（未評価）" />{lostIdx && <Sw c={COLORS.lost} l="路線を止めると行けなくなる" />}
-                <span className="text-muted-foreground">濃いほど人口が多い</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <b>停留所の色（1日の発車本数）</b>
-                {[['#9e9e9e', '0'], ['#fdd49e', '1-5'], ['#fdbb84', '6-15'], ['#fc8d59', '16-40'], ['#e34a33', '41-100'], ['#b30000', '101+']].map(([c, l]) => <Sw key={l} c={c} l={l} round />)}
-                <Sw c={facLabel === '病院' || !facLabel ? '#8e24aa' : '#f9a825'} l={facLabel || '病院'} round />
-                <span className="flex items-center gap-1"><span className="inline-block size-3 rounded-full border-2 border-black bg-white" />選んだ地点</span>
-              </div>
-              <ul className="list-disc space-y-0.5 pl-4 text-muted-foreground">
-                <li><Term tip={TIPS.mesh}>エリア（メッシュ）</Term>: 地図を約500m四方に区切った区画。人口はこの単位で数えています。</li>
-                <li><Term tip={TIPS.gtfs}>GTFS</Term>: バスなどの時刻表・停留所のオープンデータ。</li>
-                <li><Term tip={TIPS.none}>行けない</Term>: 歩いても、収録した公共交通でも許容時間内に着けない。</li>
-              </ul>
-            </CardContent>
-          </Card>
-          {data && (
-            <Alert>
-              <AlertTitle>診断の範囲（実データ・収録した範囲のみ）</AlertTitle>
-              <AlertDescription className="block">
-                収録しているのは{data.coverage.sources.join('・')}のGTFS {data.coverage.feeds}件（{data.coverage.modes.join('・')}）のみ。
-                {data.coverage.modes.filter((m) => m !== 'バス').length ? `鉄道は${data.coverage.modes.filter((m) => m !== 'バス').join('・')}のみ収録し、JR等そのほかの鉄道は未収録です。` : '鉄道（JR等）は未収録です。'}
-                デマンド交通・予約制の便も未収録です。
-                {data.coverage.rail_checked && ` 未収録の鉄道の駅から徒歩${data.params.rail_walk_min}分圏で行けない地区は、赤ではなく灰色「鉄道駅が近い（未評価）」にしています。`}
-                {dataWarn && <b className="mt-1 block text-orange-800">データの期限: {dataWarn}</b>}
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-
-        {/* 詳細タブ */}
-        <div className="min-w-0 lg:col-start-2 lg:row-start-2">
-          <Tabs value={tab} onValueChange={setTab}>
-            <div className="overflow-x-auto">
-              <TabsList className="w-max">
-                <TabsTrigger value="stops">近くの停留所</TabsTrigger>
-                <TabsTrigger value="region">地域全体</TabsTrigger>
-                <TabsTrigger value="whatif">路線を止めたら？</TabsTrigger>
-                <TabsTrigger value="compare">5地域比較</TabsTrigger>
-                <TabsTrigger value="about">出典・前提</TabsTrigger>
-              </TabsList>
+            <p className="text-xs text-muted-foreground">{data.reason}</p>
+          </div>
+          <form role="search" className="space-y-1" onSubmit={(e) => { e.preventDefault(); doSearch(query) }}>
+            <label htmlFor="odpt-q" className="text-sm font-medium">住所・駅名で探す（または地図をタップ）</label>
+            <div className="flex gap-2">
+              <Input id="odpt-q" type="search" value={query} onChange={(e) => setQuery(e.target.value)} maxLength={80} autoComplete="off"
+                placeholder={`例: ${exampleFor[regionId] ?? '駅名や住所'}`} />
+              <Button type="submit" disabled={searching || !index}><Search className="size-4" />探す</Button>
             </div>
-            {!data ? (
-              <Skeleton className="h-48 w-full" />
-            ) : (
-              <>
-                <TabsContent value="stops"><StopsPanel data={data} cond={cond} cell={diag?.cell ?? null} near={diag?.near ?? []} labels={diag?.labels ?? []} /></TabsContent>
-                <TabsContent value="region"><RegionPanel data={data} cond={cond} /></TabsContent>
-                <TabsContent value="whatif"><WhatIfPanel data={data} whatif={whatif} cond={cond} route={route} onRoute={selectRoute} impact={impact} /></TabsContent>
-                <TabsContent value="compare">
-                  {index && <ComparePanel index={index} all={all} cond={cond} data={data} loading={!all && !allErr} error={allErr} />}
-                </TabsContent>
-                <TabsContent value="about">
-                  <AboutPanel data={data} url={isLocal() ? '公開URLをここに記入' : shareUrl.replace(/[#?].*$/, '')} date={todayIso()}
-                    onCopyCite={(t) => writeClipboard(t, () => toast.success('出典の例文をコピーしました'))} />
-                </TabsContent>
-              </>
-            )}
-          </Tabs>
-          <p className="mt-3 text-xs text-muted-foreground">
-            この画面の状態（地域・行き先・曜日・時間帯・許容時間・選んだ路線・調べた地点）は、ブラウザのアドレス欄のリンクに入っています。
-          </p>
+            <div className="text-sm" aria-live="polite" data-testid="search-msg">
+              {searchMsg}
+              {cands.length > 0 && (
+                <div className="mt-2 space-y-1.5" data-testid="cands">
+                  <p className="text-sm font-medium">他の候補（押すと、その場所を診断します）</p>
+                  {cands.map((c, i) => (
+                    <Button key={i} type="button" variant="outline" disabled={!c.rid} onClick={() => goCand(c)}
+                      className="h-auto w-full justify-start whitespace-normal py-2 text-left text-sm">
+                      {c.title}{c.rid ? (c.rid === data.id && !c.inCell ? '（診断範囲外）' : `（${shortName(index?.regions.find((x) => x.id === c.rid)?.name ?? '')}）`) : '（収録範囲外）'}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </form>
+          {!hasPt && (
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-xs text-muted-foreground">駅名の例:</span>
+              {STATIONS.map((st) => (
+                <Button key={st.q} variant="outline" size="sm" onClick={() => onStation(st.q)} disabled={searching}>{st.label}</Button>
+              ))}
+            </div>
+          )}
         </div>
+      )}
+      {step === 'cond' && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[4.5rem_1fr] items-start gap-x-2 gap-y-2 text-sm">
+            <span className="pt-2 font-medium">行き先</span>
+            <Seg label="行き先" value={cond.fi} options={data.facility_order.map((k, i) => ({ value: i, label: data.facility_labels[k] }))} onChange={(fi) => setC({ fi })} />
+            <span className="pt-2 font-medium">曜日</span>
+            <Seg label="曜日" value={cond.day} options={DAYS.map((k) => ({ value: k as Day, label: DAY_FULL[k] }))} onChange={(day) => setC({ day })} />
+            <span className="pt-2 font-medium">出発</span>
+            <Seg label="出発時刻" value={cond.per} options={PERIODS.map((k) => ({ value: k as Period, label: `${PERIOD_LABEL[k]}${data.params.start_hours[k]}時` }))} onChange={(per) => setC({ per })} />
+            <span className="pt-2 font-medium">許容時間</span>
+            <Seg label="許容時間" value={cond.w} options={data.params.thresholds.map((w) => ({ value: w, label: `${w}分以内` }))} onChange={(w) => setC({ w })} />
+          </div>
+          <p className="text-xs text-muted-foreground">平日＝水曜のダイヤ、休日＝日曜のダイヤで計算（祝日・臨時ダイヤは未反映）。初期値のままで、平日の朝に30分以内で病院へ行けるかを調べられます。</p>
+        </div>
+      )}
+      {step === 'verdict' && (hasPt ? <VerdictPanel d={dv} /> : needPt)}
+      {step === 'hol' && (hasPt ? <HolPanel d={dv} /> : needPt)}
+      {step === 'last' && (hasPt ? (
+        <div className="space-y-4">
+          <LastPanel d={dv} />
+          <StopsPanel data={data} cond={cond} cell={diag?.cell ?? null} near={diag?.near ?? []} labels={diag?.labels ?? []} />
+        </div>
+      ) : needPt)}
+      {step === 'copy' && (hasPt ? <CopyPanel copyText={copyText} onCopy={onCopy} copied={copied} isLocal={isLocal()} /> : needPt)}
+      {step === 'region' && <RegionPanel data={data} cond={cond} />}
+      {step === 'whatif' && <WhatIfPanel data={data} whatif={whatif} cond={cond} route={route} onRoute={selectRoute} impact={impact} />}
+      {step === 'compare' && index && <ComparePanel index={index} all={all} cond={cond} data={data} loading={!all && !allErr} error={allErr} />}
+      {step === 'about' && (
+        <AboutPanel data={data} url={isLocal() ? '公開URLをここに記入' : shareUrl.replace(/[#?].*$/, '')} date={todayIso()}
+          onCopyCite={(t) => writeClipboard(t, () => toast.success('出典の例文をコピーしました'))} />
+      )}
+    </>
+  )
+
+  const facLabel2 = facLabel || '病院'
+  const mapAside = (
+    <div className="relative h-full w-full">
+      {!data ? (
+        <Skeleton className="h-full w-full" />
+      ) : (
+        <MapView
+          className="h-full w-full"
+          center={view.center ?? data.center}
+          zoom={view.zoom ?? 10}
+          bounds={bounds}
+          layers={layers}
+          onClick={onMapClick}
+          onMapReady={(m) => {
+            mapRef.current = m
+            new ResizeObserver(() => m.resize()).observe(m.getContainer())
+          }}
+          attribution="国勢調査・国土数値情報・各事業者GTFS（加工して作成）"
+          ariaLabel="診断マップ（地図をタップするとその地点を診断します）"
+        />
+      )}
+      <MapSummary d={dv} hasPoint={hasPt} />
+      <div className="absolute bottom-7 left-2 z-10 max-w-[calc(100%-1rem)]">
+        {legendOpen ? (
+          <div className="max-h-[50vh] w-72 max-w-full space-y-1.5 overflow-y-auto rounded-md border bg-white/95 p-2 text-xs shadow" data-testid="legend">
+            <div className="flex items-center justify-between"><b>凡例・表示切替</b><Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setLegendOpen(false)}>閉じる</Button></div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1" role="group" aria-label="表示切替">
+              {([['cells', '診断エリア'], ['nodes', '停留所'], ['routes', '路線'], ['fac', `施設（${facLabel2}）`], ['rail', '鉄道駅（未収録）']] as const).map(([k, l]) => (
+                <label key={k} className="flex items-center gap-1.5">
+                  <Checkbox checked={vis[k]} onCheckedChange={(c) => setVis((v) => ({ ...v, [k]: c === true }))} />{l}
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <b>エリア（<Term tip={TIPS.mesh}>約500m四方</Term>）</b>
+              <Sw c={COLORS.walk} l="歩いて行ける" /><Sw c={COLORS.transit} l="公共交通で行ける" /><Sw c={COLORS.none} l="行けない" />
+              <Sw c={COLORS.rail} l="鉄道駅が近い（未評価）" />{lostIdx && <Sw c={COLORS.lost} l="路線を止めると行けなくなる" />}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <b>停留所（1日の本数）</b>
+              {[['#9e9e9e', '0'], ['#fdd49e', '1-5'], ['#fdbb84', '6-15'], ['#fc8d59', '16-40'], ['#e34a33', '41-100'], ['#b30000', '101+']].map(([c, l]) => <Sw key={l} c={c} l={l} round />)}
+              <Sw c={facLabel2 === '病院' ? '#8e24aa' : '#f9a825'} l={facLabel2} round />
+              <span className="flex items-center gap-1"><span className="inline-block size-3 rounded-full border-2 border-black bg-white" />選んだ地点</span>
+            </div>
+            <p className="text-muted-foreground"><Term tip={TIPS.gtfs}>GTFS</Term>・<Term tip={TIPS.none}>行けない</Term>の意味は、言葉に触れると表示されます。</p>
+          </div>
+        ) : (
+          <Button size="sm" variant="secondary" className="h-7 border bg-white/95 px-2 text-xs shadow" onClick={() => setLegendOpen(true)}>凡例・表示切替</Button>
+        )}
       </div>
     </div>
+  )
+
+  return (
+    <>
+      <PageHeader
+        appId="odpt"
+        compact
+        actions={
+          <>
+            <Term tip={coverageTip}><Badge variant="outline" className="cursor-help">収録した範囲のバスのみ</Badge></Term>
+            <SourceDialog sources={SOURCES} />
+          </>
+        }
+      />
+      <StepLayout title={stepTitle} hint={stepDefs.find((x) => x.id === step)?.hint} aside={mapAside}>
+        {panel}
+      </StepLayout>
+    </>
   )
 }
 

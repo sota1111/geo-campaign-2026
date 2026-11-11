@@ -41,10 +41,7 @@ const shot = async (name) => { const r = await send('Page.captureScreenshot', { 
 const clickText = (sel, text) => ev(`(()=>{const e=[...document.querySelectorAll(${JSON.stringify(sel)})].find(x=>x.textContent.includes(${JSON.stringify(text)}));if(!e)return 'NOTFOUND';e.scrollIntoView({block:'center'});e.click();return 'ok'})()`)
 const body = () => ev('document.body.innerText')
 
-const IDS = ['place', 'cross', 'overlay', 'record', 'confirm', 'export']
 const statuses = () => ev(`[...document.querySelectorAll('aside [data-step]')].map(b=>b.dataset.step+':'+b.dataset.status).join(' ')`)
-const activeTab = () => ev(`document.querySelector('[role=tab][data-state=active]').textContent`)
-// サイドバー（スマホは上部ステッパーを開いて）の手順を押す
 const stepClick = async (id) => {
   const r = await ev(`(()=>{
     const vis=()=>[...document.querySelectorAll('[data-step="${id}"]')].find(b=>b.offsetParent!==null);
@@ -55,9 +52,11 @@ const stepClick = async (id) => {
   return r
 }
 const setSelect = (id, v) => ev(`(()=>{const s=document.getElementById('${id}');const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'${v}');s.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+const heights = () => ev(`JSON.stringify({docScrollH:document.documentElement.scrollHeight,bodyScrollH:document.body.scrollHeight,innerH:innerHeight,scrollY:Math.round(scrollY),over:document.documentElement.scrollHeight>innerHeight?[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.bottom>innerHeight+1&&r.height>0&&!e.closest('[data-testid=step-panel-body]')&&getComputedStyle(e).position!=='fixed'}).slice(0,6).map(e=>e.tagName+'.'+String(e.className).slice(0,50)+' b='+Math.round(e.getBoundingClientRect().bottom)):[],panelScrollable:(()=>{const p=document.querySelector('[data-testid=step-panel-body]');return p?p.scrollHeight+'/'+p.clientHeight:null})()})`)
+const panelTitle = () => ev(`document.querySelector('[data-testid=step-layout] h2').textContent`)
 const URL0 = base + 'apps/biz-idea/'
 
-for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
+for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   logs.length = 0
   await send('Page.navigate', { url: URL0 })
@@ -66,58 +65,54 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await send('Page.reload')
   await sleep(2500)
   await shot(`${label}-1-initial`)
-  console.log(label, 'overflow ok:', await ev('document.documentElement.scrollWidth<=window.innerWidth'), 'sidebar visible:', await ev(`(()=>{const a=document.querySelector('aside[aria-label=進め方]');return !!a&&a.offsetParent!==null})()`), 'topbar visible:', await ev(`(()=>{const a=document.querySelector('[data-testid=steps-topbar]');return !!a&&a.offsetParent!==null})()`))
-  console.log(label, 'initial', await statuses())
+  console.log(label, 'overflow-x ok:', await ev('document.documentElement.scrollWidth<=window.innerWidth'), 'tabs in page:', await ev(`document.querySelectorAll('[role=tab]').length`), 'initial', await statuses())
+  console.log(label, 'H place', await panelTitle(), await heights())
 
-  // 1 地名
-  console.log(label, 'step place', await stepClick('place'), await activeTab())
-  console.log(label, await clickText('button', 'ぬま田'))
+  console.log(label, 'step place', await stepClick('place'), await clickText('button', 'ぬま田'))
   await sleep(1200)
-  console.log(label, await statuses())
-  // 2 突き合わせ
-  console.log(label, 'step cross', await stepClick('cross'), await activeTab())
-  await sleep(600)
-  const top = (id) => ev(`Math.round(document.getElementById('${id}').getBoundingClientRect().top)`)
+  console.log(label, await statuses(), '| auto-switch? title:', await panelTitle(), await heights())
+  await shot(`${label}-2-place`)
+
+  console.log(label, 'step cross', await stepClick('cross'), await panelTitle())
   let t = await body()
-  console.log(label, '手がかりあり:', /手がかりあり/.test(t), '| 2-1結果の位置 top=', await top('step-2-1-result'), '2-2 top=', await top('step-2-2'), 'innerHeight', await ev('innerHeight'))
-  console.log(label, '手順2のみ済（3は未）:', await statuses())
-  await shot(`${label}-2-cross`)
-  // 3 重ねる
-  console.log(label, 'step overlay', await stepClick('overlay'))
-  await sleep(500)
-  console.log(label, '手順3押下後 2-2 top=', await top('step-2-2'), '状態:', await statuses())
+  console.log(label, '手がかりあり:', /手がかりあり/.test(t), await statuses(), await heights())
+  await shot(`${label}-3-cross`)
+
+  console.log(label, 'step overlay', await stepClick('overlay'), await panelTitle(), '(押しただけ:', await statuses(), ')')
   console.log(label, await clickText('button', '明治期の低湿地（洪水の話なら）'))
   await sleep(1800)
-  console.log(label, await statuses())
-  await shot(`${label}-3-overlay`)
-  // 4 記録
-  console.log(label, 'step record', await stepClick('record'), await activeTab())
+  console.log(label, await statuses(), await heights())
+  await shot(`${label}-4-overlay`)
+
+  console.log(label, 'step record', await stepClick('record'), await panelTitle(), 'H record(just opened)', await heights(), 'save button in viewport:', await ev(`(()=>{const b=document.querySelector('button[type=submit]');const r=b.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()`))
   console.log(label, await clickText('button', 'サンプルの語り'))
   await sleep(300)
+  console.log(label, 'H record(before save)', await heights(), 'save button in viewport:', await ev(`(()=>{const b=document.querySelector('button[type=submit]');const r=b.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()`))
+  await shot(`${label}-5-record`)
   console.log(label, await clickText('button[type=submit]', '記録して地図に残す'))
   await sleep(1000)
   t = await body()
-  console.log(label, '未確認:', /「未確認」の記録として保存しました/.test(t), '必須一覧:', /必須: 地名／聞き取った話／話の出典／位置/.test(t), '保存後 地名保持:', await ev(`document.getElementById('f-name').value`), '話・出典・語り手クリア:', await ev(`['f-story','f-basis','f-teller'].map(i=>document.getElementById(i).value==='').join(',')`), 'タブ名:', await ev(`[...document.querySelectorAll('[role=tab]')].map(x=>x.textContent).join('|')`))
-  console.log(label, await statuses())
-  await shot(`${label}-4-saved`)
-  // 5 確認して公開範囲
-  console.log(label, 'step confirm', await stepClick('confirm'))
-  console.log(label, 'dialog open:', await ev(`!!document.querySelector('[role=dialog]')`))
-  await shot(`${label}-5-dialog`)
+  console.log(label, '未確認:', /「未確認」の記録として保存しました/.test(t), '地名保持:', await ev(`document.getElementById('f-name').value`), await statuses())
+
+  console.log(label, 'step confirm', await stepClick('confirm'), await panelTitle(), await heights())
+  console.log(label, await clickText('button', '確認済みにする…（確認役を兼ねる）'))
+  await sleep(600)
+  await shot(`${label}-6-confirm-dialog`)
   await setSelect('dlg-vis', 'public')
   await sleep(300)
   console.log(label, await ev(`(()=>{const b=[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent==='確認済みにする');b.click();return 'ok'})()`))
   await sleep(700)
   console.log(label, await statuses())
-  // 6 書き出し
-  console.log(label, 'step export', await stepClick('export'), await activeTab())
+  await shot(`${label}-7-confirm`)
+
+  console.log(label, 'step export', await stepClick('export'), await panelTitle())
   console.log(label, await clickText('button', '公開分を書き出し'))
   await sleep(700)
   t = await body()
   console.log(label, (t.match(/\d件を GeoJSON で書き出しました（[^）]*）/) || [])[0])
-  console.log(label, 'FINAL', await statuses())
+  console.log(label, 'FINAL', await statuses(), 'H export', await heights())
   console.log(label, 'progress text:', await ev(`document.body.innerText.match(/\\d+\\/\\d+ 完了|目的に必要な手順はすべて完了しました/g)?.join(' | ')`))
-  await shot(`${label}-6-all-done`)
+  await shot(`${label}-8-all-done`)
   console.log(label, 'console errors (tile fetch除く):', JSON.stringify(logs.filter((l) => !/cyberjapandata|ERR_|Failed to load resource/.test(l))), 'raw count', logs.length)
 }
 ws.close(); chrome.kill()

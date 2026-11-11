@@ -1,4 +1,5 @@
-// 画面操作の通し確認（ヘッドレスChrome＋CDP）。要: npx vite preview --port 8842 --host 127.0.0.1、google-chrome、node 22+
+// 画面操作の通し確認（ヘッドレスChrome＋CDP）。サイドバー（スマホは上部ステッパー）を上から順に押して全手順を済にする。
+// 要: npx vite preview --port 8842 --host 127.0.0.1、google-chrome、node 22+
 // usage: node src/apps/udc-moritsuchi/e2e.mjs <outDir> <width> <height> <mobile:0|1>
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -49,16 +50,30 @@ const shot = async (name, full = false) => {
   fs.writeFileSync(path.join(outDir, name + '.png'), Buffer.from(r.result.data, 'base64'))
 }
 const clickText = (sel, text) => ev(`(()=>{const e=[...document.querySelectorAll(${JSON.stringify(sel)})].find(x=>x.textContent.includes(${JSON.stringify(text)}));if(!e)return false;e.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:0}));e.click();return true})()`)
-const mapCenter = async () => {
-  await ev(`document.querySelector(${JSON.stringify(MAP)}).scrollIntoView({block:'center'})`)
-  await sleep(500)
-  return ev(`(()=>{const r=document.querySelector(${JSON.stringify(MAP)}).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
-}
 const tapMap = async () => {
-  const p = await mapCenter()
+  await ev(`document.querySelector(${JSON.stringify(MAP)}).scrollIntoView({block:'center'})`)
+  await sleep(400)
+  const p = await ev(`(()=>{const r=document.querySelector(${JSON.stringify(MAP)}).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
   for (const t of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type: t, x: p.x, y: p.y, button: 'left', clickCount: 1 })
   await sleep(600)
 }
+const doneCount = async () => +(/必須 5 のうち (\d) 完了/.exec(await ev(`document.querySelector('[data-testid=steps-topbar]').textContent`))?.[1] ?? -1)
+const stepAttr = (sid, a) => ev(`(document.querySelector('aside [data-step=${sid}]') || document.querySelector('[data-testid=steps-topbar] [data-step=${sid}]'))?.${a} ?? 'none'`)
+const stepStatus = (sid) => stepAttr(sid, 'dataset.status')
+const isActive = async (sid) => (await stepAttr(sid, "dataset.active")) === 'true'
+const clickStep = async (sid) => {
+  if (mobile) {
+    const open = await ev(`document.querySelector('[data-testid=steps-topbar] > button').getAttribute('aria-expanded')`)
+    if (open !== 'true') await ev(`document.querySelector('[data-testid=steps-topbar] > button').click()`)
+    await sleep(300)
+    await ev(`document.querySelector('[data-testid=steps-topbar] [data-step=${sid}]').click()`)
+  } else {
+    await ev(`document.querySelector('aside [data-step=${sid}]').click()`)
+  }
+  await sleep(1000)
+}
+const typeInto = (sel, text) => ev(`(()=>{const t=document.querySelector(${JSON.stringify(sel)});const s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;s.call(t,${JSON.stringify(text)});t.dispatchEvent(new Event('input',{bubbles:true}))})()`)
+const docScroll = () => ev(`({sh: document.documentElement.scrollHeight, bh: document.body.scrollHeight, ih: window.innerHeight})`)
 const results = []
 const check = (name, ok, extra = '') => { results.push([name, ok]); console.log(ok ? 'PASS' : 'FAIL', name, extra) }
 
@@ -70,93 +85,86 @@ await send('Page.navigate', { url: URL0 })
 await sleep(4000)
 await shot('01-initial')
 
-check('初期表示: 地図とタブ', await ev(`!!document.querySelector(${JSON.stringify(MAP)} + ' canvas') && !![...document.querySelectorAll('[role=tab]')].find(t=>t.textContent.includes('確かめる'))`))
-const doneCount = async () => +(/(\d)\/5 完了/.exec(await ev(`document.querySelector('[data-testid=steps-topbar]').textContent`))?.[1] ?? -1)
-const stepStatus = (id) => ev(`(document.querySelector('aside [data-step=${id}]') || document.querySelector('[data-testid=steps-topbar] [data-step=${id}]'))?.dataset.status ?? 'none'`)
-const clickStep = async (id) => {
-  if (mobile) {
-    const open = await ev(`document.querySelector('[data-testid=steps-topbar] > button').getAttribute('aria-expanded')`)
-    if (open !== 'true') await ev(`document.querySelector('[data-testid=steps-topbar] > button').click()`)
-    await sleep(300)
-    await ev(`document.querySelector('[data-testid=steps-topbar] [data-step=${id}]').click()`)
-  } else {
-    await ev(`document.querySelector('aside [data-step=${id}]').click()`)
+check('初期表示: 地図がある', await ev(`!!document.querySelector(${JSON.stringify(MAP)} + ' canvas')`))
+check('初期は手順1が表示中・いまここ・進捗0/5', (await isActive('place')) && (await stepStatus('place')) === 'current' && (await doneCount()) === 0)
+check('ページ内にタブ・チェックリスト・次へボタンがない', await ev(`!document.querySelector('[role=tab]') && !document.querySelector('[data-testid=checklist]') && !document.querySelector('[data-testid=next-action]')`))
+if (!mobile) {
+  check('サイドバーに手順が上から place,look,compare,rec,prep,ref', (await ev(`[...document.querySelectorAll('aside [data-step]')].map(e=>e.dataset.step).join(',')`)) === 'place,look,compare,rec,prep,ref')
+  // (1) 全手順を表示してもページ全体はスクロールしない
+  let worst = 0
+  for (const sid of ['place', 'look', 'compare', 'rec', 'prep', 'ref']) {
+    await clickStep(sid)
+    const d = await docScroll()
+    worst = Math.max(worst, d.sh - d.ih, d.bh - d.ih)
+    check(`手順 ${sid}: documentのスクロール高さ ≤ ビューポート (${d.sh} / ${d.ih})`, d.sh <= d.ih && d.bh <= d.ih)
   }
-  await sleep(1200)
+  console.log('worst overflow px:', worst)
+  await clickStep('place')
 }
-const typeInto = (sel, text) => ev(`(()=>{const t=document.querySelector(${JSON.stringify(sel)});const s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;s.call(t,${JSON.stringify(text)});t.dispatchEvent(new Event('input',{bubbles:true}))})()`)
 
-check('初期は「確かめる」画面で、手順1がいまここ・進捗0/5', (await ev(`document.querySelector('[role=tab][data-state=active]').innerText.includes('確かめる')`)) && (await stepStatus('place')) === 'current' && (await doneCount()) === 0)
-if (!mobile) check('手順が5つ、上から順に登録されている', (await ev(`[...document.querySelectorAll('aside [data-step]')].map(e=>e.dataset.step).join(',')`)) === 'place,look,compare,rec,prep')
-check('結論バナー: 初期は例と明示', (await ev(`document.querySelector('[data-testid=near-banner]').innerText`)).startsWith('熱海駅（例）からの結果です'))
 // 手順1: 自宅の場所を入れる
-await clickStep('place')
-check('手順1を押すと住所入力欄にフォーカス', await ev(`document.activeElement?.id === 'mw-q'`))
+await ev(`document.getElementById('mw-q').focus()`)
 await typeInto('#mw-q', '熱海駅')
 await ev(`document.querySelector('form[role=search] button[type=submit]').click()`); await sleep(3500)
 check('検索候補が出る', (await ev(`document.querySelectorAll('ul[aria-label="検索結果"] li').length`)) > 0)
+await shot('02a-search')
 await ev(`document.querySelector('ul[aria-label="検索結果"] li button').click()`); await sleep(1500)
-check('手順1が済・手順2がいまここ', (await stepStatus('place')) === 'done' && (await stepStatus('look')) === 'current' && (await doneCount()) === 1)
-check('検索地点の近くの造成地が距離順に出る', (await ev(`document.querySelectorAll('ul[aria-label="近い盛土造成地"] li').length`)) === 5)
-const ns = await ev(`document.querySelector('[data-testid=near-summary]').innerText`)
-check('最寄りまでの距離（直線）と近くの基準', ns.includes('（直線）') && ns.includes('500m以内'))
-await shot('02b-search')
+check('手順1が済・手順2がいまここ・表示は自動で切り替わらない', (await stepStatus('place')) === 'done' && (await stepStatus('look')) === 'current' && (await isActive('place')) && (await doneCount()) === 1)
+
 // 手順2: 近くの盛土造成地を確かめる
 await clickStep('look')
-const top1 = await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').getBoundingClientRect().top`)
-await sleep(800)
-const top2 = await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').getBoundingClientRect().top`)
-check('手順2: 一覧へ移動し、動かない', Math.abs(top1 - top2) < 1 && top2 > 0 && top2 < +h, `${top1} ${top2}`)
+check('手順2のパネル: 結論・一覧5件', (await ev(`document.querySelector('[data-testid=near-summary]').innerText`)).includes('（直線）') && (await ev(`document.querySelectorAll('ul[aria-label="近い盛土造成地"] li').length`)) === 5)
 const want = await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button .font-medium').innerText`)
 await ev(`document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').click()`); await sleep(1500)
-check('押した造成地が選ばれ型が出る', await ev(`/谷埋め型|腹付け型|区分なし/.test(document.querySelector('[data-testid=fill-info]').innerText) && document.querySelector('[data-testid=fill-info]').innerText.includes(${JSON.stringify(want)})`), want)
-check('型の説明が凡例にある', await ev(`document.body.innerText.includes('谷を埋めた盛土') && document.body.innerText.includes('斜面に盛った盛土')`))
+check('押した造成地が選ばれ型が出る', await ev(`/谷埋め型|腹付け型|区分なし/.test(document.querySelector('[data-testid=fill-info]').innerText) && document.querySelector('[data-testid=fill-info]').innerText.includes(${JSON.stringify(want)}) && document.querySelector('ul[aria-label="近い盛土造成地"] li:nth-child(2) button').getAttribute('aria-pressed')==='true'`), want)
+check('型の説明が出る', await ev(`document.body.innerText.includes('谷を埋めた盛土') && document.body.innerText.includes('斜面に盛った盛土')`))
 check('手順2が済・手順3がいまここ', (await stepStatus('look')) === 'done' && (await stepStatus('compare')) === 'current' && (await doneCount()) === 2)
 await shot('02-fill-selected')
+
 // 手順3: 昔の写真と見比べる
-await clickStep('compare'); await sleep(1500)
-check('手順3: 昔の写真に切り替わり見比べ画面', await ev(`location.hash.includes('old=ort_old10') && document.querySelector('[role=tab][data-state=active]').innerText.includes('見比べる')`), await ev('location.hash'))
+await clickStep('compare')
+await ev(`[...document.querySelectorAll('button[role=radio]')].find(x=>x.textContent.trim()==='1961〜69年').click()`); await sleep(2500)
+check('昔の写真に切り替わる', await ev(`location.hash.includes('old=ort_old10')`), await ev('location.hash'))
 check('見るポイントと今/昔のラベル', (await ev(`document.querySelector('[data-testid=look-points]').innerText.includes('判定しません')`)) && (await ev(`document.querySelector('[data-testid=compare-badge]')?.innerText || ''`)).includes('左＝今'))
 check('手順3が済・手順4がいまここ', (await stepStatus('compare')) === 'done' && (await stepStatus('rec')) === 'current' && (await doneCount()) === 3)
 await shot('03-old-photo')
-await clickText('button', '航空写真(現在)'); await sleep(300)
+await ev(`[...document.querySelectorAll('button[role=radio]')].find(x=>x.textContent.trim()==='航空写真(現在)').click()`); await sleep(300)
 await ev(`[...document.querySelectorAll('button[role=radio]')].find(x=>x.textContent.trim()==='1974〜78年').click()`); await sleep(1500)
 check('1974〜78年に切替', await ev(`location.hash.includes('old=gazo1')`))
 await shot('03b-compare-1974')
 await ev(`[...document.querySelectorAll('button[role=radio]')].find(x=>x.textContent.trim()==='なし').click()`); await sleep(300)
+
 // 手順4: 気づいたことを記録する
 await clickStep('rec')
-check('位置は未選択から始まる（初期座標なし）', (await ev(`document.querySelector('[data-testid=pick-pos]').innerText`)).includes('未選択') && (await ev(`document.body.innerText.includes('地図をタップして位置を決めてください')`)))
+check('位置は未選択から始まる', (await ev(`document.querySelector('[data-testid=pick-pos]').innerText`)).includes('未選択') && (await ev(`document.body.innerText.includes('地図をタップして位置を決めてください')`)))
 check('位置未選択では保存ボタンが無効', await ev(`[...document.querySelectorAll('button[type=submit]')].find(b=>b.textContent.includes('記録する')).disabled`))
 await tapMap()
-const pos = await ev(`document.querySelector('[data-testid=pick-pos]').innerText`)
-check('地図クリックで位置が決まる', /\d+\.\d+, \d+\.\d+/.test(pos), pos)
+check('地図クリックで位置が決まる', /\d+\.\d+, \d+\.\d+/.test(await ev(`document.querySelector('[data-testid=pick-pos]').innerText`)))
 await ev(`document.querySelector('#mw-kind').click()`); await sleep(300)
 await clickText('[role=option]', '湧水・水の濁り'); await sleep(300)
 await ev(`(()=>{const t=document.querySelector('#mw-memo');const s=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set;s.call(t,'擁壁の下から水がにじんでいる（テスト）');t.dispatchEvent(new Event('input',{bubbles:true}))})()`)
 await clickText('label', '位置を約100m'); await sleep(200)
 await shot('04-record-form')
 await ev(`[...document.querySelectorAll('button[type=submit]')].find(b=>b.textContent.includes('記録する')).click()`); await sleep(1000)
-check('保存後に記録1件', (await ev(`document.querySelector('[data-testid=rec-count]').innerText`)) === '1')
-check('手順4が済・手順5がいまここ・バッジ「記録1件」', (await stepStatus('rec')) === 'done' && (await stepStatus('prep')) === 'current' && (await doneCount()) === 4 && (await ev(`document.querySelector('[role=tab][data-state=active]').innerText.includes('記録1件')`)))
-await sleep(1200)
-check('保存後に通報文カードへ自動スクロール', await ev(`(()=>{const r=document.querySelector('[data-testid=report-text]').getBoundingClientRect();return r.top>=0&&r.top<window.innerHeight})()`))
-const rep = await ev(`document.querySelector('[data-testid=report-text]').value`)
-check('通報文に500m以内の一文と通報先案内', rep.includes('500m以内に登録された大規模盛土造成地:') && (await ev(`document.body.innerText.includes('熱海市・伊東市の担当窓口')`)))
-check('通報文のたたき台が出る（ぼかし・湧水・メモ）', rep.includes('ぼかした位置') && rep.includes('湧水') && rep.includes('擁壁の下から'))
-console.log(rep)
+check('保存後に手順4が済・手順5がいまここ・表示は切り替わらない', (await stepStatus('rec')) === 'done' && (await stepStatus('prep')) === 'current' && (await isActive('rec')) && (await doneCount()) === 4)
 check('localStorage に保存', (await ev(`JSON.parse(localStorage.getItem('udc-moritsuchi:records')).length`)) === 1)
+
+// 手順5: 市に伝える文面を用意する
+await clickStep('prep')
+const rep = await ev(`document.querySelector('[data-testid=report-text]').value`)
+check('通報文（ぼかし・湧水・メモ・500m以内の一文）', rep.includes('ぼかした位置') && rep.includes('湧水') && rep.includes('擁壁の下から') && rep.includes('500m以内に登録された大規模盛土造成地:'))
+check('通報先案内と「コピーで準備完了」', await ev(`document.body.innerText.includes('熱海市・伊東市の担当窓口') && document.body.innerText.includes('この文面をコピーすると準備完了です')`))
+if (!mobile) { const d = await docScroll(); check(`手順5（記録あり）でもページはスクロールしない (${d.sh}/${d.ih})`, d.sh <= d.ih) }
+await shot('05-prep')
 await clickText('button', '文面をコピー'); await sleep(600)
 const clip = await ev(`navigator.clipboard.readText().catch(e=>'ERR '+e.message)`)
 check('通報文がクリップボードにコピーされる', clip.startsWith('【盛土の変化'), clip.slice(0, 30))
-check('手順5が済・5/5完了・完了メッセージ', (await stepStatus('prep')) === 'done' && (await doneCount()) === 5 && (await ev(`document.querySelector('[data-testid=steps-topbar]').textContent.includes('すべて完了')`)))
-await shot('05-out', true)
+check('手順5が済・5/5完了', (await stepStatus('prep')) === 'done' && (await doneCount()) === 5 && (await ev(`document.querySelector('[data-testid=steps-topbar]').textContent.includes('すべて完了')`)))
 
-await clickText('button', 'GeoJSONで書き出す'); await sleep(800)
-await clickText('button', 'CSVで書き出す'); await sleep(800)
+await clickText('button', 'GeoJSON'); await sleep(800)
+await clickText('button', 'CSV'); await sleep(800)
 const files = fs.readdirSync(dl)
-console.log(files)
-check('GeoJSON/CSVが書き出される', files.some((f) => f.endsWith('.geojson')) && files.some((f) => f.endsWith('.csv')))
+check('GeoJSON/CSVが書き出される', files.some((f) => f.endsWith('.geojson')) && files.some((f) => f.endsWith('.csv')), files.join(' '))
 const gj = files.find((f) => f.endsWith('.geojson'))
 if (gj) {
   const j = JSON.parse(fs.readFileSync(path.join(dl, gj), 'utf8'))
@@ -168,16 +176,20 @@ if (gj) {
   check('GeoJSON読み込みで2件', (await ev(`document.querySelector('[data-testid=rec-count]').innerText`)) === '2', await ev(`document.querySelector('[data-testid=io-msg]').innerText`))
 }
 
-// 範囲外（東京）を開き、記録タブで地図をタップ
+// 参考（任意）
+await clickStep('ref')
+check('参考: 出典・注意が出る', await ev(`document.body.innerText.includes('CC BY 4.0') && document.body.innerText.includes('直ちに危険な場所ではありません')`))
+
+// 範囲外（東京）を開き、記録手順で地図をタップ
 await send('Page.navigate', { url: URL0 + '#/?z=12&lat=35.68&lng=139.76' })
 await sleep(800); await send('Page.reload'); await sleep(4000)
-await clickText('[role=tab]', '記録する'); await sleep(300)
+await clickStep('rec')
 await tapMap()
 check('範囲外の警告が出る', await ev(`!!document.querySelector('[data-testid=out-of-coverage]')`))
 check('リロード後も記録が残る', (await ev(`JSON.parse(localStorage.getItem('udc-moritsuchi:records')).length`)) === 2)
 await shot('06-out-of-coverage')
 
-await clickText('[role=tab]', '届ける'); await sleep(300)
+await clickStep('prep')
 await clickText('button', '全記録を消す'); await sleep(400)
 await clickText('[role=dialog] button', '消す'); await sleep(500)
 check('全記録を消せる', (await ev(`document.querySelector('[data-testid=rec-count]').innerText`)) === '0')
@@ -186,7 +198,6 @@ const overflow = await ev(`document.documentElement.scrollWidth - document.docum
 check('横スクロールなし', overflow <= 0, String(overflow))
 const errs = logs.filter((l) => !/Failed to load resource/.test(l))
 check('コンソールエラーなし', errs.length === 0, JSON.stringify(logs.slice(0, 5)))
-console.log('console logs (all):', JSON.stringify(logs.slice(0, 5)))
 console.log('FAILS:', results.filter((r) => !r[1]).map((r) => r[0]))
 chrome.kill()
 ws.close()

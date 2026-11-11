@@ -56,7 +56,7 @@ const realClick = async (sel) => {
   for (const type of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: r[0], y: r[1], button: 'left', clickCount: 1 })
   return 'ok'
 }
-for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
+for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300)
   logs.length = 0
@@ -65,24 +65,29 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   console.log(`== ${label}`)
   const openTop = async () => { if (mobile) { const open = await ev(`document.querySelector('[data-testid=steps-topbar] button[aria-expanded]')?.getAttribute('aria-expanded')`); if (open !== 'true') await realClick('[data-testid=steps-topbar] button[aria-expanded]'); await sleep(300) } }
   const statuses = async () => { await openTop(); const r = await ev(`[...document.querySelectorAll('[data-step]')].map(e=>e.dataset.step+':'+e.dataset.status).join(' ')`); if (mobile) await realClick('[data-testid=steps-topbar] button[aria-expanded]'); await sleep(200); return r }
-  const pick = async (id) => { await openTop(); const r = await realClick(`[data-step=${id}]`); await sleep(900); return r }
+  const pick = async (id) => { await openTop(); await ev(`document.querySelector('[data-step=${id}]')?.scrollIntoView({block:'center'})`); await sleep(200); const r = mobile ? await ev(`(()=>{const b=[...document.querySelectorAll('[data-step=${id}]')].find(e=>e.offsetParent!==null);if(!b)return 'notfound';b.click();return 'ok'})()`) : await realClick(`[data-step=${id}]`); await sleep(900); return r }
   console.log('initial:', await statuses())
   await shot(`${label}-steps-0`)
-  console.log('step place:', await pick('place'), 'focused=', await ev(`document.activeElement?.id`))
+  console.log('step place:', await pick('place'), 'click input:', await realClick('#odpt-q'), 'focused=', await ev(`document.activeElement?.id`))
   await send('Input.insertText', { text: process.env.Q || '富山市大町' })
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
   await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
   await sleep(4500)
   console.log('after search:', await statuses())
-  for (const id of ['cond', 'verdict', 'hol', 'last', 'copy']) {
-    console.log('step', id, await pick(id), '->', await statuses())
+  const scrollInfo = () => ev(`JSON.stringify({docH: document.documentElement.scrollHeight, bodyH: document.body.scrollHeight, innerH: innerHeight, docW: document.documentElement.scrollWidth, innerW: innerWidth})`)
+  for (const id of ['place', 'cond', 'verdict', 'hol', 'last', 'copy', 'region', 'whatif', 'compare', 'about']) {
+    const r = await pick(id)
+    if (id === 'compare') await sleep(2500)
+    console.log('step', id, r, '| title:', await ev(`document.querySelector('[data-testid=step-layout] h2')?.innerText`), '| scroll', await scrollInfo())
+    if (id === 'verdict') console.log('  verdict:', (await ev(`document.querySelector('[data-testid=verdict-main]')?.innerText`)))
+    if (id === 'hol') console.log('  hol:', (await ev(`document.querySelector('[data-testid=compare-days]')?.innerText`)).replace(/\n+/g, ' / '))
+    if (id === 'last') console.log('  last:', (await ev(`document.querySelector('[data-testid=last-bus]')?.innerText`)).replace(/\n+/g, ' / '))
     if (id === 'copy') {
-      console.log('focused:', await ev(`document.activeElement?.dataset?.testid`))
-      await sleep(1200)
-      console.log('copy btn rect:', await ev(`JSON.stringify(document.querySelector('[data-testid=copy-conclusion]').getBoundingClientRect())`), 'innerHeight', await ev('innerHeight'))
       await realClick('[data-testid=copy-conclusion]'); await sleep(1000)
-      console.log('after copy click:', await statuses())
+      console.log('  copy status:', await ev(`document.querySelector('[data-testid=copy-done]')?.innerText`))
     }
+    if (['verdict', 'copy', 'region', 'about'].includes(id)) await shot(`${label}-step-${id}`)
+    console.log('  statuses:', (await statuses()).split(' ').slice(0, 10).join(' '))
   }
   console.log('progress:', await ev(`document.querySelector('[data-testid=steps-progress]')?.innerText ?? '(閉じている)'`))
   await shot(`${label}-steps-done`)

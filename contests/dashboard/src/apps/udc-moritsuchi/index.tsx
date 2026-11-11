@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
-import { AlertTriangle, Copy, Crosshair, Download, History, LocateFixed, MapPin, Search, Trash2, Upload } from 'lucide-react'
+import { AlertTriangle, Copy, Crosshair, Download, LocateFixed, MapPin, Search, Trash2, Upload } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { StepLayout } from '@/components/shared/StepLayout'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { downloadGeoJson, downloadText } from '@/components/shared/downloadText'
@@ -14,18 +15,16 @@ import { fetchData } from '@/lib/data'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  ATAMI_STATION, KINDS, KIND_LABEL, distText, fillCenter, fmtDate, inCoverage, kindDescription,
+  ATAMI_STATION, KINDS, KIND_LABEL, distText, fmtDate, inCoverage, kindDescription,
   makeRecord, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
   type FillFeature, type MwRecord, type NearFill,
 } from './lib'
@@ -115,7 +114,7 @@ export default function App() {
   const [loadError, setLoadError] = useState('')
   const [rawRecords, setRawRecords] = useLocalStorage<MwRecord[]>('udc-moritsuchi:records', [])
   const records = useMemo(() => sanitizeRecords(rawRecords), [rawRecords])
-  const [tab, setTab] = useState('look')
+  const [step, setStep] = useState('place')
   const [selFill, setSelFill] = useState<string | null>(null)
   const [selRec, setSelRec] = useState<string | null>(null)
   const [pick, setPick] = useState<{ lng: number; lat: number; nearFill: NearFill | null } | null>(null)
@@ -127,11 +126,9 @@ export default function App() {
   const [hits, setHits] = useState<PlaceHit[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchMsg, setSearchMsg] = useState('')
-  const [justSaved, setJustSaved] = useState(false)
   const [didCompare, setDidCompare] = useState(false)
   const [originChosen, setOriginChosen] = useState(false)
   const [didPrepare, setDidPrepare] = useState(false)
-  const reportRef = useRef<HTMLDivElement>(null)
 
   const [base, setBase] = useHashState('base', 'std')
   const [old, setOld] = useHashState('old', 'none')
@@ -149,7 +146,6 @@ export default function App() {
   const [pickMsg, setPickMsg] = useState('')
 
   const mapRef = useRef<maplibregl.Map | null>(null)
-  const mapWrapRef = useRef<HTMLDivElement>(null)
   const recHit = useRef(false)
 
   const initialView = useMemo(() => {
@@ -202,8 +198,8 @@ export default function App() {
 
   useEffect(() => {
     const map = mapRef.current
-    if (map) map.getCanvas().style.cursor = tab === 'rec' ? 'crosshair' : ''
-  }, [tab, mapReady])
+    if (map) map.getCanvas().style.cursor = step === 'rec' ? 'crosshair' : ''
+  }, [step, mapReady])
 
   const layers = useMemo<MapLayer[]>(() => {
     const recFc = toGeoJSON(records)
@@ -253,14 +249,12 @@ export default function App() {
     setSelFill(id)
     toast.success(`${id}（${f.properties.kind}）を選びました`)
     mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
-    if (window.innerWidth < 1024) mapWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [fills])
 
   const goOrigin = (o: { label: string; lng: number; lat: number }) => {
     setOrigin(o)
     setOriginChosen(true)
     mapRef.current?.flyTo({ center: [o.lng, o.lat], zoom: 14.5, duration: 600 })
-    if (window.innerWidth < 1024) mapWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   const goStation = () => goOrigin({ label: '熱海駅（例・目安の位置）', ...ATAMI_STATION })
 
@@ -281,12 +275,10 @@ export default function App() {
     }
   }
 
-  /** この造成地を昔の写真で見る: 寄って、昔の写真に切り替え、「2 見比べる」へ */
-  const viewOld = (id: string, which: 'ort_old10' | 'gazo1') => {
-    focusFill(id)
-    setOld(which)
-    setOp('50')
-    changeTab('compare')
+  /** 選択中の造成地へ地図を寄せる（見比べの年代を選んだ時など） */
+  const fitSel = (id: string | null) => {
+    const f = id ? fills.find((x) => x.properties.id === id) : null
+    if (f) mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
   }
 
   /* ---------- 位置の選択 ---------- */
@@ -304,7 +296,7 @@ export default function App() {
     if (layerId === 'rec') {
       recHit.current = true
       const id = String(f.properties?.id)
-      selectRecord(id, true)
+      selectRecord(id)
     } else if (layerId === 'fills-fill') {
       setSelFill(String(f.properties?.id))
     }
@@ -314,27 +306,16 @@ export default function App() {
       recHit.current = false
       return
     }
-    if (tab === 'rec') choosePos(lng, lat)
+    if (step === 'rec') choosePos(lng, lat)
   }
 
-  const changeTab = (t: string) => {
-    setTab(t)
-    if (t !== 'rec') {
+  const goStep = (id: string) => {
+    setStep(id)
+    if (id !== 'rec') {
       setPick(null)
       setPickMsg('')
     }
-    if (t === 'rec' && window.innerWidth < 1024) mapWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
-
-  // 保存後は通報文カードへ自動スクロール
-  useEffect(() => {
-    if (!justSaved || tab !== 'out') return
-    const t = setTimeout(() => {
-      reportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setJustSaved(false)
-    }, 150)
-    return () => clearTimeout(t)
-  }, [justSaved, tab])
 
   const locate = () => {
     if (!navigator.geolocation) {
@@ -374,16 +355,13 @@ export default function App() {
     setMemo('')
     setWhen(fmtDate(new Date()).replace(' ', 'T'))
     setSelRec(rec.id)
-    setTab('out')
     setIoMsg('')
-    setJustSaved(true)
-    toast.success('記録を保存しました。通報文のたたき台を表示します。')
+    toast.success('記録を保存しました')
     mapRef.current?.easeTo({ center: [rec.lng, rec.lat], duration: 400 })
   }
 
-  const selectRecord = (id: string, openTab: boolean) => {
+  const selectRecord = (id: string) => {
     setSelRec(id)
-    if (openTab) changeTab('out')
     const r = records.find((x) => x.id === id)
     if (r) mapRef.current?.easeTo({ center: [r.lng, r.lat], duration: 400 })
   }
@@ -393,7 +371,7 @@ export default function App() {
     if (selRec === id) setSelRec(null)
   }
 
-  const selectedRecord = records.find((r) => r.id === selRec) ?? null
+  const selectedRecord = records.find((r) => r.id === selRec) ?? records[records.length - 1] ?? null
   const report = selectedRecord ? reportText(selectedRecord) : ''
 
   const copy = async (text: string, okMsg: string, prepared = false) => {
@@ -469,481 +447,383 @@ export default function App() {
   }
 
   const outOfCoverage = pick ? !inCoverage(pick.lng, pick.lat) : false
+  const originIsExample = origin.label.startsWith('熱海駅（例')
 
-  const goLast = () => {
-    const last = records[records.length - 1]
-    if (!last) return changeTab('rec')
-    setSelRec(last.id)
-    changeTab('out')
-    setJustSaved(true)
+  const STEP_META: Record<string, { title: string; hint: string }> = {
+    place: { title: '自宅の場所を入れる', hint: '住所・駅名で検索します（熱海駅は例です）' },
+    look: { title: '近くの盛土造成地を確かめる', hint: '一覧から選び、型（谷埋め／腹付け）を見ます' },
+    compare: { title: '昔の写真と見比べる', hint: '年代を選び、スライダーで今と昔を行き来します' },
+    rec: { title: '気づいたことを記録する', hint: '地図をタップして位置を決め、保存します' },
+    prep: { title: '市に伝える文面を用意する', hint: '通報文をコピーするか、記録を書き出します' },
+    ref: { title: '参考（出典・注意）', hint: '任意。データの出典と使うときの注意です' },
   }
-  // 左サイドバー（スマホは上部ステッパー）の手順。上から順に進めると目的を達成できる
-  useAppSteps([
-    {
-      id: 'place', title: '自宅の場所を入れる', hint: '住所・駅名で検索（熱海駅は例）', done: originChosen,
-      onSelect: () => {
-        changeTab('look')
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-          const el = document.getElementById('mw-q')
-          el?.scrollIntoView({ behavior: 'auto', block: 'center' })
-          el?.focus({ preventScroll: true })
-        }))
-      },
-    },
-    {
-      id: 'look', title: '近くの盛土造成地を確かめる', hint: '一覧から選び、型（谷埋め／腹付け）を見る', done: selFill !== null,
-      onSelect: () => {
-        changeTab('look')
-        requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('ul[aria-label="近い盛土造成地"]')?.scrollIntoView({ behavior: 'auto', block: 'center' })))
-      },
-    },
-    {
-      id: 'compare', title: '昔の写真と見比べる', hint: '選んだ造成地を1961〜69年／1974〜78年の写真で', done: didCompare,
-      onSelect: () => (selFill ? viewOld(selFill, 'ort_old10') : changeTab('compare')),
-    },
-    {
-      id: 'rec', title: '気づいたことを記録する', hint: '地図で位置を決めて保存', done: records.length > 0,
-      onSelect: () => changeTab('rec'),
-    },
-    {
-      id: 'prep', title: '市に伝える文面を用意する', hint: '通報文のコピー、または書き出し', done: didPrepare,
-      onSelect: goLast,
-    },
-  ])
 
-  const fillCard = (actions: boolean) => (
-    <Card aria-live="polite">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">選んだ盛土造成地の情報</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm" data-testid="fill-info">
-        {selFillFeature ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <b>{selFillFeature.properties.id}（{selFillFeature.properties.city}）</b>
-              <KindBadge kind={selFillFeature.properties.kind} />
-            </div>
-            <div>盛土区分: <b>{selFillFeature.properties.kind}</b>＝{KIND_HELP[selFillFeature.properties.kind] ?? ''}</div>
-            <div>{kindDescription(selFillFeature.properties.kind)}</div>
-            <p className="text-xs text-muted-foreground">
-              範囲は「概ね」の位置です。直ちに危険という意味ではなく、安全性の確認が必要な場所を示します。最新の状況は市の窓口で確認してください。
-            </p>
-            {actions && (
-              <div className="space-y-2 rounded-md border bg-accent/40 p-2">
-                <div className="flex items-center gap-1 text-sm font-medium"><History className="size-4" />この場所を昔の写真で見る</div>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => viewOld(selFillFeature.properties.id, 'ort_old10')}>1961〜69年の写真で見る</Button>
-                  <Button size="sm" onClick={() => viewOld(selFillFeature.properties.id, 'gazo1')}>1974〜78年の写真で見る</Button>
-                </div>
-                <p className="text-xs text-muted-foreground">押すと、この造成地へ寄って昔の写真に切り替わり、スライダーで今と見比べられます。</p>
-              </div>
-            )}
-            {actions && (
-              <Button size="sm" variant="outline" onClick={() => {
-                focusFill(selFillFeature.properties.id)
-                changeTab('rec')
-              }}>
-                <Crosshair className="size-4" />この造成地の近くで記録する
-              </Button>
-            )}
-          </>
-        ) : (
-          <p className="text-muted-foreground">地図上の色付きの範囲をタップするか、上の一覧から選ぶと、盛土造成地の型と情報が出ます。</p>
-        )}
-      </CardContent>
-    </Card>
+  // 左サイドバー（スマホは上部ステッパー）が唯一のナビゲーション。上から順に進めると目的を達成できる
+  useAppSteps(
+    [
+      { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: originChosen },
+      { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: selFill !== null },
+      { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今', done: didCompare },
+      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて保存', done: records.length > 0 },
+      { id: 'prep', title: STEP_META.prep.title, hint: 'コピーまたは書き出し', done: didPrepare },
+      { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
+    ],
+    {
+      activeId: step,
+      onSelectStep: goStep,
+      description: '熱海市に住む住民として、自宅の周りに大規模な盛土の造成地があるかを知り、気づいた変化を記録して市に伝える準備をします。',
+    },
   )
 
-  return (
-    <div className="mx-auto max-w-7xl space-y-4">
-      <PageHeader appId="udc-moritsuchi" actions={<SourceDialog sources={SOURCES} />} />
+  const legend = (
+    <ul className="space-y-1 text-xs" aria-label="凡例">
+      {Object.keys(KIND_COLOR).map((k) => (
+        <li key={k} className="flex items-center gap-2">
+          <span className="inline-block size-3.5 shrink-0 rounded-sm border-2" style={{ borderColor: KIND_COLOR[k], background: KIND_COLOR[k] + '70' }} />
+          <span><b>{k}</b>＝{KIND_HELP[k]}</span>
+        </li>
+      ))}
+      <li className="flex items-center gap-2">
+        <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-white" />白丸＝探した地点（初期は熱海駅の例）
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-[#F0E442]" />黄色い丸＝保存した自分の記録
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="inline-block size-4 shrink-0 rounded-full border-[3px] border-[#CC79A7] bg-[#CC79A7]/20" />ピンクの輪＝記録する位置（保存前）
+      </li>
+    </ul>
+  )
 
-      <Tabs value={tab} onValueChange={changeTab} className="space-y-4">
-      <nav aria-label="画面の切り替え" className="py-1">
-        <p className="mb-1 text-xs text-muted-foreground">画面の切り替え（手順は左のサイドバーの順に進めます）</p>
-        <TabsList className="grid h-auto w-full grid-cols-4 gap-1 p-1">
-          <TabsTrigger value="look" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>確かめる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">場所と型</span></TabsTrigger>
-          <TabsTrigger value="compare" className="flex-col gap-0 py-1.5 text-xs font-bold sm:text-sm"><span className="flex items-center gap-1"><History className="size-3.5" />見比べる</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">昔の航空写真</span></TabsTrigger>
-          <TabsTrigger value="rec" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>記録する</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">変化を保存</span></TabsTrigger>
-          <TabsTrigger value="out" className="flex-col gap-0 py-1.5 text-xs sm:text-sm"><span>届ける{records.length > 0 && <Badge variant="secondary" className="ml-1 px-1 text-[10px]">記録{records.length}件</Badge>}</span><span className="hidden text-[10px] font-normal text-muted-foreground sm:block">通報文・書き出し</span></TabsTrigger>
-        </TabsList>
-      </nav>
-
-      <Alert>
-        <AlertTriangle className="size-4" />
-        <AlertTitle>対象は静岡県 熱海市・伊東市のみ</AlertTitle>
-        <AlertDescription>
-          <p className="text-sm">
-            表示している盛土造成地は<b>「安全性の確認が必要な盛土造成地」で、直ちに危険な場所ではありません</b>。すべての盛土造成地が載っているわけでもなく、このページは危険かどうかの判定をしません。手順は左のサイドバー（スマホは上部のステッパー）の上から順に進めてください。下のタブは画面の切り替えです。
-          </p>
-        </AlertDescription>
-      </Alert>
-
-      {loadError && (
-        <Alert variant="destructive">
-          <AlertDescription>{loadError}</AlertDescription>
-        </Alert>
+  const mapAside = (
+    <div className="relative">
+      <MapView
+        className="h-full"
+        center={initialView.center}
+        zoom={initialView.zoom}
+        basemap="pale"
+        showBasemapSwitcher={false}
+        layers={layers}
+        clickableLayerIds={['rec', 'fills-fill']}
+        onFeatureClick={onFeatureClick}
+        onClick={onMapClick}
+        onMapReady={onMapReady}
+        cooperativeGestures={window.innerWidth < 768}
+        attribution="大規模盛土造成地：国土数値情報（国土交通省）"
+        ariaLabel="盛土ウォッチの地図"
+      />
+      {step === 'compare' && old !== 'none' && (
+        <div className="pointer-events-none absolute left-2 top-2 z-10 max-w-[70%] rounded-md bg-white/95 px-2 py-1 text-xs font-medium shadow" data-testid="compare-badge">
+          スライダー: 左＝今（{BASES.find((b) => b.id === base)?.label}）／右＝昔（{OLDS.find((o) => o.id === old)?.label}）。昔の写真 {op}%
+        </div>
       )}
+      {step === 'rec' && (
+        <div className="pointer-events-none absolute left-2 top-2 z-10 max-w-[70%] rounded-md bg-white/95 px-2 py-1 text-xs font-bold shadow">
+          {pick ? 'ピンクの輪＝いま選んだ位置' : '▶ 地図をタップして位置を決めてください'}
+        </div>
+      )}
+    </div>
+  )
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div ref={mapWrapRef} className="scroll-mt-16 space-y-2 lg:sticky lg:top-4 lg:self-start">
-          <div data-testid="near-banner" className="space-y-2 rounded-md border-2 border-primary bg-accent/50 p-2">
-            <div className="text-lg font-bold leading-tight sm:text-xl" data-testid="near-origin">
-              {origin.label.startsWith('熱海駅（例') ? '熱海駅（例）からの結果です' : `「${origin.label}」からの結果です`}
-            </div>
-            {origin.label.startsWith('熱海駅（例') && (
-              <div className="text-sm font-medium text-destructive">これは自宅の結果ではありません。下の欄に自宅の住所を入れてください。</div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="mw-q" className="text-sm font-bold text-primary">自宅の住所を入れてください（駅名・町名でも可）</Label>
-            <form onSubmit={doSearch} className="flex gap-2" role="search">
-                    <Input
-                      id="mw-q"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="住所・駅名（例: 熱海駅、咲見町）"
-                      aria-label="住所・駅名で探す"
-                    />
-                    <Button type="submit" disabled={searching || !query.trim()}>
-                      <Search className="size-4" />{searching ? '検索中' : '検索'}
-                    </Button>
-                  </form>
-                  {searchMsg && <p className="text-sm text-muted-foreground" role="status">{searchMsg}</p>}
-                  {hits && hits.length > 0 && (
-                    <ul className="space-y-1.5" aria-label="検索結果">
-                      {hits.map((h, i) => (
-                        <li key={i}>
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent"
-                            onClick={() => { goOrigin({ label: h.title, lng: h.lng, lat: h.lat }); setHits(null) }}
-                          >
-                            <span className="min-w-0 break-words">{h.title}</span>
-                            <Badge variant={h.inArea ? 'secondary' : 'outline'} className="shrink-0">
-                              {h.inArea ? '対象範囲内' : '対象範囲外'}
-                            </Badge>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-            </div>
-            <div className="text-sm font-semibold sm:text-base" data-testid="near-summary">{nearSummary(stationList)}</div>
+  const searchForm = (
+    <div className="space-y-2">
+      <Label htmlFor="mw-q" className="text-sm font-bold">自宅の住所を入れてください（駅名・町名でも可）</Label>
+      <form onSubmit={doSearch} className="flex gap-2" role="search">
+        <Input
+          id="mw-q"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="例: 熱海駅、咲見町"
+          aria-label="住所・駅名で探す"
+        />
+        <Button type="submit" disabled={searching || !query.trim()}>
+          <Search className="size-4" />{searching ? '検索中' : '検索'}
+        </Button>
+      </form>
+      {searchMsg && <p className="text-sm text-muted-foreground" role="status">{searchMsg}</p>}
+      {hits && hits.length > 0 && (
+        <ul className="space-y-1.5" aria-label="検索結果">
+          {hits.map((h, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent"
+                onClick={() => { goOrigin({ label: h.title, lng: h.lng, lat: h.lat }); setHits(null) }}
+              >
+                <span className="min-w-0 break-words">{h.title}</span>
+                <Badge variant={h.inArea ? 'secondary' : 'outline'} className="shrink-0">{h.inArea ? '対象範囲内' : '対象範囲外'}</Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+
+  const panelPlace = (
+    <div className="space-y-3">
+      <p className="text-sm font-semibold" data-testid="near-origin">
+        {originIsExample ? '熱海駅（例）を表示中です。自宅の結果ではありません。' : `「${origin.label}」を起点にしました。`}
+      </p>
+      {searchForm}
+      <p className="text-xs text-muted-foreground">検索は国土地理院の地名検索（GETのみ）を使います。入力した文字だけが送られ、記録は送られません。</p>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={goStation}><MapPin className="size-4" />熱海駅を例にする</Button>
+        {JUMPS.map((j) => (
+          <Button key={j.label} size="sm" variant="outline" onClick={() => mapRef.current?.flyTo({ center: [j.lng, j.lat], zoom: j.z, duration: 600 })}>
+            {j.label}を表示
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+
+  const fillInfo = (
+    <div className="space-y-1.5 rounded-md border p-3 text-sm" data-testid="fill-info" aria-live="polite">
+      {selFillFeature ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <b>{selFillFeature.properties.id}（{selFillFeature.properties.city}）</b>
+            <KindBadge kind={selFillFeature.properties.kind} />
           </div>
-          <div className="relative">
-          <MapView
-            className="h-[340px] sm:h-[460px] lg:h-[calc(100vh-24rem)] lg:min-h-[360px]"
-            center={initialView.center}
-            zoom={initialView.zoom}
-            basemap="pale"
-            showBasemapSwitcher={false}
-            layers={layers}
-            clickableLayerIds={['rec', 'fills-fill']}
-            onFeatureClick={onFeatureClick}
-            onClick={onMapClick}
-            onMapReady={onMapReady}
-            attribution="大規模盛土造成地：国土数値情報（国土交通省）"
-            ariaLabel="盛土ウォッチの地図"
-          />
-          {old !== 'none' && (
-            <div className="pointer-events-none absolute left-2 top-2 z-10 max-w-[70%] rounded-md bg-white/95 px-2 py-1 text-xs font-medium shadow" data-testid="compare-badge">
-              スライダー: 左＝今（{BASES.find((b) => b.id === base)?.label}）／右＝昔（{OLDS.find((o) => o.id === old)?.label}）。昔の写真 {op}%
-            </div>
-          )}
+          <div>盛土区分: <b>{selFillFeature.properties.kind}</b>＝{KIND_HELP[selFillFeature.properties.kind] ?? ''}</div>
+          <div>{kindDescription(selFillFeature.properties.kind)}</div>
+          <p className="text-xs text-muted-foreground">
+            範囲は「概ね」の位置です。直ちに危険という意味ではなく、安全性の確認が必要な場所を示します。最新の状況は市の窓口で確認してください。
+          </p>
+        </>
+      ) : (
+        <p className="text-muted-foreground">一覧か地図上の色付きの範囲を選ぶと、盛土造成地の型と情報が出ます。</p>
+      )}
+    </div>
+  )
+
+  const panelLook = (
+    <div className="space-y-3">
+      <div className="rounded-md border-2 border-primary bg-accent/50 p-2">
+        <div className="text-xs text-muted-foreground" data-testid="near-origin">起点: 「{origin.label}」{originIsExample && '（自宅の結果ではありません）'}</div>
+        <div className="text-sm font-semibold" data-testid="near-summary">{nearSummary(stationList)}</div>
+      </div>
+      <ul className="space-y-1.5" aria-label="近い盛土造成地">
+        {stationList.map((d) => (
+          <li key={d.id}>
+            <button
+              type="button"
+              onClick={() => focusFill(d.id)}
+              aria-pressed={selFill === d.id}
+              className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent ${selFill === d.id ? 'border-primary bg-accent ring-2 ring-primary' : ''}`}
+            >
+              <span className="min-w-0">
+                <span className="font-medium">{d.id}</span>
+                <span className="ml-2 text-muted-foreground">起点から{metersLabel(d)}{!d.inside && d.distM <= NEAR_M ? '（近く）' : ''}</span>
+              </span>
+              <KindBadge kind={d.kind} />
+            </button>
+          </li>
+        ))}
+        {!stationList.length && !loadError && <li className="text-sm text-muted-foreground">読み込み中…</li>}
+      </ul>
+      {loadError && <p className="text-sm text-destructive">{loadError}</p>}
+      {fillInfo}
+      {legend}
+    </div>
+  )
+
+  const panelCompare = (
+    <div className="space-y-3">
+      {selFillFeature ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-accent/40 p-2 text-sm">
+          <span>見ている場所:</span>
+          <b>{selFillFeature.properties.id}</b>
+          <KindBadge kind={selFillFeature.properties.kind} />
+        </div>
+      ) : (
+        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。地図の色付きの範囲をタップしても選べます。</p>
+      )}
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">昔の写真</Label>
+        <ToggleGroup type="single" variant="outline" value={old} aria-label="年代別の空中写真"
+          onValueChange={(v) => { if (!v) return; setOld(v); if (v !== 'none') { setOp('50'); fitSel(selFill) } }} className="flex-wrap justify-start">
+          {OLDS.map((o) => <ToggleGroupItem key={o.id} value={o.id} className="px-3 text-sm">{o.label}</ToggleGroupItem>)}
+        </ToggleGroup>
+      </div>
+      <div className={old === 'none' ? 'opacity-50' : ''}>
+        <Label htmlFor="mw-op" className="text-xs text-muted-foreground">見比べ（左＝現在の背景、右＝昔の写真）</Label>
+        <div className="mt-2 flex items-center gap-2 text-sm">
+          <span className="shrink-0 font-medium">今</span>
+          <Slider id="mw-op" min={0} max={100} step={5} value={[op]} disabled={old === 'none'}
+            onValueChange={(v) => setOp(String(v[0]))} aria-label="昔の写真の濃さ" />
+          <span className="shrink-0 font-medium">昔{old !== 'none' ? `（${OLDS.find((o) => o.id === old)?.label}）` : ''}</span>
+        </div>
+        {old === 'none' && <p className="mt-1 text-xs">先に「昔の写真」の年代を選んでください。</p>}
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">現在の背景</Label>
+        <ToggleGroup type="single" variant="outline" size="sm" value={base} aria-label="背景地図"
+          onValueChange={(v) => v && setBase(v)} className="flex-wrap justify-start">
+          {BASES.map((b) => <ToggleGroupItem key={b.id} value={b.id} className="px-3 text-xs">{b.label}</ToggleGroupItem>)}
+        </ToggleGroup>
+        <p className="text-xs text-muted-foreground">「航空写真(現在)」にすると、同じ場所の今の写真と昔の写真を見比べられます。</p>
+      </div>
+      <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
+        <div className="font-semibold">見るポイント（見方の例）</div>
+        <ul className="list-disc space-y-0.5 pl-5">
+          <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
+          <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
+        </ul>
+        <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        昔の写真はズーム10〜17で表示され、撮影年・範囲により空白の場所があります。見比べは目視で、変化の自動判定はしません。
+      </p>
+    </div>
+  )
+
+  const panelRec = (
+    <div className="space-y-3">
+      <ul className="list-disc space-y-0.5 rounded-md border bg-accent/30 p-2 pl-6 text-xs">
+        <li>公道など立ち入ってよい場所から。盛土や私有地、立入禁止の場所には入らない。</li>
+        <li>人や車のナンバーが写る写真は共有しない。</li>
+        <li>差し迫った危険（崩れそう・水が噴き出す等）は、記録より先に119番・110番や市の防災窓口へ。</li>
+      </ul>
+      <div className="space-y-2">
+        <p className={`rounded-md border-2 p-2 text-sm font-medium ${pick ? 'border-primary bg-accent/40' : 'border-dashed border-primary'}`}>
+          {pick ? '位置を選びました（地図のピンク色の大きな輪）。違えば、もう一度地図をタップ。' : '地図をタップして位置を決めてください（まだ選ばれていません）'}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
+          <Button size="sm" variant="outline" onClick={useCenter}><Crosshair className="size-4" />地図の中心を使う</Button>
+        </div>
+        <p className="text-sm" data-testid="pick-pos">位置: {pick ? `${pick.lat.toFixed(5)}, ${pick.lng.toFixed(5)}` : '未選択'}</p>
+        {pickMsg && <p className="text-sm text-muted-foreground" role="status">{pickMsg}</p>}
+        {outOfCoverage && (
+          <Alert variant="destructive" data-testid="out-of-coverage">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>対象範囲の外です</AlertTitle>
+            <AlertDescription>熱海市・伊東市の外のため、盛土造成地データとの比較はできません（記録は可能です）。</AlertDescription>
+          </Alert>
+        )}
+      </div>
+      <form onSubmit={save} autoComplete="off" className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="mw-kind">気づいたこと</Label>
+          <Select value={kind} onValueChange={setKind}>
+            <SelectTrigger id="mw-kind" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="mw-when">気づいた日時</Label>
+          <Input id="mw-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="mw-memo">状況メモ（500字まで。個人が特定される情報は書かない）</Label>
+          <Textarea id="mw-memo" rows={3} maxLength={500} value={memo} onChange={(e) => setMemo(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox id="mw-blur" checked={blurred} onCheckedChange={(v) => setBlurred(v === true)} />
+          <Label htmlFor="mw-blur">位置を約100mにぼかして保存する</Label>
+        </div>
+        <Button type="submit" disabled={!pick} className="w-full">この場所を記録する（この端末に保存）</Button>
+      </form>
+      {records.length > 0 && (
+        <p className="rounded-md border border-primary bg-accent/40 p-2 text-sm font-medium" data-testid="saved-note">保存済みの記録: {records.length}件（地図の黄色い丸）</p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真は保存しません。
+      </p>
+    </div>
+  )
+
+  const panelPrep = (
+    <div className="relative space-y-3">
+      {selectedRecord ? (
+        <div className="space-y-2 rounded-md border-2 border-primary p-3">
+          <div className="text-sm font-semibold">通報文のたたき台</div>
+          <p className="text-sm font-medium">この文面をコピーすると準備完了です{didPrepare ? '（準備できました）' : ''}。GeoJSON／CSVの書き出しでも完了になります。</p>
+          <Textarea readOnly rows={8} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
+          <Button size="lg" className="w-full" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピー</Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="lg" variant="outline" onClick={exportGeo}><Download className="size-5" />GeoJSON</Button>
+            <Button size="lg" variant="outline" onClick={exportCsv}><Download className="size-5" />CSV</Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            背景：国土地理院（{BASES.find((b) => b.id === base)?.label ?? '標準'}
-            {old !== 'none' ? `＋昔の写真 ${OLDS.find((o) => o.id === old)?.label}` : ''}）。白丸＝探した地点（初期は熱海駅の目安。例です）。
-            {tab === 'rec' && (pick ? '　ピンク色の大きな輪＝いま選んだ位置（黄色い丸は保存済みの記録）。' : '　▶ 地図をタップして記録の位置を決めてください。')}
+            このページは送信しません。通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
           </p>
         </div>
-
-        <div className="min-w-0">
-            {/* ---- 1 確かめる ---- */}
-            <TabsContent value="look" className="space-y-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">① 場所を移す</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-xs text-muted-foreground">検索は国土地理院の地名検索（GETのみ）を使います。入力した文字だけが送られ、記録は送られません。</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={goStation}><MapPin className="size-4" />熱海駅の近くへ</Button>
-                    {JUMPS.map((j) => (
-                      <Button key={j.label} size="sm" variant="outline"
-                        onClick={() => mapRef.current?.flyTo({ center: [j.lng, j.lat], zoom: j.z, duration: 600 })}>
-                        {j.label}へ移動
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">② 「{origin.label}」から近い盛土造成地</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    距離は地図上の直線距離の目安です（白丸が起点。熱海駅の位置は案内用の目安）。選ぶと地図が移動し、型が下に出ます。
-                  </p>
-                  <ul className="space-y-1.5" aria-label="近い盛土造成地">
-                    {stationList.map((d) => (
-                      <li key={d.id}>
-                        <button
-                          type="button"
-                          onClick={() => focusFill(d.id)}
-                          aria-pressed={selFill === d.id}
-                          className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent ${selFill === d.id ? 'border-primary bg-accent ring-2 ring-primary' : ''}`}
-                        >
-                          <span className="min-w-0">
-                            <span className="font-medium">{d.id}</span>
-                            <span className="ml-2 text-muted-foreground">起点から{metersLabel(d)}{!d.inside && d.distM <= NEAR_M ? '（近く）' : ''}</span>
-                          </span>
-                          <KindBadge kind={d.kind} />
-                        </button>
-                      </li>
-                    ))}
-                    {!stationList.length && !loadError && <li className="text-sm text-muted-foreground">読み込み中…</li>}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {fillCard(true)}
-
-              <Card>
-                <CardContent className="space-y-2 pt-4">
-                  <div className="text-sm font-medium">凡例</div>
-                  <ul className="space-y-1 text-xs" aria-label="凡例">
-                    {Object.keys(KIND_COLOR).map((k) => (
-                      <li key={k} className="flex items-center gap-2">
-                        <span className="inline-block size-3.5 shrink-0 rounded-sm border-2" style={{ borderColor: KIND_COLOR[k], background: KIND_COLOR[k] + '70' }} />
-                        <span><b>{k === '区分なし' ? '区分なし' : k}</b>＝{KIND_HELP[k]}</span>
-                      </li>
-                    ))}
-                    <li className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-[#F0E442]" />黄色い丸＝保存した自分の記録
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="inline-block size-4 shrink-0 rounded-full border-[3px] border-[#CC79A7] bg-[#CC79A7]/20" />ピンクの輪＝記録する位置（保存前に選んだ場所）
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 shrink-0 rounded-full border-2 border-black bg-white" />白丸＝探した地点（住所を入れるとその地点。熱海駅は例）
-                    </li>
-                  </ul>
-                  <Button size="sm" variant="outline" onClick={copyLink}><Copy className="size-4" />いまの表示のURLをコピー</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ---- 2 見比べる ---- */}
-            <TabsContent value="compare" className="space-y-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">昔の写真と今を見比べる</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <ol className="list-decimal space-y-0.5 pl-5 text-sm">
-                    <li>年代を選ぶ（地図が昔の写真に変わります）</li>
-                    <li>スライダーを動かして、今と昔を行き来する</li>
-                  </ol>
-                  <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
-                    <div className="font-semibold">見るポイント（見方の例）</div>
-                    <ul className="list-disc space-y-0.5 pl-5">
-                      <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
-                      <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
-                    </ul>
-                    <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
-                  </div>
-                  {selFillFeature ? (
-                    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-accent/40 p-2 text-sm">
-                      <span>見ている場所:</span>
-                      <b>{selFillFeature.properties.id}</b>
-                      <KindBadge kind={selFillFeature.properties.kind} />
-                      <Button size="sm" variant="outline" onClick={() => focusFill(selFillFeature.properties.id)}>この造成地へ寄る</Button>
-                    </div>
-                  ) : (
-                    <div className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">
-                      盛土造成地がまだ選ばれていません。「確かめる」画面で選ぶと、その場所に寄って見比べられます。
-                      <Button size="sm" variant="outline" className="ml-2" onClick={() => changeTab('look')}>確かめる画面へ</Button>
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">昔の写真</Label>
-                    <ToggleGroup type="single" variant="outline" value={old} aria-label="年代別の空中写真"
-                      onValueChange={(v) => v && setOld(v)} className="flex-wrap justify-start">
-                      {OLDS.map((o) => <ToggleGroupItem key={o.id} value={o.id} className="px-3 text-sm">{o.label}</ToggleGroupItem>)}
-                    </ToggleGroup>
-                  </div>
-                  <div className={old === 'none' ? 'opacity-50' : ''}>
-                    <Label htmlFor="mw-op" className="text-xs text-muted-foreground">見比べ（左＝現在の背景、右＝昔の写真）</Label>
-                    <div className="mt-2 flex items-center gap-2 text-sm">
-                      <span className="shrink-0 font-medium">今</span>
-                      <Slider id="mw-op" min={0} max={100} step={5} value={[op]} disabled={old === 'none'}
-                        onValueChange={(v) => setOp(String(v[0]))} aria-label="昔の写真の濃さ" />
-                      <span className="shrink-0 font-medium">昔{old !== 'none' ? `（${OLDS.find((o) => o.id === old)?.label}）` : ''}</span>
-                    </div>
-                    {old === 'none' && <p className="mt-1 text-xs">先に「昔の写真」の年代を選んでください。</p>}
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">現在の背景</Label>
-                    <ToggleGroup type="single" variant="outline" size="sm" value={base} aria-label="背景地図"
-                      onValueChange={(v) => v && setBase(v)} className="flex-wrap justify-start">
-                      {BASES.map((b) => <ToggleGroupItem key={b.id} value={b.id} className="px-3 text-xs">{b.label}</ToggleGroupItem>)}
-                    </ToggleGroup>
-                    <p className="text-xs text-muted-foreground">「航空写真(現在)」にすると、同じ場所の今の写真と昔の写真を見比べられます。</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    昔の写真はズーム10〜17で表示され、撮影年・範囲により空白の場所があります。見比べは目視で、変化の自動判定はしません。
-                  </p>
-                  {fills.length > 0 && selFillFeature && (
-                    <Button onClick={() => { changeTab('rec') }} variant="secondary" size="sm">気づいたことを記録する（記録する画面へ）</Button>
-                  )}
-                </CardContent>
-              </Card>
-              {fillCard(false)}
-            </TabsContent>
-
-            {/* ---- 2 記録する ---- */}
-            <TabsContent value="rec" className="space-y-3">
-              <Alert>
-                <AlertTitle>記録の前に</AlertTitle>
-                <AlertDescription>
-                  <ul className="list-disc space-y-0.5 pl-5">
-                    <li>公道など立ち入ってよい場所から。盛土や私有地、立入禁止の場所には入らない。</li>
-                    <li>人や車のナンバーが写る写真は共有しない。</li>
-                    <li>差し迫った危険（崩れそう・水が噴き出す等）は、記録より先に119番・110番や市の防災窓口へ。</li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-
-              <Card>
-                <CardContent className="space-y-3 pt-4">
-                  <p className={`rounded-md border-2 p-2 text-sm font-medium ${pick ? 'border-primary bg-accent/40' : 'border-dashed border-primary'}`}>
-                    {pick ? '① 位置を選びました（地図のピンク色の大きな輪）。違えば、もう一度地図をタップ。' : '① 地図をタップして位置を決めてください（まだ選ばれていません）'}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
-                    <Button size="sm" variant="outline" onClick={useCenter}><Crosshair className="size-4" />地図の中心を使う</Button>
-                  </div>
-                  <p className="text-sm" data-testid="pick-pos">
-                    位置: {pick ? `${pick.lat.toFixed(5)}, ${pick.lng.toFixed(5)}` : '未選択'}
-                  </p>
-                  {pickMsg && <p className="text-sm text-muted-foreground" role="status">{pickMsg}</p>}
-                  {outOfCoverage && (
-                    <Alert variant="destructive" data-testid="out-of-coverage">
-                      <AlertTriangle className="size-4" />
-                      <AlertTitle>対象範囲の外です</AlertTitle>
-                      <AlertDescription>熱海市・伊東市の外のため、盛土造成地データとの比較はできません（記録は可能です）。</AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-
-              <form onSubmit={save} autoComplete="off" className="space-y-3">
-                <p className="text-sm"><b>② 内容を入れて保存:</b></p>
-                <div className="space-y-1.5">
-                  <Label htmlFor="mw-kind">気づいたこと</Label>
-                  <Select value={kind} onValueChange={setKind}>
-                    <SelectTrigger id="mw-kind" className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="mw-when">気づいた日時</Label>
-                  <Input id="mw-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="mw-memo">状況メモ（500字まで。個人が特定される情報は書かない）</Label>
-                  <Textarea id="mw-memo" rows={3} maxLength={500} value={memo} onChange={(e) => setMemo(e.target.value)} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="mw-blur" checked={blurred} onCheckedChange={(v) => setBlurred(v === true)} />
-                  <Label htmlFor="mw-blur">位置を約100mにぼかして保存する</Label>
-                </div>
-                <Button type="submit" disabled={!pick} className="w-full">この場所を記録する（この端末に保存）</Button>
-                {!pick && <p className="text-xs text-muted-foreground">位置が未選択です。先に地図をタップしてください。</p>}
-              </form>
-              <p className="text-xs text-muted-foreground">
-                記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真はこのページでは保存しません。
-              </p>
-            </TabsContent>
-
-            {/* ---- 3 届ける ---- */}
-            <TabsContent value="out" className="space-y-3">
-              <p className="text-sm">
-                記録 <b data-testid="rec-count">{records.length}</b> 件（上のバッジ「記録○件」は保存済みの件数）。地図上の黄色い丸（黒ふち）が自分の記録です。
-              </p>
-              <ul className="space-y-2" aria-label="記録の一覧">
-                {!records.length && (
-                  <li className="rounded-md border p-3 text-sm text-muted-foreground">まだ記録がありません。「記録する」画面から追加できます。</li>
-                )}
-                {records.map((r) => (
-                  <li key={r.id} className={`space-y-1 rounded-md border p-3 text-sm ${r.id === selRec ? 'border-primary bg-accent/50' : ''}`}>
-                    <div className="font-medium">{KIND_LABEL[r.kind]}</div>
-                    <div>{r.observedAt}{r.blurred ? '（位置ぼかし）' : ''}</div>
-                    <div>{distText(r.nearFill)}</div>
-                    {r.outOfCoverage && <div className="text-xs text-destructive">※対象範囲外の位置</div>}
-                    {r.memo && <div className="whitespace-pre-wrap break-words text-xs text-muted-foreground">{r.memo}</div>}
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <Button size="sm" variant="outline" onClick={() => selectRecord(r.id, false)}>通報文を作る</Button>
-                      <Button size="sm" variant="ghost" onClick={() => removeRecord(r.id)}><Trash2 className="size-4" />削除</Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              {selectedRecord && (
-                <Card ref={reportRef} className="scroll-mt-20 border-2 border-primary">
-                  <CardHeader className="pb-2"><CardTitle className="text-base">通報文のたたき台</CardTitle><p className="text-sm font-medium">この文面をコピーすると準備完了です{didPrepare ? '（準備できました）' : ''}。GeoJSON／CSVの書き出しでも完了になります。</p></CardHeader>
-                  <CardContent className="space-y-3">
-                    <Textarea readOnly rows={10} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
-                    <Button size="lg" className="w-full" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピー</Button>
-                    <Button size="lg" variant="outline" className="w-full" onClick={exportGeo}><Download className="size-5" />GeoJSONで書き出す（記録をファイルに保存）</Button>
-                    <p className="text-xs text-muted-foreground">
-                      このページは送信しません。文面をコピーして、自治体の窓口（電話・メール・フォーム）へ。通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">書き出し・読み込み</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={exportGeo}><Download className="size-4" />GeoJSONで書き出す</Button>
-                    <Button size="sm" variant="outline" onClick={exportCsv}><Download className="size-4" />CSVで書き出す</Button>
-                    <Button size="sm" variant="outline" asChild>
-                      <label htmlFor="mw-import" className="cursor-pointer"><Upload className="size-4" />GeoJSONを読み込む</label>
-                    </Button>
-                    <input id="mw-import" type="file" className="sr-only" accept=".geojson,.json,application/geo+json,application/json" onChange={onImport} />
-                    <Button size="sm" variant="destructive" disabled={!records.length} onClick={() => setClearOpen(true)}>
-                      <Trash2 className="size-4" />全記録を消す
-                    </Button>
-                  </div>
-                  <p className="text-sm" role="status" data-testid="io-msg">{ioMsg}</p>
-                  <p className="text-xs text-muted-foreground">
-                    書き出したファイルは、自治会の仲間への共有や、地図ソフト（QGIS等）での確認に使えます。読み込みはこの端末内で行い、外部へ送信しません。
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-        </div>
+      ) : (
+        <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">記録がまだありません。記録を1件保存すると、通報文のたたき台ができます。</p>
+      )}
+      <div className="space-y-1.5">
+        <p className="text-sm">記録 <b data-testid="rec-count">{records.length}</b> 件。選ぶと、その記録の通報文になります。</p>
+        <ul className="max-h-44 space-y-1.5 overflow-y-auto" aria-label="記録の一覧">
+          {!records.length && <li className="rounded-md border p-2 text-sm text-muted-foreground">まだ記録がありません。</li>}
+          {records.map((r) => (
+            <li key={r.id} className={`space-y-0.5 rounded-md border p-2 text-sm ${r.id === selectedRecord?.id ? 'border-primary bg-accent/50' : ''}`}>
+              <div className="font-medium">{KIND_LABEL[r.kind]}　<span className="font-normal">{r.observedAt}{r.blurred ? '（位置ぼかし）' : ''}</span></div>
+              <div className="text-xs">{distText(r.nearFill)}</div>
+              {r.outOfCoverage && <div className="text-xs text-destructive">※対象範囲外の位置</div>}
+              {r.memo && <div className="whitespace-pre-wrap break-words text-xs text-muted-foreground">{r.memo}</div>}
+              <div className="flex gap-2 pt-0.5">
+                <Button size="sm" variant="outline" onClick={() => selectRecord(r.id)}>この記録の通報文</Button>
+                <Button size="sm" variant="ghost" onClick={() => removeRecord(r.id)}><Trash2 className="size-4" />削除</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
-      </Tabs>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" asChild>
+          <label htmlFor="mw-import" className="cursor-pointer"><Upload className="size-4" />GeoJSONを読み込む</label>
+        </Button>
+        <input id="mw-import" type="file" className="sr-only" accept=".geojson,.json,application/geo+json,application/json" onChange={onImport} />
+        <Button size="sm" variant="destructive" disabled={!records.length} onClick={() => setClearOpen(true)}>
+          <Trash2 className="size-4" />全記録を消す
+        </Button>
+      </div>
+      <p className="text-sm" role="status" data-testid="io-msg">{ioMsg}</p>
+      <p className="text-xs text-muted-foreground">
+        書き出したファイルは、自治会の仲間への共有や、地図ソフト（QGIS等）での確認に使えます。読み込みはこの端末内で行い、外部へ送信しません。
+      </p>
+    </div>
+  )
 
-      <footer className="space-y-1 border-t pt-3 text-xs text-muted-foreground">
-        <p>
-          出典: 国土交通省 国土数値情報「大規模盛土造成地」A54（2023年版・データ基準日 2023-03-31、CC BY 4.0）／国土地理院 地理院タイル。位置は加工しています。詳しくは右上の「出典・ライセンス」。
-        </p>
-        <p>
-          より正確な確認は国の
-          <a className="underline" href="https://disaportal.gsi.go.jp/hazardmap/maps/index.html" target="_blank" rel="noreferrer">重ねるハザードマップ</a>
-          と各自治体の案内で。宅地建物取引業法に基づく重要事項説明等の根拠には利用できません。
-        </p>
-      </footer>
+  const panelRef = (
+    <div className="space-y-3 text-sm">
+      <p>
+        表示している盛土造成地は<b>「安全性の確認が必要な盛土造成地」で、直ちに危険な場所ではありません</b>。すべての盛土造成地が載っているわけでも、宅地建物取引業法に基づく重要事項説明等の根拠に使えるわけでもありません。このページは危険かどうかの判定をしません。
+      </p>
+      <ul className="space-y-2">
+        {SOURCES.map((x) => (
+          <li key={x.name} className="rounded-md border p-2 text-xs">
+            <div className="font-medium">{x.name}</div>
+            {x.provider && <div className="text-muted-foreground">提供: {x.provider}</div>}
+            {x.license && <div className="text-muted-foreground">ライセンス: {x.license}</div>}
+            {x.note && <div>{x.note}</div>}
+            {x.url && <a className="break-all text-primary underline" href={x.url} target="_blank" rel="noreferrer">{x.url}</a>}
+          </li>
+        ))}
+      </ul>
+      <Button size="sm" variant="outline" onClick={copyLink}><Copy className="size-4" />いまの地図表示のURLをコピー</Button>
+    </div>
+  )
+
+  const panels: Record<string, React.ReactNode> = {
+    place: panelPlace, look: panelLook, compare: panelCompare, rec: panelRec, prep: panelPrep, ref: panelRef,
+  }
+  const meta = STEP_META[step] ?? STEP_META.place
+
+  return (
+    <>
+      <PageHeader appId="udc-moritsuchi" compact actions={<SourceDialog sources={SOURCES} />} />
+      <p className="shrink-0 border-b bg-accent/40 px-4 py-1 text-xs" data-testid="caution-line">
+        対象は熱海市・伊東市のみ。表示は「安全性の確認が必要な盛土造成地」で、直ちに危険ではなく、危険かどうかの判定はしません。
+      </p>
+      <StepLayout title={meta.title} hint={meta.hint} aside={mapAside}>
+        {panels[step]}
+      </StepLayout>
 
       <Dialog open={clearOpen} onOpenChange={setClearOpen}>
         <DialogContent>
@@ -957,6 +837,6 @@ export default function App() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

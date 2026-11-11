@@ -1,5 +1,5 @@
 // 操作確認（ヘッドレスChrome, CDP）。usage: node src/apps/biz-business/e2e.mjs <base_url> <out_dir>
-// 独立ページ apps/biz-business/ で、(A) 例のまま、サイドバーの手順を上から順に押すだけ／(B) 路線を足す・逆転する案を作る、の2通りを、デスクトップと390pxで確認する。
+// 独立ページ apps/biz-business/ で、(A) デスクトップ1280x765のbodyスクロール高さ、全手順を表示、サイドバーを上から順に押して全必須手順が済／(B) 逆転する2案・複数路線・390px を確認する。
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -38,38 +38,52 @@ const click = (txt, sel = 'button') => ev(`(()=>{const b=[...document.querySelec
 const alerts = `[...document.querySelectorAll('[role=alert],[role=status]')].map(a=>a.innerText.replace(/\\n/g,' ')).join(' || ').slice(0,900)`
 const status = `[...document.querySelectorAll('button[data-step]')].map(b=>b.dataset.step+':'+b.dataset.status).filter((v,i,a)=>a.indexOf(v)===i).join(' ')`
 const pick = (id) => ev(`(()=>{const bs=[...document.querySelectorAll('button[data-step="${id}"]')];if(!bs.length)return 'nf';(bs.find(b=>b.offsetParent)||bs[0]).click();return 'ok'})()`)
-const setSel = (plan, val) => ev(`(()=>{const s=document.querySelector('select[aria-label="案${plan}に止める路線を追加"]');const o=[...s.options].find(o=>o.value==='${val}');if(!o)return 'nooption';const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'${val}');s.dispatchEvent(new Event('change',{bubbles:true}));return 'set '+o.textContent.slice(0,30)})()`)
+const scrollH = () => ev('[document.documentElement.scrollHeight, window.innerHeight, document.body.scrollHeight].join("/")')
+const setSel = (plan, val) => ev(`(()=>{const s=document.querySelector('select[aria-label="案${plan}に止める路線を追加"]');if(!s)return 'noselect';const o=[...s.options].find(o=>o.value==='${val}');if(!o)return 'nooption';const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;set.call(s,'${val}');s.dispatchEvent(new Event('change',{bubbles:true}));return 'set '+o.textContent.slice(0,24)})()`)
 const open = async (mobile) => {
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300)
   await send('Page.navigate', { url: `${base}apps/biz-business/` }); await sleep(5000)
   await ev(`(()=>{window.__csv=[];const o=URL.createObjectURL;URL.createObjectURL=(b)=>{b.text().then(t=>window.__csv.push(t));return o(b)}})()`)
-  if (mobile) { await click('完了'); await sleep(500) }
 }
-for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
+const STEPS = ['cond', 'planA', 'planB', 'verdict', 'export']
+for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
-  // (A) 例のまま、サイドバーを上から順に押すだけ
   await open(mobile)
-  console.log(label, 'A initial', await ev(status), 'overflow', await ev('document.documentElement.scrollWidth - window.innerWidth'))
-  for (const id of ['cond', 'planA', 'planB', 'verdict', 'export']) {
+  console.log(label, 'initial', await ev(status))
+  // (A) 全手順を表示してbodyスクロール高さを測る → 上から順に押す
+  for (const id of STEPS) {
     if (mobile) { await click('完了'); await sleep(300) }
-    const r = await pick(id); await sleep(1300)
-    if (id === 'export') { console.log(label, 'A csv', await click('会議資料用にCSVで書き出す')); await sleep(800) }
-    console.log(label, 'A', id, r, '->', await ev(status))
+    const r = await pick(id); await sleep(900)
+    if (id === 'export') { console.log(label, 'csv', await click('CSVで書き出す')); await sleep(600) }
+    console.log(label, id, r, 'scrollH/innerH/body', await scrollH(), '->', await ev(status))
+    await shot(`${label}-step-${id}.png`)
   }
-  await shot(`${label}-A-done.png`)
-  // (B) 逆転する2案（案A=和田島線 / 案B=橘線）を、絞り込みと標準selectで作る
+  console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth - window.innerWidth'))
+  console.log(label, 'mapcanvas', await ev(`!!document.querySelector('canvas.maplibregl-canvas')`))
+  console.log(label, 'errors', JSON.stringify(logs)); logs.length = 0
+  // (B) 逆転する2案（案A=和田島線 / 案B=橘線 + 路線追加）
   await open(mobile)
-  await ev(`document.querySelectorAll('[aria-label$="を外す"]').forEach(b=>b.click())`); await sleep(600)
-  console.log(label, 'B select A', await setSel('A', '59')); await sleep(500)
-  console.log(label, 'B select B', await setSel('B', '37')); await sleep(800)
-  console.log(label, 'B filter', await ev(`(()=>{const i=document.querySelector('input[aria-label="案Cの路線を絞り込み"]');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(i,'鳴門');i.dispatchEvent(new Event('input',{bubbles:true}));return 'typed'})()`)); await sleep(500)
-  console.log(label, 'B filtered options', await ev(`[...document.querySelector('select[aria-label="案Cに止める路線を追加"]').options].map(o=>o.textContent.slice(0,14)).slice(0,4).join(' | ')+' n='+document.querySelector('select[aria-label="案Cに止める路線を追加"]').options.length`))
+  if (mobile) { await click('完了'); await sleep(300) }
+  await pick('planA'); await sleep(600)
+  await ev(`document.querySelectorAll('[aria-label$="を外す"]').forEach(b=>b.click())`); await sleep(500)
+  console.log(label, 'B A', await setSel('A', '59')); await sleep(500)
+  if (mobile) { await click('完了'); await sleep(300) }
+  await pick('planB'); await sleep(600)
+  await ev(`document.querySelectorAll('[aria-label$="を外す"]').forEach(b=>b.click())`); await sleep(500)
+  console.log(label, 'B B', await setSel('B', '37')); await sleep(500)
+  console.log(label, 'B B result', await ev(`(document.querySelector('[data-testid=plan-result-1]')||{innerText:'none'}).innerText.replace(/\\n/g,' ')`))
+  if (mobile) { await click('完了'); await sleep(300) }
+  await pick('verdict'); await sleep(800)
+  console.log(label, 'B verdict', await ev(`(document.querySelector('[data-testid=verdict-main]')||{innerText:'none'}).innerText.replace(/\\n/g,' ')`))
   console.log(label, 'B reversal', await ev(`(document.querySelector('[role=alert]')||{innerText:'none'}).innerText.replace(/\\n/g,' ')`))
-  console.log(label, 'B csv', await click('会議資料用にCSVで書き出す')); await sleep(800)
-  const csv = await ev('window.__csv[0]||""')
-  console.log(label, 'B csv row', csv.split('\r\n').filter((l) => l.startsWith('注意（65歳以上）') || l.startsWith('影響が小さい案')).join(' // ').slice(0, 300))
-  console.log(label, 'B sentences has note', await ev(`document.body.innerText.includes('65歳以上では')`))
+  console.log(label, 'B scrollH', await scrollH())
   await shot(`${label}-B-reversal.png`)
-  console.log(label, 'overflow2', await ev('document.documentElement.scrollWidth - window.innerWidth'), 'errors', JSON.stringify(logs)); logs.length = 0
+  if (mobile) { await click('完了'); await sleep(300) }
+  await pick('export'); await sleep(600)
+  await click('CSVで書き出す'); await sleep(700)
+  const csv = await ev('window.__csv[0]||""')
+  console.log(label, 'B csv', csv.split('\r\n').filter((l) => l.startsWith('注意（65歳以上）')).join('').slice(0, 120))
+  console.log(label, 'B lastAction', await ev(`(document.querySelector('[role=status]')||{innerText:''}).innerText.slice(0,100)`))
+  console.log(label, 'B errors', JSON.stringify(logs), 'overflowX', await ev('document.documentElement.scrollWidth - window.innerWidth')); logs.length = 0
 }
 ws.close(); chrome.kill()
