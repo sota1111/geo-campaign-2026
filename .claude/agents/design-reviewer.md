@@ -3,7 +3,7 @@ name: design-reviewer
 description: デザイン審査班。アプリ・ダッシュボード・補足資料の画面デザインを、実際に表示したスクリーンショットで審査し、指摘だけを出す。情報設計・導線・視覚階層・一貫性・アクセシビリティ（色覚・コントラスト・キーボード）・レスポンシブ・無駄なスクロールや機能の重複を検査する。工兵の画面改修の後、初見ユーザー試験の前後、提出前に使う。修正はしない。
 tools: Read, Grep, Glob, Bash, Write
 model: opus
-maxTurns: 40
+maxTurns: 80
 hooks:
   PreToolUse:
     - matcher: "Write|Edit"
