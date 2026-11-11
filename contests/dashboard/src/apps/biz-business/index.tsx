@@ -61,7 +61,7 @@ function Seg<T extends string>({ value, options, onChange, label }: {
 }
 
 export default function App() {
-  const [step, setStep] = useState<StepId>('cond')
+  const [step, setStep] = useState<StepId>(SAMPLE_MODE ? 'export' : 'cond')
   const [visited, setVisited] = useState<Record<string, boolean>>({})
   const [mapOverride, setMapOverride] = useState<number | null>(null)
   const [regions, setRegions] = useState<RegionInfo[]>([])
@@ -75,6 +75,8 @@ export default function App() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [selFac, setSelFac] = useState(0)
   const [exported, setExported] = useState(false)
+  // 利用者が案の路線を実際に操作したか（初期値の自動入力だけでは「済」にしない）
+  const [edited, setEdited] = useState<Record<number, boolean>>({})
   const [lastAction, setLastAction] = useState('')
   const [routeQ, setRouteQ] = useState<string[]>(['', '', ''])
 
@@ -232,7 +234,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, calc, plans, mapPlan, selFac])
 
-  const updatePlan = (k: number, f: (p: Plan) => Plan) => setPlans((ps) => ps.map((p, i) => (i === k ? f(p) : p)))
+  const updatePlan = (k: number, f: (p: Plan) => Plan) => {
+    setEdited((e) => (e[k] ? e : { ...e, [k]: true }))
+    setPlans((ps) => ps.map((p, i) => (i === k ? f(p) : p)))
+  }
 
   const planViews = (): PlanView[] => ks.map((k) => ({ name: plans[k].name, routes: plans[k].routes.map(routeFull), per: calc!.results[k] }))
   const makeRows = () => {
@@ -279,7 +284,7 @@ export default function App() {
   const hasA = (plans[0]?.routes.length ?? 0) > 0
   const hasB = (plans[1]?.routes.length ?? 0) > 0
   // 「済」の共通ルール: 見る手順・初期値で成り立つ手順は、前提が満たされた状態で表示したら済。する手順（書き出し）は主操作で済
-  const prereq: Record<StepId, boolean> = { cond: !!data, planA: hasA, planB: hasB, verdict: ks.length >= 2, export: false }
+  const prereq: Record<StepId, boolean> = { cond: !!data, planA: hasA && !!edited[0], planB: hasB && !!edited[1], verdict: ks.length >= 2, export: false }
   useEffect(() => {
     if (prereq[step]) setVisited((v) => (v[step] ? v : { ...v, [step]: true }))
   })

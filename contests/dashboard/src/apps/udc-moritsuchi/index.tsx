@@ -781,7 +781,7 @@ export default function App() {
             <Button type="button" size="sm" variant="outline" onClick={locate}><LocateFixed className="size-4" />現在地を使う</Button>
             <Button type="button" size="sm" variant="outline" onClick={useCenter}><Crosshair className="size-4" />地図の中心を使う</Button>
           </div>
-          <p className="text-sm" data-testid="pick-pos">位置: {pick ? `${pick.lat.toFixed(5)}, ${pick.lng.toFixed(5)}` : '未選択'}</p>
+          <p className="text-sm" data-testid="pick-pos">位置: {pick ? `${pick.lat.toFixed(5)}, ${pick.lng.toFixed(5)}` : savedMsg ? '保存済み（次の記録の位置を地図で選んでください）' : '未選択'}</p>
           {pickMsg && <p className="text-sm text-muted-foreground" role="status">{pickMsg}</p>}
           {outOfCoverage && (
             <Alert variant="destructive" data-testid="out-of-coverage">
@@ -813,7 +813,7 @@ export default function App() {
           <Label htmlFor="mw-blur">位置を約100mにぼかして保存する</Label>
         </div>
         <p className="text-xs text-muted-foreground">
-          記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真は保存しません。
+          {sample ? '実行サンプルでは保存されません（再読み込みで元に戻ります）。' : '記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。'}写真は保存しません。
         </p>
       </div>
       <div className="mt-auto shrink-0 space-y-2 border-t bg-background pt-3 md:sticky md:bottom-0">

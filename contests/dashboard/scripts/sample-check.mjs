@@ -57,6 +57,7 @@ for (const a of apps) {
       over: document.documentElement.scrollHeight - innerHeight,
       barH: bar?.getBoundingClientRect().height, asideBottom: aside ? Math.round(aside.getBoundingClientRect().bottom) : null, vh: innerHeight,
       noteH: note ? Math.round(note.getBoundingClientRect().height) : null, hasNote: !!note,
+      prog: document.querySelector('aside')?.innerText.match(/[0-9]+ のうち [0-9]+ 完了|すべて完了/)?.[0],
       text: document.body.innerText } })()`)
     const want = NUMBERS[a]?.[id] ?? []
     const miss = want.filter((w) => !r.text.includes(w))
@@ -66,6 +67,8 @@ for (const a of apps) {
     if (r.asideBottom != null && r.asideBottom > r.vh) bad.push(`asideBottom=${r.asideBottom}>${r.vh}`)
     if (r.noteH != null && r.noteH > 40) bad.push(`noteH=${r.noteH}`)
     if (miss.length) bad.push(`missing=${miss.join('|')}`)
+    // 再現状態は開く手順によらず最終状態（全手順が完了）に固定
+    if (['biz-idea', 'biz-business'].includes(a) && !/^([0-9]+) のうち \1 完了$/.test(r.prog ?? '')) bad.push(`progress=${r.prog}`)
     console.log(a, id, bad.length ? 'NG ' + bad.join(' ') : 'ok', `barH=${r.barH} noteH=${r.noteH}${want.length ? ' nums=' + want.length : ''}`)
     if (bad.length) fail(`${a}/${id}: ${bad.join(' ')}`)
   }

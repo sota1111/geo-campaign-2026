@@ -41,14 +41,14 @@ export default function Overview() {
                   {a.purpose}
                 </p>
               </CardContent>
-              <CardFooter className="items-center justify-between gap-2 px-4">
+              <CardFooter className="flex-wrap items-center justify-between gap-x-2 gap-y-2 px-4">
                 <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                   <CalendarClock className="size-3.5 shrink-0" />
-                  <span className="truncate" title={a.deadline}>
+                  <span className="whitespace-nowrap" title={a.deadline}>
                     締切 {a.deadline.replace(/（.*/, '')}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-1.5">
+                <span className="ml-auto flex shrink-0 items-center gap-1.5">
                   {getSample(a.id) && (
                     <Button asChild size="sm" variant="outline" title="AI（Sonnet）の模擬利用を再現して開きます（実在の利用ではありません）">
                       <a href={sampleUrl(a.id)}>実行サンプル</a>

@@ -49,9 +49,6 @@ const EMPTY_RECORDS: MemoryRecord[] = []
 const CENTER: [number, number] = [132.485, 34.475]
 const DESCRIPTION = '地域の聞き取り担当として、地名にまつわる災害の言い伝えを公開データで確かめ、聞き取った話を記録して地図に残す。'
 
-const BEFORE_CONFIRM: StepId[] = ['place', 'cross', 'overlay', 'record']
-const beforeConfirm = (s: StepId) => BEFORE_CONFIRM.includes(s)
-
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   place: { title: '地名を選ぶ', hint: '地名と語りは架空のサンプル。地図のオレンジのピンでも選べます' },
   cross: { title: '伝承碑と突き合わせる', hint: '語られている災害と、近くの自然災害伝承碑（実データ）を比べる' },
@@ -162,9 +159,6 @@ export default function BizIdeaApp() {
   const [mapIdle, setMapIdle] = useState(false)
   const [exportNote, setExportNote] = useState('')
   const sampleMapRef = useRef(false)
-  const sampleRecs = useRef<{ unverified: MemoryRecord; verified: MemoryRecord } | null>(null)
-  const stepRef = useRef<StepId>(step)
-  stepRef.current = step
   const [confirmClear, setConfirmClear] = useState(false)
   const [map, setMap] = useState<maplibregl.Map | null>(null)
   const [zoom, setZoom] = useState(12)
@@ -192,9 +186,8 @@ export default function BizIdeaApp() {
     setForm(base)
     if (!made.ok) return
     const rec = { ...setVerified(made.record, '確認役（デモ）', now), visibility: SAMPLE_VISIBILITY as MemoryRecord['visibility'] }
-    // 報告の時系列に合わせる: 手順4（記録）までは「未確認」、手順5（確認）からは確認済み・公開
-    sampleRecs.current = { unverified: made.record, verified: rec }
-    setRecords([beforeConfirm(stepRef.current) ? made.record : rec])
+    // どの手順から開いても最終状態（確認済み・公開）に固定する（手順4のノートに未確認で保存したことを書く）
+    setRecords([rec])
     setLastSavedId(rec.id)
     const n = toGeoJSON([rec], { onlyPublishable: true, exportedAt: now }).features.length
     setExportNote(`${n}件を GeoJSON で書き出しました（chimei-kioku-public.geojson）。公開分です。端末内で作成し、送信はしていません。`)
@@ -211,15 +204,6 @@ export default function BizIdeaApp() {
       })
       .catch((e: Error) => setLoadError(e.message))
   }, [])
-
-  // 実行サンプル: 手順4（記録）以前を開いている間は「未確認で保存」、手順5以降は「確認済み・公開」の状態で見せる（被験者の報告の時系列）
-  const isBefore = beforeConfirm(step)
-  useEffect(() => {
-    const r = sampleRecs.current
-    if (!sample || !r) return
-    setRecords((rs) => (rs.length === 1 && rs[0].id === r.verified.id ? [isBefore ? r.unverified : r.verified] : rs))
-    setLastSavedId(r.verified.id)
-  }, [isBefore])
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
   const closePopup = useCallback(() => { popupRef.current?.remove(); popupRef.current = null }, [])

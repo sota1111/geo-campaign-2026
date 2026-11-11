@@ -54,6 +54,7 @@ export function SampleBar({ appId }: { appId: string }) {
             {run.feedback.length > 0 && (
               <section>
                 <h3 className="text-xs font-semibold text-muted-foreground">AIが迷った点・要望</h3>
+                <p className="text-xs text-muted-foreground">（第6回後に対応済み）の付いていない項目は未対応です</p>
                 <ul className="list-disc space-y-0.5 pl-5">{run.feedback.map((t, i) => <li key={i}>{t}</li>)}</ul>
               </section>
             )}

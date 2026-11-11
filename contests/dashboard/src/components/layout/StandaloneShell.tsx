@@ -57,7 +57,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
               <a
                 href={sampleUrl(appId)}
                 data-testid="sample-open"
-                className="hidden shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-violet-700 underline-offset-2 hover:bg-violet-50 hover:underline sm:inline"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-violet-700 underline-offset-2 hover:bg-violet-50 hover:underline"
               >
                 実行サンプルを見る
               </a>
