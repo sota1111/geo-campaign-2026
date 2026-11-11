@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { toast } from 'sonner'
-import { AlertTriangle, Check, CircleHelp, Download, MapPin, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, Download, MapPin, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog } from '@/components/shared/SourceDialog'
@@ -79,6 +79,41 @@ function NativeSelect({ id, value, onChange, options, className = '' }: {
     >
       {options.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
     </select>
+  )
+}
+
+const Req = () => <span className="rounded bg-black px-1 text-[10px] font-normal text-white">必須</span>
+const Opt = () => <span className="rounded border px-1 text-[10px] font-normal text-muted-foreground">任意</span>
+
+/** 直近に保存した記録の「いま」の状態に合わせた案内（保存直後・確認後・公開後で文面が変わる） */
+function SavedNotice({ rec, onConfirm, onList, onNext }: {
+  rec: MemoryRecord; onConfirm: () => void; onList: (anchor?: string) => void; onNext: () => void
+}) {
+  const publishable = isPublishable(rec)
+  let title: string
+  let body: string
+  if (!rec.verified) {
+    title = `「${rec.placeName}」を「未確認」の記録として保存しました`
+    body = `未確認のままでは公開分に入りません。次は「確認済みにする…」を押してください（公開範囲もそこで選びます${rec.visibility === 'undecided' ? '。いまは未定です' : ''}）。`
+  } else if (publishable) {
+    title = `「${rec.placeName}」は確認済み・公開です。公開分に入りました`
+    body = '次は書き出しです。「公開分を書き出し」を押すと GeoJSON を作ります。'
+  } else {
+    title = `「${rec.placeName}」は確認済みですが、公開分には入っていません`
+    body = `理由: ${publishBlockers(rec).join('、')}。一覧の行で公開範囲などを変えられます。`
+  }
+  return (
+    <div className="space-y-1.5 rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm text-blue-950" role="status">
+      <p><b>✓ {title}</b></p>
+      <p className="text-xs">{body}</p>
+      <div className="flex flex-wrap gap-2">
+        {!rec.verified && <Button type="button" size="sm" onClick={onConfirm}>確認済みにする…（確認役を兼ねる）</Button>}
+        {publishable && <Button type="button" size="sm" onClick={() => onList('step-publish')}>書き出しへ進む</Button>}
+        {!publishable && rec.verified && <Button type="button" size="sm" variant="outline" onClick={() => onList()}>記録の一覧を見る</Button>}
+        {!rec.verified && <Button type="button" size="sm" variant="outline" onClick={() => onList()}>記録の一覧を見る</Button>}
+        <Button type="button" size="sm" variant="outline" onClick={onNext}>続けて別の話を記録する</Button>
+      </div>
+    </div>
   )
 }
 
@@ -176,7 +211,7 @@ export default function BizIdeaApp() {
   const [opacity, setOpacity] = useState(70)
   const [tab, setTab] = useState('pick')
   const [errors, setErrors] = useState<string[]>([])
-  const [lastSaved, setLastSaved] = useState('')
+  const [flash, setFlash] = useState(false)
   const [lastSavedId, setLastSavedId] = useState('')
   const [mapIdle, setMapIdle] = useState(false)
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -339,11 +374,32 @@ export default function BizIdeaApp() {
     }
     setErrors([])
     setRecords((rs) => [...rs, r.record])
-    setLastSaved(r.record.placeName)
     setLastSavedId(r.record.id)
-    setForm((f) => ({ ...f, story: '', basis: '' }))
-    toast.success(`「${r.record.placeName}」を未確認の記録として地図に残しました`)
+    setForm(EMPTY_FORM) // 二重登録を防ぐため、保存したらフォームを空に戻す
+    toast.success(`「${r.record.placeName}」を未確認の記録として地図に残しました。入力欄は空に戻しました`)
   }
+  /** 続けて別の話を記録する: 同じ地名・位置で入力欄を用意し、地名欄へ移る（押した結果としての移動） */
+  const nextRecord = () => {
+    setLastSavedId('')
+    setErrors([])
+    const p = focus?.place
+    setForm(p
+      ? { ...EMPTY_FORM, placeName: p.name, placeType: PLACE_TYPES.includes(p.type) ? p.type : 'その他', claimedKinds: p.claimedKinds, certainty: p.certainty }
+      : EMPTY_FORM)
+    setTab('rec')
+    setTimeout(() => {
+      const el = document.getElementById(p ? 'f-story' : 'f-name')
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el?.focus({ preventScroll: true })
+    }, 150)
+  }
+  const fillSample = (p: SamplePlace) => {
+    setForm((f) => ({ ...f, story: p.story, basis: p.basis, teller: p.teller }))
+    setFlash(true)
+    setTimeout(() => setFlash(false), 2500)
+    toast.success('サンプルの語り（架空）を「聞き取った話」「話の出典」「語り手」に入力しました。下の入力欄で確認できます')
+  }
+  const flashCls = flash ? ' ring-2 ring-[#0072B2] bg-blue-50' : ''
   const updateRecord = (id: string, fn: (r: MemoryRecord) => MemoryRecord) => {
     closePopup()
     setRecords((rs) => rs.map((r) => (r.id === id ? fn(r) : r)))
@@ -673,23 +729,23 @@ export default function BizIdeaApp() {
                     {focus.place && (
                       <Button
                         type="button" variant="outline" size="sm"
-                        onClick={() => setForm((f) => ({ ...f, story: focus.place!.story, basis: focus.place!.basis, teller: focus.place!.teller }))}
+                        onClick={() => fillSample(focus.place!)}
                       >
                         サンプルの語り（架空）を入力欄に写す
                       </Button>
                     )}
-                    <div className="space-y-1"><Label htmlFor="f-name">地名</Label>
+                    <div className="space-y-1"><Label htmlFor="f-name">地名 <Req /></Label>
                       <Input id="f-name" maxLength={40} autoComplete="off" value={form.placeName} onChange={(e) => set('placeName', e.target.value)} /></div>
                     <div className="space-y-1"><Label htmlFor="f-type">種類</Label>
                       <NativeSelect id="f-type" value={form.placeType} onChange={(v) => set('placeType', v)} options={PLACE_TYPES.map((t) => [t, t])} /></div>
-                    <div className="space-y-1"><Label htmlFor="f-teller">語り手（仮名・匿名可）</Label>
-                      <Input id="f-teller" maxLength={40} autoComplete="off" placeholder="例：語り手F（架空）" value={form.teller} onChange={(e) => set('teller', e.target.value)} /></div>
-                    <div className="space-y-1"><Label htmlFor="f-date">聞いた日</Label>
+                    <div className="space-y-1"><Label htmlFor="f-teller">語り手（仮名・匿名可） <Opt /></Label>
+                      <Input id="f-teller" className={flashCls} maxLength={40} autoComplete="off" placeholder="例：語り手F（架空）" value={form.teller} onChange={(e) => set('teller', e.target.value)} /></div>
+                    <div className="space-y-1"><Label htmlFor="f-date">聞いた日 <Opt /></Label>
                       <Input id="f-date" type="date" value={form.heardOn} onChange={(e) => set('heardOn', e.target.value)} /></div>
-                    <div className="space-y-1"><Label htmlFor="f-story">聞き取った話</Label>
-                      <Textarea id="f-story" rows={4} maxLength={600} value={form.story} onChange={(e) => set('story', e.target.value)} /></div>
-                    <div className="space-y-1"><Label htmlFor="f-basis">話の出典（誰から・どの資料で）</Label>
-                      <Input id="f-basis" maxLength={200} autoComplete="off" value={form.basis} onChange={(e) => set('basis', e.target.value)} /></div>
+                    <div className="space-y-1"><Label htmlFor="f-story">聞き取った話 <Req /></Label>
+                      <Textarea id="f-story" className={flashCls} rows={4} maxLength={600} value={form.story} onChange={(e) => set('story', e.target.value)} /></div>
+                    <div className="space-y-1"><Label htmlFor="f-basis">話の出典（誰から・どの資料で） <Req /></Label>
+                      <Input id="f-basis" className={flashCls} maxLength={200} autoComplete="off" value={form.basis} onChange={(e) => set('basis', e.target.value)} /></div>
                     <KindsField idPrefix="k-rec" value={form.claimedKinds} onChange={(v) => set('claimedKinds', v)} />
                     <div className="space-y-1"><Label htmlFor="f-cert">確からしさ</Label>
                       <NativeSelect id="f-cert" value={form.certainty} onChange={(v) => set('certainty', v)} options={[...CERTAINTY].reverse().map((c) => [c, c])} /></div>
@@ -704,22 +760,7 @@ export default function BizIdeaApp() {
                         <AlertDescription>{errors.map((m) => <span key={m} className="block">{m}</span>)}</AlertDescription></Alert>
                     )}
                     <div className="sticky bottom-0 -mx-6 space-y-2 border-t bg-background/95 px-6 py-3 backdrop-blur">
-                      {savedRec && (
-                        <div className="space-y-1.5 rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm text-blue-950" role="status">
-                          <p>
-                            <b>✓ 「{savedRec.placeName}」を保存しました</b>（
-                            {savedRec.verified ? '確認済み' : '未確認'}・公開範囲「{VISIBILITY[savedRec.visibility]}」）。
-                            {!savedRec.verified && '未確認のままでは公開分に入りません。'}
-                            {savedRec.visibility === 'undecided' && '公開範囲は未定のままです。確認済みにするときに一緒に選びます。'}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {!savedRec.verified && (
-                              <Button type="button" size="sm" onClick={() => openConfirm(savedRec)}>確認済みにする…（確認役を兼ねる）</Button>
-                            )}
-                            <Button type="button" size="sm" variant="outline" onClick={() => goTab('list')}>記録の一覧を見る</Button>
-                          </div>
-                        </div>
-                      )}
+                      {savedRec && <SavedNotice rec={savedRec} onConfirm={() => openConfirm(savedRec)} onList={(a) => goTab('list', a)} onNext={nextRecord} />}
                       <Button type="submit" className="w-full">記録して地図に残す（未確認）</Button>
                     </div>
                   </form>
@@ -731,15 +772,7 @@ export default function BizIdeaApp() {
           {/* 4 一覧・書き出し */}
           <TabsContent value="list" className="space-y-3">
             <FlowDiagram current={records.length === 0 ? 'record' : publishableCount > 0 ? 'publish' : 'verify'} />
-            {lastSaved && (
-              <Alert className="border-[#0072B2] bg-blue-50 text-blue-950">
-                <CircleHelp className="size-4" />
-                <AlertTitle>「{lastSaved}」を「未確認」の記録として保存しました</AlertTitle>
-                <AlertDescription className="text-blue-950/90">
-                  下の一覧で強調している行が今回の記録です。未確認の記録は公開用データには入りません。次は「確認済みにする…」を押してください（公開範囲もそこで選びます）。
-                </AlertDescription>
-              </Alert>
-            )}
+            {savedRec && <SavedNotice rec={savedRec} onConfirm={() => openConfirm(savedRec)} onList={(a) => goTab('list', a)} onNext={nextRecord} />}
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">残した記録（{records.length}件）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -844,6 +877,7 @@ export default function BizIdeaApp() {
                     </AlertDescription>
                   </Alert>
                 )}
+                <Note>書き出したGeoJSONは、地域のオープンデータサイト等に掲載する想定です（このデモは掲載しません）。</Note>
                 <Note>ファイルは端末内で作成し、送信しません。地名に「（架空）」が付く記録は、このデモのための架空の内容です。実際の公開データとしては使わないでください。</Note>
                 <Button variant="outline" size="sm" className="border-red-700 text-red-800" disabled={!records.length} onClick={() => setConfirmClear(true)}>
                   この端末の記録を全消去
@@ -886,7 +920,7 @@ export default function BizIdeaApp() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>やめる</Button>
-            <Button className="bg-red-800 text-white hover:bg-red-900" onClick={() => { setRecords([]); closePopup(); setConfirmClear(false); setLastSaved('') }}>すべて消す</Button>
+            <Button className="bg-red-800 text-white hover:bg-red-900" onClick={() => { setRecords([]); closePopup(); setConfirmClear(false); setLastSavedId('') }}>すべて消す</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

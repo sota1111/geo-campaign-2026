@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  buildDigest, buildSheet, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, SAMPLE_FACTS,
+  buildDigest, buildSheet, glossaryFor, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, SAMPLE_FACTS,
   summarize, tileOf, transitAround, worldToLonLat, type AreaData, type Facts,
 } from './lib'
 import { analyze, reverseGeocode } from './collect'
@@ -14,8 +14,20 @@ describe('検索結果の選び方', () => {
     { lon: 134.5485, lat: 34.0735, title: '徳島駅前郵便局' },
     { lon: 134.5518, lat: 34.0762, title: '徳島駅' },
   ]
-  it('「駅」を含む語は title が「〜駅」の候補を優先', () => {
-    expect(pickSearchHit('徳島駅', hits, data)?.title).toBe('徳島駅')
+  it('駅名検索は同梱の駅データの座標を優先（GSIの「徳島駅」＝城山公園付近のラベルは使わない）', () => {
+    const h = pickSearchHit('徳島駅', hits, data)!
+    const rail = data.rail.find((s) => s[2] === '徳島')!
+    expect([h.title, h.lon, h.lat]).toEqual(['徳島駅', rail[0], rail[1]])
+  })
+  it('駅データにない駅名は GSI の title が「〜駅」の候補を使う', () => {
+    const h = pickSearchHit('架空の駅', [{ lon: 134.5, lat: 34.05, title: '架空の駅' }], data)!
+    expect(h.title).toBe('架空の駅')
+    expect(h.lon).toBe(134.5)
+  })
+  it('用語集: 国庫帰属などを検出する', () => {
+    const g = glossaryFor('国庫帰属の申請。市街化調整区域。用途地域は')
+    expect(g.map((x) => x.term).join()).toMatch(/国庫帰属.*用途地域.*市街化調整区域/)
+    expect(g[0].text).toContain('国に引き取って')
   })
   it('駅候補がなければ同梱の駅データの座標', () => {
     const h = pickSearchHit('徳島駅', hits.slice(0, 3), data)

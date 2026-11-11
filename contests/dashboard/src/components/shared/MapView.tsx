@@ -59,6 +59,8 @@ export interface MapViewProps {
   attribution?: string
   /** 出典表示の全文を差し替える（指定すると国土地理院の既定表記・attribution・オーバーレイの出典は出ない）。空文字で非表示 */
   attributionText?: string
+  /** true（既定）: ページのスクロール中に地図が拡大されない。Ctrl/⌘＋ホイールで拡大、スマホは2本指で移動。false で従来の挙動 */
+  cooperativeGestures?: boolean
   /** 地図オブジェクトが必要な時（マーカー・独自レイヤー追加など）。 */
   onMapReady?: (map: maplibregl.Map) => void
   className?: string
@@ -173,6 +175,7 @@ export function MapView({
   showBasemapSwitcher = true,
   attribution,
   attributionText,
+  cooperativeGestures = true,
   onMapReady,
   className,
   ariaLabel = '地図',
@@ -207,6 +210,12 @@ export function MapView({
       center,
       zoom,
       attributionControl: false,
+      cooperativeGestures,
+      locale: {
+        'CooperativeGesturesHandler.WindowsHelpText': 'Ctrl キーを押しながらスクロールすると地図を拡大・縮小できます',
+        'CooperativeGesturesHandler.MacHelpText': '⌘ キーを押しながらスクロールすると地図を拡大・縮小できます',
+        'CooperativeGesturesHandler.MobileHelpText': '2本指で地図を動かせます',
+      },
       ...(bounds ? { bounds, fitBoundsOptions: { padding: 20 } } : {}),
     })
     mapRef.current = map

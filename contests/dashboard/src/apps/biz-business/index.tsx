@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -63,6 +64,7 @@ export default function App() {
   const [exported, setExported] = useState(false)
   const exportBtn = useRef<HTMLButtonElement>(null)
   const [seen, setSeen] = useState(false)
+  const [lastAction, setLastAction] = useState('')
 
   useEffect(() => {
     fetchData<{ regions: RegionInfo[] }>(APP, 'index.json').then((i) => setRegions(i.regions)).catch((e) => setError(String(e.message)))
@@ -200,11 +202,8 @@ export default function App() {
   const updatePlan = (k: number, f: (p: Plan) => Plan) => setPlans((ps) => ps.map((p, i) => (i === k ? f(p) : p)))
 
   const planViews = (): PlanView[] => ks.map((k) => ({ name: plans[k].name, routes: plans[k].routes.map(routeFull), per: calc!.results[k] }))
-  const exportCsv = () => {
-    if (!data || !calc || !ks.length) {
-      toast.error('止める路線を選んだ案がありません。「① 見直し案をつくる」で路線を選んでください。')
-      return
-    }
+  const makeRows = () => {
+    if (!data || !calc || !ks.length) return null
     const rows = buildCsvRows(data, condText, calc.base, planViews())
     if (smaller.length) {
       rows.splice(6, 0, [
@@ -213,9 +212,20 @@ export default function App() {
         firm ? '確定' : '暫定（下限値どうしの比較を含む）',
       ])
     }
+    return rows
+  }
+  const previewRows = useMemo(() => makeRows(), // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, calc, plans, condText, smaller.join(','), firm])
+  const exportCsv = () => {
+    if (!data || !calc || !ks.length) {
+      toast.error('止める路線を選んだ案がありません。「① 見直し案をつくる」で路線を選んでください。')
+      return
+    }
+    const rows = makeRows()!
     const fname = `plan-comparison-${data.id}-${day}${per}${w}.csv`
     downloadText(fname, toCsvText(rows), 'text/csv;charset=utf-8')
     setExported(true)
+    setLastAction(`ダウンロードフォルダに ${fname} を保存しました（保存先はブラウザの設定によります。ブラウザのダウンロード表示でも確認できます）。Excelで開けます。`)
     toast.success(`${fname} を書き出しました`, {
       description: `中身: ${ks.map((k) => plans[k].name).join('・')}の比較表（病院・学校別の人数、うち65歳以上、割合、地区数）、地区別の内訳、診断の前提、出典。この端末で作成しただけで、送信していません。`,
       duration: 9000,
@@ -227,6 +237,7 @@ export default function App() {
       () => {
         setCopied(true)
         setExported(true)
+        setLastAction(`クリップボードにコピーしました（${ks.map((k) => plans[k].name).join('・')}の${ks.length}段落、${sentences.join('\n').length}文字）。報告書や議事録の本文に貼り付け（Ctrl+V / ⌘V）してください。`)
         toast.success('資料用の文章をコピーしました', { description: `${ks.map((k) => plans[k].name).join('・')}の${ks.length}件。各案で行けなくなる人（うち65歳以上）と最も多い地区を、条件つきで1段落ずつ入れています。貼り付け先で確認してください。`, duration: 9000 })
       },
       () => toast.error('コピーできませんでした'),
@@ -385,7 +396,7 @@ export default function App() {
           {data && calc && (() => {
             const items = [
               { done: ks.length >= 2, label: '案を2つ作った', todo: '案を2つ作る（案Aと案Bに止める路線を選ぶ）', optional: false },
-              { done: plans.some((p) => p.routes.length >= 2), label: '少なくとも1案を複数路線にした（任意。下限値の意味を確かめられます）', todo: '', optional: true },
+              { done: plans.some((p) => p.routes.length >= 2), label: '少なくとも1案を複数路線にした（任意。複数の路線を同時に止める案を比べたい場合は必須。下限値の意味もここで分かります）', todo: '', optional: true },
               { done: ks.length >= 2 && seen, label: 'どちらの影響が小さいか確かめた', todo: 'どちらの影響が小さいか確かめる（2案に路線を選ぶと結論が出ます）', optional: false },
               { done: exported, label: '会議資料用に書き出した（CSVまたは文章コピー）', todo: '会議資料用に書き出す（CSVまたは文章コピー）', optional: false },
             ]
@@ -461,6 +472,19 @@ export default function App() {
                       <div className="text-xs text-muted-foreground">{fl0}へ行けなくなる人</div>
                       <div className="text-2xl font-bold">{lostText(l)}</div>
                       <div className="text-sm">うち65歳以上 <b>{lb(l.exact)}{n(l.lost65)}人</b></div>
+                      {!l.exact && (
+                        <div className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                          <span>重複を除いた下限。足し算ではありません。</span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" aria-label="下限値の説明" className="shrink-0 rounded"><Info className="size-3.5" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-64">
+                              路線ごとに行けなくなる区画を求め、重なる区画は1回だけ数えた合計です。同時に止めたときだけ新たに行けなくなる人は含まないので、実際の人数はこれ以上です。
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -469,6 +493,35 @@ export default function App() {
                 <Button size="lg" ref={exportBtn} onClick={exportCsv}><Download className="size-4" />会議資料用にCSVで書き出す</Button>
                 <Button size="lg" variant="outline" onClick={copySentences}><Copy className="size-4" />{copied ? 'コピーしました' : '資料用の文章をコピー'}</Button>
               </div>
+              <p className="text-sm">使い分け: <b>表に貼る・集計に使う → CSV</b>／<b>報告書や議事録の本文に貼る → 文章</b>。</p>
+              {lastAction && <p role="status" className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium">{lastAction}</p>}
+              <details open className="rounded-lg border p-3">
+                <summary className="cursor-pointer text-sm font-bold">書き出す内容のプレビュー（折りたためます）</summary>
+                <div className="mt-2 space-y-3">
+                  <div>
+                    <div className="mb-1 text-xs font-bold text-muted-foreground">資料用の文章（コピーされる全文）</div>
+                    <div className="space-y-1">
+                      {sentences.map((t, i) => <p key={i} className="rounded border-l-4 border-primary bg-muted/40 p-2 text-sm">{t}</p>)}
+                    </div>
+                  </div>
+                  {previewRows && (
+                    <div>
+                      <div className="mb-1 text-xs font-bold text-muted-foreground">CSVの先頭{Math.min(14, previewRows.length)}行（全{previewRows.length}行。以降は地区別の内訳・前提・出典）</div>
+                      <div className="overflow-x-auto rounded border">
+                        <table className="w-full text-xs">
+                          <tbody>
+                            {previewRows.slice(0, 14).map((r, i) => (
+                              <tr key={i} className="border-b last:border-0">
+                                {r.length ? r.map((c, j) => <td key={j} className="max-w-56 truncate whitespace-nowrap px-2 py-1" title={String(c ?? '')}>{String(c ?? '')}</td>) : <td className="px-2 py-1">&nbsp;</td>}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
               <p className="text-xs text-muted-foreground">
                 人数は、500m四方の区画ごとの令和2年国勢調査の人口を合計した推計です（実際の利用者数ではありません）。CSVには、比較表（病院・学校別の人数・うち65歳以上・割合・地区数）、地区別の内訳、前提、出典が入ります。この端末の中で作るだけで、送信しません。
               </p>

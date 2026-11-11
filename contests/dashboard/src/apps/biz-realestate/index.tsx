@@ -17,7 +17,7 @@ import { fetchData } from '@/lib/data'
 import { cn } from '@/lib/utils'
 import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
-  buildDigest, buildSheet, pickSearchHit, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
+  buildDigest, buildSheet, glossaryFor, pickSearchHit, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
   type Answers, type AreaData, type Facts, type Tone, type Zone,
 } from './lib'
 
@@ -40,7 +40,8 @@ const QUESTIONS: { key: keyof Answers; legend: string; options: [string, string]
   { key: 'road', legend: '道路に接していますか', options: [['不明', '分からない'], ['あり', '接している'], ['なし', '接していない・不明確']] },
   { key: 'registered', legend: '相続登記は済んでいますか', options: [['不明', '分からない'], ['済', '済んでいる'], ['未', 'まだ']] },
 ]
-const BASIS = { data: 'データ', answer: 'あなたの回答', none: 'データなし' } as const
+const SHORT: Record<string, string> = { building: '建物', landUse: '地目', road: '道路への接し方', registered: '相続登記' }
+const BASIS = { data: 'データ', answer: 'あなたの回答による', none: 'データなし' } as const
 
 function zoneClass(name: string) {
   return name.includes('商業') ? 'com' : name.includes('工業') ? 'ind' : 'res'
@@ -84,6 +85,7 @@ export default function App() {
   const [hit, setHit] = useState<SearchHit | null>(null)
   const [address, setAddress] = useState<string | null | 'loading'>(null)
   const hitMarker = useRef<maplibregl.Marker | null>(null)
+  const hitBannerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const seq = useRef(0)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -152,11 +154,26 @@ export default function App() {
     return () => { mk.remove() }
   }, [hit])
 
-  const scrollToSheet = () => {
-    const el = sheetRef.current
-    if (!el) return
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior: 'smooth' })
-  }
+  // シートの先頭（タイトル→要約）に合わせる。描画後のレイアウト変化で途中に止まらないよう、後から位置を補正する
+  const scrollToSheet = useCallback(() => {
+    const go = (behavior: ScrollBehavior) => {
+      const el = sheetRef.current
+      if (!el) return
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 64, behavior })
+    }
+    go('smooth')
+    setTimeout(() => go('auto'), 800)
+  }, [])
+  const pendingScroll = useRef(false)
+  useEffect(() => {
+    if (!pendingScroll.current || !facts) return
+    pendingScroll.current = false
+    requestAnimationFrame(scrollToSheet)
+  }, [facts, address, scrollToSheet])
+  // 検索で移動したら、案内（「この位置を土地として使う」）が見える位置へ
+  useEffect(() => {
+    if (hit) setTimeout(() => hitBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150)
+  }, [hit])
 
   // ---- 操作 ----
   const choose = useCallback(async (lon: number, lat: number, label = '地図で指した土地') => {
@@ -169,11 +186,11 @@ export default function App() {
     const [f, addr] = await Promise.all([analyze(data, lon, lat, label), reverseGeocode(lon, lat)])
     if (mine !== seq.current) return
     setBusy(false)
+    pendingScroll.current = true
     setFacts(f)
     setAddress(addr)
     const bits = f.inArea ? '' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。'
     setStatus(`位置を指定しました。${bits}`)
-    setTimeout(scrollToSheet, 150)
   }, [data])
 
   const onMapClick = useCallback((ll: { lng: number; lat: number }) => { void choose(ll.lng, ll.lat) }, [choose])
@@ -198,7 +215,7 @@ export default function App() {
     }
     mapRef.current?.jumpTo({ center: [h.lon, h.lat], zoom: 15 })
     setHit(h)
-    setStatus(`「${h.title}」の位置（地図のマーカー）に移動しました。土地の位置を地図でクリックするか、この位置をそのまま土地として使うこともできます。`)
+    setStatus(`「${h.title}」の位置（地図のマーカー）に移動しました。`)
   }
 
   const showSample = () => {
@@ -218,7 +235,13 @@ export default function App() {
   const addrText = address === 'loading' ? '住所を取得中…' : address ? address : '住所を取得できなかった'
   const where = facts && !facts.sample && pin ? `指定した位置: ${addrText}付近${coord}` : ''
   const digest = useMemo(() => (facts && sheet ? buildDigest(facts, sheet) : []), [facts, sheet])
-  const keyRows =rows.filter((r) => r.key === 'zone' || r.key === 'flood')
+  const glossary = useMemo(() => {
+    if (!sheet) return []
+    const t = JSON.stringify(sheet.exits) + sheet.missing.join('') + digest.join('') + rows.map((r) => r.value).join('')
+    // 相続土地国庫帰属制度は「手放す」の注記に常にあるため、用語の説明にも常に載せる
+    return glossaryFor(t + '国庫帰属')
+  }, [sheet, digest, rows])
+  const keyRows = rows.filter((r) => r.key === 'zone' || r.key === 'flood')
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -249,10 +272,11 @@ export default function App() {
               <Input id="rs-q" type="search" className="min-w-0 flex-1 basis-48" placeholder="例: 徳島駅、徳島市役所、徳島市幸町" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)} />
               <Button type="submit"><Search className="size-4" />検索</Button>
               <Button type="button" variant="outline" onClick={() => {
-                const h = { lon: 134.5518, lat: 34.0762, title: '徳島駅' }
+                // 駅舎の位置は同梱の駅データ（鉄道駅の座標）を優先
+                const h = pickSearchHit('徳島駅', [], data) ?? { lon: 134.5515, lat: 34.07451, title: '徳島駅' }
                 mapRef.current?.jumpTo({ center: [h.lon, h.lat], zoom: 15 })
                 setHit(h)
-                setStatus('「徳島駅」の位置（地図のマーカー）に移動しました。土地の位置を地図でクリックするか、この位置をそのまま土地として使うこともできます。')
+                setStatus(`「${h.title}」の位置（地図のマーカー）に移動しました。`)
               }}>徳島駅付近を表示</Button>
             </form>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -270,6 +294,19 @@ export default function App() {
                 <Label htmlFor="rs-zones" className="text-sm">用途地域の範囲を重ねる</Label>
               </div>
             </div>
+            {hit && (
+              <div ref={hitBannerRef} className="space-y-2 rounded-lg border-2 border-sky-700 bg-sky-50 p-3 scroll-mt-16" data-testid="use-hit" role="status">
+                <p className="text-base font-bold">「{hit.title}」の位置に移動しました（地図の青いマーカー）。次はどちらかを選んでください。</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="lg" className="h-auto min-h-11 whitespace-normal py-2 text-base" onClick={() => void choose(hit.lon, hit.lat, `検索した位置（${hit.title}）`)}>
+                    <MapPin className="size-5" />この位置（{hit.title}）を土地として使う
+                  </Button>
+                  <Button type="button" size="lg" variant="outline" className="h-auto min-h-11 whitespace-normal py-2 text-base" onClick={() => { setHit(null); setStatus('地図をクリックして、土地の位置を指してください。') }}>
+                    地図をクリックして位置を変える
+                  </Button>
+                </div>
+              </div>
+            )}
             <MapView
               center={CENTER}
               zoom={14}
@@ -281,15 +318,6 @@ export default function App() {
               className="h-[380px] cursor-crosshair sm:h-[460px]"
               ariaLabel="地図。クリックまたはタップで土地の位置を指定"
             />
-            {hit && (
-              <div className="flex flex-wrap items-center gap-2 rounded-md border-2 border-sky-700 bg-sky-50 p-2" data-testid="use-hit">
-                <span className="text-sm">地図の「{hit.title}」の位置が土地ですか？</span>
-                <Button type="button" onClick={() => void choose(hit.lon, hit.lat, `検索した位置（${hit.title}）`)}>
-                  <MapPin className="size-4" />この位置を土地として使う
-                </Button>
-                <span className="text-xs text-muted-foreground">違う場合は、土地の場所を地図でクリックしてください。</span>
-              </div>
-            )}
             <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="用途地域の凡例">
               {[['#0072B2', '住居系'], ['#E69F00', '商業系'], ['#CC79A7', '工業系']].map(([c, t]) => (
                 <li key={t} className="flex items-center gap-1"><span className="inline-block size-3 rounded-sm border" style={{ background: c, opacity: 0.6 }} />{t}</li>
@@ -373,6 +401,17 @@ export default function App() {
                   <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{digest.map((d) => <li key={d}>{d}</li>)}</ul>
                 </section>
               )}
+              <section aria-label="あなたの回答" data-testid="answers" className="rounded-md border p-2 text-sm print:p-1 print:text-[7.5pt]">
+                <h3 className="text-sm font-bold print:text-[9pt]">あなたの回答（手順2で選んだ内容）</h3>
+                <ul className="flex flex-wrap gap-x-4 gap-y-0.5">
+                  {QUESTIONS.map((q) => {
+                    const v = answers[q.key] ?? '不明'
+                    const label = q.options.find((o) => o[0] === v)?.[1] ?? '分からない'
+                    return <li key={q.key}>{SHORT[q.key as string]}：<b className={v === '不明' ? 'font-normal text-muted-foreground print:text-black' : ''}>{label}</b></li>
+                  })}
+                </ul>
+                <p className="text-xs text-muted-foreground print:text-[6.5pt] print:text-black">変えると、下の各出口の「あなたの回答による」印の項目が変わります。</p>
+              </section>
               <section aria-label="記号の見かた" data-testid="legend" className="rounded-md border bg-muted/30 p-2 text-xs print:p-1 print:text-[6.5pt]">
                 <p className="mb-0.5 font-bold">記号の見かた</p>
                 <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:grid-cols-2">
@@ -380,7 +419,7 @@ export default function App() {
                   <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden />＝ 注意が必要（想定区域に入る）</li>
                   <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden />＝ 分からない（データにない・範囲外・取得できなかった）</li>
                   <li><span className="mr-1 inline-block rounded border px-1">データ</span>＝ 公開データから分かったこと</li>
-                  <li><span className="mr-1 inline-block rounded border px-1">あなたの回答</span>＝ 手順2で選んだ内容（未選択は「分からない」扱い）</li>
+                  <li><span className="mr-1 inline-block rounded border-2 border-orange-700 px-1 font-bold">あなたの回答による</span>＝ 手順2で選んだ内容が反映された項目（未選択は「分からない」扱い）</li>
                   <li><span className="mr-1 inline-block rounded border px-1">データなし</span>＝ 該当データがなく、一般的な確認のみ</li>
                 </ul>
               </section>
@@ -407,11 +446,14 @@ export default function App() {
                   {sheet.exits.map((e) => (
                     <div key={e.key} className="rounded-md border p-3 print:break-inside-avoid print:p-1.5" data-testid={`exit-${e.key}`}>
                       <h4 className="mb-1 text-base font-bold print:mb-0.5 print:text-[9pt]">{e.label}</h4>
+                      {e.key === 'release' && (
+                        <p className="mb-1 text-xs text-muted-foreground print:text-[6.5pt] print:text-black">相続土地国庫帰属制度（国庫帰属）＝相続した土地を、一定の条件で国に引き取ってもらう制度。</p>
+                      )}
                       <ul className="space-y-2 print:space-y-0.5">
                         {e.items.map((it, i) => (
                           <li key={i} className="text-sm print:text-[7.5pt]">
                             <span className="block">
-                              <span className="mr-1 inline-block rounded border px-1 text-[11px] print:text-[6.5pt]">{BASIS[it.basis]}</span>
+                              <span className={cn('mr-1 inline-block rounded border px-1 text-[11px] print:text-[6.5pt]', it.basis === 'answer' && 'border-2 border-orange-700 bg-orange-50 font-bold print:bg-white')}>{BASIS[it.basis]}</span>
                               {it.fact}
                             </span>
                             <span className="block font-medium text-sky-900 print:text-black">→ {it.ask}（{it.who}）</span>
@@ -434,8 +476,15 @@ export default function App() {
                 </section>
               </div>
 
+              {glossary.length > 0 && (
+                <section aria-label="用語の説明" data-testid="glossary">
+                  <h3 className="text-sm font-bold print:text-[9pt]">用語の説明</h3>
+                  <ul className="text-xs print:text-[6.5pt]">{glossary.map((g) => <li key={g.term} className="print:mr-2 print:inline"><b>{g.term}</b>＝{g.text}</li>)}</ul>
+                </section>
+              )}
+
               <p className="text-xs text-muted-foreground print:text-[6.5pt] print:text-black">
-                出典: 国土地理院タイル・住所検索・逆ジオコーダ（町名の表示）、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
+                出典:国土地理院タイル・住所検索・逆ジオコーダ（町名の表示）、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
                 取引価格・地価などは国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）で確認。
                 国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
               </p>
@@ -452,7 +501,7 @@ export default function App() {
 
       <style>{`
 @media print {
-  @page { size: A4; margin: 10mm; }
+  @page { size: A4; margin: 7mm; }
   body * { visibility: visible; }
   body *:not(.print-sheet):not(.print-sheet *):not(:has(.print-sheet)) { display: none !important; }
   body *:has(.print-sheet) { display: block !important; position: static !important; padding: 0 !important; margin: 0 !important;

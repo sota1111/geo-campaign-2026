@@ -136,3 +136,28 @@ const url = dataUrl('odpt', 'tokushima.json')   // 'fetch' や MapView の GeoJS
 - maplibre-gl 4.7.x: BSD-3-Clause
 - 背景地図: 国土地理院タイル（淡色・標準・シームレス空中写真）。出典の表示が必要。https://maps.gsi.go.jp/development/ichiran.html
 - 各アプリのデータの出典・ライセンスは、元アプリの README・画面の記載に従い、各ページの `SourceDialog` に書く。
+
+## 手順サイドバー（useAppSteps）
+
+各アプリページは、目的を達成する手順を `useAppSteps` で登録できます。登録すると、デスクトップ（768px 以上）では左サイドバー（幅 240px）に、スマホでは上部の折りたたみステッパー（いまここの手順名＋進捗、タップで一覧）に出ます。登録しないページでは何も出ません（壊れません）。
+
+```tsx
+import { useAppSteps } from '@/components/shared/AppSteps'
+
+useAppSteps([
+  { id: 'place', title: '場所を選ぶ', hint: '地図をタップ', done: !!point, onSelect: () => setTab('map') },
+  { id: 'copy', title: '結論をコピーする', done: copied },
+  { id: 'memo', title: '共有メモを書く', done: false, optional: true },
+])
+```
+
+- 型: `AppStep = { id; title; hint?; done; optional?; onSelect? }`。毎レンダーで最新を渡す（`done` は状態から計算する）。
+- 表示: 番号つきで上から。済（✓）／いまここ（最初の未完了の必須手順を強調）／未着手。`optional` は「任意」表示で、「いまここ」と進捗の数から除外。クリックで `onSelect`（タブ切替・スクロールなど）。
+- 進捗は「必須の完了数/必須の数 完了」。必須がすべて済むと「目的に必要な手順はすべて完了しました」。
+- 判定関数 `currentStepIndex` / `stepStatuses` / `stepProgress` も同じファイルから export（テスト: `src/test/appsteps.test.tsx`）。
+
+## 地図・Select の注意
+
+- `MapView` は既定で `cooperativeGestures`（ページのスクロール中に地図が拡大されない。Ctrl/⌘＋ホイールで拡大、スマホは2本指で移動。日本語メッセージ）。`cooperativeGestures={false}` で無効化。
+- `src/components/ui/select.tsx` と `dropdown-menu.tsx` は閉じるアニメーション（animate-out）を外してあります。Radix Select は開いている間 body に `pointer-events:none` を付け、閉じるアニメ終了まで外さないため、閉じた直後の最初のクリックが無反応になっていたためです（再現: `node scripts/select-repro.mjs <base_url>`）。shadcn で再生成する時は同じ修正を戻すこと。
+- 確認用スクリプト: `scripts/wheel-check.mjs`（地図上のホイール）。

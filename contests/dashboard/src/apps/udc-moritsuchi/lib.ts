@@ -258,6 +258,19 @@ export function kindDescription(kind: string) {
       : '区分は整備されていません'
 }
 
+/** 「近く」とみなす距離（m）。案内表示用の目安であり、安全性の基準ではない */
+export const NEAR_M = 500
+
+/** 通報文の一文: この地点から NEAR_M 以内に登録された造成地があるか */
+export function nearLine(r: MwRecord) {
+  const head = `この地点から${NEAR_M}m以内に登録された大規模盛土造成地: `
+  if (r.outOfCoverage) return head + '判定できていません（対象範囲外）'
+  const nf = r.nearFill
+  if (!nf) return head + 'ありません'
+  if (nf.inside || nf.distM <= NEAR_M) return head + 'あります（' + distText(nf) + '）'
+  return head + 'ありません（最寄りは' + distText(nf).replace(/^大規模盛土造成地/, '') + '）'
+}
+
 /** 自治体窓口に伝えるための通報文のたたき台。送信はしない（コピーして各窓口へ） */
 export function reportText(r: MwRecord) {
   const lines = [
@@ -268,11 +281,12 @@ export function reportText(r: MwRecord) {
     '気づいた内容: ' + KIND_LABEL[r.kind],
     '状況: ' + (r.memo || '（記入なし）'),
     '国の大規模盛土造成地データとの位置関係: ' + distText(r.nearFill),
+    nearLine(r),
     '撮影は公道など立ち入ってよい場所から行い、個人が特定される写真は添付しません。',
     '※盛土造成地であること自体は、直ちに危険であることを意味しません。危険かどうかの判定はしていません。',
   ]
   if (r.outOfCoverage) {
-    lines.splice(7, 0, '※この位置は本アプリの対象範囲（熱海市・伊東市）の外です。大規模盛土造成地データとの比較はできていません。')
+    lines.splice(8, 0, '※この位置は本アプリの対象範囲（熱海市・伊東市）の外です。大規模盛土造成地データとの比較はできていません。')
   }
   return lines.join('\n')
 }

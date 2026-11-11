@@ -45,7 +45,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await shot(`${label}-1-initial.png`, true)
   console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth > window.innerWidth'))
   // 検索欄に「徳島駅」と入力して検索
-  await ev(`document.querySelector('#rs-q').focus()`)
+  await ev(`document.querySelector('#rs-q').focus(); document.querySelector('#rs-q').select()`)
   await send('Input.insertText', { text: '徳島駅' })
   await ev(`document.querySelector('form[role=search] button[type=submit]').click()`)
   await sleep(3000)
@@ -59,6 +59,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await sleep(500)
   await shot(`${label}-2-overlay.png`)
   const r = JSON.parse(await ev(`JSON.stringify(document.querySelector('[role=region][aria-label^=地図]').getBoundingClientRect())`))
+  console.log(label, 'banner rect:', await ev(`JSON.stringify((({top,bottom})=>({top:Math.round(top),bottom:Math.round(bottom),vh:innerHeight}))(document.querySelector('[data-testid=use-hit]').getBoundingClientRect()))`))
   console.log(label, 'marker label:', await ev(`document.querySelector('.maplibregl-marker')?.textContent`))
   await shot(`${label}-2b-marker.png`)
   if (mobile) {
@@ -66,7 +67,12 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   } else {
     await ev(`document.querySelector('[data-testid=use-hit] button').click()`)
   }
-  await sleep(10000)
+  for (let i = 0; i < 30 && !(await ev(`!!document.querySelector('[data-testid=digest]')`)); i++) await sleep(500)
+  await sleep(2500)
+  console.log(label, 'sheetTop after 2.5s', await ev(`Math.round(document.querySelector('[data-testid=sheet]').getBoundingClientRect().top)`))
+  console.log(label, 'answers:', await ev(`document.querySelector('[data-testid=answers]')?.innerText`))
+  console.log(label, 'glossary:', await ev(`document.querySelector('[data-testid=glossary]')?.innerText`))
+  await sleep(2000)
   console.log(label, 'after choose: sheetTop', await ev(`Math.round(document.querySelector('[data-testid=sheet]').getBoundingClientRect().top)`), 'quick:', await ev(`document.querySelector('[data-testid=quick-result]')?.innerText`))
   await shot(`${label}-2c-after-choose.png`)
   console.log(label, 'digest:', await ev(`document.querySelector('[data-testid=digest]')?.innerText`))

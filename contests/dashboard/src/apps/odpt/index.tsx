@@ -28,7 +28,7 @@ import {
 
 type View = { bounds?: [[number, number], [number, number]]; center?: [number, number]; zoom?: number }
 type Pt = [number, number]
-type Cand = { title: string; lon: number; lat: number; rid: string | null }
+type Cand = { title: string; lon: number; lat: number; rid: string | null; inCell?: boolean }
 
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
 const HIDDEN = ['==', 1, 0]
@@ -127,11 +127,11 @@ export default function App() {
   useEffect(() => {
     if (!queryStr) return
     const params = new URLSearchParams(queryStr)
-    const next = withHashQuery(window.location.hash || '#/apps/odpt', params)
+    const next = withHashQuery(window.location.hash || '#/', params)
     window.history.replaceState(null, '', window.location.pathname + window.location.search + next)
   }, [queryStr])
   const shareUrl = useMemo(() => {
-    const path = (window.location.hash || '#/apps/odpt').split('?')[0]
+    const path = (window.location.hash || '#/').split('?')[0]
     return `${window.location.origin}${window.location.pathname}${window.location.search}${path}?${queryStr}`
   }, [queryStr])
 
@@ -205,7 +205,7 @@ export default function App() {
       else {
         const pv = document.getElementById('odpt-copy-preview') as HTMLTextAreaElement | null
         pv?.focus(); pv?.select()
-        toast.error('自動でコピーできませんでした。下の文面を選択しました。Ctrl+C（スマホは長押し）でコピーしてください')
+        toast.error('自動でコピーできませんでした。コピー用の文面を選択しました。Ctrl+C（スマホは長押し）でコピーしてください')
       }
     }
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(ok, fallback)
@@ -229,7 +229,7 @@ export default function App() {
 
   const goCand = useCallback((c: Cand) => {
     if (!c.rid) return
-    setSearchMsg(`「${c.title}」を調べました。結論は上の「この地点の結論」に出ています。`)
+    setSearchMsg(`「${c.title}」を調べました。結果は「この地点の結論」のカードに出ています。`)
     if (data && c.rid === data.id) choosePoint(c.lon, c.lat, c.title, true)
     else {
       pending.current = { pt: [c.lon, c.lat], route: null }
@@ -252,7 +252,9 @@ export default function App() {
       rs = parseGsi(await r.json()).map((h) => ({ ...h, rid: regionForPoint(index.regions, h.lon, h.lat) }))
     } catch { failed = true }
     const cur = data?.id
-    rs = rs.map((r, i) => ({ r, k: (r.rid === cur ? 0 : r.rid ? 1 : 2) * 10000 + i })).sort((a, b) => a.k - b.k).map((x) => x.r).slice(0, 5)
+    // 並び順: 選択中の地域で診断できる場所 → 選択中の地域の範囲内 → 他の収録地域 → 範囲外
+    rs = rs.map((r) => ({ ...r, inCell: r.rid === cur && cellIdx[meshCodeAt(r.lon, r.lat)] != null }))
+    rs = rs.map((r, i) => ({ r, k: (r.rid === cur ? (r.inCell ? 0 : 1) : r.rid ? 2 : 3) * 1e7 + (r.rid === cur && data ? Math.round(distM(r.lon, r.lat, data.center[0], data.center[1])) : i) })).sort((a, b) => a.k - b.k).map((x) => x.r).slice(0, 6)
     // 地名検索で見つからない／接続できないときは、読み込み済みの地域の停留所名から探す
     if (!rs.some((r) => r.rid) && data) {
       searchStops(data.nodes, q.replace(/^.*[都道府県市区町村]/, '') || q).forEach((s) => {
@@ -270,11 +272,18 @@ export default function App() {
       return
     }
     goCand(first)
-    setCands(rs.filter((r) => r !== first))
-  }, [index, data, goCand])
+    const others = rs.filter((r) => r !== first)
+    setCands(others)
+    if (others.length && !(first.rid === cur && !first.inCell)) {
+      setSearchMsg(`「${first.title}」を調べました（結果は「この地点の結論」のカード）。同じ名前の候補が他にもあります。場所が違う場合は、下の候補から選んでください。`)
+    }
+    if (first.rid === cur && !first.inCell) {
+      setSearchMsg(`「${first.title}」は診断範囲外でした。別の地域の「${q}」かもしれません。${others.length ? '下の候補から選んでください。' : ''}`)
+    }
+  }, [index, data, goCand, cellIdx])
 
   const onMapClick = useCallback(({ lng, lat }: { lng: number; lat: number }) => {
-    setSearchMsg('地図で選んだ地点を調べました。結果は上の「この地点の結論」に出ています。')
+    setSearchMsg('地図で選んだ地点を調べました。結果は「この地点の結論」のカードに出ています。')
     setCands([])
     choosePoint(lng, lat, '', false)
   }, [choosePoint])
@@ -428,11 +437,12 @@ export default function App() {
               <div className="text-sm" aria-live="polite" data-testid="search-msg">
                 {searchMsg}
                 {cands.length > 0 && (
-                  <div className="mt-1 flex flex-wrap items-center gap-1">
-                    <span className="text-xs text-muted-foreground">他の候補:</span>
+                  <div className="mt-2 space-y-1.5" data-testid="cands">
+                    <p className="text-sm font-medium">他の候補（押すと、その場所を診断します）</p>
                     {cands.map((c, i) => (
-                      <Button key={i} type="button" size="sm" variant="outline" disabled={!c.rid} onClick={() => goCand(c)}>
-                        {c.title}{c.rid ? '' : '（収録範囲外）'}
+                      <Button key={i} type="button" variant="outline" disabled={!c.rid} onClick={() => goCand(c)}
+                        className="h-auto w-full justify-start whitespace-normal py-2 text-left text-sm">
+                        {c.title}{c.rid ? (c.rid === data?.id && !c.inCell ? '（診断範囲外）' : `（${shortName(index?.regions.find((x) => x.id === c.rid)?.name ?? '')}）`) : '（収録範囲外）'}
                       </Button>
                     ))}
                   </div>

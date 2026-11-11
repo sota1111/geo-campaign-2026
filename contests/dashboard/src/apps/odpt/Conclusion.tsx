@@ -116,12 +116,26 @@ export const Conclusion = forwardRef<HTMLDivElement, ConclusionProps>(function C
                 )}
                 {v.status === 'walk' && <p>歩きだけで{cond.w}分以内に着ける、と計算した地点です。</p>}
                 {v.status === 'transit' && (
-                  <p>公共交通（乗り継ぎ・待ち時間を含む）で <b>{p.transitLevel ?? `${cond.w}分以内`}</b> に着ける区分です。乗る路線・経路は元データにないため表示できません（近くの停留所と路線は下の「近くの停留所」タブ）。</p>
+                  <p>公共交通（乗り継ぎ・待ち時間を含む）で <b>{p.transitLevel ?? `${cond.w}分以内`}</b> に着ける区分です。乗る路線・経路は元データにないため表示できません（近くの停留所と路線は「近くの停留所」タブ）。</p>
                 )}
                 {!v.ok && <p>最寄りの{fl}までは、{cond.w}分以内には着けない計算です。</p>}
                 <p className="text-xs opacity-80">最寄りの{fl}は直線距離で選んだ目安で、実際に向かう{fl}とは限りません。</p>
               </div>
             </div>
+
+          <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+              <Button size="lg" onClick={p.onCopy} className="h-12 w-full text-base" data-testid="copy-conclusion">
+                {p.copied ? <Check className="size-5" /> : <Copy className="size-5" />}
+                {p.copied ? 'コピーしました' : '結論とリンクをコピー'}
+              </Button>
+              <p className="text-sm font-medium text-blue-800" role="status" data-testid="copy-done">
+                {p.copied ? 'コピーしました。LINEやメールに貼り付けて送れます。' : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
+              </p>
+              <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">コピーされる文面（自動でコピーできない時は、ここを選んでコピー）</label>
+              <Textarea id="odpt-copy-preview" readOnly rows={4} value={p.copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+              {p.isLocal && <p className="text-xs text-muted-foreground">※いまは手元の確認用アドレスです。公開後のアドレスで共有すると、相手も開けます。</p>}
+            </div>
+        
 
             <div>
               <p className="mb-1 font-medium">平日と休日（日曜ダイヤ）の違い（{PERIOD_LABEL[cond.per]}{hr}時発・{cond.w}分以内）</p>
@@ -180,20 +194,6 @@ export const Conclusion = forwardRef<HTMLDivElement, ConclusionProps>(function C
           </p>
         )}
 
-        {data && p.hasPoint && (
-          <div className="space-y-2 border-t pt-3">
-            <Button size="lg" onClick={p.onCopy} className="h-12 w-full text-base" data-testid="copy-conclusion">
-              {p.copied ? <Check className="size-5" /> : <Copy className="size-5" />}
-              {p.copied ? 'コピーしました' : '結論とリンクをコピー'}
-            </Button>
-            <p className="text-sm font-medium text-blue-800" role="status" data-testid="copy-done">
-              {p.copied ? 'コピーしました。LINEやメールに貼り付けて送れます。' : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
-            </p>
-            <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">コピーされる文面（自動でコピーできない時は、ここを選んでコピー）</label>
-            <Textarea id="odpt-copy-preview" readOnly rows={4} value={p.copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
-            {p.isLocal && <p className="text-xs text-muted-foreground">※いまは手元の確認用アドレスです。公開後のアドレスで共有すると、相手も開けます。</p>}
-          </div>
-        )}
         <p className="text-xs text-muted-foreground">
           時刻表データによる推計で、実際の運行を保証するものではありません。収録した事業者のバスのみが対象で、鉄道・予約制の便・病院の診療時間は評価していません。
         </p>

@@ -311,14 +311,16 @@ export interface Hit { lon: number; lat: number; title: string }
 export function pickSearchHit(q: string, hits: Hit[], data: Pick<AreaData, 'bbox' | 'rail'> | null): Hit | null {
   const inArea = (h: Hit) => !data || inBBox(data.bbox, h.lon, h.lat)
   if (q.includes('駅')) {
+    // 1) 同梱の駅データ（鉄道駅の座標＝駅舎の位置）を優先。駅名が完全一致するものだけ
+    const key = q.replace(/\s/g, '').replace(/^徳島県|^徳島市/, '').replace(/駅$/, '')
+    if (data && key) {
+      const r = data.rail.find((s) => s[2] === key)
+      if (r) return { lon: r[0], lat: r[1], title: r[2] + '駅' }
+    }
+    // 2) 駅データにない場合のみ、GSIの結果のうち title が「〜駅」のもの
     const st = hits.filter((h) => h.title.endsWith('駅'))
     const hit = st.find(inArea) || (data ? null : st[0])
     if (hit) return hit
-    if (data) {
-      const key = q.replace(/\s/g, '').replace(/^徳島県|^徳島市/, '').replace(/駅$/, '') || q.replace(/駅/g, '')
-      const r = data.rail.find((s) => s[2] === key) || data.rail.find((s) => key && (s[2].includes(key) || key.includes(s[2])))
-      if (r) return { lon: r[0], lat: r[1], title: r[2] + '駅' }
-    }
     if (st[0]) return st[0]
   }
   return hits.find(inArea) || hits[0] || null
@@ -339,4 +341,18 @@ export function buildDigest(f: Facts, sheet: Sheet): string[] {
   const top = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([w]) => w)
   if (top.length) lines.push('まず相談する先の候補（4つの出口で多く出る相手）: ' + top.join('・') + '（くわしくは下の各出口）。')
   return lines.slice(0, 3)
+}
+
+// ---- 用語の説明（シートに出てくる専門語に1行の説明） ----
+export const GLOSSARY: { term: string; re: RegExp; text: string }[] = [
+  { term: '相続土地国庫帰属制度（国庫帰属）', re: /国庫帰属/, text: '相続した土地を、一定の条件で国に引き取ってもらう制度。' },
+  { term: '用途地域', re: /用途地域/, text: '都市計画で、建てられる建物の種類や使い方を地域ごとに定めたもの。' },
+  { term: '建ぺい率・容積率', re: /建ぺい率|容積率/, text: '敷地に対して建物を建てられる面積の割合（建ぺい率）と、延べ床面積の割合（容積率）の上限。' },
+  { term: '市街化調整区域', re: /市街化調整区域/, text: '市街化を抑える区域。建物の新築などに制限がある。' },
+  { term: '想定最大規模', re: /想定最大規模/, text: '想定しうる最大級の大雨を前提にした浸水の想定。' },
+  { term: '農業委員会', re: /農業委員会/, text: '農地の売買・貸し借りなどの手続きを扱う市町村の機関。' },
+  { term: '相続登記', re: /相続登記/, text: '相続した土地の名義を、法務局の登記簿で変える手続き。' },
+]
+export function glossaryFor(text: string) {
+  return GLOSSARY.filter((g) => g.re.test(text))
 }

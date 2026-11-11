@@ -1,7 +1,6 @@
-import { inCoverage, type NearFill } from './lib'
+import { NEAR_M, inCoverage, type NearFill } from './lib'
 
-/** 「近く」とみなす距離（m）。案内表示用の目安であり、安全性の基準ではない */
-export const NEAR_M = 500
+export { NEAR_M }
 
 export const KIND_HELP: Record<string, string> = {
   谷埋め型: '谷を埋めた盛土',

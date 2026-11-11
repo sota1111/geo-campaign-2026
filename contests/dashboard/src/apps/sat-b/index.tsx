@@ -31,6 +31,15 @@ import {
 import { SampleFrame, SiteMap, TilePhoto } from './parts'
 
 const PAGE = 25
+const NATIVE_SELECT =
+  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+// 結果の意味（このデモの実装上の扱い。業務上の正式な基準ではない）
+const RESULT_HELP: [string, string][] = [
+  ['是正対象', '現地で是正が必要と見たもの。「検出条件の見直し」では「当たり」として集計されます'],
+  ['要継続観察', '今回は是正に至らないが、次回以降も見るもの'],
+  ['問題なし', '現地で問題を確認しなかったもの'],
+  ['立入不可・再訪', '立ち入れず確認できなかったもの。あらためて訪れる必要があります'],
+]
 const NOT_CONNECTED = '衛星由来の変化量は未接続（点数に含まれません）'
 
 const SOURCES: SourceItem[] = [
@@ -509,6 +518,9 @@ function PlanTab({ ds, mode, ranked, plan, cap, setCap, note, onRecord, onSelect
               ? '点数の高い順に上位N件を選び、市役所付近からの回り順（地図上の直線距離の最近傍法）で並べます。道路事情・立入可否は考慮しません。'
               : '点数の高い順に上位N件を選び、役所からの回り順（地図上の直線距離の最近傍法）で並べます。実際の道路事情・立入可否は考慮しません。'}
           </p>
+          <p className="basis-full rounded-md border border-dashed border-amber-500 bg-amber-50 p-2 text-sm">
+            <b>この計画はCSVで書き出して保存してください。</b>画面を閉じると再計算されます（保存されるのは巡視結果の記録だけです）。
+          </p>
           <p className="basis-full text-sm">
             <b>同点のときの並べ方</b>: 点数が同じ場合は面積の大きい順、面積も同じなら ID の順で順位を付けています（台帳と同じ順位です）。
             下の表の「点数の内訳」で、なぜその地点が選ばれたかを確認できます。
@@ -598,7 +610,8 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
   const real = mode === 'real'
   const [date, setDate] = useState(dateStr())
   const [who, setWho] = useState('')
-  const [result, setResult] = useState<string>(RESULTS[0])
+  const [result, setResult] = useState<string>('')
+  const [formError, setFormError] = useState<string[]>([])
   const [memo, setMemo] = useState('')
   const [saved, setSaved] = useState<PatrolResult | null>(null)
   const shownSaved = saved && results.length > 0 ? saved : null
@@ -618,10 +631,20 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!who.trim() || !date || !recSite) return
+    const problems: string[] = []
+    if (!recSite) problems.push('地点を選んでください')
+    if (!date) problems.push('巡視日を入れてください')
+    if (!who.trim()) problems.push('巡視者を入れてください（役職名や班名で構いません）')
+    if (!result) problems.push('結果を選んでください（選ぶまで記録できません）')
+    if (problems.length) {
+      setFormError(problems)
+      toast.error(`記録できていません: ${problems.join('／')}`)
+      return
+    }
+    setFormError([])
     const r: PatrolResult = { siteId: recSite, date, who: who.trim(), result, memo: memo.trim() }
     setResults([...results, r])
-    setSaved(r); setMemo('')
+    setSaved(r); setMemo(''); setResult('')
     toast.success(`${r.siteId} の巡視結果を記録しました。台帳の「最新の巡視」に反映されています`)
   }
   const exportRec = () =>
@@ -640,38 +663,46 @@ function RecordTab({ ds, mode, ranked, results, setResults, recSite, setRecSite,
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} noValidate className="space-y-3">
             <div className="space-y-1">
               <Label>地点{rec ? `（順位 ${rec.rank}／点数 ${rec.score}）` : ''}</Label>
-              <Select value={recSite} onValueChange={setRecSite}>
-                <SelectTrigger className="w-full" aria-label="巡視した地点"><SelectValue /></SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {ranked.map((s) => <SelectItem key={s.id} value={s.id}>{s.rank}位 {s.id}{real ? ` ${s.type}` : ` ${s.name}`}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <select aria-label="巡視した地点" value={recSite} onChange={(e) => setRecSite(e.target.value)} className={NATIVE_SELECT}>
+                {ranked.map((s) => <option key={s.id} value={s.id}>{s.rank}位 {s.id}{real ? ` ${s.type}` : ` ${s.name}`}</option>)}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="sat-b-date">巡視日</Label>
-                <Input id="sat-b-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input id="sat-b-date" type="date" lang="ja" value={date} onChange={(e) => setDate(e.target.value)} />
+                <p className="text-xs text-muted-foreground">選択中: {date || '未入力'}（年-月-日）</p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="sat-b-who">巡視者（必須）</Label>
-                <Input id="sat-b-who" required maxLength={40} value={who} placeholder="例: 盛土班" onChange={(e) => setWho(e.target.value)} />
+                <Input id="sat-b-who" maxLength={40} value={who} placeholder="例: 盛土班" onChange={(e) => setWho(e.target.value)} />
               </div>
             </div>
             <div className="space-y-1">
-              <Label>結果</Label>
-              <Select value={result} onValueChange={setResult}>
-                <SelectTrigger className="w-full" aria-label="巡視の結果"><SelectValue /></SelectTrigger>
-                <SelectContent>{RESULTS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-              </Select>
+              <Label htmlFor="sat-b-result">結果（必須）</Label>
+              <select id="sat-b-result" aria-label="巡視の結果" value={result} onChange={(e) => setResult(e.target.value)} className={NATIVE_SELECT}>
+                <option value="">選んでください</option>
+                {RESULTS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <ul className="space-y-0.5 rounded-md bg-muted p-2 text-xs">
+                {RESULT_HELP.map(([k, v]) => <li key={k}><b>{k}</b>: {v}</li>)}
+                <li className="text-muted-foreground">※この画面での意味づけで、業務上の正式な基準ではありません。実際の判断は所属の基準に従ってください。</li>
+              </ul>
             </div>
             <div className="space-y-1">
               <Label htmlFor="sat-b-memo">メモ（任意）</Label>
               <Input id="sat-b-memo" maxLength={200} value={memo} onChange={(e) => setMemo(e.target.value)} />
             </div>
             <Button type="submit" className="w-full sm:w-auto">記録する</Button>
+            {formError.length > 0 && (
+              <Alert variant="destructive" role="alert">
+                <AlertTitle>まだ記録していません</AlertTitle>
+                <AlertDescription><ul className="list-disc pl-4">{formError.map((m) => <li key={m}>{m}</li>)}</ul></AlertDescription>
+              </Alert>
+            )}
           </form>
           {shownSaved && (
             <Alert className="mt-3 border-sky-300 bg-sky-50">

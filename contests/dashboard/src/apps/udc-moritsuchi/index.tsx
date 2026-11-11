@@ -249,6 +249,7 @@ export default function App() {
     const f = fills.find((x) => x.properties.id === id)
     if (!f) return
     setSelFill(id)
+    toast.success(`${id}（${f.properties.kind}）を選びました`)
     mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
     if (window.innerWidth < 1024) mapWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [fills])
@@ -468,7 +469,10 @@ export default function App() {
 
   const checklist = [
     { key: 'look', label: '近くの盛土造成地を確かめた', done: selFill !== null, next: '近くの盛土造成地を1つ選んで、型を確かめる', button: '一覧から選ぶ',
-      go: () => { changeTab('look'); setTimeout(() => document.querySelector('ul[aria-label="近い盛土造成地"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100) } },
+      go: () => {
+        changeTab('look')
+        requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('ul[aria-label="近い盛土造成地"]')?.scrollIntoView({ behavior: 'auto', block: 'center' })))
+      } },
     { key: 'compare', label: '昔の写真と見比べた', done: didCompare, next: '昔の写真と今を見比べる', button: selFill ? '昔の写真で見る（1961〜69年）' : '造成地を選ぶ',
       go: () => (selFill ? viewOld(selFill, 'ort_old10') : changeTab('look')) },
     { key: 'rec', label: '気づいたことを記録した', done: records.length > 0, next: '気づいた変化を1件記録する', button: '記録する画面へ',
@@ -547,17 +551,17 @@ export default function App() {
           {checklist.map((c) => (
             <li key={c.key} className={`flex items-center gap-2 ${c.done ? 'text-foreground' : 'text-muted-foreground'}`} data-done={c.done ? '1' : '0'}>
               {c.done ? <CheckCircle2 className="size-4 shrink-0 text-primary" aria-label="完了" /> : <Circle className="size-4 shrink-0" aria-label="未完了" />}
-              <span>{c.label}{c.done ? '（完了）' : ''}</span>
+              <span>{c.label}{c.done && <span className="sr-only">（完了）</span>}</span>
             </li>
           ))}
         </ul>
         {nextItem ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border-2 border-primary bg-accent/50 p-2" data-testid="next-action">
+          <div className="mt-2 flex min-h-[7rem] flex-wrap content-start items-center gap-2 rounded-md border-2 border-primary bg-accent/50 p-2 sm:min-h-[3.5rem]" data-testid="next-action">
             <span className="text-sm font-semibold">次にやること: {nextItem.next}</span>
             <Button size="sm" onClick={nextItem.go}>{nextItem.button}</Button>
           </div>
         ) : (
-          <p className="mt-2 rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-semibold" data-testid="all-done">
+          <p className="mt-2 min-h-[7rem] rounded-md border-2 border-primary bg-accent/50 p-2 text-sm font-semibold sm:min-h-[3.5rem]" data-testid="all-done">
             すべて完了です。コピーした文面は、市の窓口へ電話・メール・フォームで伝えるときに使えます。
           </p>
         )}
@@ -581,15 +585,52 @@ export default function App() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div ref={mapWrapRef} className="scroll-mt-16 space-y-2 lg:sticky lg:top-4 lg:self-start">
-          <div data-testid="near-banner" className="rounded-md border-2 border-primary bg-accent/50 p-2">
-            <div className="text-xs text-muted-foreground">
-              「{origin.label}」からの結果。自宅の住所を入れると、その地点からの距離で出ます（熱海駅は例です）。
+          <div data-testid="near-banner" className="space-y-2 rounded-md border-2 border-primary bg-accent/50 p-2">
+            <div className="text-lg font-bold leading-tight sm:text-xl" data-testid="near-origin">
+              {origin.label.startsWith('熱海駅（例') ? '熱海駅（例）からの結果です' : `「${origin.label}」からの結果です`}
+            </div>
+            {origin.label.startsWith('熱海駅（例') && (
+              <div className="text-sm font-medium text-destructive">これは自宅の結果ではありません。下の欄に自宅の住所を入れてください。</div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="mw-q" className="text-sm font-bold text-primary">自宅の住所を入れてください（駅名・町名でも可）</Label>
+            <form onSubmit={doSearch} className="flex gap-2" role="search">
+                    <Input
+                      id="mw-q"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="住所・駅名（例: 熱海駅、咲見町）"
+                      aria-label="住所・駅名で探す"
+                    />
+                    <Button type="submit" disabled={searching || !query.trim()}>
+                      <Search className="size-4" />{searching ? '検索中' : '検索'}
+                    </Button>
+                  </form>
+                  {searchMsg && <p className="text-sm text-muted-foreground" role="status">{searchMsg}</p>}
+                  {hits && hits.length > 0 && (
+                    <ul className="space-y-1.5" aria-label="検索結果">
+                      {hits.map((h, i) => (
+                        <li key={i}>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent"
+                            onClick={() => { goOrigin({ label: h.title, lng: h.lng, lat: h.lat }); setHits(null) }}
+                          >
+                            <span className="min-w-0 break-words">{h.title}</span>
+                            <Badge variant={h.inArea ? 'secondary' : 'outline'} className="shrink-0">
+                              {h.inArea ? '対象範囲内' : '対象範囲外'}
+                            </Badge>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
             </div>
             <div className="text-sm font-semibold sm:text-base" data-testid="near-summary">{nearSummary(stationList)}</div>
           </div>
           <div className="relative">
           <MapView
-            className="h-[340px] sm:h-[460px] lg:h-[calc(100vh-17rem)] lg:min-h-[420px]"
+            className="h-[340px] sm:h-[460px] lg:h-[calc(100vh-24rem)] lg:min-h-[360px]"
             center={initialView.center}
             zoom={initialView.zoom}
             basemap="pale"
@@ -620,39 +661,9 @@ export default function App() {
             <TabsContent value="look" className="space-y-3">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">① 自宅の周りを探す（住所・駅名）</CardTitle>
+                  <CardTitle className="text-base">① 場所を移す</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <form onSubmit={doSearch} className="flex gap-2" role="search">
-                    <Input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="住所・駅名（例: 熱海駅、咲見町）"
-                      aria-label="住所・駅名で探す"
-                    />
-                    <Button type="submit" disabled={searching || !query.trim()}>
-                      <Search className="size-4" />{searching ? '検索中' : '検索'}
-                    </Button>
-                  </form>
-                  {searchMsg && <p className="text-sm text-muted-foreground" role="status">{searchMsg}</p>}
-                  {hits && hits.length > 0 && (
-                    <ul className="space-y-1.5" aria-label="検索結果">
-                      {hits.map((h, i) => (
-                        <li key={i}>
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent"
-                            onClick={() => { goOrigin({ label: h.title, lng: h.lng, lat: h.lat }); setHits(null) }}
-                          >
-                            <span className="min-w-0 break-words">{h.title}</span>
-                            <Badge variant={h.inArea ? 'secondary' : 'outline'} className="shrink-0">
-                              {h.inArea ? '対象範囲内' : '対象範囲外'}
-                            </Badge>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                   <p className="text-xs text-muted-foreground">検索は国土地理院の地名検索（GETのみ）を使います。入力した文字だけが送られ、記録は送られません。</p>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={goStation}><MapPin className="size-4" />熱海駅の近くへ</Button>
@@ -681,7 +692,7 @@ export default function App() {
                           type="button"
                           onClick={() => focusFill(d.id)}
                           aria-pressed={selFill === d.id}
-                          className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent ${selFill === d.id ? 'border-primary bg-accent' : ''}`}
+                          className={`flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent ${selFill === d.id ? 'border-primary bg-accent ring-2 ring-primary' : ''}`}
                         >
                           <span className="min-w-0">
                             <span className="font-medium">{d.id}</span>
@@ -733,8 +744,15 @@ export default function App() {
                   <ol className="list-decimal space-y-0.5 pl-5 text-sm">
                     <li>年代を選ぶ（地図が昔の写真に変わります）</li>
                     <li>スライダーを動かして、今と昔を行き来する</li>
-                    <li>谷が埋められた跡や、道・建物の増え方を見比べる</li>
                   </ol>
+                  <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
+                    <div className="font-semibold">見るポイント（見方の例）</div>
+                    <ul className="list-disc space-y-0.5 pl-5">
+                      <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
+                      <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
+                    </ul>
+                    <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
+                  </div>
                   {selFillFeature ? (
                     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-accent/40 p-2 text-sm">
                       <span>見ている場所:</span>
@@ -883,7 +901,7 @@ export default function App() {
                     <Button size="lg" className="w-full" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピー</Button>
                     <Button size="lg" variant="outline" className="w-full" onClick={exportGeo}><Download className="size-5" />GeoJSONで書き出す（記録をファイルに保存）</Button>
                     <p className="text-xs text-muted-foreground">
-                      このページは送信しません。文面をコピーして、自治体の窓口（電話・メール・フォーム）へ。通報先は市町村・県で異なるため、各自治体の案内を確認してください。静岡県の例は国のガイドライン2.3に紹介されています。
+                      このページは送信しません。文面をコピーして、自治体の窓口（電話・メール・フォーム）へ。通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
                     </p>
                   </CardContent>
                 </Card>

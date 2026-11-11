@@ -13,7 +13,7 @@ import { SatMap } from './SatMap'
 import { Step1, Step2, Step3, type CalibResult, type PrevInfo } from './Steps'
 import { About, SOURCES } from './About'
 import {
-  NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, rank, satNorm, selectByBudget,
+  NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, rank, satNorm, selectByBudget, totalKm,
   type SampleData, type Segment,
 } from './logic'
 
@@ -113,10 +113,10 @@ export default function App() {
     const newW = calib && calib.w !== null ? calib.w : w
     const after = candidatesOf(rank(segs, cellSat, newW))
     const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
-    setPrev({ rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed, calibrated: !!(calib && calib.w !== null) })
+    setPrev({ rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed, calibrated: !!(calib && calib.w !== null), scanned: lastBatch.length })
     if (calib && calib.w !== null) {
       setMsg(
-        `較正済み: 衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。走査した区間を除く候補の1位は ${before[0]?.id} → ${after[0]?.id}、上位10区間のうち ${changed} 区間で順位が入れ替わっています（表の「前回」列）。`,
+        `較正済み: 衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。${before[0]?.id === after[0]?.id ? `走査した区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `走査した区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています（表の「前回」列）。`,
       )
     } else {
       setMsg('較正に使える結果が不足していたため、重みは変えていません（走査済みの区間が候補から外れた分だけ順位が繰り上がります）。')
@@ -140,6 +140,15 @@ export default function App() {
     )
   }
 
+  const selKm = totalKm(segs, selected)
+  const primary =
+    step === '1'
+      ? { label: round > 1 ? `第${round}回の候補で、もう一度選ぶ →` : '次へ：区間を選ぶ →', disabled: false, onClick: () => setStep('2') }
+      : step === '2'
+        ? { label: '次へ：結果を戻す →', disabled: selected.size === 0 || selKm > budgetKm + 1e-9, onClick: () => setStep('3') }
+        : revealed
+          ? { label: `較正を反映して第${round + 1}回へ →`, disabled: false, onClick: applyCalib }
+          : { label: '走査結果を見る', disabled: selected.size === 0, onClick: doScan }
   const focusSeg = focus ? ranked.find((s) => s.id === focus) : undefined
   const detailCard = (
     <Card aria-live="polite" data-testid="detail">
@@ -201,16 +210,21 @@ export default function App() {
       </Alert>
 
       <Tabs value={step} onValueChange={(v) => setStep(v as StepId)} className="gap-4">
-        <div ref={stepperRef} className="flex scroll-mt-2 flex-wrap items-center gap-2">
+        <div ref={stepperRef} className="sticky top-12 z-30 -mx-1 flex scroll-mt-2 flex-wrap items-center gap-2 border-b bg-background/95 px-1 py-2 backdrop-blur" data-testid="sticky-bar">
           <TabsList className="h-auto w-full flex-1 sm:w-auto sm:flex-none" aria-label="調査の段階">
             <TabsTrigger value="1" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>1</b> 絞る</TabsTrigger>
             <TabsTrigger value="2" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>2</b> 選ぶ</TabsTrigger>
             <TabsTrigger value="3" className="min-h-10 flex-1 px-3 data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground sm:flex-none"><b>3</b> 戻す</TabsTrigger>
           </TabsList>
           <Badge variant="secondary" className="text-sm" data-testid="round">第{round}回</Badge>
-          <span className="text-xs text-muted-foreground">
+          <span className="hidden text-xs text-muted-foreground xl:inline">
             流れ: 点数で候補を絞る → 予算内で地中レーダの対象を選ぶ → 結果を点数に戻して第{round + 1}回へ
           </span>
+          {data && (
+            <Button size="sm" className="ml-auto" onClick={primary.onClick} disabled={primary.disabled} data-testid="sticky-next">
+              {primary.label}
+            </Button>
+          )}
         </div>
 
         {!data ? (

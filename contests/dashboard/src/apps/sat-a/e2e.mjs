@@ -99,6 +99,12 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   r.mapClick = hit
   await shot(`${label}-4-map-click.png`)
   await clickSel('[data-testid=auto]')
+  await ev('window.scrollTo(0, 900)'); await sleep(400)
+  r.stickyTop = await ev(`Math.round(document.querySelector('[data-testid=sticky-bar]').getBoundingClientRect().top)`)
+  await shot(`${label}-4b-sticky.png`)
+  await clickSel('[data-testid=sticky-next]')
+  r.stickyWorks = await ev(`document.querySelector('[role=tab][aria-selected=true]')?.textContent`)
+  await clickSel('[role=tab]', '選ぶ')
   await clickSel('[data-testid=to3]')
   r.s3count = await txt('s3-count')
   await fullshot(`${label}-5-step3-before.png`)

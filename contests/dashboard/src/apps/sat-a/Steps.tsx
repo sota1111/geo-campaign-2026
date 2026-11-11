@@ -24,6 +24,7 @@ export interface PrevInfo {
   newTopId: string
   changed: number
   calibrated: boolean
+  scanned: number
 }
 
 export type CalibResult = Calibration & { ex0: Exclusion | null; ex1: Exclusion | null; pastCount: number }
@@ -79,6 +80,11 @@ export function Step1({
           <Alert className="border-primary/40 bg-primary/5" data-testid="calib-msg">
             <AlertTitle>第{prev.round}回 → 第{round}回：較正の反映結果</AlertTitle>
             <AlertDescription className="w-full space-y-2 text-foreground">
+              <p className="font-medium" data-testid="what-changed">
+                {prev.calibrated
+                  ? `何が変わったか: 調査結果に照らして当たりやすい重み（衛星${pct(prev.newW)}%）に更新し、走査済み${prev.scanned}区間を除いた順位を作り直しました。`
+                  : `何が変わったか: 結果が不足していたため重みは据え置き、走査済み${prev.scanned}区間を除いた順位を作り直しました。`}
+              </p>
               <p>{msg}</p>
               <Table>
                 <TableHeader>
@@ -86,7 +92,7 @@ export function Step1({
                 </TableHeader>
                 <TableBody>
                   <TableRow><TableCell>衛星指標の重み</TableCell><TableCell className="text-right">{pct(prev.oldW)}%</TableCell><TableCell className="text-right">{pct(prev.newW)}%</TableCell></TableRow>
-                  <TableRow><TableCell>候補の1位（走査済みを除く）</TableCell><TableCell className="text-right">{prev.topId}</TableCell><TableCell className="text-right">{prev.newTopId}</TableCell></TableRow>
+                  <TableRow><TableCell>候補の1位（走査済みを除く）</TableCell><TableCell className="text-right">{prev.topId}</TableCell><TableCell className="text-right">{prev.topId === prev.newTopId ? `変わらず（2位以下が入れ替わり）` : prev.newTopId}</TableCell></TableRow>
                   <TableRow><TableCell>上位10区間で順位が入れ替わった数</TableCell><TableCell className="text-right">—</TableCell><TableCell className="text-right" data-testid="changed">{prev.changed} 区間</TableCell></TableRow>
                 </TableBody>
               </Table>
