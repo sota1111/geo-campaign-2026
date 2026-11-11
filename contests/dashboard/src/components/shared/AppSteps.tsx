@@ -41,36 +41,63 @@ export function progressLabel(steps: Pick<AppStep, 'done' | 'optional'>[]): stri
   return opt > 0 ? `必須 ${p.total} のうち ${p.done} 完了（任意 ${opt}）` : `${p.total} のうち ${p.done} 完了`
 }
 
-type PublicStep =Omit<AppStep, 'onSelect'>
+type PublicStep = Omit<AppStep, 'onSelect'>
+
+export interface AppStepsOptions {
+  /** いまメインに表示中の手順の id（サイドバーで「表示中」を強調） */
+  activeId?: string
+  /** サイドバーで手順がクリックされた時。ページが activeId を切り替える（従来の onSelect も呼ばれる） */
+  onSelectStep?: (id: string) => void
+  /** サイドバーのアプリ名の下に出す説明（PageHeader compact と組み合わせる） */
+  description?: string
+}
+
 interface Ctx {
   steps: PublicStep[]
-  register: (steps: AppStep[]) => void
+  activeId?: string
+  description?: string
+  /** StepLayout が表示中か（Shell が body スクロールを止めるために使う） */
+  layoutActive: boolean
+  setLayoutActive: (v: boolean) => void
+  register: (steps: AppStep[], opts?: AppStepsOptions) => void
   select: (id: string) => void
 }
 const AppStepsContext = createContext<Ctx | null>(null)
 
-const signature = (steps: AppStep[]) =>
-  JSON.stringify(steps.map((s) => [s.id, s.title, s.hint ?? '', s.done, !!s.optional]))
+const signature = (steps: AppStep[], opts?: AppStepsOptions) =>
+  JSON.stringify([steps.map((s) => [s.id, s.title, s.hint ?? '', s.done, !!s.optional]), opts?.activeId ?? '', opts?.description ?? ''])
 
 /** StandaloneShell が使う。登録された手順（onSelect を除く）を保持する */
 export function AppStepsProvider({ children }: { children: ReactNode }) {
-  const [steps, setSteps] = useState<PublicStep[]>([])
+  const [state, setState] = useState<{ steps: PublicStep[]; activeId?: string; description?: string }>({ steps: [] })
+  const [layoutActive, setLayoutActive] = useState(false)
   const handlers = useRef<Record<string, (() => void) | undefined>>({})
+  const onSelectStep = useRef<((id: string) => void) | undefined>(undefined)
   const sig = useRef('')
   const value = useMemo<Ctx>(
     () => ({
-      steps,
-      register: (next) => {
-        handlers.current = Object.fromEntries(next.map((s) => [s.id, s.onSelect]))
-        const s = signature(next)
-        if (s !== sig.current) {
-          sig.current = s
-          setSteps(next.map(({ onSelect: _o, ...rest }) => rest))
+      ...state,
+      layoutActive,
+      setLayoutActive,
+      register: (next, opts) => {
+        handlers.current = Object.fromEntries(next.map((st) => [st.id, st.onSelect]))
+        onSelectStep.current = opts?.onSelectStep
+        const sg = signature(next, opts)
+        if (sg !== sig.current) {
+          sig.current = sg
+          setState({
+            steps: next.map(({ onSelect: _o, ...rest }) => rest),
+            activeId: opts?.activeId,
+            description: opts?.description,
+          })
         }
       },
-      select: (id) => handlers.current[id]?.(),
+      select: (id) => {
+        handlers.current[id]?.()
+        onSelectStep.current?.(id)
+      },
     }),
-    [steps],
+    [state, layoutActive],
   )
   return <AppStepsContext.Provider value={value}>{children}</AppStepsContext.Provider>
 }
@@ -78,26 +105,43 @@ export function AppStepsProvider({ children }: { children: ReactNode }) {
 /** サイドバー側が読む。Provider がなければ空 */
 export function useRegisteredSteps() {
   const ctx = useContext(AppStepsContext)
-  return { steps: ctx?.steps ?? [], select: ctx?.select ?? (() => {}) }
+  return {
+    steps: ctx?.steps ?? [],
+    activeId: ctx?.activeId,
+    description: ctx?.description,
+    layoutActive: ctx?.layoutActive ?? false,
+    select: ctx?.select ?? (() => {}),
+  }
+}
+
+/** StepLayout が使う。マウント中は Shell が body のスクロールを止める（デスクトップ） */
+export function useLayoutActiveFlag() {
+  const ctx = useContext(AppStepsContext)
+  const set = ctx?.setLayoutActive
+  useEffect(() => {
+    set?.(true)
+    return () => set?.(false)
+  }, [set])
 }
 
 /**
  * ページが手順を登録する。毎レンダーで最新を渡す（done は状態から計算）。登録しなくても、Provider がなくても壊れない。
  *
- *   useAppSteps([
- *     { id: 'place', title: '場所を選ぶ', done: !!point, onSelect: () => setTab('map') },
- *     { id: 'copy',  title: '結論をコピー', done: copied },
- *     { id: 'share', title: '共有メモを書く', done: false, optional: true },
- *   ])
+ *   useAppSteps(
+ *     [
+ *       { id: 'place', title: '場所を選ぶ', done: !!point },
+ *       { id: 'copy',  title: '結論をコピー', done: copied },
+ *       { id: 'share', title: '共有メモを書く', done: false, optional: true },
+ *     ],
+ *     { activeId, onSelectStep: setActiveId },
+ *   )
  */
-export function useAppSteps(steps: AppStep[]) {
+export function useAppSteps(steps: AppStep[], opts?: AppStepsOptions) {
   const ctx = useContext(AppStepsContext)
-  const register = ctx?.register
-  // register は steps 変化のたびに作り直されないよう ref 経由で呼ぶ
-  const reg = useRef(register)
-  reg.current = register
+  const reg = useRef(ctx?.register)
+  reg.current = ctx?.register
   useEffect(() => {
-    reg.current?.(steps)
+    reg.current?.(steps, opts)
   })
   useEffect(() => () => reg.current?.([]), [])
 }

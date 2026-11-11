@@ -32,6 +32,52 @@ describe('progressLabel', () => {
   })
 })
 
+describe('activeId / onSelectStep', () => {
+  function Page({ activeId, onSelectStep, onSelect }: { activeId: string; onSelectStep: (id: string) => void; onSelect?: () => void }) {
+    useAppSteps([{ id: 'a', title: 'A', done: true, onSelect }, { id: 'b', title: 'B', done: false }], { activeId, onSelectStep, description: '説明' })
+    return null
+  }
+  function Probe() {
+    const { activeId, description, select } = useRegisteredSteps()
+    return (
+      <div>
+        <span data-testid="active">{activeId}</span>
+        <span data-testid="desc">{description}</span>
+        <button onClick={() => select('b')}>pickB</button>
+        <button onClick={() => select('a')}>pickA</button>
+      </div>
+    )
+  }
+  it('activeId を共有し、選択で onSelectStep と onSelect が呼ばれる。済になっても activeId は自動で変わらない', () => {
+    const onSelectStep = vi.fn()
+    const onSelect = vi.fn()
+    render(
+      <AppStepsProvider>
+        <Page activeId="a" onSelectStep={onSelectStep} onSelect={onSelect} />
+        <Probe />
+      </AppStepsProvider>,
+    )
+    expect(screen.getByTestId('active').textContent).toBe('a')
+    expect(screen.getByTestId('desc').textContent).toBe('説明')
+    act(() => screen.getByText('pickB').click())
+    expect(onSelectStep).toHaveBeenCalledWith('b')
+    act(() => screen.getByText('pickA').click())
+    expect(onSelect).toHaveBeenCalledTimes(1)
+    expect(onSelectStep).toHaveBeenLastCalledWith('a')
+    // 手順 a は済だが、いまここは b、表示中は a のまま
+    expect(currentStepIndex([s('a', true), s('b', false)])).toBe(1)
+    expect(screen.getByTestId('active').textContent).toBe('a')
+  })
+  it('opts なしの従来の呼び方でも動く', () => {
+    function Old() {
+      useAppSteps([s('a', false)])
+      return null
+    }
+    expect(() => render(<AppStepsProvider><Old /><Probe /></AppStepsProvider>)).not.toThrow()
+    expect(screen.getByTestId('active').textContent).toBe('')
+  })
+})
+
 describe('useAppSteps', () => {
   function Page({ done, onSelect }: { done: boolean; onSelect: () => void }) {
     useAppSteps([{ id: 'a', title: '最初', done, onSelect }, { id: 'b', title: '次', done: false }])

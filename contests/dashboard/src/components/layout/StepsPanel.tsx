@@ -23,7 +23,7 @@ function ProgressLine({ steps }: { steps: Steps }) {
 }
 
 function StepList({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
-  const { select } = useRegisteredSteps()
+  const { select, activeId } = useRegisteredSteps()
   const status = stepStatuses(steps as AppStep[])
   return (
     <ol className="space-y-1">
@@ -35,14 +35,17 @@ function StepList({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
               type="button"
               data-step={s.id}
               data-status={st}
+              data-active={s.id === activeId ? 'true' : undefined}
+              aria-selected={s.id === activeId || undefined}
               aria-current={st === 'current' ? 'step' : undefined}
               onClick={() => {
                 select(s.id)
                 onPick?.()
               }}
               className={cn(
-                'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent',
-                st === 'current' && 'bg-accent font-semibold ring-1 ring-primary/50',
+                'flex w-full items-start gap-2 rounded-md border-l-4 border-transparent px-2 py-1.5 text-left text-sm hover:bg-accent',
+                s.id === activeId && 'border-primary bg-accent font-semibold',
+                st === 'current' && 'font-semibold',
               )}
             >
               <span
@@ -60,7 +63,8 @@ function StepList({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
                   {s.title}
                   {s.optional && <span className="ml-1 rounded bg-muted px-1 text-[10px] font-normal text-muted-foreground">任意</span>}
                 </span>
-                {st === 'current' && <span className="block text-[11px] font-normal text-primary">いまここ</span>}
+                {st === 'current' && <span className="block text-[11px] font-normal text-primary">いまここ（次にやる手順）</span>}
+                {s.id === activeId && <span className="block text-[11px] font-normal text-muted-foreground">表示中</span>}
                 {s.hint && <span className="block text-xs font-normal text-muted-foreground">{s.hint}</span>}
               </span>
             </button>
@@ -73,7 +77,7 @@ function StepList({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
 
 /** デスクトップ（md 以上）の左サイドバー。手順が未登録なら何も出さない */
 export function StepsSidebar({ appName }: { appName?: string }) {
-  const { steps } = useRegisteredSteps()
+  const { steps, description } = useRegisteredSteps()
   if (!steps.length) return null
   return (
     <aside
@@ -82,6 +86,7 @@ export function StepsSidebar({ appName }: { appName?: string }) {
     >
       <div>
         {appName && <p className="text-sm font-bold leading-tight">{appName}</p>}
+        {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
         <p className="mt-1 text-xs text-muted-foreground">この順に進めると目的を達成できます</p>
       </div>
       <ProgressLine steps={steps} />

@@ -161,3 +161,41 @@ useAppSteps([
 - `MapView` は既定で `cooperativeGestures`（ページのスクロール中に地図が拡大されない。Ctrl/⌘＋ホイールで拡大、スマホは2本指で移動。日本語メッセージ）。`cooperativeGestures={false}` で無効化。
 - `src/components/ui/select.tsx` と `dropdown-menu.tsx` は閉じるアニメーション（animate-out）を外してあります。Radix Select は開いている間 body に `pointer-events:none` を付け、閉じるアニメ終了まで外さないため、閉じた直後の最初のクリックが無反応になっていたためです（再現: `node scripts/select-repro.mjs <base_url>`）。shadcn で再生成する時は同じ修正を戻すこと。
 - 確認用スクリプト: `scripts/wheel-check.mjs`（地図上のホイール）。
+
+## 新しいページの書き方（サイドバー主導・1画面に収める）
+
+方針: **サイドバーが唯一のナビゲーション**。メインは「サイドバーで選んだ手順」の内容だけを表示し（スクロールで移動せず切り替える）、デスクトップでは body をスクロールさせない。長い表・リストは手順パネルの枠内だけでスクロールする。
+
+```tsx
+const [step, setStep] = useState('place')
+useAppSteps(
+  [
+    { id: 'place', title: '場所を選ぶ', done: !!point },
+    { id: 'result', title: '結論を見る', done: copied },
+    { id: 'memo', title: '共有メモ', done: false, optional: true },
+  ],
+  { activeId: step, onSelectStep: setStep, description: '車を使わない家族が…（目的の一文）' },
+)
+return (
+  <>
+    <PageHeader appId="odpt" compact actions={<SourceDialog sources={...} />} />
+    <StepLayout title={titles[step]} hint="地図をタップして出発地を選ぶ" aside={<MapView ... />}>
+      {step === 'place' && <PlacePanel />}
+      {step === 'result' && <ResultPanel />}
+    </StepLayout>
+  </>
+)
+```
+
+- `useAppSteps(steps, { activeId, onSelectStep, description })`（2つ目は省略可・後方互換）。サイドバーで「表示中」（`activeId`：左の太い帯＋背景）と「いまここ（次にやる必須手順）」は別の表現。手順が済になっても自動で表示は切り替わらない（いまここの強調が次へ移るだけ）。サイドバーの手順をクリックすると `onSelectStep(id)`（と従来の `onSelect`）が呼ばれる。`description` はサイドバーのアプリ名の下に出る。
+- `StepLayout`（`@/components/shared/StepLayout`）: `title`（手順名）、`hint`（1行）、`aside`（地図など常設領域・任意）、`children`（手順パネル本文。枠内スクロール）。デスクトップ（768px 以上）は、ヘッダーからウィンドウ下端までに収まり、左に手順パネル（幅 380〜440px）・右に aside が残り幅いっぱい。スマホは縦並び（aside が上、高さ 38vh。パネルの下でページ全体がスクロール）。aside の `MapView` に高さ指定は不要（親に合わせて 100%）。`StepLayout` を使うページでは Shell が body のスクロールを止め、`main` の余白もなくなる。
+- `PageHeader compact`: アプリ名・データ種別・`actions`（出典ボタン）だけの1行（高さ 44px）。説明文はサイドバーの `description` へ。
+- 旧書き方のページ（`PageHeader` ＋縦に長い本文）もそのまま動く。
+
+撤去すべき重複要素のチェックリスト（サイドバーと機能が被るもの）:
+- [ ] ページ内のタブ・段階タブ・ステッパー（手順の切り替えはサイドバーだけ）
+- [ ] ページ内の手順一覧・「使い方 n ステップ」・進捗表示（サイドバーに出る）
+- [ ] 「次へ」「〜へ進む」「〜に移動」ボタン（サイドバーで移動する。次の手順は「いまここ」で分かる）
+- [ ] 手順間の自動スクロール（`scrollIntoView` など。原則禁止）
+- [ ] PageHeader の長い説明文（サイドバーの `description` へ）
+- [ ] 縦に長く伸びるカードの積み重ね（手順ごとに切り替える。表・リストは枠内スクロール）
