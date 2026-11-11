@@ -38,57 +38,67 @@ const click = async (x, y) => { for (const t of ['mousePressed', 'mouseReleased'
 const pages = (b) => (b.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length
 // usage: node src/apps/biz-realestate/steps-check.mjs <out_dir>   （要: vite preview --port 8847。独立ページ /apps/biz-realestate/）
 const statuses = () => ev(`JSON.stringify([...document.querySelectorAll('[data-step]')].filter(b=>b.offsetParent!==null).map(b=>b.dataset.step+':'+b.dataset.status))`)
-for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
+const scrollInfo = () => ev(`JSON.stringify({docH: document.documentElement.scrollHeight, bodyH: document.body.scrollHeight, vh: innerHeight})`)
+for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   logs.length = 0
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: 'http://127.0.0.1:8847/apps/biz-realestate/' })
   await sleep(3000)
   const openList = async () => { if (mobile && !(await ev(`!!document.querySelector('[data-step]')?.offsetParent`))) { await ev(`document.querySelector('[data-testid=steps-topbar] button').click()`); await sleep(300) } }
-  const pick = async (id) => { await openList(); await ev(`document.querySelector('[data-step=${id}]').click()`); await sleep(1200) }
+  const pick = async (id) => { await openList(); await ev(`document.querySelector('[data-step=${id}]').click()`); await sleep(1000) }
   await openList(); console.log(label, 'initial', await statuses())
-  await shot(`${label}-steps-0-initial.png`)
   await pick('place')
+  console.log(label, 'scroll@place', await scrollInfo())
+  await shot(`${label}-s1-place.png`)
   await ev(`document.querySelector('#rs-q').focus(); document.querySelector('#rs-q').select()`)
   await send('Input.insertText', { text: '徳島駅' })
   await ev(`document.querySelector('form[role=search] button[type=submit]').click()`)
   await sleep(3000)
+  await shot(`${label}-s1b-hit.png`)
+  console.log(label, 'scroll@hit', await scrollInfo())
   await ev(`document.querySelector('[data-testid=use-hit] button').click()`)
-  for (let i = 0; i < 40 && !(await ev(`!!document.querySelector('[data-testid=digest]')`)); i++) await sleep(500)
-  await sleep(2500)
-  console.log(label, 'scrollY after place', await ev(`Math.round(scrollY)`), 'answers card rect', await ev(`JSON.stringify((({top,bottom})=>({top:Math.round(top),bottom:Math.round(bottom),vh:innerHeight}))(document.querySelector('#rs-s2').getBoundingClientRect()))`))
-  await openList(); console.log(label, 'after place', await statuses())
+  for (let i = 0; i < 40 && !(await statuses()).includes('place:done'); i++) { await openList(); await sleep(500) }
+  await sleep(1500)
+  await openList(); console.log(label, 'after place (no auto switch; active panel title):', await statuses(), await ev(`document.querySelector('[data-testid=step-layout] h2').textContent`))
   await pick('answers')
   await ev(`[...document.querySelectorAll('[role=radio]')].find(b=>b.textContent.trim()==='ある').click()`)
   await sleep(500)
+  console.log(label, 'scroll@answers', await scrollInfo())
   console.log(label, 'answers-summary:', await ev(`document.querySelector('[data-testid=answers-summary]').innerText`))
-  console.log(label, 'term tooltips:', await ev(`document.querySelectorAll('[role=button][aria-label*="の説明"]').length`))
-  await openList(); console.log(label, 'before conditions', await statuses())
+  await shot(`${label}-s2-answers.png`)
+  await pick('conditions')
+  console.log(label, 'scroll@conditions', await scrollInfo(), 'tooltips:', await ev(`document.querySelectorAll('[data-testid=step-panel-body] [role=button][aria-label*="の説明"]').length`))
+  await shot(`${label}-s3-conditions.png`)
   if (!mobile) {
-    await ev(`document.querySelector('[role=button][aria-label*="の説明"]').scrollIntoView({block:'center'})`)
-    const r = JSON.parse(await ev(`JSON.stringify(document.querySelector('[role=button][aria-label*="の説明"]').getBoundingClientRect())`))
+    const r = JSON.parse(await ev(`JSON.stringify(document.querySelector('[data-testid=step-panel-body] [role=button][aria-label*="の説明"]').getBoundingClientRect())`))
     await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: r.x + 3, y: r.y + 3 })
     await sleep(700)
-    console.log(label, 'tooltip text:', await ev(`document.querySelector('[role=tooltip]')?.textContent`))
+    console.log(label, 'tooltip:', await ev(`document.querySelector('[role=tooltip]')?.textContent`))
   }
-  await pick('conditions'); await openList(); console.log(label, 'after conditions', await statuses())
+  await openList(); console.log(label, 'after conditions', await statuses())
   await pick('exits')
+  console.log(label, 'scroll@exits', await scrollInfo())
+  await shot(`${label}-s4-exits.png`)
   await pick('print')
-  await ev(`[...document.querySelectorAll('#rs-s5 button')].find(b=>b.textContent.includes('印刷・PDFで保存する')).click()`)
+  console.log(label, 'scroll@print', await scrollInfo())
+  await shot(`${label}-s5-print.png`)
+  await ev(`[...document.querySelectorAll('[data-testid=step-panel-body] button')].find(b=>b.textContent.includes('印刷・PDFで保存する')).click()`)
   await sleep(1500)
   await openList(); console.log(label, 'final', await statuses())
   console.log(label, 'progress', await ev(`document.querySelector('[data-testid=steps-progress]')?.innerText ?? document.body.innerText.match(/\\d\\/\\d 完了/)?.[0]`))
-  await shot(`${label}-steps-9-final.png`)
+  console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth > window.innerWidth'))
   if (!mobile) {
-    await ev(`document.querySelector('[data-testid=sheet]').scrollIntoView()`)
-    await send('Emulation.setEmulatedMedia', { media: 'print' })
-    await sleep(500)
-    const pdf = await send('Page.printToPDF', { paperWidth: 8.27, paperHeight: 11.69, preferCSSPageSize: true, printBackground: true })
-    const buf = Buffer.from(pdf.result.data, 'base64')
-    fs.writeFileSync(path.join(out, 'print-with-steps.pdf'), buf)
-    console.log('print pdf pages:', pages(buf), 'aside display in print:', await ev(`getComputedStyle(document.querySelector('aside')).display`))
-    await send('Emulation.setEmulatedMedia', { media: '' })
+    for (const stepId of ['print', 'place']) {
+      await pick(stepId)
+      await send('Emulation.setEmulatedMedia', { media: 'print' })
+      await sleep(500)
+      const pdf = await send('Page.printToPDF', { paperWidth: 8.27, paperHeight: 11.69, preferCSSPageSize: true, printBackground: true })
+      const buf = Buffer.from(pdf.result.data, 'base64')
+      fs.writeFileSync(path.join(out, `print-from-${stepId}.pdf`), buf)
+      console.log('print pdf pages (from step', stepId + '):', pages(buf))
+      await send('Emulation.setEmulatedMedia', { media: '' })
+    }
   }
   console.log(label, 'console errors:', JSON.stringify(logs.filter((l) => !l.includes('status of 404'))))
 }
 ws.close(); chrome.kill()
-

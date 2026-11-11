@@ -1,5 +1,4 @@
 // sat-a の手順サイドバー確認: サイドバーを上から順に押して全手順が済になるか。
-// （通し確認は e2e.mjs）
 // 元: sat-a の通し確認（ヘッドレスChrome）。目標の成果を操作で達成し、スクリーンショットを撮る。
 // usage: npx vite preview --port 8843 --host 127.0.0.1 &
 //        node src/apps/sat-a/e2e.mjs http://127.0.0.1:8843/ src/apps/sat-a/screenshots
@@ -63,36 +62,44 @@ const fullshot = async (name) => {
 const out = {}
 const rawStat = () => ev(`(() => { const o={}; document.querySelectorAll('[data-step]').forEach(e=>{ if(e.getClientRects().length) o[e.dataset.step]=e.dataset.status }); return JSON.stringify(o) })()`)
 let MOBILE = false
+const openTop = () => clickSel('[data-testid=steps-topbar] > button')
 const stat = async () => {
-  if (MOBILE) await clickSel('[data-testid=steps-topbar] > button')
+  if (MOBILE) await openTop()
   const v = await rawStat()
-  if (MOBILE) await clickSel('[data-testid=steps-topbar] > button')
+  if (MOBILE) await openTop()
   return v
 }
-for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
+const heights = () => ev('[document.documentElement.scrollHeight, document.body.scrollHeight, innerHeight]')
+for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
   MOBILE = mobile
-  const r = (out[label] = { log: [] })
+  const r = (out[label] = { log: [], heights: {} })
   logs.length = 0
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300)
   await send('Page.navigate', { url: `${base}apps/sat-a/` }); await sleep(3500)
   const pick = async (sid) => {
-    if (mobile) await clickSel('[data-testid=steps-topbar] > button')
+    if (mobile) await openTop()
     await clickSel(`[data-step=${sid}]`)
     await sleep(500)
+    r.heights[sid + (r.round ? '@r2' : '')] = await heights()
+    r.activeTitle = await ev(`document.querySelector('[data-testid=step-layout] h2')?.innerText`)
   }
   r.initial = await stat()
   await shot(`${label}-s0-initial.png`)
-  await pick('top'); await clickSel('[data-testid=rank-row]'); r.log.push(['top', await stat()])
-  await pick('weight'); await ev(`document.querySelector('[role=slider]').focus()`); await key('ArrowRight'); r.log.push(['weight', await stat()])
-  await pick('pick'); await clickSel('[data-testid=auto]'); r.log.push(['pick', await stat()])
-  await shot(`${label}-s1-pick.png`)
-  await pick('scan'); await clickSel('[data-testid=scan]'); r.log.push(['scan', await stat()])
-  await pick('apply'); await clickSel('[data-testid=apply]'); r.log.push(['apply', await stat()])
-  await pick('round2'); r.round = await txt('round'); r.log.push(['round2', await stat()])
-  await shot(`${label}-s2-final.png`)
+  r.top1 = await txt('m-top')
+  await pick('top'); await shot(`${label}-s1-top.png`); await clickSel('[data-testid=rank-row]'); r.log.push(['top', await stat()])
+  await pick('weight'); await shot(`${label}-s2-weight.png`)
+  await ev(`document.querySelector('[role=slider]').focus()`); await key('ArrowRight'); r.w70 = await txt('w-out'); r.log.push(['weight', await stat()])
+  await pick('pick'); await clickSel('[data-testid=auto]'); r.auto = [await txt('sel-count'), await txt('sel-km'), await txt('sel-breakdown')]
+  await clickSel('[role=checkbox]'); r.uncheck = await txt('sel-count'); await clickSel('[role=checkbox]'); r.recheck = await txt('sel-count')
+  await shot(`${label}-s3-pick.png`); r.log.push(['pick', await stat()])
+  await pick('scan'); await shot(`${label}-s4-scan-before.png`); await clickSel('[data-testid=scan]'); r.s3hit = await txt('s3-hit'); await shot(`${label}-s4-scan.png`); r.log.push(['scan', await stat()])
+  await pick('apply'); await shot(`${label}-s5-apply-before.png`); r.auc = await txt('auc-adopted'); await clickSel('[data-testid=apply]'); await shot(`${label}-s5-apply.png`); r.log.push(['apply', await stat()])
+  r.round = true
+  await pick('round2'); r.what = await txt('what-changed'); r.changed = await txt('changed'); await shot(`${label}-s6-round2.png`); r.log.push(['round2', await stat()])
+  await pick('top'); r.top2 = await txt('m-top')
   r.final = await stat()
-  if (mobile) await clickSel('[data-testid=steps-topbar] > button')
+  if (mobile) await openTop()
   r.progress = await ev(`[...document.querySelectorAll('[data-testid=steps-progress]')].find(e=>e.getClientRects().length)?.innerText`)
   r.scrollW = await ev('[document.documentElement.scrollWidth, innerWidth]')
   r.errors = [...logs]

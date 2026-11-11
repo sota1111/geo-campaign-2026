@@ -131,9 +131,10 @@ export function SatMap({ cells, cellSat, ranked, selected, focus, step, results,
   }
 
   return (
-    <div className="relative">
+    <div className={`relative ${className ?? ''}`}>
       <MapView
-        className={className}
+        className="h-full"
+        cooperativeGestures={false}
         bounds={BOUNDS}
         layers={layers}
         showBasemapSwitcher={false}
