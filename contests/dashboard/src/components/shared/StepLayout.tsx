@@ -20,6 +20,7 @@ export function StepLayout({
   useLayoutActiveFlag()
   const { steps, activeId } = useRegisteredSteps()
   const badge = stepBadgeText(steps, activeId)
+  const shownHint = hint ?? steps.find((x) => x.id === activeId)?.hint
   return (
     <div className="flex flex-col md:min-h-0 md:flex-1 md:overflow-hidden" data-testid="step-layout">
       {notice && (
@@ -44,7 +45,7 @@ export function StepLayout({
               )}
               <span className="min-w-0">{title}</span>
             </h2>
-            {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+            {shownHint && <p className="mt-0.5 text-xs text-muted-foreground">{shownHint}</p>}
           </div>
           <div className="min-h-0 flex-1 p-4 md:overflow-y-auto" data-testid="step-panel-body">
             {children}

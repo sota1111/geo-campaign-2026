@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import {
-  AppStepsProvider, currentStepIndex, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useAppSteps, useRegisteredSteps, type AppStep,
+  AppStepsProvider, currentStepIndex, pendingLabel, pendingRequired, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useAppSteps, useRegisteredSteps, type AppStep,
 } from '@/components/shared/AppSteps'
 
 const s = (id: string, done: boolean, optional = false): AppStep => ({ id, title: id, done, optional })
@@ -32,6 +32,20 @@ describe('stepNumbers / stepBadgeText', () => {
     expect(stepBadgeText(steps, 'o')).toBe('参考')
     expect(stepBadgeText(steps, 'zzz')).toBeNull()
     expect(stepBadgeText(steps, undefined)).toBeNull()
+  })
+})
+
+describe('pendingLabel / pendingRequired', () => {
+  const t = (id: string, done: boolean, optional = false): AppStep => ({ id, title: `題${id}`, done, optional })
+  it('未完了の必須手順を「手順n「題名」ほかm件」で示す（任意は除外）', () => {
+    const steps = [t('a', true), t('o', false, true), t('b', false), t('c', false), t('d', false)]
+    expect(pendingRequired(steps).map((x) => x.id)).toEqual(['b', 'c', 'd'])
+    expect(pendingLabel(steps)).toBe('まだ済んでいない手順: 手順2「題b」ほか2件')
+    expect(pendingLabel([t('a', true), t('b', false)])).toBe('まだ済んでいない手順: 手順2「題b」')
+  })
+  it('必須がすべて済みなら null（任意が未完了でも）', () => {
+    expect(pendingLabel([t('a', true), t('o', false, true)])).toBeNull()
+    expect(pendingRequired([])).toEqual([])
   })
 })
 

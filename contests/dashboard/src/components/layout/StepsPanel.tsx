@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import {
-  currentStepIndex, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useRegisteredSteps,
+  currentStepIndex, pendingLabel, pendingRequired, progressLabel, stepBadgeText, stepNumbers, stepProgress, stepStatuses, useRegisteredSteps,
   type AppStep, type StepStatus,
 } from '@/components/shared/AppSteps'
 import { cn } from '@/lib/utils'
@@ -16,8 +16,32 @@ function ProgressLine({ steps }: { steps: Steps }) {
       <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div className="h-full bg-primary transition-all" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%` }} />
       </div>
-      {p.allDone && <p className="text-xs font-medium text-sky-800">目的に必要な手順はすべて完了しました</p>}
     </div>
+  )
+}
+
+/** 未完了の必須手順の明示。押すとその手順へ。全部済みなら完了メッセージ */
+function PendingNotice({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
+  const { select } = useRegisteredSteps()
+  const label = pendingLabel(steps)
+  const first = pendingRequired(steps)[0]
+  if (!label || !first) {
+    return stepProgress(steps as AppStep[]).allDone ? (
+      <p className="text-xs font-medium text-sky-800" data-testid="steps-alldone">目的に必要な手順はすべて完了しました</p>
+    ) : null
+  }
+  return (
+    <button
+      type="button"
+      data-testid="steps-pending"
+      onClick={() => {
+        select(first.id)
+        onPick?.()
+      }}
+      className="w-full rounded-md border border-amber-400 bg-amber-50 px-2 py-1.5 text-left text-xs font-medium leading-snug text-amber-950 hover:bg-amber-100"
+    >
+      {label}
+    </button>
   )
 }
 
@@ -59,13 +83,10 @@ function StepItem({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block leading-snug">{step.title}</span>
-          {(status === 'current' || active) && (
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] font-normal leading-tight">
-              {active && <span className="text-muted-foreground">表示中</span>}
-              {status === 'current' && <span className="text-primary">いまここ（次にやる手順）</span>}
-            </span>
+          {status === 'current' && <span className="mt-0.5 block text-[11px] font-normal leading-tight text-primary">次はこれ</span>}
+          {step.action && status !== 'done' && !small && (
+            <span className="mt-0.5 block text-[11px] font-normal leading-snug text-muted-foreground">{step.action}</span>
           )}
-          {step.hint && !small && <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">{step.hint}</span>}
         </span>
       </button>
     </li>
@@ -135,6 +156,9 @@ export function StepsSidebar({ appName }: { appName?: string }) {
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3" data-testid="steps-list">
         <StepList steps={steps} />
       </div>
+      <div className="shrink-0 border-t p-3">
+        <PendingNotice steps={steps} />
+      </div>
     </aside>
   )
 }
@@ -187,6 +211,7 @@ export function StepsTopbar() {
       {open && (
         <div className="max-h-[60vh] space-y-3 overflow-y-auto border-t p-3">
           <p className="text-xs text-muted-foreground">この順に進めると目的を達成できます</p>
+          <PendingNotice steps={steps} onPick={() => setOpen(false)} />
           <ProgressLine steps={steps} />
           <StepList steps={steps} onPick={() => setOpen(false)} />
         </div>

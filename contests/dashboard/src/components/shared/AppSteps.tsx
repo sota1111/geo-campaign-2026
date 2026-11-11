@@ -4,8 +4,10 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 export interface AppStep {
   id: string
   title: string
-  /** 補足（一行程度） */
+  /** 補足（一行程度）。パネル見出しの下（StepLayout）に出る。サイドバーには出ない */
   hint?: string
+  /** 未完了の間、サイドバーの手順の下に小さく出す一言（例: 「文面をコピーすると完了」）。完了すると消える */
+  action?: string
   /** 完了しているか（ページの状態から計算して渡す） */
   done: boolean
   /** true なら「任意」。「いまここ」の判定と進捗の数から除外される */
@@ -65,7 +67,7 @@ interface Ctx {
 const AppStepsContext = createContext<Ctx | null>(null)
 
 const signature = (steps: AppStep[], opts?: AppStepsOptions) =>
-  JSON.stringify([steps.map((s) => [s.id, s.title, s.hint ?? '', s.done, !!s.optional]), opts?.activeId ?? '', opts?.description ?? ''])
+  JSON.stringify([steps.map((s) => [s.id, s.title, s.hint ?? '', s.action ?? '', s.done, !!s.optional]), opts?.activeId ?? '', opts?.description ?? ''])
 
 /** StandaloneShell が使う。登録された手順（onSelect を除く）を保持する */
 export function AppStepsProvider({ children }: { children: ReactNode }) {
@@ -158,4 +160,21 @@ export function stepBadgeText(steps: Pick<AppStep, 'id' | 'optional'>[], id: str
   if (i < 0) return null
   const num = stepNumbers(steps)[i]
   return num == null ? '参考' : String(num)
+}
+
+/** 未完了の必須手順（登録順）の { id, 番号, 題名 } */
+export function pendingRequired(steps: Pick<AppStep, 'id' | 'title' | 'done' | 'optional'>[]) {
+  const nums = stepNumbers(steps)
+  return steps
+    .map((s, i) => ({ id: s.id, num: nums[i] as number, title: s.title, skip: s.done || !!s.optional }))
+    .filter((x) => !x.skip)
+    .map(({ id, num, title }) => ({ id, num, title }))
+}
+
+/** 「まだ済んでいない手順: 手順3「題名」ほか1件」。未完了の必須がなければ null */
+export function pendingLabel(steps: Pick<AppStep, 'id' | 'title' | 'done' | 'optional'>[]): string | null {
+  const p = pendingRequired(steps)
+  if (!p.length) return null
+  const rest = p.length - 1
+  return `まだ済んでいない手順: 手順${p[0].num}「${p[0].title}」${rest > 0 ? `ほか${rest}件` : ''}`
 }
