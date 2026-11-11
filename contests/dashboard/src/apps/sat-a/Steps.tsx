@@ -89,7 +89,7 @@ function RankTable({
               <TableCell className="text-right">{s.year}</TableCell>
               <TableCell className="text-right font-medium">{s.score.toFixed(2)}</TableCell>
               {prev && (
-                <TableCell className="text-right text-xs">{p ? `${p}位 ${d > 0 ? `▲${d}` : d < 0 ? `▽${-d}` : '＝'}` : '—'}</TableCell>
+                <TableCell className="text-right text-xs">{p ? `${p}位 ${d > 0 ? `↑${d}` : d < 0 ? `↓${-d}` : '→'}` : '—'}</TableCell>
               )}
             </TableRow>
           )
@@ -180,7 +180,7 @@ export function PickPanel({
         <Button size="sm" variant="outline" onClick={onClear} data-testid="clear">選択をクリア</Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        延長の上限（{fmt1(budgetKm)}km）に収まるまで、点数の高い順に選びます。表の上位15区間に入らない区間も含まれます。地図の道路をタップしても選択／解除できます。
+        延長の上限（{fmt1(budgetKm)}km）まで点数順に選ぶため、表の上位15に入らない区間も含まれます。地図の道路のタップでも選択／解除できます。
       </p>
 
       <div className="space-y-1" aria-live="polite">

@@ -40,21 +40,13 @@ export function NoPoint({ text = '先に「場所を決める」で地点を選�
   return <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{text}</p>
 }
 
-/** 地図上の小さな要点（全手順で見える1か所） */
-export function MapSummary({ d, hasPoint }: { d: DiagView | null; hasPoint: boolean }) {
+/** 地図上の小さな条件表示（結論は左のパネルだけに出す） */
+export function MapSummary({ d }: { d: DiagView | null }) {
   if (!d) return null
-  const v = d.verdict
   const fl = d.data.facility_labels[d.data.facility_order[d.cond.fi]]
   return (
-    <div className="pointer-events-none absolute left-2 top-12 z-10 max-w-[min(20rem,calc(100%-1rem))] rounded-md border bg-white/95 px-2.5 py-1.5 text-xs shadow" data-testid="map-summary" aria-live="polite">
-      <div className="text-muted-foreground">{DAY_LABEL[d.cond.day]}・{PERIOD_LABEL[d.cond.per]}{d.data.params.start_hours[d.cond.per]}時・{d.cond.w}分以内・{fl}</div>
-      {!hasPoint && <div className="font-medium">地点を選ぶと結論がここに出ます</div>}
-      {hasPoint && !v && <div className="font-bold text-orange-800">診断範囲外の地点</div>}
-      {hasPoint && v && (
-        <div className={`flex items-center gap-1 text-sm font-bold ${v.ok ? 'text-blue-900' : 'text-orange-800'}`}>
-          {v.ok ? <Check className="size-4" /> : <X className="size-4" />}{v.yesNo}
-        </div>
-      )}
+    <div className="pointer-events-none absolute left-2 top-12 z-10 rounded-md border bg-white/95 px-2 py-1 text-xs text-muted-foreground shadow" data-testid="map-summary">
+      {DAY_LABEL[d.cond.day]}・{PERIOD_LABEL[d.cond.per]}{d.data.params.start_hours[d.cond.per]}時・{d.cond.w}分以内・{fl}
     </div>
   )
 }

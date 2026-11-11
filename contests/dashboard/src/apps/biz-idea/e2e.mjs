@@ -101,7 +101,14 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await setSelect('dlg-vis', 'public')
   await sleep(300)
   console.log(label, await ev(`(()=>{const b=[...document.querySelectorAll('[role=dialog] button')].find(b=>b.textContent==='確認済みにする');b.click();return 'ok'})()`))
-  await sleep(700)
+  // 実マウス操作（hit-testingあり）で、ダイアログを閉じた直後に手順6を押す
+  await sleep(mobile ? 700 : 40)
+  if (!mobile) {
+    const rc = await ev(`(()=>{const b=[...document.querySelectorAll('[data-step="export"]')].find(b=>b.offsetParent!==null);const r=b.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`)
+    for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: rc.x, y: rc.y, button: 'left', clickCount: 1 })
+    await sleep(700)
+    console.log(label, 'rapid real click right after dialog close -> panel title:', await panelTitle())
+  }
   console.log(label, await statuses())
   await shot(`${label}-7-confirm`)
 

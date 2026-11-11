@@ -514,8 +514,8 @@ export default function App() {
       { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: originChosen },
       { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: didLook },
       { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今', done: didCompare },
-      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて保存', done: records.length > 0 },
-      { id: 'prep', title: STEP_META.prep.title, hint: 'コピーまたは書き出し', done: didPrepare },
+      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて保存', action: '保存すると完了', done: records.length > 0 },
+      { id: 'prep', title: STEP_META.prep.title, hint: 'コピーまたは書き出し', action: '文面をコピーすると完了', done: didPrepare },
       { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
     ],
     {
@@ -612,9 +612,18 @@ export default function App() {
 
   const panelPlace = (
     <div className="space-y-3">
-      <p className="text-sm font-semibold" data-testid="near-origin">
-        {originIsExample ? '熱海駅（例）を表示中です。自宅の結果ではありません。' : `「${origin.label}」を起点にしました。`}
-      </p>
+      <div className="space-y-0.5 text-sm" data-testid="near-origin">
+        <p className="font-semibold">
+          {originChosen
+            ? `「${origin.label}」を起点にしました${originIsExample ? '（自宅の結果ではありません）' : ''}。`
+            : '熱海駅（例）を表示中です。自宅の結果ではありません。'}
+        </p>
+        {originChosen && stationList[0] && (
+          <p data-testid="place-nearest">
+            最寄りの造成地: {stationList[0].id}（{stationList[0].kind}）{stationList[0].inside ? 'の範囲内' : `まで${metersLabel(stationList[0])}（直線）`}
+          </p>
+        )}
+      </div>
       {searchForm}
       <p className="text-xs text-muted-foreground">検索は国土地理院の地名検索（GETのみ）を使います。入力した文字だけが送られ、記録は送られません。</p>
       <div className="flex flex-wrap gap-2">
@@ -639,7 +648,7 @@ export default function App() {
           <div>盛土区分: <b>{selFillFeature.properties.kind}</b>＝{KIND_HELP[selFillFeature.properties.kind] ?? ''}</div>
           <div>{kindDescription(selFillFeature.properties.kind)}</div>
           <p className="text-xs text-muted-foreground">
-            範囲は「概ね」の位置です。直ちに危険という意味ではなく、安全性の確認が必要な場所を示します。最新の状況は市の窓口で確認してください。
+            範囲は「概ね」の位置です。最新の状況は市の窓口で確認してください。
           </p>
         </>
       ) : (
@@ -795,13 +804,15 @@ export default function App() {
     <div className="relative space-y-3">
       {selectedRecord ? (
         <div className="space-y-2 rounded-md border-2 border-primary p-3">
+          <p className="text-sm font-medium" data-testid="prep-status">
+            {didPrepare ? '✔ 完了しました（文面のコピーまたは書き出しをしました）。' : 'この手順は、文面をコピー（または書き出し）すると完了します。'}
+          </p>
+          <Button size="lg" className="h-14 w-full text-base" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピーする</Button>
           <div className="text-sm font-semibold">通報文のたたき台</div>
-          <p className="text-sm font-medium">この文面をコピーすると準備完了です{didPrepare ? '（準備できました）' : ''}。GeoJSON／CSVの書き出しでも完了になります。</p>
-          <Textarea readOnly rows={8} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
-          <Button size="lg" className="w-full" onClick={() => copy(report, 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-5" />文面をコピー</Button>
+          <Textarea readOnly rows={7} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
           <div className="grid grid-cols-2 gap-2">
-            <Button size="lg" variant="outline" onClick={exportGeo}><Download className="size-5" />GeoJSON</Button>
-            <Button size="lg" variant="outline" onClick={exportCsv}><Download className="size-5" />CSV</Button>
+            <Button variant="outline" onClick={exportGeo}><Download className="size-4" />GeoJSONで書き出す</Button>
+            <Button variant="outline" onClick={exportCsv}><Download className="size-4" />CSVで書き出す</Button>
           </div>
           <p className="text-xs text-muted-foreground">
             このページは送信しません。通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。

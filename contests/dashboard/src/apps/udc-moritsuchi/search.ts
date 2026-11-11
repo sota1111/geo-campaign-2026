@@ -55,13 +55,8 @@ export async function searchPlaces(q: string): Promise<PlaceHit[]> {
 export function nearSummary(list: NearFill[]): string {
   if (!list.length) return '登録された大規模盛土造成地データはありません。'
   const n = list[0]
-  const m = n.inside ? 0 : n.distM < 100 ? Math.round(n.distM / 10) * 10 : Math.round(n.distM / 50) * 50
-  const head = n.inside
-    ? `この地点は大規模盛土造成地「${n.id}」（${n.kind}）の範囲内です。`
-    : `最寄りの造成地「${n.id}」（${n.kind}）まで約${m}m（直線）。`
-  const tail =
-    n.distM <= NEAR_M
-      ? `${NEAR_M}m以内を「近く」とみなしています。`
-      : `${NEAR_M}m以内を「近く」とみなしており、この地点の近くには登録された造成地はありません（より遠い造成地を距離順に表示）。`
-  return head + tail
+  if (n.inside) return `この地点は大規模盛土造成地「${n.id}」（${n.kind}）の範囲内です。`
+  const m = n.distM < 100 ? Math.round(n.distM / 10) * 10 : Math.round(n.distM / 50) * 50
+  const head = n.distM <= NEAR_M ? `${NEAR_M}m以内に登録された造成地があります。` : `${NEAR_M}m以内に登録された造成地はありません。`
+  return `${head}最寄りは${n.id}（${n.kind}）まで約${m}m（直線）`
 }

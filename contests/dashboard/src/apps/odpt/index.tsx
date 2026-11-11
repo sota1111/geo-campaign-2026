@@ -233,7 +233,7 @@ export default function App() {
 
   const goCand = useCallback((c: Cand) => {
     if (!c.rid) return
-    setSearchMsg(`「${c.title}」を調べました。地図の左上に結論の要点を出しました。詳しくは左のサイドバーの「行けるか結論を見る」へ。`)
+    setSearchMsg(`「${c.title}」を選びました。結論は、サイドバーの「行けるか結論を見る」で見られます。`)
     if (data && c.rid === data.id) choosePoint(c.lon, c.lat, c.title, true)
     else {
       pending.current = { pt: [c.lon, c.lat], route: null }
@@ -279,7 +279,7 @@ export default function App() {
     const others = rs.filter((r) => r !== first)
     setCands(others)
     if (others.length && !(first.rid === cur && !first.inCell)) {
-      setSearchMsg(`「${first.title}」を調べました（結論の要点は地図の左上）。同じ名前の候補が他にもあります。場所が違う場合は、下の候補から選んでください。`)
+      setSearchMsg(`「${first.title}」を選びました。同じ名前の候補が他にもあります。場所が違う場合は、下の候補から選んでください。`)
     }
     if (first.rid === cur && !first.inCell) {
       setSearchMsg(`「${first.title}」は診断範囲外でした。別の地域の「${q}」かもしれません。${others.length ? '下の候補から選んでください。' : ''}`)
@@ -287,7 +287,7 @@ export default function App() {
   }, [index, data, goCand, cellIdx])
 
   const onMapClick = useCallback(({ lng, lat }: { lng: number; lat: number }) => {
-    setSearchMsg('地図で選んだ地点を調べました。地図の左上に結論の要点を出しました。詳しくは左のサイドバーの「行けるか結論を見る」へ。')
+    setSearchMsg('地図で選んだ地点を診断対象にしました。結論は、サイドバーの「行けるか結論を見る」で見られます。')
     setCands([])
     choosePoint(lng, lat, '', false)
   }, [choosePoint])
@@ -398,7 +398,7 @@ export default function App() {
     { id: 'verdict', title: '行けるか結論を見る', hint: '行けます／行けません、徒歩か公共交通か', done: seenVerdict },
     { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日との違いを確認', done: seenCmp },
     { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
-    { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', done: hasPt && copiedPt === ptKey },
+    { id: 'copy', title: '結論とリンクをコピーして送る', hint: 'LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: hasPt && copiedPt === ptKey },
     { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
     { id: 'whatif', title: '参考: 路線を止めたら？', hint: '行けなくなる人の数', done: false, optional: true },
     { id: 'compare', title: '参考: 5地域を比べる', hint: '同じ条件で並べる', done: false, optional: true },
@@ -453,6 +453,16 @@ export default function App() {
       'デマンド交通・予約制の便も未収録です。実データに基づく推計。' + (dataWarn ? `【データの期限】${dataWarn}` : '')
     : '収録した事業者のバスのみが対象です。'
   const needPt = <NoPoint />
+  // 同名の候補を見分けるための補足（データにある範囲）: 現在の地域内なら最寄りの停留所、いずれも座標
+  const candInfo = (c: Cand) => {
+    const ll = `北緯${c.lat.toFixed(3)}・東経${c.lon.toFixed(3)}`
+    if (data && c.rid === data.id) {
+      const n = nearbyNodes(data.nodes, c.lon, c.lat, 1500, 1)[0]
+      if (n) return `最寄りの停留所: ${data.nodes[n.i][2] || '(名称なし)'}（約${Math.round(n.d)}m）／${ll}`
+    }
+    return ll
+  }
+  const here = pt ? (placeLabel || '地図で選んだ地点') : ''
 
   const panel = !data || !dv ? (
     <div className="space-y-3" aria-busy="true" aria-label="読み込み中"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-24 w-full" /></div>
@@ -470,6 +480,13 @@ export default function App() {
             />
             <p className="text-xs text-muted-foreground">{data.reason}</p>
           </div>
+          {hasPt && (
+            <div className="rounded-md border-2 border-blue-700 bg-blue-50 p-2 text-sm text-blue-950" data-testid="chosen-place">
+              <b>この場所で診断します</b>（{here}）
+              {!diag?.v && <span className="block text-xs text-orange-800">診断範囲外の地点です。別の場所を選んでください。</span>}
+              <span className="block text-xs">結論は、サイドバーの「行けるか結論を見る」で見られます。</span>
+            </div>
+          )}
           <form role="search" className="space-y-1" onSubmit={(e) => { e.preventDefault(); doSearch(query) }}>
             <label htmlFor="odpt-q" className="text-sm font-medium">住所・駅名で探す（または地図をタップ）</label>
             <div className="flex gap-2">
@@ -485,7 +502,10 @@ export default function App() {
                   {cands.map((c, i) => (
                     <Button key={i} type="button" variant="outline" disabled={!c.rid} onClick={() => goCand(c)}
                       className="h-auto w-full justify-start whitespace-normal py-2 text-left text-sm">
-                      {c.title}{c.rid ? (c.rid === data.id && !c.inCell ? '（診断範囲外）' : `（${shortName(index?.regions.find((x) => x.id === c.rid)?.name ?? '')}）`) : '（収録範囲外）'}
+                      <span className="block">
+                        {c.title}{c.rid ? (c.rid === data.id && !c.inCell ? '（診断範囲外）' : `（${shortName(index?.regions.find((x) => x.id === c.rid)?.name ?? '')}）`) : '（収録範囲外）'}
+                        <span className="block text-xs font-normal text-muted-foreground">{candInfo(c)}</span>
+                      </span>
                     </Button>
                   ))}
                 </div>
@@ -570,7 +590,7 @@ export default function App() {
           ariaLabel="診断マップ（地図をタップするとその地点を診断します）"
         />
       )}
-      <MapSummary d={dv} hasPoint={hasPt} />
+      <MapSummary d={dv} />
       <div className="absolute bottom-7 left-2 z-10 max-w-[calc(100%-1rem)]">
         {legendOpen ? (
           <div className="max-h-[50vh] w-72 max-w-full space-y-1.5 overflow-y-auto rounded-md border bg-white/95 p-2 text-xs shadow" data-testid="legend">

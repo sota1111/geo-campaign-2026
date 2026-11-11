@@ -73,6 +73,9 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
   await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
   await sleep(4500)
+  console.log('chosen:', await ev(`document.querySelector('[data-testid=chosen-place]')?.innerText`))
+  console.log('map-summary:', await ev(`document.querySelector('[data-testid=map-summary]')?.innerText`))
+  console.log('cands:', await ev(`document.querySelector('[data-testid=cands]')?.innerText`))
   console.log('after search:', await statuses())
   const scrollInfo = () => ev(`JSON.stringify({docH: document.documentElement.scrollHeight, bodyH: document.body.scrollHeight, innerH: innerHeight, docW: document.documentElement.scrollWidth, innerW: innerWidth})`)
   for (const id of ['place', 'cond', 'verdict', 'hol', 'last', 'copy', 'region', 'whatif', 'compare', 'about']) {

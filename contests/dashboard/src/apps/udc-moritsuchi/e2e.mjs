@@ -57,17 +57,20 @@ const tapMap = async () => {
   for (const t of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type: t, x: p.x, y: p.y, button: 'left', clickCount: 1 })
   await sleep(600)
 }
-const doneCount = async () => +(/必須 5 のうち (\d) 完了/.exec(await ev(`document.querySelector('[data-testid=steps-topbar]').textContent`))?.[1] ?? -1)
+const doneCount = async () => +(/^(\d)\//.exec(await ev(`document.querySelector('[data-testid=steps-topbar-progress]').textContent`))?.[1] ?? -1)
 const stepAttr = (sid, a) => ev(`(document.querySelector('aside [data-step=${sid}]') || document.querySelector('[data-testid=steps-topbar] [data-step=${sid}]'))?.${a} ?? 'none'`)
 const stepStatus = (sid) => stepAttr(sid, 'dataset.status')
 const isActive = async (sid) => (await stepAttr(sid, "dataset.active")) === 'true'
+const openOpt = () => ev(`(()=>{const b=document.querySelector('${mobile ? '[data-testid=steps-topbar] ' : 'aside '}[data-testid=steps-optional] button[aria-expanded=false]');if(b)b.click()})()`)
 const clickStep = async (sid) => {
   if (mobile) {
     const open = await ev(`document.querySelector('[data-testid=steps-topbar] > button').getAttribute('aria-expanded')`)
     if (open !== 'true') await ev(`document.querySelector('[data-testid=steps-topbar] > button').click()`)
     await sleep(300)
+    if (sid === 'ref') { await openOpt(); await sleep(200) }
     await ev(`document.querySelector('[data-testid=steps-topbar] [data-step=${sid}]').click()`)
   } else {
+    if (sid === 'ref') { await openOpt(); await sleep(200) }
     await ev(`document.querySelector('aside [data-step=${sid}]').click()`)
   }
   await sleep(1000)
@@ -89,7 +92,7 @@ check('初期表示: 地図がある', await ev(`!!document.querySelector(${JSON
 check('初期は手順1が表示中・いまここ・進捗0/5', (await isActive('place')) && (await stepStatus('place')) === 'current' && (await doneCount()) === 0)
 check('ページ内にタブ・チェックリスト・次へボタンがない', await ev(`!document.querySelector('[role=tab]') && !document.querySelector('[data-testid=checklist]') && !document.querySelector('[data-testid=next-action]')`))
 if (!mobile) {
-  check('サイドバーに手順が上から place,look,compare,rec,prep,ref', (await ev(`[...document.querySelectorAll('aside [data-step]')].map(e=>e.dataset.step).join(',')`)) === 'place,look,compare,rec,prep,ref')
+  check('サイドバーの必須手順が上から place,look,compare,rec,prep（参考は折りたたみ）', (await ev(`[...document.querySelectorAll('aside [data-step]')].map(e=>e.dataset.step).join(',')`)) === 'place,look,compare,rec,prep')
   // (1) 全手順を表示してもページ全体はスクロールしない
   let worst = 0
   for (const sid of ['place', 'look', 'compare', 'rec', 'prep', 'ref']) {
@@ -111,6 +114,7 @@ await shot('02a-search')
 await ev(`document.querySelector('ul[aria-label="検索結果"] li button').click()`); await sleep(1500)
 check('手順1が済・手順2がいまここ・表示は自動で切り替わらない', (await stepStatus('place')) === 'done' && (await stepStatus('look')) === 'current' && (await isActive('place')) && (await doneCount()) === 1)
 
+check('手順1: 起点を決めた後に最寄りの距離が1行出る', (await ev(`document.querySelector('[data-testid=place-nearest]')?.innerText || ''`)).includes('（直線）'))
 // 手順2: 近くの盛土造成地を確かめる
 await clickStep('look')
 check('手順2のパネル: 結論・一覧5件', (await ev(`document.querySelector('[data-testid=near-summary]').innerText`)).includes('（直線）') && (await ev(`document.querySelectorAll('ul[aria-label="近い盛土造成地"] li').length`)) === 5)
@@ -154,16 +158,17 @@ check('localStorage に保存', (await ev(`JSON.parse(localStorage.getItem('udc-
 await clickStep('prep')
 const rep = await ev(`document.querySelector('[data-testid=report-text]').value`)
 check('通報文（ぼかし・湧水・メモ・500m以内の一文）', rep.includes('ぼかした位置') && rep.includes('湧水') && rep.includes('擁壁の下から') && rep.includes('500m以内に登録された大規模盛土造成地:'))
-check('通報先案内と「コピーで準備完了」', await ev(`document.body.innerText.includes('熱海市・伊東市の担当窓口') && document.body.innerText.includes('この文面をコピーすると準備完了です')`))
+check('手順5: 主操作「文面をコピーする」が本文より上・大きい', await ev(`(()=>{const b=[...document.querySelectorAll('button')].find(x=>x.textContent.includes('文面をコピーする'));const t=document.querySelector('[data-testid=report-text]');return b.getBoundingClientRect().bottom<=t.getBoundingClientRect().top && b.getBoundingClientRect().height>=48})()`))
+check('通報先案内と「コピーで準備完了」', await ev(`document.body.innerText.includes('熱海市・伊東市の担当窓口') && document.body.innerText.includes('この手順は、文面をコピー（または書き出し）すると完了します')`))
 if (!mobile) { const d = await docScroll(); check(`手順5（記録あり）でもページはスクロールしない (${d.sh}/${d.ih})`, d.sh <= d.ih) }
 await shot('05-prep')
 await clickText('button', '文面をコピー'); await sleep(600)
 const clip = await ev(`navigator.clipboard.readText().catch(e=>'ERR '+e.message)`)
 check('通報文がクリップボードにコピーされる', clip.startsWith('【盛土の変化'), clip.slice(0, 30))
-check('手順5が済・5/5完了', (await stepStatus('prep')) === 'done' && (await doneCount()) === 5 && (await ev(`document.querySelector('[data-testid=steps-topbar]').textContent.includes('すべて完了')`)))
+check('手順5が済・5/5完了', (await stepStatus('prep')) === 'done' && (await doneCount()) === 5)
 
-await clickText('button', 'GeoJSON'); await sleep(800)
-await clickText('button', 'CSV'); await sleep(800)
+await clickText('button', 'GeoJSONで書き出す'); await sleep(800)
+await clickText('button', 'CSVで書き出す'); await sleep(800)
 const files = fs.readdirSync(dl)
 check('GeoJSON/CSVが書き出される', files.some((f) => f.endsWith('.geojson')) && files.some((f) => f.endsWith('.csv')), files.join(' '))
 const gj = files.find((f) => f.endsWith('.geojson'))

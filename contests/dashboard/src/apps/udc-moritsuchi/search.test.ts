@@ -18,7 +18,7 @@ describe('住所検索・近さの説明', () => {
     const far = nearSummary([{ id: '熱海市0012', kind: '腹付け型', city: '熱海市', inside: false, distM: 1100 }])
     expect(far).toContain('約1100m（直線）')
     expect(far).toContain(`${NEAR_M}m以内`)
-    expect(far).toContain('近くには登録された造成地はありません')
+    expect(far).toContain('500m以内に登録された造成地はありません')
     expect(nearSummary([{ id: 'A', kind: '谷埋め型', city: '', inside: true, distM: 0 }])).toContain('範囲内')
     expect(nearSummary([{ id: 'A', kind: '谷埋め型', city: '', inside: false, distM: 200 }])).not.toContain('ありません')
     expect(nearSummary([])).toContain('ありません')

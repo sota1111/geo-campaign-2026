@@ -202,6 +202,10 @@ export default function BizIdeaApp() {
 
   const near = useMemo(() => (focus && lore ? nearby(lore, focus.lon, focus.lat, radius) : []), [focus, lore, radius])
   const cross = useMemo(() => crossCheck(form.claimedKinds, near), [form.claimedKinds, near])
+  const shownNear = useMemo(
+    () => [...cross.hits, ...near.filter((n) => !cross.hits.includes(n))].slice(0, 5),
+    [cross, near],
+  )
 
   /* 手順2: 突き合わせの結果を表示した（地名があり、災害の種類を選んだ状態で手順2を開いている）ら済 */
   useEffect(() => {
@@ -355,13 +359,13 @@ export default function BizIdeaApp() {
     [
       { id: 'place', title: '地名を選ぶ', hint: '地名と語りは架空のサンプル', done: !!focus },
       { id: 'cross', title: '伝承碑と突き合わせる', hint: '半径内の自然災害伝承碑（実データ）と比べる', done: done.cross },
-      { id: 'overlay', title: '昔の地図・写真と重ねる', hint: '空中写真・低湿地など。おすすめ表示あり', done: done.overlay },
+      { id: 'overlay', title: '昔の地図・写真と重ねる', hint: 'おすすめの重ね地図あり', action: '重ね地図を選ぶと完了', done: done.overlay },
       { id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', done: records.length > 0 },
       {
         id: 'confirm', title: '確認して公開範囲を選ぶ', hint: 'デモでは自分が確認役を兼ねる',
         done: records.some((r) => r.verified && r.visibility !== 'undecided'),
       },
-      { id: 'export', title: '公開分を書き出す', hint: '確認済み・公開の記録だけ（GeoJSON）', done: done.published },
+      { id: 'export', title: '公開分を書き出す', hint: '確認済み・公開の記録だけ', action: '書き出すと完了', done: done.published },
     ],
     { activeId: step, onSelectStep: (id) => setStep(id as StepId), description: DESCRIPTION },
   )
@@ -443,14 +447,27 @@ export default function BizIdeaApp() {
             <Note>碑が建てられていないだけの場合もあり、話が誤りという意味ではありません。範囲を広げるか、郷土資料・語り手への再確認で確かめます。</Note>
           </div>
         )}
+        {form.claimedKinds.length > 0 && (() => {
+          const rec = recommendOverlays(form.claimedKinds)[0]
+          const o = OVERLAYS.find((x) => x.id === rec.id)!
+          return (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border-2 border-black bg-yellow-50 p-2 text-sm">
+              <span className="font-bold">この話を昔の地図で確かめる</span>
+              <Button size="sm" variant={overlayId === rec.id ? 'default' : 'outline'} onClick={() => chooseOverlay(rec.id)}>
+                {overlayId === rec.id && <Check className="size-3.5" />}おすすめ: {o.label}を重ねる
+              </Button>
+            </div>
+          )
+        })()}
         {near.length ? (
           <>
-            <Note>範囲内の伝承碑（全種類・近い順・上位5件／全{near.length}件）。地図の青い丸でも見られます。</Note>
+            <Note>範囲内の伝承碑（語られた種類に合う碑を先頭に、あとは近い順・上位5件／全{near.length}件）。地図の青い丸でも見られます。</Note>
             <ul className="space-y-1.5">
-              {near.slice(0, 5).map((n) => (
+              {shownNear.map((n) => (
                 <li key={n.item.id} className="rounded border p-2 text-sm">
+                  {cross.hits.includes(n) && <Badge className="mr-1.5 bg-[#0072B2] text-white hover:bg-[#0072B2]">種類が合う</Badge>}
                   <b>{n.item.name}</b>（{n.item.year}年・{n.item.kind}）{fmtDist(n.dist)}
-                  <details className="mt-1 text-xs">
+                  <details className="mt-1 text-sm">
                     <summary className="cursor-pointer">伝承内容</summary>
                     {n.item.info.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')}{' '}
                     <a className="text-blue-700 underline" href={gsiLink(n.item.lon, n.item.lat, 17)} target="_blank" rel="noopener noreferrer">地理院地図で見る</a>
@@ -473,10 +490,10 @@ export default function BizIdeaApp() {
           おすすめ{form.claimedKinds.length ? `（語られている災害: ${form.claimedKinds.join('・')}）` : ''}
         </p>
         <div className="flex flex-wrap gap-2">
-          {recommendOverlays(form.claimedKinds).map((rec) => {
+          {recommendOverlays(form.claimedKinds).map((rec, i) => {
             const o = OVERLAYS.find((x) => x.id === rec.id)!
             return (
-              <Button key={rec.id} size="sm" variant={overlayId === rec.id ? 'default' : 'outline'} onClick={() => chooseOverlay(rec.id)}>
+              <Button key={rec.id} size={i === 0 ? 'default' : 'sm'} variant={overlayId === rec.id ? 'default' : 'outline'} onClick={() => chooseOverlay(rec.id)}>
                 {overlayId === rec.id && <Check className="size-3.5" />}{o.label}
                 <span className="text-[10px] font-normal opacity-80">（{rec.because}）</span>
               </Button>
@@ -716,6 +733,8 @@ export default function BizIdeaApp() {
         {panels[step]}
       </StepLayout>
 
+      {/* ダイアログを閉じた直後のクリックが、閉じるアニメーション中のオーバーレイ／body の pointer-events:none に奪われないよう、閉じたら即消す */}
+      <style>{`[data-slot="dialog-overlay"][data-state="closed"],[data-slot="dialog-content"][data-state="closed"]{display:none !important}`}</style>
       <Dialog open={!!confirmRec} onOpenChange={(o) => { if (!o) setConfirmId(null) }}>
         <DialogContent>
           <DialogHeader>
@@ -726,13 +745,14 @@ export default function BizIdeaApp() {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label htmlFor="dlg-vis">公開範囲（必ず選んでください）</Label>
-              <NativeSelect id="dlg-vis" value={dlgVis} onChange={setDlgVis}
+              <NativeSelect id="dlg-vis" value={dlgVis} onChange={setDlgVis} className={dlgVis ? '' : 'border-2 border-[#D55E00] bg-orange-50 ring-2 ring-[#D55E00]/40'}
                 options={[...(dlgVis ? [] : [['', '選んでください']] as [string, string][]), ...(Object.entries(VISIBILITY).filter(([k]) => k !== 'undecided') as [string, string][])]} /></div>
             <div className="space-y-1"><Label htmlFor="dlg-lic">利用条件</Label>
               <NativeSelect id="dlg-lic" value={dlgLic} onChange={setDlgLic} options={Object.entries(LICENSES)} /></div>
             <Note>公開分として書き出されるのは、「公開」を選び、利用条件が「利用不可」以外のときだけです。</Note>
           </div>
           <DialogFooter>
+            {!dlgVis && <span className="self-center text-sm font-bold text-[#7a3000]" role="status">公開範囲を選んでください</span>}
             <Button variant="outline" onClick={() => setConfirmId(null)}>やめる</Button>
             <Button disabled={!dlgVis} onClick={doConfirm}>確認済みにする</Button>
           </DialogFooter>

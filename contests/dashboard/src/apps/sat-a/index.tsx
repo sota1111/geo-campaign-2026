@@ -208,6 +208,7 @@ export default function App() {
   const aside = data ? (
     <div className="flex h-full flex-col">
       <SatMap
+        round={round}
         className="min-h-0 flex-1"
         cells={data.cells}
         cellSat={cellSat}
@@ -218,8 +219,8 @@ export default function App() {
         results={results}
         onSegmentClick={onSegmentClick}
       />
-      <div className="relative flex shrink-0 items-start gap-3 border-t bg-card px-3 py-2 text-xs" data-testid="detail" aria-live="polite">
-        <div className="min-w-0 flex-1 space-y-0.5">
+      <div className="shrink-0 border-t bg-card px-3 py-1.5 text-xs" aria-live="polite" data-testid="detail">
+        <div className="space-y-0.5">
           {focusSeg ? (
             <>
               <div>
@@ -240,21 +241,20 @@ export default function App() {
             <span className="text-muted-foreground">地図の道路、または表の行をタップすると、点数の内訳を表示します。</span>
           )}
         </div>
-        <details className="shrink-0">
-          <summary className="cursor-pointer font-medium">凡例</summary>
-          <div className="absolute bottom-full right-2 z-30 w-72 space-y-1.5 rounded-md border bg-card p-3 shadow-lg">
-            <div>道路の色＝点数（高いほど先に確かめたい）</div>
-            <div className="h-2.5 w-full rounded" style={{ background: 'linear-gradient(90deg,#dbe5ec,#f4b942,#8e1b6b)' }} />
-            <div className="flex justify-between"><span>低</span><span>高</span></div>
-            <div className="flex items-center gap-2"><span className="inline-block w-8 border-t-4 border-dashed border-[#6f7d86]" />調査済み・幹線（対象外）</div>
-            <div className="flex items-center gap-2"><span className="inline-block h-1.5 w-8 rounded bg-[#00a3c4]" />選択した区間</div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block size-3.5 rounded-full border-2 border-white bg-[#d55e00] outline outline-1 outline-neutral-500" />▲ 空洞の疑い
-              <span className="inline-block size-2.5 rounded-full border-2 border-[#0072b2] bg-white" />○ 異常なし
-            </div>
-            <div className="flex items-center gap-2"><span className="inline-block size-3.5 rounded bg-[#7fa3c0]" />区画の青み＝地表変位の指標（サンプル値）</div>
-          </div>
-        </details>
+
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t bg-card px-3 py-1.5 text-[11px]" data-testid="legend">
+        <span className="font-medium">凡例</span>
+        <span className="flex items-center gap-1">点数 低<span className="inline-block h-2 w-14 rounded" style={{ background: 'linear-gradient(90deg,#dbe5ec,#f4b942,#8e1b6b)' }} />高</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-6 border-t-4 border-dashed border-[#6f7d86]" />調査済み・幹線</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-6 rounded bg-[#00a3c4]" />選択中</span>
+        <span className="flex items-center gap-1">
+          <svg width="14" height="13" viewBox="0 0 26 24" aria-hidden><polygon points="13,2 24,22 2,22" fill="#d55e00" stroke="#fff" strokeWidth="2.5" strokeLinejoin="round" /></svg>空洞の疑い
+        </span>
+        <span className="flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="5.5" fill="#fff" stroke="#0072b2" strokeWidth="2.5" /></svg>異常なし
+        </span>
+        <span className="flex items-center gap-1"><span className="inline-block size-3 rounded bg-[#7fa3c0]" />区画の青み＝地表変位</span>
       </div>
     </div>
   ) : (
@@ -264,9 +264,6 @@ export default function App() {
   return (
     <>
       {header}
-      <p className="shrink-0 border-b bg-amber-50 px-4 py-1 text-xs text-amber-950" data-testid="fiction-note">
-        ◇ 道路・衛星指標・調査結果はすべて架空のサンプルです（実在の場所・精度・効果を示しません）。第{round}回
-      </p>
       <StepLayout title={TITLES[step]} hint={HINTS[step]} aside={aside}>
         {!data ? (
           <Skeleton className="h-40 w-full" />

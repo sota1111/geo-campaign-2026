@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import type { Cell, Scored, CellSat } from './logic'
@@ -8,6 +8,7 @@ const SCORE_COLOR = ['interpolate', ['linear'], ['get', 'score'], 0, '#dbe5ec', 
 const BOUNDS: [[number, number], [number, number]] = [[-0.0006, -0.0006], [0.015, 0.0114]]
 
 export interface SatMapProps {
+  round: number
   cells: Cell[]
   cellSat: CellSat
   ranked: Scored[]
@@ -19,8 +20,11 @@ export interface SatMapProps {
   className?: string
 }
 
-export function SatMap({ cells, cellSat, ranked, selected, focus, step, results, onSegmentClick, className }: SatMapProps) {
+export function SatMap({ round, cells, cellSat, ranked, selected, focus, step, results, onSegmentClick, className }: SatMapProps) {
+  const [mapReady, setMapReady] = useState(false)
   const markersRef = useRef<maplibregl.Marker[]>([])
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const resMarkersRef = useRef<maplibregl.Marker[]>([])
 
   const cellsFc = useMemo<GeoJSON.FeatureCollection>(
     () => ({
@@ -88,16 +92,8 @@ export function SatMap({ cells, cellSat, ranked, selected, focus, step, results,
       },
       // タップしやすいように、ほぼ透明の太い線を最前面に置く
       { id: 'seg-hit', type: 'line', data: segFc, paint: { 'line-color': '#000', 'line-width': 20, 'line-opacity': 0.01 } },
-      {
-        id: 'res-ok', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 0],
-        paint: { 'circle-radius': 5, 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': 2.5 },
-      },
-      {
-        id: 'res-hit', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 1],
-        paint: { 'circle-radius': 10, 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 },
-      },
     ],
-    [cellsFc, segFc, resFc, step, focus],
+    [cellsFc, segFc, step, focus],
   )
 
   // 区画ラベルは第1段階のみ表示
@@ -107,7 +103,28 @@ export function SatMap({ cells, cellSat, ranked, selected, focus, step, results,
     })
   }, [step])
 
+  // 走査結果は形で区別するマーカー（▲＝空洞の疑い、○＝異常なし）。色だけに頼らない
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    resMarkersRef.current.forEach((mk) => mk.remove())
+    resMarkersRef.current = []
+    for (const f of resFc.features) {
+      const hit = f.properties?.hit === 1
+      const el = document.createElement('div')
+      el.setAttribute('aria-hidden', 'true')
+      el.style.pointerEvents = 'none'
+      el.innerHTML = hit
+        ? '<svg width="26" height="24" viewBox="0 0 26 24"><polygon points="13,2 24,22 2,22" fill="#d55e00" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="#fff" stroke="#0072b2" stroke-width="2.5"/></svg>'
+      const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates
+      resMarkersRef.current.push(new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map))
+    }
+  }, [resFc, mapReady])
+
   const onMapReady = (map: maplibregl.Map) => {
+    mapRef.current = map
+    setMapReady(true)
     // 架空の街なので背景地図（地理院タイル）は使わない。単色の背景に差し替える
     map.on('style.load', () => {
       if (map.getLayer('gsi')) map.removeLayer('gsi')
@@ -148,7 +165,7 @@ export function SatMap({ cells, cellSat, ranked, selected, focus, step, results,
         背景地図なし（架空の街）／サンプルデータ
       </div>
       <div className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4rem)] rounded border border-dashed border-amber-500 bg-amber-50/95 px-2 py-1 text-xs font-medium text-amber-900 shadow">
-        ◇ 架空の街「サンプル市」（実在の地点ではありません）
+        ◇ 架空の街「サンプル市」（実在の地点ではありません）／第{round}回
       </div>
     </div>
   )

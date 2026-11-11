@@ -126,7 +126,7 @@ export default function App() {
 
 type StepId = 'data' | 'ledger' | 'plan' | 'csv' | 'record' | 'check' | 'tune'
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
-  data: { title: 'データを確かめる', hint: '実データ（横須賀市）であること、衛星由来の変化量が未接続であることを確認' },
+  data: { title: 'データを確かめる', hint: '実データ（横須賀市）の内容を確かめます' },
   ledger: { title: '台帳で優先度と内訳を見る', hint: '行か地図の点を選ぶと、地図の上に点数の内訳と前後の写真が出ます' },
   plan: { title: '件数を決めて計画を作る', hint: '巡視できる件数を入れると、優先度の上位から回り順に並びます' },
   csv: { title: '計画をCSVで書き出す', hint: '書き出す内容を確かめて保存します' },
@@ -186,11 +186,11 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
   
   useAppSteps(
     [
-      { id: 'data', title: 'データを確かめる', hint: real ? '実データ・未接続の確認' : '「実データ（横須賀市）」を選ぶ', done: real && dataChecked },
+      { id: 'data', title: 'データを確かめる', hint: real ? '実データの内容を確認' : '「実データ（横須賀市）」を選ぶ', action: '確認ボタンを押すと完了', done: real && dataChecked },
       { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '台帳を開く。行を選ぶと内訳も見られる', done: prog.ledger },
       { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', done: planSeen },
-      { id: 'csv', title: '計画をCSVで書き出す', done: planExported },
-      { id: 'record', title: '巡視結果を記録する', done: recordedNow },
+      { id: 'csv', title: '計画をCSVで書き出す', action: '書き出すと完了', done: planExported },
+      { id: 'record', title: '巡視結果を記録する', action: '記録すると完了', done: recordedNow },
       { id: 'check', title: '台帳に反映されたか確かめる', hint: '「最新の巡視」に結果が出る', done: ledgerChecked },
       { id: 'tune', title: '検出条件の見直し（参考）', optional: true, done: false },
     ],
@@ -272,12 +272,12 @@ function Body({ mode, ds, setMode }: { mode: Mode; ds: Dataset; setMode: (m: str
         {step === 'csv' && <CsvPanel mode={mode} plan={plan} note={note} onExported={() => setProg({ csv: true })} />}
         {step === 'record' && (
           <RecordPanel
-            mode={mode} ranked={ranked} planIds={plan.route.map((s) => s.id)} results={results} setResults={setResults} recSite={recSite || plan.route.find((s) => !s.latest)?.id || plan.route[0]?.id || ranked[0]?.id || ''}
+            mode={mode} ranked={ranked} planIds={plan.route.map((s) => s.id)} results={results} setResults={setResults} recSite={recSite}
             setRecSite={setRecSite} onRecorded={(id) => setProg({ record: true, last: id })}
           />
         )}
         {step === 'check' && (
-          <CheckPanel mode={mode} ranked={ranked} results={results} sel={sel} onSelect={select} onReset={resetAll} />
+          <CheckPanel plan={plan.route} mode={mode} ranked={ranked} results={results} sel={sel} onSelect={select} onReset={resetAll} />
         )}
         {step === 'tune' && <TuneTab ds={ds} mode={mode} results={results} weights={weights} setWeights={setWeights} />}
       </StepLayout>
@@ -324,25 +324,24 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
             <p>
               造成地の位置・型・規制区域は国土数値情報、標高差と傾斜は地理院DEM、写真は地理院タイルの実データです。
               <b>{NOT_CONNECTED}</b>。実運用では Sentinel-1/2 で算出する想定で、今の点数は型・区域・面積・標高差・傾斜だけの暫定です。
-              衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。
+              衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。内容を読んだら、下のボタンを押してください。
             </p>
           ) : (
             <p>地点・区域・変化量・許可届出・巡視結果はすべて架空で、実在の盛土や衛星解析結果ではありません。右上で「実データ（横須賀市）」に切り替えられます。</p>
           )}
         </AlertDescription>
       </Alert>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <Metric label="台帳の件数" value={`${ranked.length}か所`} sub={real ? '横須賀市（A54）' : '架空'} />
-        <Metric label="衛星由来の変化量" value={real ? '未接続' : '架空'} sub={real ? '点数に含まれない' : 'サンプルの値'} warn={real} />
         <Metric label="巡視を記録済み" value={`${visited}か所`} sub={`未巡視 ${ranked.length - visited}か所`} />
-        <Metric label="記録の件数" value={`${results.length}件`} sub="この端末のブラウザの記録" />
+        <Metric label="記録の件数" value={`${results.length}件`} sub="この端末の記録" />
       </div>
       {real && (
         <Button
           variant={dataChecked ? 'secondary' : 'default'} className="h-auto w-full whitespace-normal py-2 text-left"
           aria-pressed={dataChecked} onClick={() => setDataChecked(!dataChecked)}
         >
-          {dataChecked ? '✓ 確認済み: 実データ（横須賀市）で、衛星由来の変化量は未接続（点数に含まれない）' : '実データ（横須賀市）で、衛星由来の変化量は未接続であることを確認した'}
+          {dataChecked ? '✓ データの内容を確認しました' : 'データの内容を確認しました'}
         </Button>
       )}
       <div className="space-y-1.5 rounded-md border p-2 text-xs text-muted-foreground">
@@ -354,7 +353,7 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
           <summary className="cursor-pointer font-medium text-foreground">できていること・いないこと</summary>
           <div className="mt-1 space-y-1">
             <p>出せた項目: 位置、型、面積、造成地内の標高差と平均傾斜、規制区域の内外と区分、前後の写真、巡視計画、巡視結果の記録と書き出し。</p>
-            <p><b>出せない項目（推測値で埋めていません）</b>: 衛星由来の変化量・変化の開始時期・SARの変位（未接続）、許可・届出の有無、盛土の高さ・土量、造成の時期。</p>
+            <p><b>出せない項目（推測値で埋めていません）</b>: 衛星由来の変化量・変化の開始時期・SARの変位、許可・届出の有無、盛土の高さ・土量、造成の時期。</p>
             <p>写真は撮影年代の異なる航空写真で、直近の変化を示すものではありません。規制区域（A56）は概略で、申請・根拠資料には使えません。出典は右上の「出典・ライセンス」。</p>
           </div>
         </details>
@@ -417,7 +416,7 @@ function LedgerPanel({ mode, rows, ranked, sel, onSelect, note, zone, setZone, s
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-background shadow-[0_1px_0_var(--border)]">
             <TableRow>
-              <TableHead>順位</TableHead><TableHead>点数</TableHead>
+              <TableHead>台帳順位</TableHead><TableHead>点数</TableHead>
               <TableHead>{real ? 'ID・型' : '名称・ID'}</TableHead>
               {real ? <><TableHead>前</TableHead><TableHead>現在</TableHead></> : <TableHead>変化</TableHead>}
               <TableHead>最新の巡視</TableHead>
@@ -483,11 +482,11 @@ function PlanPanel({ mode, plan, cap, setCap, sel, onSelect }: {
         {real
           ? `周回距離の目安: 約${(plan.total / 1000).toFixed(1)} km（直線距離の合計。道路距離ではありません）`
           : `周回距離の目安: ${Math.round(plan.total)}（模式図の単位。実距離ではありません）`}
-        ／{NOT_CONNECTED}。地図の青い番号が回る順、「起」が出発地です。
+        ／地図の青い番号が回る順、「起」が出発地です。
       </p>
       <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
         <Table>
-          <TableHeader><TableRow><TableHead>順</TableHead><TableHead>地点と点数の内訳</TableHead><TableHead>点数</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead className="whitespace-nowrap">回る順</TableHead><TableHead>地点と点数の内訳</TableHead><TableHead className="whitespace-nowrap">点数・台帳順位</TableHead></TableRow></TableHeader>
           <TableBody>
             {plan.route.map((s, i) => (
               <TableRow key={s.id} data-state={s.id === sel ? 'selected' : undefined} className="cursor-pointer" onClick={() => onSelect(s.id)}>
@@ -497,7 +496,7 @@ function PlanPanel({ mode, plan, cap, setCap, sel, onSelect }: {
                   {s.latest && <Badge variant="outline" className="ml-1 gap-1 align-middle text-[10px]"><span aria-hidden>✔</span>巡視済み（{s.latest.date}）</Badge>}
                   <div className="mt-0.5"><PartsInline parts={s.parts} /></div>
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-xs">{s.score}<div className="text-muted-foreground">{s.rank}位</div></TableCell>
+                <TableCell className="whitespace-nowrap text-xs">{s.score}点<div className="text-muted-foreground">台帳 {s.rank}位</div></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -547,6 +546,14 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
   const [memo, setMemo] = useState('')
   const [saved, setSaved] = useState<PatrolResult | null>(null)
   const [formError, setFormError] = useState<string[]>([])
+  const [switched, setSwitched] = useState('')
+  // 入った時に一度だけ、計画の未巡視の最初の地点を選んでおく（以後、記録前に勝手には変えない）
+  useEffect(() => {
+    if (recSite) return
+    const first = planIds.find((id) => !ranked.find((s) => s.id === id)?.latest) ?? planIds[0] ?? ranked[0]?.id
+    if (first) setRecSite(first)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const rec = ranked.find((s) => s.id === recSite)
 
   const submit = (e: React.FormEvent) => {
@@ -565,6 +572,9 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
     const r: PatrolResult = { siteId: recSite, date, who: who.trim(), result, memo: memo.trim() }
     setResults([...results, r])
     setSaved(r); setMemo(''); setResult(''); onRecorded(r.siteId)
+    // 記録後は、計画の次の未巡視の地点に切り替える（切り替えたことを下に明示する）
+    const next = planIds.find((id) => id !== r.siteId && !ranked.find((s) => s.id === id)?.latest)
+    if (next) { setRecSite(next); setSwitched(next) } else setSwitched('')
     toast.success(`${r.siteId} の巡視結果を記録しました`)
   }
   return (
@@ -622,7 +632,10 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
         <Alert className="border-sky-300 bg-sky-50">
           <AlertTitle>記録しました: {saved.siteId}</AlertTitle>
           <AlertDescription className="text-foreground">
-            <p>{saved.date}「{saved.result}」。台帳の「最新の巡視」に反映されました（手順6で確かめられます）。続けて別の地点も記録できます。</p>
+            <p>{saved.date}「{saved.result}」。台帳の「最新の巡視」に反映されました（手順6で確かめられます）。</p>
+            <p className="mt-1">{switched
+              ? `地点を、計画の次の未巡視の地点（${switched}）に切り替えました。別の地点にするときは、上の地点欄で選び直してください。`
+              : '計画の地点はすべて記録済みです。地点欄はそのままです。'}</p>
           </AlertDescription>
         </Alert>
       )}
@@ -631,10 +644,11 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
 }
 
 // ---------------- 6 反映の確認 ----------------
-function CheckPanel({ ranked, results, sel, onSelect, onReset }: {
-  mode: Mode; ranked: Ranked[]; results: PatrolResult[]; sel: string | null; onSelect: (id: string) => void; onReset: () => void
+function CheckPanel({ plan, ranked, results, sel, onSelect, onReset }: {
+  plan: Ranked[]; mode: Mode; ranked: Ranked[]; results: PatrolResult[]; sel: string | null; onSelect: (id: string) => void; onReset: () => void
 }) {
   const visited = ranked.filter((s) => s.latest)
+  const planDone = plan.filter((s) => s.latest).length
   const exportRec = () =>
     downloadText('patrol-records.csv',
       toCSV(['site_id', 'patrol_date', 'patroller', 'result', 'memo'], results.map((r) => [r.siteId, r.date, r.who, r.result, r.memo])),
@@ -642,10 +656,21 @@ function CheckPanel({ ranked, results, sel, onSelect, onReset }: {
   return (
     <div className="space-y-3 text-sm">
       <div className="space-y-1">
+        <p className="text-xs font-medium">計画の{plan.length}件のうち、記録済み {planDone}件、未記録 {plan.length - planDone}件</p>
+        <ul className="divide-y rounded-md border text-xs">
+          {plan.map((s, i) => (
+            <li key={s.id} data-plan-status={s.latest ? 'done' : 'todo'} className="flex items-center justify-between gap-2 px-2 py-1.5">
+              <span className="min-w-0 break-all">回る順 {i + 1}　{s.id}</span>
+              <span className="shrink-0">{s.latest ? <ResultTag r={s.latest} /> : <span className="text-muted-foreground">未記録</span>}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="space-y-1">
         <p className="text-xs font-medium">台帳の「最新の巡視」（記録のある地点・{visited.length}か所）</p>
         <div className="overflow-x-auto rounded-md border [&_td]:px-1.5 [&_th]:px-1.5">
           <Table>
-            <TableHeader><TableRow><TableHead>順位</TableHead><TableHead>地点</TableHead><TableHead>最新の巡視</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>台帳順位</TableHead><TableHead>地点</TableHead><TableHead>最新の巡視</TableHead></TableRow></TableHeader>
             <TableBody>
               {visited.map((s) => (
                 <TableRow key={s.id} data-id={s.id} data-state={s.id === sel ? 'selected' : undefined} className="cursor-pointer" onClick={() => onSelect(s.id)}>
@@ -727,7 +752,6 @@ function SiteDetail({ s, mode, results }: { s: Ranked; mode: Mode; results: Patr
             <dt className="text-muted-foreground">標高</dt>
             <dd>{s.reliefM == null ? '算出不可（小規模でDEMの画素が少ない）' : `区域内の標高差 ${s.reliefM} m／平均傾斜 ${s.slopeDeg}°／平均標高 ${s.elevM} m（DEM${s.demRes}、${s.demPx}画素）`}</dd>
             <dt className="text-muted-foreground">区域</dt><dd>{s.zone}（A56。概略）</dd>
-            <dt className="text-muted-foreground">衛星由来の変化</dt><dd><b>未接続</b>（実運用では Sentinel-1/2 で算出）。点数に含めていません</dd>
           </>
         ) : (
           <>
@@ -742,9 +766,9 @@ function SiteDetail({ s, mode, results }: { s: Ranked; mode: Mode; results: Patr
         <ul className="space-y-0.5 rounded-md border p-2">
           {s.parts.map(([label, p]) => (
             <li key={label} className="flex justify-between gap-2">
-              <span>{label}</span>
+              <span>{p == null ? '衛星由来' : label}</span>
               {p == null
-                ? <span className="shrink-0 font-medium text-amber-800">— 点数に含めない</span>
+                ? <span className="shrink-0 font-medium text-amber-800">点数外</span>
                 : <span className="shrink-0 font-mono">{p >= 0 ? '+' : ''}{p}</span>}
             </li>
           ))}
@@ -775,7 +799,7 @@ function PartsInline({ parts }: { parts: Ranked['parts'] }) {
     <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
       {parts.map(([label, p]) => (
         <li key={label} className="whitespace-nowrap">
-          {p == null ? <span className="text-amber-800">衛星由来の変化 未接続（点数外）</span> : <>{label.split('（')[0]} <b className="font-mono">{p >= 0 ? '+' : ''}{p}</b></>}
+          {p == null ? <span className="text-amber-800">衛星由来: 点数外</span> : <>{label.split('（')[0]} <b className="font-mono">{p >= 0 ? '+' : ''}{p}</b></>}
         </li>
       ))}
     </ul>
@@ -824,7 +848,7 @@ function TuneTab({ ds, mode, results, weights, setWeights }: {
         </Table>
       </div>
       <Button variant="outline" size="sm" onClick={() => { setWeights(clone(real ? DEFAULT_WEIGHTS_REAL : DEFAULT_WEIGHTS)); toast('重みを初期値に戻しました') }}>重みを初期値に戻す</Button>
-      <p className="text-xs text-muted-foreground">重みとしきい値の初期値は説明用の仮置きで、根拠のある値ではありません。{real && NOT_CONNECTED + '。'}</p>
+      <p className="text-xs text-muted-foreground">重みとしきい値の初期値は説明用の仮置きで、根拠のある値ではありません。</p>
     </div>
   )
 }

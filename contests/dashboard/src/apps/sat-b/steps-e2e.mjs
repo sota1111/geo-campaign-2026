@@ -48,16 +48,19 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   }
   const step = async (sid) => { await openTop(); R.log.push(sid + ':' + await click(`[data-step=${sid}]`)); await sleep(1000); R.heights[sid] = await heights(); R.trace = (R.trace || []).concat(sid + '→current=' + (await ev('document.querySelector("[data-status=current]")?.dataset.step ?? "none"'))); await shot(`steps-${label}-${sid}.png`) }
   R.initial = await (async () => { await openTop(); const s = await statuses(); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })()
-  await step('data'); R.confirm = await click('button[aria-pressed]', '確認した'); await sleep(300)
+  await step('data'); R.unconnectedCount = await ev('(document.body.innerText.match(/未接続/g)||[]).length'); R.confirmText = await ev('document.querySelector("button[aria-pressed]")?.innerText'); R.confirm = await click('button[aria-pressed]', '確認しました'); await sleep(300)
   await step('ledger'); R.ledgerDoneNoClick = await (async () => { await openTop(); const s = await ev('document.querySelector("[data-step=ledger]").dataset.status'); if (mobile) await ev('document.querySelector("[data-testid=steps-topbar] button").click()'); return s })(); R.ledgerScroll = await ev('(()=>{const c=[...document.querySelectorAll("[data-testid=step-panel-body] div")].find(d=>d.scrollHeight>d.clientHeight+20&&getComputedStyle(d).overflowY!=="visible");return c?c.scrollHeight+">"+c.clientHeight:"none"})()'); R.row = 'skipped (selection optional)'; await sleep(300); R.heights.ledgerSel = await heights(); await shot(`steps-${label}-ledger-sel.png`)
   if (mobile) { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(500) }
   await step('plan'); R.cap = await ev('document.querySelector("#sat-b-cap")?.value')
   await ev('window.__dlname=[];HTMLAnchorElement.prototype.click=function(){window.__dlname.push(this.download)}')
   await step('csv'); R.csvBtn = await click('[data-testid=step-panel-body] button', '計画をCSVで書き出す'); await sleep(500)
   R.dl = await ev('JSON.stringify(window.__dlname)')
-  await step('record'); await setInput('#sat-b-who', '盛土班'); await setSel('是正対象'); R.submit = await click('button[type=submit]', '記録する'); await sleep(700)
+  await step('record'); R.siteBefore = await ev('document.querySelector("#sat-b-site").selectedOptions[0].text'); await sleep(1500); R.siteStill = await ev('document.querySelector("#sat-b-site").selectedOptions[0].text'); await setInput('#sat-b-who', '盛土班'); await setSel('是正対象'); R.submit = await click('button[type=submit]', '記録する'); await sleep(700)
+  R.siteAfter = await ev('document.querySelector("#sat-b-site").selectedOptions[0].text')
+  R.switchMsg = await ev('(document.body.innerText.match(/計画の次の未巡視の地点（[^）]*）に切り替えました/)||["none"])[0]')
   R.saved = await ev('document.body.innerText.includes("台帳の「最新の巡視」に反映されました")')
   await step('check'); await sleep(500)
+  R.planSummary = await ev('(document.body.innerText.match(/計画の\\d+件のうち[^\\n]*/)||["none"])[0]')
   R.ledgerRow = await ev('[...document.querySelectorAll("[data-testid=step-panel-body] tbody tr")].map(r=>r.innerText.replace(/\\s+/g," ")).join(" | ")')
   await step('tune')
   R.final = await (async () => { await openTop(); return statuses() })()

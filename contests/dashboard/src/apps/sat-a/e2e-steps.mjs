@@ -79,6 +79,8 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await send('Page.navigate', { url: `${base}apps/sat-a/` }); await sleep(3500)
   const pick = async (sid) => {
     if (mobile) await openTop()
+    const vis = await ev(`[...document.querySelectorAll('[data-step=${sid}]')].some(e=>e.getClientRects().length)`)
+    if (!vis) await clickSel('[data-testid=steps-optional] > button')
     await clickSel(`[data-step=${sid}]`)
     await sleep(500)
     r.heights[sid + (r.round ? '@r2' : '')] = await heights()

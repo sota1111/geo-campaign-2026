@@ -117,7 +117,12 @@ export default function App() {
     return r[0] + (r[1] ? `（${r[1]}）` : '')
   }
   /** 事業者名を先頭に（同名路線の見分け用） */
-  const routeFull = (i: number) => `${data!.routes[i][2]}｜${routeName(i)}`
+  const routeFull = (i: number) => {
+    const base = `${data!.routes[i][2]}｜${routeName(i)}`
+    // 同じ事業者・同じ表示名の系統が複数あるときは便数で区別する
+    const dup = data!.routes.some((r, j) => j !== i && `${r[2]}｜${r[0]}${r[1] ? `（${r[1]}）` : ''}` === base)
+    return dup ? `${base}（平日${data!.routes[i][3]}本・休日${data!.routes[i][4]}本）` : base
+  }
   const condText = data ? `${DAY_LABEL[day]}${PERIOD_LABEL[per]}${data.params.start_hours[per]}時発・${w}分以内` : ''
 
   const calc = useMemo(() => {
@@ -147,9 +152,10 @@ export default function App() {
   const fl0 = data ? data.facility_labels[data.facility_order[0]] : ''
 
   // 総数では影響が小さい案と、65歳以上で少ない案が逆転する場合の注意文
+  const rev = calc && ks.length >= 2 ? find65Reversal(ks.map((k) => calc.results[k][0])) : null
   const reversalText = (() => {
     if (!calc || ks.length < 2) return ''
-    const rv = find65Reversal(ks.map((k) => calc.results[k][0]))
+    const rv = rev
     if (!rv) return ''
     const w0 = ks[rv.winner], j = ks[rv.other]
     const wl = calc.results[w0][0], jl = calc.results[j][0]
@@ -272,7 +278,7 @@ export default function App() {
       { id: 'planA', title: TITLES.planA.title, hint: '止める路線を選ぶ', done: !!visited.planA },
       { id: 'planB', title: TITLES.planB.title, hint: '複数路線にする場合は路線を足す', done: !!visited.planB },
       { id: 'verdict', title: TITLES.verdict.title, hint: '結論と詳細表', done: !!visited.verdict },
-      { id: 'export', title: TITLES.export.title, hint: 'CSVまたは文章コピー', done: exported },
+      { id: 'export', title: TITLES.export.title, hint: 'CSVまたは文章コピー', action: '書き出す（またはコピーする）と完了', done: exported },
     ],
     {
       activeId: step,
@@ -343,6 +349,9 @@ export default function App() {
           <Input value={p.name} maxLength={30} aria-label={`案${PLAN_IDS[k]}の名前`}
             onChange={(e) => updatePlan(k, (qq) => ({ ...qq, name: e.target.value || `案${PLAN_IDS[k]}` }))} />
         </div>
+        <p className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium" data-testid="multi-hint">
+          路線を足すと、複数路線を同時に止める案になります（人数は「少なくとも」の下限値）。足すには、下の「＋ 止める路線を追加」で選びます。
+        </p>
         <div className="flex min-h-8 flex-wrap gap-1.5" data-testid={`chips-${k}`}>
           {p.routes.length ? p.routes.map((r) => (
             <Badge key={r} variant="secondary" className="gap-1 py-1 pr-1 text-xs font-normal">
@@ -366,14 +375,21 @@ export default function App() {
               setRouteQ((qs) => qs.map((v, i) => (i === k ? '' : v)))
             }}>
             <option value="">＋ 止める路線を追加…（{q ? `候補${opts.length}路線` : `残り${opts.length}路線`}）</option>
-            {opts.map((r) => (
+            {opts.filter((r) => calc.single.get(r)! > 0).map((r) => (
               <option key={r} value={String(r)}>
                 {routeFull(r)}（平日{data.routes[r][3]}本・休日{data.routes[r][4]}本｜この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
               </option>
             ))}
+            {opts.some((r) => calc.single.get(r)! === 0) && (
+              <optgroup label={`影響なし（${opts.filter((r) => calc.single.get(r)! === 0).length}路線。この条件では止めても${fl0}へ行けなくなる人が出ない）`}>
+                {opts.filter((r) => calc.single.get(r)! === 0).map((r) => (
+                  <option key={r} value={String(r)}>{routeFull(r)}（平日{data.routes[r][3]}本・休日{data.routes[r][4]}本）</option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <p className="text-xs text-muted-foreground">
-            路線を足すと、複数路線を同時に止める案になります（人数は「少なくとも」の下限値）。選べるのは基準日に便がある{calc.selectable.length}路線／収録{data.routes.length}路線（全便の停止のみ。減便は未対応）。
+            選べるのは基準日に便がある{calc.selectable.length}路線／収録{data.routes.length}路線（全便の停止のみ。減便は未対応）。
           </p>
         </div>
         {l && p.routes.length > 0 && (
@@ -400,7 +416,7 @@ export default function App() {
       <div className="space-y-4">
         <div role="status" className="space-y-1" data-testid="verdict-main">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-lg font-bold">影響が小さい案: {smaller.length === ks.length ? '差がありません（同数）' : smaller.map((k) => plans[k].name).join('・')}</span>
+            <span className="text-lg font-bold">影響が小さい案: {smaller.length === ks.length ? '差がありません（同数）' : smaller.map((k) => plans[k].name).join('・')}{rev ? `（総数）／65歳以上では${plans[ks[rev.other]].name}` : ''}</span>
             <Badge variant={firm ? 'default' : 'outline'}>{firm ? '確定' : '暫定'}</Badge>
           </div>
           <p className="text-sm">{fl0}へ行けなくなる人が少ない案です。同数なら65歳以上が少ない方を選んでいます。</p>
@@ -421,7 +437,7 @@ export default function App() {
             return (
               <div key={k} className={`rounded-lg border p-2.5 ${win ? 'border-2 border-primary' : ''}`}>
                 <div className="flex flex-wrap items-center gap-1 text-sm font-bold">
-                  {plans[k].name}{win && <Badge>影響小</Badge>}{!l.exact && <Badge variant="outline">下限値</Badge>}
+                  {plans[k].name}{win && <Badge>影響小</Badge>}{rev && ks[rev.other] === k && <Badge variant="outline">65歳以上は少</Badge>}{!l.exact && <Badge variant="outline">下限値</Badge>}
                 </div>
                 <div className="text-xs text-muted-foreground">{fl0}へ行けなくなる人</div>
                 <div className="text-xl font-bold">{lostText(l)}</div>
@@ -535,11 +551,12 @@ export default function App() {
     if (!ks.length) return <Alert><Info className="size-4" /><AlertDescription>書き出すには、案に路線を選んでください。</AlertDescription></Alert>
     return (
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={exportCsv} data-testid="export-csv"><Download className="size-4" />CSVで書き出す</Button>
-          <Button variant="outline" onClick={copySentences} data-testid="copy-text"><Copy className="size-4" />文章をコピー</Button>
-        </div>
-        <p className="text-sm">使い分け: <b>表に貼る・集計に使う → CSV</b>／<b>報告書や議事録の本文に貼る → 文章</b>。この端末の中で作るだけで、送信しません。</p>
+        <p className="text-sm font-medium" data-testid="export-state">
+          {exported ? 'この手順は完了しました。書き出したCSV／文章を会議資料に貼り付けてください。' : 'この手順は、書き出す（またはコピーする）と完了します。'}
+        </p>
+        <Button size="lg" className="h-12 w-full text-base" onClick={exportCsv} data-testid="export-csv"><Download className="size-5" />会議資料用にCSVで書き出す</Button>
+        <Button variant="outline" size="sm" onClick={copySentences} data-testid="copy-text"><Copy className="size-4" />文章だけをコピー（本文に貼る場合）</Button>
+        <p className="text-xs text-muted-foreground">使い分け: 表に貼る・集計に使う → CSV／報告書や議事録の本文に貼る → 文章。この端末の中で作るだけで、送信しません。</p>
         {lastAction && <p role="status" className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium">{lastAction}</p>}
         <details className="rounded-lg border p-2" data-testid="export-preview">
           <summary className="cursor-pointer text-sm font-bold">書き出す内容のプレビュー（文章全文・CSV先頭）</summary>
