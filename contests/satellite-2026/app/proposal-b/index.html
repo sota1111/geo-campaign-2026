@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>盛土巡視台帳（コンセプトデモ）</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>盛土巡視台帳 <small>衛星の変化検出を巡視計画に変える（コンセプトデモ）</small></h1>
+  <div class="modebar" role="group" aria-label="データの切り替え">
+    <span>データ:</span>
+    <button id="m-real" data-mode="real" aria-pressed="true">実データ（横須賀市）</button>
+    <button id="m-sample" data-mode="sample" aria-pressed="false">架空サンプル</button>
+  </div>
+  <p class="banner" id="banner" role="note"></p>
+  <nav id="tabs" role="tablist">
+    <button role="tab" data-view="ledger" aria-selected="true">① 台帳</button>
+    <button role="tab" data-view="plan" aria-selected="false">② 巡視計画</button>
+    <button role="tab" data-view="record" aria-selected="false">③ 巡視結果の記録</button>
+    <button role="tab" data-view="tune" aria-selected="false">④ 検出条件の見直し</button>
+  </nav>
+</header>
+<main>
+  <section id="v-ledger" class="view">
+    <div class="split">
+      <div class="pane">
+        <div class="filters">
+          <label>区域 <select id="f-zone"><option value="">すべて</option></select></label>
+          <label><span id="f2-label">型</span> <select id="f-second"><option value="">すべて</option></select></label>
+          <label><input type="checkbox" id="f-unvisited"> 未巡視のみ</label>
+        </div>
+        <p id="count" class="note"></p>
+        <div class="tablewrap"><table id="ledger"><thead></thead><tbody></tbody></table></div>
+        <p><button id="btn-more">さらに表示</button></p>
+      </div>
+      <div class="pane">
+        <svg id="map" role="img" aria-label="対象地域の地図（造成地の位置と規制区域）"></svg>
+        <p class="legend" id="legend"></p>
+        <div id="detail" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+  <section id="v-plan" class="view" hidden>
+    <div class="filters">
+      <label>今回の巡視可能件数 <input type="number" id="cap" min="1" max="30" value="6"></label>
+      <button id="btn-plan-csv">計画をCSVで書き出す</button>
+    </div>
+    <p id="plan-help"></p>
+    <ol id="plan-list"></ol>
+    <p id="plan-total"></p>
+  </section>
+  <section id="v-record" class="view" hidden>
+    <form id="rec-form">
+      <label>地点 <select id="r-site"></select></label>
+      <label>巡視日 <input type="date" id="r-date" required></label>
+      <label>巡視者 <input type="text" id="r-who" maxlength="40" required></label>
+      <label>結果 <select id="r-result"></select></label>
+      <label class="wide">メモ <input type="text" id="r-memo" maxlength="200"></label>
+      <button type="submit">記録する</button>
+    </form>
+    <p class="note">記録はこのブラウザの localStorage にだけ保存されます（外部へ送信しません）。氏名等の個人情報は入れないでください。実データ版と架空サンプルで記録は別に保存されます。</p>
+    <div class="filters"><button id="btn-rec-csv">記録をCSVで書き出す</button><button id="btn-ledger-csv">台帳をCSVで書き出す</button><button id="btn-reset">記録を全消去</button></div>
+    <div class="tablewrap"><table id="rec-table"><thead><tr><th>巡視日</th><th>ID</th><th>巡視者</th><th>結果</th><th>メモ</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section id="v-tune" class="view" hidden>
+    <p>巡視結果を、型（実データ）または変化の種類（サンプル）ごとに集計します。件数が少ないうちは率を出さず、重みの見直しは職員が判断します（自動では変えません）。</p>
+    <div class="tablewrap"><table id="hit-table"><thead><tr><th>区分</th><th>巡視件数</th><th>是正対象</th><th>初期の重み</th><th>変更後の重み</th></tr></thead><tbody></tbody></table></div>
+    <div class="filters"><button id="btn-weights-reset">重みを初期値に戻す</button></div>
+    <p class="note">重みとしきい値の初期値は説明用の仮置きで、根拠のある値ではありません。</p>
+  </section>
+</main>
+<footer id="footer"></footer>
+<script src="data/sample.js"></script>
+<script src="data/real.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

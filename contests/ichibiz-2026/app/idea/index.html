@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>地名の記憶マップ（デモ）｜語り手がいるうちに、土地の災害の話を確かめて地図に残す</title>
+<meta name="description" content="地名を選び、土地の災害の言い伝えを公開データ（自然災害伝承碑・旧版の空中写真・土地の成り立ちの地図）と突き合わせて確かめ、聞き取りを記録して地図に残すデモ。話と語り手はサンプル（架空）。危険度は判定しません。">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="地名の記憶マップ"></div>
+
+<aside id="panel">
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <div id="panel-body">
+    <header>
+      <h1>地名の記憶マップ</h1>
+      <p class="lead">語り手がいるうちに、土地の災害の話を<b>確かめて</b>地図に残す。</p>
+      <p class="notice warn"><b>デモです。</b>地名・語り手・話は<b>すべてサンプル（架空）</b>で、実在の地名の由来や人物の証言ではありません。災害の<b>危険度は判定しません</b>。</p>
+      <ol class="steps" aria-label="流れ">
+        <li id="st1" class="on">1 地名を選ぶ</li>
+        <li id="st2">2 公開データで確かめる</li>
+        <li id="st3">3 記録して地図に残す</li>
+      </ol>
+    </header>
+
+    <section id="s-pick" aria-label="1 地名を選ぶ">
+      <h2>1 地名を選ぶ（広島市安佐南区周辺）</h2>
+      <p class="note">地図上のオレンジの地名（サンプル・架空）か、下の一覧から選びます。地図の何もない所をタップすると、新しい地名の位置を指定できます。</p>
+      <ul id="place-list" class="plist"></ul>
+    </section>
+
+    <section id="s-check" aria-label="2 公開データで確かめる" hidden>
+      <h2>2 公開データで確かめる</h2>
+      <div id="focus-card"></div>
+      <div class="ctl">
+        <label for="radius">伝承碑を探す範囲</label>
+        <select id="radius">
+          <option value="500">半径 500 m</option>
+          <option value="1000" selected>半径 1 km</option>
+          <option value="2000">半径 2 km</option>
+          <option value="5000">半径 5 km</option>
+        </select>
+      </div>
+      <div id="cross" aria-live="polite"></div>
+      <h3>重ねて見る地図（国土地理院）</h3>
+      <div id="ovl" class="seg" role="radiogroup" aria-label="重ねる地図"></div>
+      <div class="row"><label for="opacity" class="lbl">濃さ</label><input id="opacity" type="range" min="20" max="100" value="70"></div>
+      <p id="ovl-note" class="note"></p>
+      <h3>確かめたこと（自分の目で見て選ぶ）</h3>
+      <div id="checks" class="checks"></div>
+      <p class="note">ここで選ぶのは、人が地図を見て気づいたことの記録です。当てはまらなくても、話が誤りという意味ではありません。</p>
+    </section>
+
+    <section id="s-rec" aria-label="3 聞き取りを記録して地図に残す" hidden>
+      <h2>3 聞き取りを記録して地図に残す</h2>
+      <p class="note">この端末のブラウザ（localStorage）にだけ保存します。サーバーには送りません。実在の人の話を入力する場合は、本人の同意を得てください（デモでは架空の内容を入力してください）。</p>
+      <form id="rec-form" novalidate>
+        <div class="f"><label for="f-name">地名</label><input id="f-name" type="text" maxlength="40" autocomplete="off"></div>
+        <div class="f"><label for="f-type">種類</label>
+          <select id="f-type"><option>旧地名</option><option>小字</option><option>通称地名</option><option>その他</option></select></div>
+        <div class="f"><label for="f-teller">語り手（仮名・匿名可）</label><input id="f-teller" type="text" maxlength="40" autocomplete="off" placeholder="例：語り手F（架空）"></div>
+        <div class="f"><label for="f-date">聞いた日</label><input id="f-date" type="date"></div>
+        <div class="f"><label for="f-story">聞き取った話</label><textarea id="f-story" rows="4" maxlength="600"></textarea></div>
+        <div class="f"><label for="f-basis">話の出典（誰から・どの資料で）</label><input id="f-basis" type="text" maxlength="200" autocomplete="off"></div>
+        <fieldset><legend>語られている災害</legend><div id="f-kinds" class="checks"></div></fieldset>
+        <div class="f"><label for="f-cert">確からしさ</label>
+          <select id="f-cert"><option value="不明">不明</option><option value="諸説">諸説</option><option value="定説">定説</option></select></div>
+        <div class="f"><label for="f-vis">公開範囲</label><select id="f-vis"></select></div>
+        <div class="f"><label for="f-lic">利用条件</label><select id="f-lic"></select></div>
+        <p class="note" id="f-pos">位置: 未選択（地図をタップ）</p>
+        <div id="f-err" class="err" role="alert" hidden></div>
+        <button type="submit" class="primary">記録して地図に残す（未確認）</button>
+      </form>
+    </section>
+
+    <section id="s-list" aria-label="記録と書き出し">
+      <h2>残した記録 <span id="rec-count"></span></h2>
+      <ul id="rec-list" class="plist"></ul>
+      <div class="btnrow">
+        <button id="ex-pub" type="button">公開分を書き出し（GeoJSON）</button>
+        <button id="ex-all" type="button">非公開以外すべて書き出し</button>
+        <button id="clear" type="button" class="danger">この端末の記録を全消去</button>
+      </div>
+      <p class="note" id="ex-note">「公開分」は、確認済み・公開・利用条件ありの記録だけです。</p>
+    </section>
+
+    <section class="foot">
+      <button id="btn-about" type="button">出典・利用条件・このデモの限界</button>
+    </section>
+  </div>
+</aside>
+
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="about-title">
+  <div class="modal-box">
+    <button id="modal-close" type="button" aria-label="閉じる">×</button>
+    <div id="about"></div>
+  </div>
+</div>
+
+<noscript>このページの表示にはJavaScriptが必要です。</noscript>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
