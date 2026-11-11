@@ -121,9 +121,9 @@ function SavedNotice({ rec, onConfirm, onList, onNext }: {
 /** 公開までの流れ。current: 今どこか（record=記録, verify=確認, publish=書き出し） */
 function FlowDiagram({ current }: { current: 'record' | 'verify' | 'publish' }) {
   const steps = [
-    { id: 'record', title: '① 記録', sub: '聞き取り担当（必ず「未確認」）' },
-    { id: 'verify', title: '② 確認', sub: '確認役が出典などを確かめる' },
-    { id: 'publish', title: '③ 公開分として書き出し', sub: '確認済み＋公開範囲「公開」＋利用条件あり' },
+    { id: 'record', title: '記録（手順4）', sub: '聞き取り担当（必ず「未確認」）' },
+    { id: 'verify', title: '確認（手順5）', sub: '確認役が出典などを確かめる' },
+    { id: 'publish', title: '公開分として書き出し（手順6）', sub: '確認済み＋公開範囲「公開」＋利用条件あり' },
   ]
   return (
     <div className="space-y-1.5 rounded-md border bg-muted/40 p-2" aria-label="公開までの流れ">
@@ -220,16 +220,26 @@ export default function BizIdeaApp() {
      タブ見出しを直接押したとき、地名の選択・保存・書き出しのときは、タブもスクロールも動かさない */
   const goTab = useCallback((t: string, anchorId?: string) => {
     setTab(t)
-    setTimeout(() => {
-      const target = (anchorId && document.getElementById(anchorId)) || tabsRef.current
-      target?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-    }, 120)
+    // タブ切替後の描画を待ち、目的の位置が現れたら1回だけ（瞬時に）移動する。途中でずれないよう smooth は使わない
+    let tries = 0
+    const attempt = () => {
+      const el = anchorId ? document.getElementById(anchorId) : null
+      if (anchorId && !el && tries++ < 20) { requestAnimationFrame(attempt); return }
+      requestAnimationFrame(() => (el ?? tabsRef.current)?.scrollIntoView({ block: 'start', behavior: 'auto' }))
+    }
+    requestAnimationFrame(attempt)
   }, [])
 
-  /* 「伝承碑と突き合わせた」: 地名があり、災害の種類を選んだ状態で「確かめる」を開いた */
+  /* 手順2「伝承碑と突き合わせる」: 突き合わせ結果（2-1）が画面に表示されたら済。2-2 の操作では済にならない */
+  const [resultEl, setResultEl] = useState<HTMLElement | null>(null)
   useEffect(() => {
-    if (tab === 'check' && focus && form.claimedKinds.length) setDone((d) => (d.cross ? d : { ...d, cross: true }))
-  }, [tab, focus, form.claimedKinds.length])
+    if (!resultEl || !form.claimedKinds.length) return
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) setDone((d) => (d.cross ? d : { ...d, cross: true }))
+    }, { threshold: 0.2 })
+    io.observe(resultEl)
+    return () => io.disconnect()
+  }, [resultEl, form.claimedKinds.length])
 
   useEffect(() => {
     if (!map) return
@@ -341,21 +351,18 @@ export default function BizIdeaApp() {
     setErrors([])
     setRecords((rs) => [...rs, r.record])
     setLastSavedId(r.record.id)
-    setForm(EMPTY_FORM) // 二重登録を防ぐため、保存したらフォームを空に戻す
-    toast.success(`「${r.record.placeName}」を未確認の記録として地図に残しました。入力欄は空に戻しました`)
+    // 二重登録を防ぐため、話・出典・語り手だけ空に戻す。地名・位置などは「続けて記録」のために保持する
+    setForm((f) => ({ ...f, story: '', basis: '', teller: '' }))
+    toast.success(`「${r.record.placeName}」を未確認の記録として地図に残しました。話・出典・語り手の欄は空に戻しました（地名と位置はそのまま）`)
   }
-  /** 続けて別の話を記録する: 同じ地名・位置で入力欄を用意し、地名欄へ移る（押した結果としての移動） */
+  /** 続けて別の話を記録する: 地名と位置はそのままで、話の欄へ移る（押した結果としての移動） */
   const nextRecord = () => {
     setLastSavedId('')
     setErrors([])
-    const p = focus?.place
-    setForm(p
-      ? { ...EMPTY_FORM, placeName: p.name, placeType: PLACE_TYPES.includes(p.type) ? p.type : 'その他', claimedKinds: p.claimedKinds, certainty: p.certainty }
-      : EMPTY_FORM)
     setTab('rec')
     setTimeout(() => {
-      const el = document.getElementById(p ? 'f-story' : 'f-name')
-      el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      const el = document.getElementById('f-story')
+      el?.scrollIntoView({ block: 'center', behavior: 'auto' })
       el?.focus({ preventScroll: true })
     }, 150)
   }
@@ -414,11 +421,12 @@ export default function BizIdeaApp() {
     },
     {
       id: 'cross', title: '伝承碑と突き合わせる', hint: '半径内の自然災害伝承碑（実データ）と比べる', done: done.cross,
-      onSelect: () => goTab('check', 'step-2-1'),
+      onSelect: () => goTab('check', focus ? 'step-2-1-result' : undefined),
     },
     {
       id: 'overlay', title: '昔の地図・写真と重ねる', hint: '空中写真・低湿地など。おすすめ表示あり', done: done.overlay,
       onSelect: () => goTab('check', 'step-2-2'),
+      // 手順3は2-2の先頭へ。地名未選択でも2-2のカードは表示される
     },
     {
       id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', done: records.length > 0,
@@ -504,11 +512,11 @@ export default function BizIdeaApp() {
         <div className="min-w-0 space-y-3">
         <Tabs ref={tabsRef} value={tab} onValueChange={setTab} className="min-w-0 scroll-mt-2">
           <TabsList className="grid h-auto w-full grid-cols-4">
-            <TabsTrigger value="pick" className="px-1 text-xs sm:text-sm">1 地名</TabsTrigger>
-            <TabsTrigger value="check" className="px-1 text-xs sm:text-sm">2 確かめる</TabsTrigger>
-            <TabsTrigger value="rec" className="px-1 text-xs sm:text-sm">3 記録</TabsTrigger>
+            <TabsTrigger value="pick" className="px-1 text-xs sm:text-sm">地名</TabsTrigger>
+            <TabsTrigger value="check" className="px-1 text-xs sm:text-sm">確かめる</TabsTrigger>
+            <TabsTrigger value="rec" className="px-1 text-xs sm:text-sm">記録</TabsTrigger>
             <TabsTrigger value="list" className="flex-col gap-0 px-1 text-xs sm:text-sm">
-              4 一覧・書出
+              一覧・書出
               <span className="text-[10px] font-normal text-muted-foreground">記録 {records.length}件</span>
             </TabsTrigger>
           </TabsList>
@@ -516,7 +524,7 @@ export default function BizIdeaApp() {
           {/* 1 地名 */}
           <TabsContent value="pick" className="space-y-3">
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">1 地名を選ぶ（広島市安佐南区周辺）</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">地名を選ぶ（手順1・広島市安佐南区周辺）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {focus && (
                   <p className="rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-sm" role="status">
@@ -552,18 +560,18 @@ export default function BizIdeaApp() {
 
           {/* 2 確かめる */}
           <TabsContent value="check" className="space-y-3">
-            <div className="flex flex-wrap gap-2" role="navigation" aria-label="2 の小段階">
+            <div className="flex flex-wrap gap-2" role="navigation" aria-label="確かめるタブの手順">
               <Button size="sm" variant="outline" onClick={() => document.getElementById('step-2-1')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
-                {done.cross ? '✓ ' : ''}2-1 伝承碑と突き合わせる
+                {done.cross ? "✓ " : ""}手順2 伝承碑と突き合わせる
               </Button>
               <Button size="sm" variant="outline" onClick={() => document.getElementById('step-2-2')?.scrollIntoView({ block: 'start', behavior: 'smooth' })}>
-                {done.overlay ? '✓ ' : ''}2-2 昔の地図・写真と重ねる
+                {done.overlay ? "✓ " : ""}手順3 昔の地図・写真と重ねる
               </Button>
             </div>
             {!focus ? (
               <Alert><MapPin className="size-4" /><AlertTitle>先に地名を選んでください</AlertTitle>
                 <AlertDescription>
-                  <Button size="sm" variant="outline" onClick={() => setTab('pick')}>1 地名の一覧へ</Button>
+                  <Button size="sm" variant="outline" onClick={() => setTab('pick')}>地名の一覧へ（手順1）</Button>
                 </AlertDescription></Alert>
             ) : (
               <>
@@ -588,7 +596,7 @@ export default function BizIdeaApp() {
                 </Card>
 
                 <Card id="step-2-1" className="scroll-mt-2">
-                  <CardHeader className="pb-2"><CardTitle className="text-base">2-1 伝承碑と突き合わせる（近くの自然災害伝承碑）</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">伝承碑と突き合わせる（手順2・近くの自然災害伝承碑）</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-1">
                       <Label htmlFor="radius-select">伝承碑を探す範囲</Label>
@@ -596,7 +604,7 @@ export default function BizIdeaApp() {
                         options={[500, 1000, 2000, 5000].map((r) => [String(r), `半径 ${fmtDist(r)}`])} />
                     </div>
                     <KindsField idPrefix="k-check" value={form.claimedKinds} onChange={(v) => set('claimedKinds', v)} />
-                    <div aria-live="polite" className="space-y-2">
+                    <div ref={setResultEl} id="step-2-1-result" aria-live="polite" className="scroll-mt-28 space-y-2">
                       {!form.claimedKinds.length ? (
                         <div className="rounded-md border p-3 text-sm">語られている災害の種類が未選択です。上で選ぶと、碑の種類と突き合わせます。</div>
                       ) : cross.level === 'clue' ? (
@@ -635,8 +643,8 @@ export default function BizIdeaApp() {
               </>
             )}
 
-            <Card id="step-2-2" className="scroll-mt-2">
-              <CardHeader className="pb-2"><CardTitle className="text-base">2-2 昔の地図・写真と重ねる（国土地理院）</CardTitle></CardHeader>
+            <Card id="step-2-2" className="scroll-mt-28">
+              <CardHeader className="pb-2"><CardTitle className="text-base">昔の地図・写真と重ねる（手順3・国土地理院）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1.5 rounded-md border-2 border-black bg-yellow-50 p-2">
                   <p className="text-sm font-bold">
@@ -688,7 +696,7 @@ export default function BizIdeaApp() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">2-2 で見て気づいたこと（自分の目で見て選ぶ）</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">見て気づいたこと（手順3・自分の目で見て選ぶ）</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {CHECKS.map((c, i) => (
                   <label key={c} htmlFor={`chk-${i}`} className="flex items-start gap-2 text-sm">
@@ -701,7 +709,7 @@ export default function BizIdeaApp() {
                   </label>
                 ))}
                 <Note>ここで選ぶのは、人が地図を見て気づいたことの記録です。当てはまらなくても、話が誤りという意味ではありません。</Note>
-                <Button onClick={() => goTab('rec')} disabled={!focus}>3 聞き取りを記録する</Button>
+                <Button onClick={() => goTab('rec')} disabled={!focus}>聞き取りを記録する（手順4）へ</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -710,12 +718,16 @@ export default function BizIdeaApp() {
           <TabsContent value="rec" className="space-y-3">
             {!focus ? (
               <Alert><MapPin className="size-4" /><AlertTitle>先に地名を選ぶか、地図で位置を指定してください</AlertTitle>
-                <AlertDescription><Button size="sm" variant="outline" onClick={() => setTab('pick')}>1 地名の一覧へ</Button></AlertDescription></Alert>
+                <AlertDescription><Button size="sm" variant="outline" onClick={() => setTab('pick')}>地名の一覧へ（手順1）</Button></AlertDescription></Alert>
             ) : (
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">3 聞き取りを記録して地図に残す</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-base">聞き取りを記録して地図に残す（手順4）</CardTitle></CardHeader>
                 <CardContent>
                   <form onSubmit={submit} noValidate className="space-y-3">
+                    <div className="rounded-md border-2 border-black bg-yellow-50 p-2 text-sm" aria-label="入力項目">
+                      <p><b>必須</b>: 地名／聞き取った話／話の出典／位置（地名を選ぶか、地図で指定済み）</p>
+                      <p className="text-xs text-muted-foreground"><b>任意</b>: 語り手・聞いた日・種類・語られている災害・確からしさ。公開範囲・利用条件は初期値のまま保存できます（公開範囲は確認のときに決めます）。</p>
+                    </div>
                     <FlowDiagram current="record" />
                     <Note>この端末のブラウザ（localStorage）にだけ保存し、サーバーには送りません。実在の人の話を入力する場合は本人の同意を得てください（デモでは架空の内容を入力してください）。新しい記録は必ず<b>「未確認」</b>から始まります。</Note>
                     {focus.place && (
@@ -766,9 +778,9 @@ export default function BizIdeaApp() {
             <FlowDiagram current={records.length === 0 ? 'record' : publishableCount > 0 ? 'publish' : 'verify'} />
             {savedRec && <SavedNotice rec={savedRec} onConfirm={() => openConfirm(savedRec)} onList={(a) => goTab('list', a)} onNext={nextRecord} />}
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base">残した記録（{records.length}件）</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base">残した記録の確認・公開範囲（手順5・{records.length}件）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                {!records.length && <Note>まだありません。「3 記録」で記録すると、ここに並びます。</Note>}
+                {!records.length && <Note>まだありません。「記録」タブで記録すると、ここに並びます。</Note>}
                 <ul className="space-y-2">
                   {records.map((r) => (
                     <li
@@ -823,8 +835,8 @@ export default function BizIdeaApp() {
               </CardContent>
             </Card>
 
-            <Card id="step-publish" className="scroll-mt-2">
-              <CardHeader className="pb-2"><CardTitle className="text-base">書き出し（GeoJSON）</CardTitle></CardHeader>
+            <Card id="step-publish" className="scroll-mt-28">
+              <CardHeader className="pb-2"><CardTitle className="text-base">公開分を書き出す（手順6・GeoJSON）</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="space-y-2 rounded-md border-2 border-[#0072B2] p-3">

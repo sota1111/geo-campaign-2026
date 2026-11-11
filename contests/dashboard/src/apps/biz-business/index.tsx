@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  DAYS, DAY_LABEL, PERIODS, PERIOD_LABEL, baseline, groupByNearestStop, meshBounds, needLevel, pct, pickSmaller, planLoss,
+  DAYS, DAY_LABEL, PERIODS, PERIOD_LABEL, baseline, groupByNearestStop, meshBounds, needLevel, pct, pickSmaller, find65Reversal, planLoss,
   toCsvText, type Day, type Period, type RegionData, type WhatIf,
 } from './lib'
 import { buildCsvRows, type PlanView } from './csv'
@@ -68,6 +68,8 @@ export default function App() {
   const [lastAction, setLastAction] = useState('')
   const [condOk, setCondOk] = useState(false)
   const [planOk, setPlanOk] = useState<boolean[]>([false, false, false])
+  const [viewed, setViewed] = useState<Record<string, boolean>>({})
+  const [routeQ, setRouteQ] = useState<string[]>(['', '', ''])
 
   useEffect(() => {
     fetchData<{ regions: RegionInfo[] }>(APP, 'index.json').then((i) => setRegions(i.regions)).catch((e) => setError(String(e.message)))
@@ -135,6 +137,21 @@ export default function App() {
   const verdict = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])) : null
   const smaller = verdict ? verdict.winners.map((i) => ks[i]) : []
   const firm = verdict?.firm ?? false
+  // 条件カード・案カードが画面の中ほどに入ったら「見た」とみなす
+  const ready = !!data && !!calc
+  useEffect(() => {
+    if (!ready) return
+    const ids = ['biz-cond', 'biz-plan-0', 'biz-plan-1']
+    const io = new IntersectionObserver(
+      (es) => {
+        const hit = es.filter((e) => e.isIntersecting).map((e) => e.target.id)
+        if (hit.length) setViewed((v) => (hit.every((h) => v[h]) ? v : { ...v, ...Object.fromEntries(hit.map((h) => [h, true])) }))
+      },
+      { rootMargin: '-5% 0px -35% 0px' },
+    )
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el) })
+    return () => io.disconnect()
+  }, [ready])
   const canJudge = ks.length >= 2 && !!calc
   useEffect(() => {
     if (!canJudge || seen) return
@@ -148,9 +165,20 @@ export default function App() {
   const lostText = (l: { lost: number; exact: boolean }) => `${l.exact ? '' : '少なくとも'}${n(l.lost)}人`
   const lb = (exact: boolean) => (exact ? '' : '少なくとも')
 
+  const fl0 = data ? data.facility_labels[data.facility_order[0]] : ''
+  // 総数では影響が小さい案と、65歳以上で少ない案が逆転する場合の注意文
+  const reversalText = (() => {
+    if (!calc || ks.length < 2) return ''
+    const rv = find65Reversal(ks.map((k) => calc.results[k][0]))
+    if (!rv) return ''
+    const w0 = ks[rv.winner], j = ks[rv.other]
+    const wl = calc.results[w0][0], jl = calc.results[j][0]
+    return `65歳以上では${plans[j].name}の方が少ない（${plans[j].name} ${lb(jl.exact)}${n(jl.lost65)}人 対 ${plans[w0].name} ${lb(wl.exact)}${n(wl.lost65)}人）。総数では${plans[w0].name}の方が影響が小さい案ですが、${fl0}へ行けなくなる65歳以上に配慮する場合は注意してください。`
+  })()
+
   const sentences = useMemo(() => {
     if (!data || !calc) return []
-    return ks.map((k) => {
+    const base = ks.map((k) => {
       const parts = data.facility_order.map((fk, fi) => {
         const l = calc.results[k][fi]
         const top = l.groups[0]
@@ -158,8 +186,9 @@ export default function App() {
       })
       return `${plans[k].name}（${plans[k].routes.map(routeFull).join('・')}を廃止）: ${condText}で、${parts.join('。')}。`
     })
+    return reversalText ? [...base, reversalText] : base
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, calc, plans, condText])
+  }, [data, calc, plans, condText, reversalText])
 
   const mapLayers = useMemo<MapLayer[]>(() => {
     if (!data || !calc || !ks.length) return []
@@ -219,10 +248,11 @@ export default function App() {
         firm ? '確定' : '暫定（下限値どうしの比較を含む）',
       ])
     }
+    if (reversalText) rows.splice(7, 0, ['注意（65歳以上）', reversalText])
     return rows
   }
   const previewRows = useMemo(() => makeRows(), // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, calc, plans, condText, smaller.join(','), firm])
+    [data, calc, plans, condText, smaller.join(','), firm, reversalText])
   const exportCsv = () => {
     if (!data || !calc || !ks.length) {
       toast.error('止める路線を選んだ案がありません。「① 見直し案をつくる」で路線を選んでください。')
@@ -253,10 +283,10 @@ export default function App() {
 
   const go = (id: string, block: ScrollLogicalPosition = 'start') => (document.getElementById(id) ?? document.getElementById('biz-conclusion'))?.scrollIntoView({ behavior: 'smooth', block })
   const steps = [
-    { id: 'cond', title: '地域と条件を確かめる', hint: '徳島市周辺・平日朝8時・20分以内でよければ「この条件でよい」', done: condOk && !!data, onSelect: () => go('biz-cond') },
-    { id: 'planA', title: '案Aを作る', hint: '止める路線を選ぶ（例が入っています）', done: planOk[0] && (plans[0]?.routes.length ?? 0) > 0, onSelect: () => go('biz-plan-0') },
-    { id: 'planB', title: '案Bを作る', hint: '複数の路線を同時に止めたい場合は路線を足す', done: planOk[1] && (plans[1]?.routes.length ?? 0) > 0, onSelect: () => go('biz-plan-1') },
-    { id: 'verdict', title: 'どちらの影響が小さいか確かめる', hint: '結論（確定／暫定、下限値の意味）を読む', done: ks.length >= 2 && seen && planOk[0] && planOk[1], onSelect: () => go('biz-verdict', 'center') },
+    { id: 'cond', title: '地域と条件を確かめる', hint: '徳島市周辺・平日朝8時・20分以内。この欄を見れば済になります', done: (condOk || !!viewed['biz-cond']) && !!data, onSelect: () => go('biz-cond') },
+    { id: 'planA', title: '案Aを作る', hint: '止める路線を選ぶ（例が入っています。見るだけでも済）', done: (planOk[0] || !!viewed['biz-plan-0']) && (plans[0]?.routes.length ?? 0) > 0, onSelect: () => go('biz-plan-0') },
+    { id: 'planB', title: '案Bを作る', hint: '複数の路線を同時に止めたい場合は路線を足す', done: (planOk[1] || !!viewed['biz-plan-1']) && (plans[1]?.routes.length ?? 0) > 0, onSelect: () => go('biz-plan-1') },
+    { id: 'verdict', title: 'どちらの影響が小さいか確かめる', hint: '結論（確定／暫定、下限値の意味）を読む', done: ks.length >= 2 && seen && (planOk[0] || !!viewed['biz-plan-0']) && (planOk[1] || !!viewed['biz-plan-1']), onSelect: () => go('biz-verdict', 'center') },
     { id: 'export', title: '会議資料用に書き出す', hint: 'CSV（表）または文章コピー', done: exported, onSelect: () => { exportBtn.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); exportBtn.current?.focus() } },
   ]
   useAppSteps(steps)
@@ -276,7 +306,6 @@ export default function App() {
       ]
     : []
 
-  const fl0 = data ? data.facility_labels[data.facility_order[0]] : ''
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -348,8 +377,8 @@ export default function App() {
           <p className="text-xs text-muted-foreground">
             「行ける」= その時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可）→徒歩で、許容時間内に施設の近くへ着けること（待ち時間込み）。歩いて着ける地区は路線を止めても影響を受けません。
           </p>
-          <Button size="sm" variant={condOk ? 'outline' : 'default'} onClick={() => { setCondOk(true); toast.success(`この条件で進めます: ${condText}`) }}>
-            {condOk ? '条件を確認済み（変更しても構いません）' : 'この条件でよい（初期値のまま進める）'}
+          <Button size="sm" variant="ghost" className="text-xs text-muted-foreground" onClick={() => { setCondOk(true); toast.success(`この条件で進めます: ${condText}`) }}>
+            {condOk ? '条件を確認済み' : '（任意）この条件で確認済みにする'}
           </Button>
         </CardContent>
       </Card>
@@ -384,21 +413,35 @@ export default function App() {
                         </Badge>
                       )) : <span className="text-xs text-muted-foreground">止める路線が未選択です（現状と同じ）</span>}
                     </div>
-                    <Select value="" onValueChange={(v) => { updatePlan(k, (q) => ({ ...q, routes: [...q.routes, +v] })); setSelPlan(k) }}>
-                      <SelectTrigger className="w-full" aria-label={`案${PLAN_IDS[k]}に止める路線を追加`}>
-                        <SelectValue placeholder="＋ 止める路線を追加…" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        {calc.selectable.filter((r) => !p.routes.includes(r)).map((r) => (
-                          <SelectItem key={r} value={String(r)}>
-                            {routeFull(r)}（平日{data.routes[r][3]}本・休日{data.routes[r][4]}本｜この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {(() => {
+                      const q = routeQ[k].trim()
+                      const opts = calc.selectable.filter((r) => !p.routes.includes(r) && (!q || routeFull(r).includes(q)))
+                      return (
+                        <div className="space-y-1.5">
+                          <Input value={routeQ[k]} placeholder="路線名・事業者名で絞り込み（例: 鳴門）" aria-label={`案${PLAN_IDS[k]}の路線を絞り込み`}
+                            onChange={(e) => setRouteQ((qs) => qs.map((v, i) => (i === k ? e.target.value : v)))} />
+                          <select value="" aria-label={`案${PLAN_IDS[k]}に止める路線を追加`}
+                            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                            onChange={(e) => {
+                              if (!e.target.value) return
+                              const r = +e.target.value
+                              updatePlan(k, (qq) => ({ ...qq, routes: [...qq.routes, r] }))
+                              setSelPlan(k)
+                              setRouteQ((qs) => qs.map((v, i) => (i === k ? '' : v)))
+                            }}>
+                            <option value="">＋ 止める路線を追加…（{opts.length}路線）</option>
+                            {opts.map((r) => (
+                              <option key={r} value={String(r)}>
+                                {routeFull(r)}（平日{data.routes[r][3]}本・休日{data.routes[r][4]}本｜この路線だけを止めると{fl0}へ行けなくなる人 {n(calc.single.get(r)!)}人）
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )
+                    })()}
                     {p.routes.length > 0 && (
-                      <Button size="sm" variant={planOk[k] ? 'outline' : 'default'} className="w-full" onClick={() => updatePlan(k, (q) => q)}>
-                        {planOk[k] ? `${p.name}を確認済み` : '例のままこの案でよい'}
+                      <Button size="sm" variant="ghost" className="w-full text-xs text-muted-foreground" onClick={() => updatePlan(k, (q) => q)}>
+                        {planOk[k] ? `${p.name}を確認済み` : '（任意）この案で確認済みにする'}
                       </Button>
                     )}
                   </div>
@@ -453,6 +496,13 @@ export default function App() {
                 </div>
               ) : (
                 <Alert><Info className="size-4" /><AlertDescription>比較するには、もう1つの案にも路線を選んでください。</AlertDescription></Alert>
+              )}
+              {reversalText && (
+                <Alert className="border-2 border-foreground/70" role="alert">
+                  <AlertTriangle className="size-4" />
+                  <AlertTitle>65歳以上では結果が逆になります</AlertTitle>
+                  <AlertDescription className="text-sm font-medium text-foreground">{reversalText}</AlertDescription>
+                </Alert>
               )}
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {ks.map((k) => {

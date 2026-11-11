@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import {
-  currentStepIndex, stepProgress, stepStatuses, useRegisteredSteps, type AppStep,
+  currentStepIndex, progressLabel, stepProgress, stepStatuses, useRegisteredSteps, type AppStep,
 } from '@/components/shared/AppSteps'
 import { cn } from '@/lib/utils'
 
@@ -12,7 +12,7 @@ function ProgressLine({ steps }: { steps: Steps }) {
   return (
     <div className="space-y-1" data-testid="steps-progress">
       <p className="text-xs font-medium">
-        {p.done}/{p.total} 完了
+        {progressLabel(steps as AppStep[])}
       </p>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div className="h-full bg-primary transition-all" style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%` }} />
@@ -107,7 +107,7 @@ export function StepsTopbar() {
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
       >
         <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
-        <span className="shrink-0 text-xs text-muted-foreground">{p.done}/{p.total} 完了</span>
+        <span className="max-w-[45%] shrink-0 text-right text-xs leading-tight text-muted-foreground">{progressLabel(steps as AppStep[])}</span>
         <ChevronDown className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (

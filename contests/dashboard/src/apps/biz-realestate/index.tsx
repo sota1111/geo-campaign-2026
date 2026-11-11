@@ -13,12 +13,13 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { fetchData } from '@/lib/data'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { cn } from '@/lib/utils'
 import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
-  buildDigest, buildSheet, glossaryFor, pickSearchHit, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
+  buildDigest, buildSheet, GLOSSARY, glossaryFor, pickSearchHit, SAMPLE_ANSWERS, SAMPLE_FACTS, summarize,
   type Answers, type AreaData, type Facts, type Tone, type Zone,
 } from './lib'
 
@@ -41,6 +42,37 @@ const QUESTIONS: { key: keyof Answers; legend: string; options: [string, string]
   { key: 'road', legend: '道路に接していますか', options: [['不明', '分からない'], ['あり', '接している'], ['なし', '接していない・不明確']] },
   { key: 'registered', legend: '相続登記は済んでいますか', options: [['不明', '分からない'], ['済', '済んでいる'], ['未', 'まだ']] },
 ]
+const TERM_RE = new RegExp('(' + GLOSSARY.map((g) => g.re.source).join('|') + ')')
+function gotoGlossary() {
+  document.getElementById('rs-glossary')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+/** 専門用語に、その場の説明（ツールチップ。タップ・クリックで「用語の説明」欄へ）を付ける */
+function Term({ word }: { word: string }) {
+  const g = GLOSSARY.find((x) => x.re.test(word))
+  if (!g) return <>{word}</>
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="button"
+          tabIndex={0}
+          className="cursor-help underline decoration-dotted underline-offset-2"
+          aria-label={`${word}の説明：${g.text}`}
+          onClick={gotoGlossary}
+          onKeyDown={(e) => { if (e.key === 'Enter') gotoGlossary() }}
+        >
+          {word}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64 text-xs">
+        <b>{g.term}</b>＝{g.text}（クリックで下の「用語の説明」へ）
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+function Annotated({ text }: { text: string }) {
+  return <>{text.split(TERM_RE).map((p, i) => (i % 2 === 1 ? <Term key={i} word={p} /> : p))}</>
+}
 const SHORT: Record<string, string> = { building: '建物', landUse: '地目', road: '道路への接し方', registered: '相続登記' }
 const BASIS = { data: 'データ', answer: 'あなたの回答による', none: 'データなし' } as const
 
@@ -183,15 +215,14 @@ export default function App() {
     setHit(null)
     setBusy(true)
     setAddress('loading')
-    setStatus('公開データを集めています…（終わると自動で1枚シートへ移動します）')
+    setStatus('公開データを集めています…')
     const [f, addr] = await Promise.all([analyze(data, lon, lat, label), reverseGeocode(lon, lat)])
     if (mine !== seq.current) return
     setBusy(false)
-    pendingScroll.current = true
     setFacts(f)
     setAddress(addr)
     const bits = f.inArea ? '' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。'
-    setStatus(`位置を指定しました。${bits}`)
+    setStatus(`位置を指定しました。${bits}次は、地図では分からないことに答える（手順2・任意）か、下の「1枚シートを見る」を押してください。`)
   }, [data])
 
   const onMapClick = useCallback((ll: { lng: number; lat: number }) => { void choose(ll.lng, ll.lat) }, [choose])
@@ -384,6 +415,11 @@ export default function App() {
                   </ToggleGroup>
                 </div>
               ))}
+              <p className="rounded-md bg-muted/50 p-2 text-xs" data-testid="answers-summary" role="status">
+                {facts
+                  ? `回答はシートに反映されます（いま: ${QUESTIONS.map((q) => `${SHORT[q.key as string]} ${q.options.find((o) => o[0] === (answers[q.key] ?? '不明'))?.[1] ?? '分からない'}`).join('／')}）。選ぶと、下のシートがすぐ更新されます。`
+                  : '土地の位置を決めると、ここに回答の反映状況が出ます。'}
+              </p>
             </CardContent>
           </Card>
 
@@ -401,7 +437,7 @@ export default function App() {
                   {keyRows.map((r) => (
                     <div key={r.key} className="flex gap-2 py-0.5">
                       <dt className="w-28 shrink-0 font-medium">{r.label}</dt>
-                      <dd className="min-w-0 flex-1">{r.value}</dd>
+                      <dd className="min-w-0 flex-1"><Annotated text={r.value} /></dd>
                     </div>
                   ))}
                   <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={scrollToSheet}>下の1枚シートを見る</Button>
@@ -431,7 +467,7 @@ export default function App() {
               {digest.length > 0 && (
                 <section aria-label="まず確認すること" data-testid="digest" className="rounded-md border-2 border-sky-700 bg-sky-50 p-2 print:border print:bg-white print:p-1">
                   <h3 className="text-sm font-bold print:text-[9pt]">まず確認すること（要約）</h3>
-                  <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{digest.map((d) => <li key={d}>{d}</li>)}</ul>
+                  <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{digest.map((d) => <li key={d}><Annotated text={d} /></li>)}</ul>
                 </section>
               )}
               <section aria-label="あなたの回答" data-testid="answers" className="rounded-md border p-2 text-sm print:p-1 print:text-[7.5pt]">
@@ -466,7 +502,7 @@ export default function App() {
                         <T.icon className={cn('mt-0.5 size-4 shrink-0 print:size-3', T.cls)} aria-hidden />
                         <span className="sr-only">{T.sr}：</span>
                         <dt className="w-24 shrink-0 font-medium sm:w-32 print:w-20">{r.label}</dt>
-                        <dd className="min-w-0 flex-1">{r.value}</dd>
+                        <dd className="min-w-0 flex-1"><Annotated text={r.value} /></dd>
                       </div>
                     )
                   })}
@@ -487,9 +523,9 @@ export default function App() {
                           <li key={i} className="text-sm print:text-[7.5pt]">
                             <span className="block">
                               <span className={cn('mr-1 inline-block rounded border px-1 text-[11px] print:text-[6.5pt]', it.basis === 'answer' && 'border-2 border-orange-700 bg-orange-50 font-bold print:bg-white')}>{BASIS[it.basis]}</span>
-                              {it.fact}
+                              <Annotated text={it.fact} />
                             </span>
-                            <span className="block font-medium text-sky-900 print:text-black">→ {it.ask}（{it.who}）</span>
+                            <span className="block font-medium text-sky-900 print:text-black">→ <Annotated text={it.ask} />（{it.who}）</span>
                           </li>
                         ))}
                       </ul>
@@ -501,7 +537,7 @@ export default function App() {
               <div className="grid gap-3 md:grid-cols-2 print:grid-cols-2 print:gap-1.5">
                 <section>
                   <h3 className="text-sm font-bold print:text-[9pt]">データにない項目（相談先で確かめる）</h3>
-                  <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{sheet.missing.map((m) => <li key={m}>{m}</li>)}</ul>
+                  <ul className="list-disc pl-5 text-sm print:text-[7.5pt]">{sheet.missing.map((m) => <li key={m}><Annotated text={m} /></li>)}</ul>
                 </section>
                 <section>
                   <h3 className="text-sm font-bold print:text-[9pt]">別の公的サイトで確認する項目（この画面では取得していません）</h3>
@@ -510,7 +546,7 @@ export default function App() {
               </div>
 
               {glossary.length > 0 && (
-                <section aria-label="用語の説明" data-testid="glossary">
+                <section id="rs-glossary" className="scroll-mt-24" aria-label="用語の説明" data-testid="glossary">
                   <h3 className="text-sm font-bold print:text-[9pt]">用語の説明</h3>
                   <ul className="text-xs print:text-[6.5pt]">{glossary.map((g) => <li key={g.term} className="print:mr-2 print:inline"><b>{g.term}</b>＝{g.text}</li>)}</ul>
                 </section>

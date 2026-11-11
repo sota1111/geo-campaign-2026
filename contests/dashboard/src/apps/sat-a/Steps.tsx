@@ -185,7 +185,7 @@ export function Step1({
           <p className="text-xs text-muted-foreground">第{round}回の順位ができました。続けて、この順位で地中レーダの対象をもう一度選べます。</p>
         )}
         <Button className="w-full" onClick={onNext} data-testid="to2">
-          {round > 1 ? `第${round}回の候補で、もう一度選ぶ` : '次へ：確かめる区間を選ぶ'} <ArrowRight />
+          {round > 1 ? `第${round}回の候補で、もう一度選ぶ（上の帯のボタンと同じ）` : '次へ：確かめる区間を選ぶ'} <ArrowRight />
         </Button>
       </CardContent>
     </Card>

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import {
-  AppStepsProvider, currentStepIndex, stepProgress, stepStatuses, useAppSteps, useRegisteredSteps, type AppStep,
+  AppStepsProvider, currentStepIndex, progressLabel, stepProgress, stepStatuses, useAppSteps, useRegisteredSteps, type AppStep,
 } from '@/components/shared/AppSteps'
 
 const s = (id: string, done: boolean, optional = false): AppStep => ({ id, title: id, done, optional })
@@ -21,6 +21,14 @@ describe('AppSteps 判定', () => {
     const steps = [s('a', true), s('o', false, true)]
     expect(currentStepIndex(steps)).toBe(-1)
     expect(stepProgress(steps).allDone).toBe(true)
+  })
+})
+
+describe('progressLabel', () => {
+  it('任意ありは任意を除外していることを明示、なしは簡潔', () => {
+    const steps = [s('a', true), s('b', true), s('c', true), s('d', false), s('e', false), s('o', false, true)]
+    expect(progressLabel(steps)).toBe('必須 5 のうち 3 完了（任意 1）')
+    expect(progressLabel(steps.slice(0, 5))).toBe('5 のうち 3 完了')
   })
 })
 

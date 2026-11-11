@@ -206,3 +206,20 @@ export function pickSmaller(losses: { lost: number; lost65: number; exact: boole
   })
   return { winners: best, firm }
 }
+
+/**
+ * 総数で影響が小さい案（勝ち案が1つのときのみ）より、65歳以上が少ない案があれば {winner, other}（losses の添字）を返す。
+ * 複数あれば65歳以上が最も少ない案。losses は案ごとの「病院へ行けなくなる人」。
+ */
+export function find65Reversal(
+  losses: { lost: number; lost65: number; exact: boolean }[],
+): { winner: number; other: number } | null {
+  const v = pickSmaller(losses)
+  if (losses.length < 2 || v.winners.length !== 1) return null
+  const w = v.winners[0]
+  let j = -1
+  losses.forEach((l, i) => {
+    if (i !== w && l.lost65 < losses[w].lost65 && (j < 0 || l.lost65 < losses[j].lost65)) j = i
+  })
+  return j < 0 ? null : { winner: w, other: j }
+}

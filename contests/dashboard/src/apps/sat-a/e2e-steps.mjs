@@ -89,7 +89,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await shot(`${label}-s1-pick.png`)
   await pick('scan'); await clickSel('[data-testid=scan]'); r.log.push(['scan', await stat()])
   await pick('apply'); await clickSel('[data-testid=apply]'); r.log.push(['apply', await stat()])
-  await pick('round2'); r.round = await txt('round'); await clickSel('[data-testid=rank-row]'); r.log.push(['round2', await stat()])
+  await pick('round2'); r.round = await txt('round'); r.log.push(['round2', await stat()])
   await shot(`${label}-s2-final.png`)
   r.final = await stat()
   if (mobile) await clickSel('[data-testid=steps-topbar] > button')

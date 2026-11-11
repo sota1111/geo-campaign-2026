@@ -63,6 +63,13 @@ describe('合成データ', () => {
     // 同数の下限値と確定値 → 暫定
     expect(L.pickSmaller([e(2190, 1, false), e(2190, 797)]).firm).toBe(false)
   })
+  it('65歳以上の逆転: 総数で少ない案より65歳以上が少ない案があれば検出する', () => {
+    const e = (lost: number, lost65: number, exact = true) => ({ lost, lost65, exact })
+    expect(L.find65Reversal([e(100, 50), e(120, 30)])).toEqual({ winner: 0, other: 1 })
+    expect(L.find65Reversal([e(100, 30), e(120, 50)])).toBeNull()
+    expect(L.find65Reversal([e(100, 50), e(100, 50)])).toBeNull()
+    expect(L.find65Reversal([e(100, 50)])).toBeNull()
+  })
   it('CSVは数式として解釈される先頭文字を無効化する', () => {
     expect(L.csvCell('=1+1')).toBe("'=1+1")
     expect(L.csvCell(-5)).toBe('-5')

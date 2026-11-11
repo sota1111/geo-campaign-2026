@@ -63,7 +63,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   logs.length = 0
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300)
-  await send('Page.navigate', { url: `${base}#/apps/sat-a` }); await sleep(3500)
+  await send('Page.navigate', { url: `${base}apps/sat-a/` }); await sleep(3500)
   r.top1 = await txt('m-top'); r.count = await txt('m-count'); r.w0 = await txt('w-out')
   await fullshot(`${label}-1-step1.png`)
   await ev(`document.querySelector('[role=slider]').focus()`)

@@ -33,7 +33,15 @@ export function stepProgress(steps: AppStep[]) {
   return { done, total: req.length, allDone: req.length > 0 && done === req.length }
 }
 
-type PublicStep = Omit<AppStep, 'onSelect'>
+/** 進捗の表示文言。任意を除外して数えていることが分かるようにする。
+ *  任意あり: 「必須 5 のうち 3 完了（任意 1）」／任意なし: 「5 のうち 3 完了」 */
+export function progressLabel(steps: Pick<AppStep, 'done' | 'optional'>[]): string {
+  const p = stepProgress(steps as AppStep[])
+  const opt = steps.filter((s) => s.optional).length
+  return opt > 0 ? `必須 ${p.total} のうち ${p.done} 完了（任意 ${opt}）` : `${p.total} のうち ${p.done} 完了`
+}
+
+type PublicStep =Omit<AppStep, 'onSelect'>
 interface Ctx {
   steps: PublicStep[]
   register: (steps: AppStep[]) => void

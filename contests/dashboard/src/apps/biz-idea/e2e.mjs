@@ -76,12 +76,16 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   console.log(label, await statuses())
   // 2 突き合わせ
   console.log(label, 'step cross', await stepClick('cross'), await activeTab())
+  await sleep(600)
+  const top = (id) => ev(`Math.round(document.getElementById('${id}').getBoundingClientRect().top)`)
   let t = await body()
-  console.log(label, '手がかりあり:', /手がかりあり/.test(t))
-  console.log(label, await statuses())
+  console.log(label, '手がかりあり:', /手がかりあり/.test(t), '| 2-1結果の位置 top=', await top('step-2-1-result'), '2-2 top=', await top('step-2-2'), 'innerHeight', await ev('innerHeight'))
+  console.log(label, '手順2のみ済（3は未）:', await statuses())
   await shot(`${label}-2-cross`)
   // 3 重ねる
   console.log(label, 'step overlay', await stepClick('overlay'))
+  await sleep(500)
+  console.log(label, '手順3押下後 2-2 top=', await top('step-2-2'), '状態:', await statuses())
   console.log(label, await clickText('button', '明治期の低湿地（洪水の話なら）'))
   await sleep(1800)
   console.log(label, await statuses())
@@ -93,7 +97,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   console.log(label, await clickText('button[type=submit]', '記録して地図に残す'))
   await sleep(1000)
   t = await body()
-  console.log(label, '未確認:', /「未確認」の記録として保存しました/.test(t))
+  console.log(label, '未確認:', /「未確認」の記録として保存しました/.test(t), '必須一覧:', /必須: 地名／聞き取った話／話の出典／位置/.test(t), '保存後 地名保持:', await ev(`document.getElementById('f-name').value`), '話・出典・語り手クリア:', await ev(`['f-story','f-basis','f-teller'].map(i=>document.getElementById(i).value==='').join(',')`), 'タブ名:', await ev(`[...document.querySelectorAll('[role=tab]')].map(x=>x.textContent).join('|')`))
   console.log(label, await statuses())
   await shot(`${label}-4-saved`)
   // 5 確認して公開範囲

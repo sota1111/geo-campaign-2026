@@ -39,6 +39,10 @@ export default function App() {
   const [prev, setPrev] = useState<PrevInfo | null>(null)
   const [viewedTop, setViewedTop] = useState(false)
   const [wTouched, setWTouched] = useState(false)
+  const [viewedR2, setViewedR2] = useState(false)
+  useEffect(() => {
+    if (round > 1 && step === '1') setViewedR2(true)
+  }, [round, step])
   const stepperRef = useRef<HTMLDivElement>(null)
   const firstStep = useRef(true)
   useEffect(() => {
@@ -161,8 +165,8 @@ export default function App() {
     { id: 'scan', title: '走査結果を見る', hint: '結果は乱数のシミュレーション', done: scanned, onSelect: () => goto('3') },
     { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', done: round > 1, onSelect: () => goto('3') },
     {
-      id: 'round2', title: '第2回の順位を確かめる', hint: '対比表の変化を見て、「点数の高い順」表の行をタップ',
-      done: round > 1 && viewedTop && focus !== null, onSelect: () => goto('1'),
+      id: 'round2', title: '第2回の順位を確かめる', hint: '段階1の順位表と、第1回との対比表を見る',
+      done: round > 1 && viewedR2, onSelect: () => goto('1'),
     },
   ])
 
