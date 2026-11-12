@@ -241,3 +241,15 @@ test('徳島市の南端: 取得範囲が市の最南のメッシュ（北緯33.
   const south = data.pop.meshes.filter((m) => m.sc === '36201').reduce((a, m) => Math.min(a, m.lat), 90);
   assert.ok(south < 33.97, String(south));
 });
+
+test('出典と原典の注意: 国土数値情報の出典（サイト名・URL・加工）と、津波・液状化の注意が画面とシートに出る', () => {
+  assert.ok(Lib.NLNI_SOURCE.includes('国土数値情報ダウンロードサイト') && Lib.NLNI_SOURCE.includes('https://nlftp.mlit.go.jp/ksj/') && Lib.NLNI_SOURCE.includes('加工'));
+  assert.ok(Lib.TSUNAMI_NOTE.includes('想定よりも大きく'));
+  assert.ok(Lib.LIQ_NOTE.includes('250mメッシュ') && Lib.LIQ_NOTE.includes('境界線'));
+  const hz = text(sheetOf(data, STATION).sections.find((x) => x.id === 'hazard'));
+  assert.ok(hz.includes('想定よりも大きく') && hz.includes('250mメッシュ'));
+  const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
+  assert.ok(app.includes('Lib.NLNI_SHORT') && app.includes('Lib.SCHOOL_FAC_NOTE'), 'シート末尾');
+  assert.ok(html.includes('id="nlni"') && html.includes('id="orignote"'), 'フッター');
+});

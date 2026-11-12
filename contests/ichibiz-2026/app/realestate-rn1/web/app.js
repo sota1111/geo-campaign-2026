@@ -178,7 +178,7 @@
     el.innerHTML =
       '<h3>' + esc(s.title) + '</h3>' +
       '<p class="meta">' + esc(where) + '　作成日: ' + new Date().toLocaleDateString('ja-JP') + '　取得データ: ' + esc(state.data.fetchedAt || '—') + ' 取得</p>' + body +
-      '<div class="fine"><p>' + esc(Lib.ATTRIBUTION) + '。取得日 ' + esc(state.data.fetchedAt || '—') + '。</p><p>' + esc(Lib.PROCESSED) + '。</p><p>' + esc(Lib.CREDIT) + '。</p><p>' + esc(Lib.RESPONSIBILITY) + '。</p>' +
+      '<div class="fine"><p>' + esc(Lib.ATTRIBUTION) + '。取得日 ' + esc(state.data.fetchedAt || '—') + '。</p><p>' + esc(Lib.PROCESSED) + '。</p><p>' + esc(Lib.NLNI_SHORT) + '。' + esc(Lib.SCHOOL_FAC_NOTE) + '</p><p>' + esc(Lib.CREDIT) + '。</p><p>' + esc(Lib.RESPONSIBILITY) + '。</p>' +
       '<p>区域は市が公表する図が正。' + esc(Lib.POP_NOTE) + '。</p></div>';
     $('printBtn').disabled = false;
   }
@@ -244,8 +244,8 @@
   }
   function runPending() { if (state.pending && state.data) { const p = state.pending; state.pending = null; choose(p.lon, p.lat); } }
   const App = window.App = { state, choose, render, last: null, ready: false };
-  load().then(() => { App.ready = true; renderStatus(); runPending(); $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE; render(); })
+  load().then(() => { App.ready = true; renderStatus(); runPending(); $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('nlni').textContent = Lib.NLNI_SOURCE; $('orignote').textContent = Lib.ORIG_NOTES; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE; render(); })
     .catch(() => { App.ready = true; $('status').textContent = 'データを読み込めませんでした。'; renderStatus(); });
-  $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE;
+  $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('nlni').textContent = Lib.NLNI_SOURCE; $('orignote').textContent = Lib.ORIG_NOTES; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE;
   render();
 })();

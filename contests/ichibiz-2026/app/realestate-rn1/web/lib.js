@@ -14,6 +14,15 @@
   const ATTRIBUTION = '出典：国土交通省　不動産情報ライブラリ（' + REINFOLIB_URL + '）';
   /** 加工した旨（利用したコンテンツの名称と、作成者が加工した旨） */
   const PROCESSED = '「都市計画決定GISデータ（立地適正化計画）」「国土数値情報（将来推計人口250mメッシュ・小学校区・学校・保育園・幼稚園等・医療機関・福祉施設・土砂災害警戒区域・洪水浸水想定区域・高潮浸水想定区域・津波浸水想定）」「地形区分に基づく液状化の発生傾向図」（いずれも国土交通省）をもとに、作成者が位置の照合・集計をして作成';
+  /** 国土数値情報の利用規約 第1条1)ア：出典（ダウンロードサイト名と当該ページのURL）と加工の旨 */
+  const NLNI_URL = 'https://nlftp.mlit.go.jp/ksj/';
+  const NLNI_SOURCE = '出典：国土交通省 国土数値情報ダウンロードサイト（' + NLNI_URL + '。各データのページは同サイトの「データ一覧」にある。例: 将来推計人口 ' + NLNI_URL + 'gml/datalist/KsjTmplt-mesh250r6.html、小学校区 ' + NLNI_URL + 'gml/datalist/KsjTmplt-A27-2023.html、洪水浸水想定区域 ' + NLNI_URL + 'gml/datalist/KsjTmplt-A31b-2024.html）。作成者が加工して表示している（不動産情報ライブラリのAPI経由で取得）';
+  const NLNI_SHORT = '出典：国土交通省 国土数値情報ダウンロードサイト（' + NLNI_URL + '）。作成者が加工';
+  /** 原典の注意書き（津波・液状化。シートの災害の節に出す） */
+  const TSUNAMI_NOTE = '津波浸水想定の注意（原典）: 実際の津波は、この想定よりも大きくなる場合がある。';
+  const LIQ_NOTE = '液状化の注意（原典）: 250mメッシュの傾向で、明確な境界線や、特定の地震・震度の危険度を示すものではない。約18m格子でも20m程度の精度はない。';
+  const SCHOOL_FAC_NOTE = '原典の注意: 小学校区は公式な資料ではなく、福祉施設の位置は正確ではない。';
+  const ORIG_NOTES = TSUNAMI_NOTE + LIQ_NOTE + '洪水は、支川の氾濫・高潮・内水による氾濫等を考慮していない想定である。' + SCHOOL_FAC_NOTE;
   /** API利用規約 第8条(1)：作成者の責任の所在と、国が作成・監修したものではない旨 */
   const RESPONSIBILITY = 'このアプリは作成者が開発・運営し、表示内容の責任は作成者が負います（国が作成・監修したものではありません）。表示は参考情報で、判断は利用者が行ってください（重要事項説明などの手続きには使えません）';
   /** 将来人口は推計である旨 */
@@ -409,6 +418,8 @@
     const yn = (v) => (v ? '想定区域の中にある' : '想定区域の外にある');
     if ('sediment' in h) sec.lines.push({ tag: 'XKT029', text: '土砂災害警戒区域: ' + yn(h.sediment) + '。このシートは警戒区域と特別警戒区域を区別していない（特別警戒区域は建築や開発に制限がかかる場合があるため、市のハザードマップで確かめる）。' });
     for (const spec of RASTER_HAZARDS) if (spec.part in h) sec.lines.push({ tag: spec.api, text: rasterHazardText(spec, data.hazard[spec.part], h[spec.part]) });
+    if ('tsunami' in h) sec.lines.push({ tag: '注意', text: TSUNAMI_NOTE });
+    if ('liquefaction' in h) sec.lines.push({ tag: '注意', text: LIQ_NOTE });
     sec.lines.push({ tag: '注意', text: '扱っていない災害: 内水氾濫、ため池、地すべり、急傾斜地、大規模盛土造成地、災害の履歴、津波の到達時間・地震の揺れ・火災。区域の外は安全を意味せず、同じ区域でも深さは場所で違う。安全・危険の判定ではない。' });
     sec.ask.push('市のハザードマップと避難場所を確認し、不動産会社に重要事項説明（水害ハザードマップ上の位置）を聞く。');
     return sec;
@@ -426,7 +437,7 @@
   }
 
   return {
-    REINFOLIB_URL, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, POP_NOTE, PLAN_PDF, PLAN_PAGE, WALK_RADIUS, POP_RADIUS, MESH_SNAP, APIS, PLAN_KUBUN, UNFETCHED, FAC_GROUPS,
+    REINFOLIB_URL, CREDIT, ATTRIBUTION, NLNI_SOURCE, NLNI_SHORT, TSUNAMI_NOTE, LIQ_NOTE, SCHOOL_FAC_NOTE, ORIG_NOTES, PROCESSED, RESPONSIBILITY, POP_NOTE, PLAN_PDF, PLAN_PAGE, WALK_RADIUS, POP_RADIUS, MESH_SNAP, APIS, PLAN_KUBUN, UNFETCHED, FAC_GROUPS,
     lonLatToWorld, worldToLonLat, haversine, inRing, inPolygon, inPolys, inBBox, fmtDist, decodeRaster, rleDecode, inRaster, levelAt, rasterAround, cellOn, pickYears, RASTER_HAZARDS, SMALL_POP, SMALL_CHILD,
     assemble, cityAt, planAt, sumMeshes, popAround, changePct, fmtPct, fmtNum, share, districtAt, facilitiesAround, collect, buildSheet,
   };
