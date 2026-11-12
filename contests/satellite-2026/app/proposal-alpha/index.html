@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配電線 樹木リスク台帳（コンセプトデモ）</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>配電線 樹木リスク台帳 <small>倒木で止まる配電を、衛星で先に見つける（コンセプトデモ）</small></h1>
+  <p class="banner" id="banner" role="note"><b>架空サンプルと実データが混在します。</b> ①〜④の配電線・区間・点数・停電戸数・現地確認はすべて<b>架空</b>で、実在の配電線や衛星解析結果ではありません。実データは⑤「実データ体験」の樹高マップだけ（Meta・WRI。東京都青梅市周辺）で、そこでの線は利用者が引く仮の線です。</p>
+  <details class="can" open>
+    <summary>衛星で言えること／言えないこと</summary>
+    <div class="cols">
+      <div><b>言える</b><ul><li>数百m単位の区間で、高い樹木が線の近くに多い所を相対的に絞る</li><li>台風・豪雨の前後で、植生の変化が大きい区間を絞る</li><li>事業者・市町村・府県が同じ区間地図を見て協議する材料にする</li></ul></div>
+      <div><b>言わない（言えない）</b><ul><li>個々の樹木と電線の離隔距離（樹高に数mの誤差があり、撮影時期も古い）</li><li>倒木の予知、事故の削減効果</li><li>樹種の判別、定期巡視・航空LiDAR・ドローンの代わり</li></ul></div>
+    </div>
+  </details>
+  <nav id="tabs" role="tablist" aria-label="画面の切り替え">
+    <button role="tab" data-view="ledger" aria-selected="true">① 優先地図（区間台帳）</button>
+    <button role="tab" data-view="plan" aria-selected="false">② 現地確認の計画</button>
+    <button role="tab" data-view="record" aria-selected="false">③ 現地確認の記録</button>
+    <button role="tab" data-view="tune" aria-selected="false">④ 点数の見直し</button>
+    <button role="tab" data-view="real" aria-selected="false">⑤ 実データ体験（樹高マップ）</button>
+  </nav>
+</header>
+<main>
+  <section id="v-ledger" class="view">
+    <div class="split">
+      <div class="pane">
+        <div class="filters">
+          <label>配電線 <select id="f-feeder"><option value="">すべて</option></select></label>
+          <label><input type="checkbox" id="f-sat"> 衛星・公開データ由来の点数だけで並べる</label>
+          <label><input type="checkbox" id="f-unvisited"> 未確認のみ</label>
+        </div>
+        <p id="count" class="note"></p>
+        <div class="tablewrap"><table id="ledger"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="pane">
+        <svg id="map" role="img" aria-label="架空の地域の模式図。配電線の区間を点数に応じた色で表示"></svg>
+        <p class="legend" id="legend"></p>
+        <div id="detail" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+  <section id="v-plan" class="view" hidden>
+    <div class="filters">
+      <label>今回、高精度で測り現地で確かめる区間数 <input type="number" id="cap" min="1" max="14" value="4"></label>
+      <button id="btn-plan-csv">計画をCSVで書き出す</button>
+      <button id="btn-share-csv">協議用の区間表をCSVで書き出す</button>
+    </div>
+    <p id="plan-help"></p>
+    <ol id="plan-list"></ol>
+    <p id="plan-total"></p>
+    <div class="share" id="share-box"></div>
+  </section>
+  <section id="v-record" class="view" hidden>
+    <form id="rec-form">
+      <label>区間 <select id="r-site"></select></label>
+      <label>確認日 <input type="date" id="r-date" required></label>
+      <label>確認者 <input type="text" id="r-who" maxlength="40" required></label>
+      <label>結果 <select id="r-result"></select></label>
+      <label class="wide">メモ <input type="text" id="r-memo" maxlength="200"></label>
+      <button type="submit">記録する</button>
+    </form>
+    <p class="note">記録はこのブラウザの localStorage にだけ保存されます（外部へ送信しません）。氏名等の個人情報は入れないでください。区間はすべて架空です。</p>
+    <div class="filters"><button id="btn-rec-csv">記録をCSVで書き出す</button><button id="btn-ledger-csv">台帳をCSVで書き出す</button><button id="btn-reset">記録を全消去</button></div>
+    <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区間</th><th>確認者</th><th>結果</th><th>メモ</th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section id="v-tune" class="view" hidden>
+    <p>現地確認の結果を、区分ごとに集計します。件数が少ないうちは率を出さず、重みの見直しは職員・事業者が判断します（自動では変えません）。</p>
+    <div class="filters"><label>見直す区分 <select id="t-key"></select></label></div>
+    <div class="tablewrap"><table id="hit-table"><thead><tr><th>区分</th><th>確認件数</th><th>要伐採</th><th>初期の重み</th><th>変更後の重み</th></tr></thead><tbody></tbody></table></div>
+    <div class="filters"><button id="btn-weights-reset">重みを初期値に戻す</button></div>
+    <p class="note">重みとしきい値の初期値は説明用の仮置きで、根拠のある値ではありません。事業者が優先順位の判断に使う観点（過去の倒木、幹線道路沿い、避難所・通信設備への影響）は、総務省の調査に例が載っています。</p>
+  </section>
+  <section id="v-real" class="view" hidden>
+    <p><b>これは実データです。</b> Meta・WRI の高解像度樹高マップ（東京都青梅市周辺 約2.3km四方）の上に、利用者が地図をクリックして<b>仮の線</b>を引くと、線の周囲の樹高を集計します。<b>線は実在の配電線ではありません</b>（実際の配電線の位置は事業者が持つデータで、このデモには入っていません）。</p>
+    <div class="filters">
+      <label>線の両側の幅 <select id="x-buf"><option value="10">10 m</option><option value="15" selected>15 m</option><option value="25">25 m</option></select></label>
+      <label>高木とみなす樹高 <select id="x-tall"><option value="10">10 m以上</option><option value="15" selected>15 m以上</option><option value="20">20 m以上</option></select></label>
+      <button id="x-preset">例の線を引く</button>
+      <button id="x-undo">1点戻す</button>
+      <button id="x-clear">線を消す</button>
+    </div>
+    <div class="split">
+      <div class="pane">
+        <svg id="xmap" role="img" aria-label="東京都青梅市周辺の樹高マップ（実データ）。クリックで仮の線の頂点を追加"></svg>
+        <p class="legend" id="x-legend"></p>
+      </div>
+      <div class="pane">
+        <div id="x-result" aria-live="polite"><p>地図をクリックして線の頂点を置いてください（2点以上で集計します）。</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="footer"></footer>
+<script src="data/sample.js"></script>
+<script src="data/real.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
