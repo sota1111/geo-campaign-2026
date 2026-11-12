@@ -6,7 +6,7 @@
 <title>生活アクセス診断マップ｜公共交通で病院・学校へ行けるか</title>
 <meta name="description" content="地区ごとに、平日・休日の朝昼夕に公共交通で病院や小・中学校へ行けるかを地図で診断します。GTFSデータリポジトリ・公共交通オープンデータセンター・国勢調査メッシュ・国土数値情報を使用。">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261111d">
 </head>
 <body>
 <div id="map" aria-label="診断マップ"></div>
@@ -14,16 +14,33 @@
 <aside id="panel">
   <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
   <div id="headline" aria-live="polite"></div>
+  <div id="pt-bar" hidden aria-live="polite"></div>
   <div id="panel-body">
     <header>
       <h1>生活アクセス診断マップ</h1>
       <p class="lead">その時間に家を出て、公共交通で<b>病院・学校へ何分で行けるか</b>を地区ごとに診断します。</p>
     </header>
 
+    <nav id="nav" aria-label="機能へのショートカット">
+      <button type="button" data-go="detail">地点を調べる</button>
+      <button type="button" data-go="whatif">路線を止めたら？</button>
+      <button type="button" data-go="compare">地域を比べる</button>
+      <button type="button" data-go="about">出典・前提</button>
+    </nav>
+
     <section class="ctl" aria-label="地域">
-      <label for="region">診断地域</label>
-      <select id="region"></select>
+      <div class="lbl-top" id="region-label">診断地域（いまの地域: <b id="region-now"></b>）</div>
+      <div id="region-seg" class="seg regions" role="radiogroup" aria-labelledby="region-label"></div>
+      <select id="region" aria-label="診断地域（一覧から選ぶ）" hidden></select>
       <p id="region-note" class="note"></p>
+      <form id="search-form" role="search">
+        <label for="search-q" class="lbl-top">住所・駅名で探す</label>
+        <div class="search-row">
+          <input id="search-q" type="search" placeholder="例: 富山駅、徳島市幸町" autocomplete="off" maxlength="80">
+          <button id="search-btn" type="submit">探す</button>
+        </div>
+      </form>
+      <div id="search-result" class="note" aria-live="polite"></div>
     </section>
 
     <section id="coverage" class="notice" aria-label="診断の範囲"></section>
@@ -32,11 +49,37 @@
     <section class="ctl" aria-label="診断条件">
       <div class="row"><span class="lbl">行き先</span><div id="ctl-facility" class="seg" role="radiogroup"></div></div>
       <div class="row"><span class="lbl">曜日</span><div id="ctl-day" class="seg" role="radiogroup"></div></div>
+      <p class="note" style="margin:0 0 4px">平日＝水曜のダイヤ、休日＝日曜のダイヤで計算（祝日・臨時ダイヤは未反映）。</p>
       <div class="row"><span class="lbl">出発</span><div id="ctl-period" class="seg" role="radiogroup"></div></div>
       <div class="row"><span class="lbl">許容時間</span><div id="ctl-w" class="seg" role="radiogroup"></div></div>
     </section>
 
     <section id="summary" aria-live="polite"></section>
+
+    <section id="detail" aria-live="polite" tabindex="-1">
+      <h2>地点の診断</h2>
+      <p class="note">地図をタップすると、その地点の診断と近くの停留所を表示します。</p>
+    </section>
+
+    <section id="whatif" hidden></section>
+
+    <section id="compare" aria-label="地域の比較">
+      <h2>地域を比べる</h2>
+      <p class="note">いまの診断条件（行き先・曜日・時間帯・許容時間）のまま、5地域を並べて比べます。押したときだけ全地域のデータを読み込みます。</p>
+      <button id="btn-compare" type="button" class="act">同じ条件で5地域を比べる</button>
+      <div id="compare-result" aria-live="polite"></div>
+    </section>
+
+    <section id="share" aria-label="共有と出典">
+      <h2>この画面を共有する・出典を書く</h2>
+      <button id="btn-share" type="button" class="act">この画面のリンクをコピー</button>
+      <span id="share-msg" class="note" aria-live="polite"></span>
+      <p class="note">リンクには、地域・行き先・曜日・時間帯・許容時間・選んだ路線・調べた地点が入ります。</p>
+      <label for="cite-text" class="lbl-top">出典の書き方（資料に貼れる例文）</label>
+      <textarea id="cite-text" readonly rows="6"></textarea>
+      <button id="btn-cite" type="button" class="act">出典の例文をコピー</button>
+      <span id="cite-msg" class="note" aria-live="polite"></span>
+    </section>
 
     <section class="ctl" aria-label="表示切替">
       <div class="checks">
@@ -48,13 +91,6 @@
       </div>
       <div id="legend"></div>
     </section>
-
-    <section id="detail" aria-live="polite">
-      <h2>地点の診断</h2>
-      <p class="note">地図をタップすると、その地点の診断と近くの停留所を表示します。</p>
-    </section>
-
-    <section id="whatif" hidden></section>
 
     <section class="foot">
       <button id="btn-about" type="button">出典・ライセンス・診断の前提</button>
@@ -71,8 +107,8 @@
 
 <noscript>このページの表示にはJavaScriptが必要です。</noscript>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
-<script src="lib.js"></script>
-<script src="app.js"></script>
-<script src="whatif.js"></script>
+<script src="lib.js?v=20261111d"></script>
+<script src="app.js?v=20261111d"></script>
+<script src="whatif.js?v=20261111d"></script>
 </body>
 </html>

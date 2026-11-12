@@ -20,6 +20,7 @@
 
   function onRegion(state, data, refresh) {
     ST = state; D = data; refreshCb = refresh; W = null; selected = null; ST.lost = null;
+    // 切り替えの途中でも、読み込み中に共有リンクの路線指定が消えないよう pendingRoute は触らない
     var box = $('whatif');
     box.hidden = true;
     fetch('data/whatif_' + data.id + '.json').then(function (r) {
@@ -30,14 +31,17 @@
       W = w;
       box.hidden = false;
       box.innerHTML = '<h2>路線を止めたら？</h2>' +
-        '<p class="note">ある路線が無くなったとき、いまの診断条件で<b>行けなくなる人</b>をピンクで示します。路線は「事業者・路線名」でまとめ、方向や系統の違うものも含めて<b>その路線の全便</b>を止めた場合を、時刻表で再計算しています。代替交通・部分的な減便は考慮していません。</p>' +
+        '<p class="wi-premise"><b>前提:</b> 選んだ路線の<b>全便が止まる</b>場合を計算します。<b>代替バス・デマンド交通・部分的な減便は考慮しません</b>。いまの診断条件で<b>行けなくなる人</b>を、地図にピンクで示します。</p>' +
+        '<p class="note">路線は「事業者・路線名」でまとめ、方向や系統の違うものも含めて、時刻表で再計算しています。</p>' +
         '<div id="wi-top"></div>' +
         '<label for="wi-route" class="note">路線を選ぶ（影響が大きい順）</label>' +
         '<select id="wi-route"></select><div id="wi-result"></div>';
       $('wi-route').addEventListener('change', function () { select($('wi-route').value || null); });
+      var pr = ST.pendingRoute; ST.pendingRoute = null;
       onRefresh();
-      refreshCb();
-    }).catch(function () { box.hidden = true; });
+      if (pr != null && W.routes[pr] && D.routes[+pr]) select(pr);
+      else refreshCb();
+    }).catch(function () { box.hidden = true; if (ST) ST.pendingRoute = null; });
   }
 
   function computeImpact() {
@@ -65,7 +69,7 @@
     if (top) {
       top.innerHTML = '<span class="note">影響が大きい路線: </span>' + ids.slice(0, 3).filter(function (r) { return impact[r].lost > 0; })
         .map(function (r) {
-          return '<button type="button" class="act" data-r="' + r + '">' + esc(D.routes[+r][0]) + '</button>';
+          return '<button type="button" class="act" data-r="' + r + '" aria-pressed="' + (r === selected) + '">' + esc(D.routes[+r][0]) + '</button>';
         }).join('');
       Array.prototype.forEach.call(top.querySelectorAll('button'), function (b) {
         b.addEventListener('click', function () { select(b.getAttribute('data-r')); });
@@ -86,16 +90,33 @@
     }
     map.getSource('routes-wi').setData({ type: 'FeatureCollection', features: feats });
     refreshCb();
+    // 選んだ路線と、行けなくなるメッシュが見えるように地図を寄せる
+    if (r != null) {
+      var bb = [180, 90, -180, -90];
+      function ext(x, y) { bb[0] = Math.min(bb[0], x); bb[1] = Math.min(bb[1], y); bb[2] = Math.max(bb[2], x); bb[3] = Math.max(bb[3], y); }
+      var lost = ST.lost;
+      if (lost) {
+        D.cells.forEach(function (c, k) { if (lost[k]) { var b = L.meshBounds(c[0]); ext(b[0], b[1]); ext(b[2], b[3]); } });
+      }
+      if (bb[0] > bb[2]) feats.forEach(function (f) { f.geometry.coordinates.forEach(function (pt) { ext(pt[0], pt[1]); }); });
+      if (bb[0] <= bb[2]) {
+        var mobile = window.matchMedia('(max-width: 720px)').matches;
+        var pad = mobile ? { top: 30, left: 30, right: 30, bottom: Math.round(window.innerHeight * 0.56) + 30 } : { top: 60, left: 420, right: 60, bottom: 60 };
+        map.fitBounds([[bb[0], bb[1]], [bb[2], bb[3]]], { padding: pad, duration: 600, maxZoom: 14 });
+      }
+    }
   }
 
   function renderResult() {
     var el = $('wi-result');
     if (!el) return;
-    if (selected == null) { el.innerHTML = ''; return; }
+    if (selected == null) { el.innerHTML = '<p class="note">路線を選ぶと、その路線が止まったときの影響がここに出ます。</p>'; return; }
     var fl = D.facility_labels[D.facility_order[ST.fi]];
     var cond = L.DAY_LABEL[ST.day] + L.PERIOD_LABEL[ST.per] + D.params.start_hours[ST.per] + '時・' + ST.w + '分以内・' + fl;
     var im = impact[selected];
-    var h = '<div class="res"><b>' + esc(routeLabel(+selected)) + '</b>が無くなると<br>';
+    var h = '<div class="wi-selected">選択中: <b>' + esc(routeLabel(+selected)) + '</b>（地図にピンクの破線で表示）' +
+      '<button type="button" class="clr" id="wi-clear">選択を解除</button></div>';
+    h += '<div class="res"><b>' + esc(routeLabel(+selected)) + '</b>が無くなると<br>';
     if (!im || im.lost === 0) {
       h += '「' + esc(cond) + '」の条件では、行けなくなる人はいません。（他の路線で代替できる、または元から到達できない地区です）';
     } else {
@@ -116,7 +137,8 @@
     });
     h += '</table><p class="note">表は「' + ST.w + '分以内・' + esc(fl) + '」で行けなくなる人数。</p></div>';
     el.innerHTML = h;
+    $('wi-clear').addEventListener('click', function () { select(null); });
   }
 
-  window.WhatIf = { onRegion: onRegion, onRefresh: onRefresh };
+  window.WhatIf = { onRegion: onRegion, onRefresh: onRefresh, getSelected: function () { return selected; } };
 })();

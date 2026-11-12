@@ -92,4 +92,40 @@ td.l3 { background: #8fb9db; } td.l4 { background: #5f9ccb; } td.lw { background
   .maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left { margin-bottom: 56vh; }
   body.sheet-closed .maplibregl-ctrl-bottom-right, body.sheet-closed .maplibregl-ctrl-bottom-left { margin-bottom: 44px; }
 }
+/* ---- 操作性の改善（初見ユーザー試験を受けて） ---- */
+#nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+#nav button { flex: 1 1 auto; min-height: 40px; padding: 4px 8px; font-size: .85rem; border: 1px solid #1b4f8a; background: #eef4fa; color: #1b4f8a; border-radius: 20px; cursor: pointer; font-weight: 600; }
+.lbl-top { display: block; font-size: .85rem; font-weight: 600; margin: 2px 0 4px; }
+.seg.regions button { flex: 1 1 calc(50% - 4px); min-width: 0; font-size: .85rem; }
+.seg.regions button[aria-checked="true"]::before { content: "✓ "; }
+#region-now { color: #0b4f7c; }
+.search-row { display: flex; gap: 6px; }
+.search-row input { flex: 1; min-width: 0; min-height: 44px; padding: 6px 8px; font-size: 1rem; border: 1px solid #aaa; border-radius: 6px; }
+.search-row button, #panel button.act { min-height: 44px; padding: 4px 12px; border: 1px solid #1b4f8a; background: #1b4f8a; color: #fff; border-radius: 6px; cursor: pointer; font-size: .9rem; }
+#search-result button { display: block; width: 100%; text-align: left; min-height: 40px; margin: 3px 0; padding: 4px 8px; border: 1px solid #999; background: #fff; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+#nav button:focus-visible, .search-row *:focus-visible, #panel button.act:focus-visible, #cite-text:focus-visible, #search-result button:focus-visible { outline: 3px solid #f5a623; outline-offset: 1px; }
+#detail .verdict { border: 2px solid var(--ok); background: #eef4fa; border-radius: 8px; padding: 8px 10px; margin: 4px 0 8px; }
+#detail .verdict.no { border-color: var(--ng); background: #fdf0e6; }
+#detail .verdict .v-main { font-size: 1.1rem; font-weight: 700; line-height: 1.45; margin: 0; }
+#detail .verdict .v-cmp { font-size: .88rem; margin: 4px 0 0; line-height: 1.5; }
+#summary .ng65 { width: 100%; margin: 6px 0; }
+#summary .ng65 td, #summary .ng65 th { font-size: .82rem; }
+#summary .ng65 b { font-size: 1rem; color: #9a3b00; }
+.wi-premise { font-size: .85rem; line-height: 1.5; background: #fff7e6; border: 1px solid #E69F00; border-left-width: 5px; border-radius: 6px; padding: 6px 10px; margin: 6px 0; }
+.wi-selected { font-size: .88rem; background: #fbeaf3; border: 2px solid #B03A8C; border-radius: 6px; padding: 6px 10px; margin: 6px 0; line-height: 1.5; }
+#whatif button.act:not([aria-pressed="true"]) { background: #fff; color: #1b4f8a; }
+#whatif button.act[aria-pressed="true"] { background: #B03A8C; border-color: #B03A8C; color: #fff; font-weight: 700; }
+#whatif button.act[aria-pressed="true"]::before { content: "✓ "; }
+#whatif button.clr { min-height: 36px; margin-left: 6px; padding: 2px 10px; border: 1px solid #B03A8C; background: #fff; color: #B03A8C; border-radius: 6px; cursor: pointer; }
+#compare-result { overflow-x: auto; }
+#compare-result table td:first-child, #compare-result table th:first-child { text-align: left; }
+#cite-text { width: 100%; font-size: .78rem; line-height: 1.5; padding: 6px; border: 1px solid #aaa; border-radius: 6px; margin: 4px 0; resize: vertical; }
+#legend .terms { margin: 6px 0 0; padding-left: 1.1em; font-size: .75rem; color: #555; line-height: 1.5; }
+.maplibregl-popup { max-width: 260px !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px #1b4f8a; } 100% { box-shadow: 0 0 0 3px transparent; } }
+.flash { animation: flash 1.6s ease-out; border-radius: 8px; }
+#pt-bar { flex: none; padding: 8px 14px; background: #fff7e0; border-bottom: 1px solid var(--line); font-size: .85rem; line-height: 1.5; }
+#pt-bar .pt-lbl { font-size: .72rem; color: #6b5200; background: #ffe9a8; border-radius: 4px; padding: 1px 6px; }
+#pt-bar button { margin: 4px 6px 0 0; font-size: .78rem; padding: 3px 8px; border: 1px solid #1b4f8a; background: #fff; color: #1b4f8a; border-radius: 6px; cursor: pointer; }
+.lastbus { background: #eef4fa; border-radius: 6px; padding: 6px 8px; font-size: .85rem; margin: 4px 0 8px; }
