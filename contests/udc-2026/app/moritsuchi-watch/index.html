@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>みんなの盛土ウォッチ｜身近な盛土を確かめ、気づいた変化を記録する</title>
+<meta name="description" content="国土数値情報の大規模盛土造成地（熱海市・伊東市）を年代別の空中写真と見比べ、気づいた変化を端末内に記録して、通報文のたたき台と GeoJSON/CSV にできる静的Webアプリ。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M0 14L5 4l4 6 2-3 5 7z%27 fill=%27%23d55e00%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="盛土ウォッチの地図"></div>
+
+<aside id="panel">
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <div id="panel-body">
+    <header>
+      <h1>みんなの盛土ウォッチ</h1>
+      <p class="lead">身近な盛土を<b>確かめ</b>、昔の写真と<b>見比べ</b>、気づいた変化を<b>記録して届ける</b>ための道具です。</p>
+    </header>
+
+    <section class="notice" aria-label="対象範囲">
+      <b>対象範囲: 静岡県 熱海市・伊東市</b>のみ（大規模盛土造成地 計<span id="n-fills">27</span>か所）。それ以外の地域では盛土造成地は表示されません。
+      <div class="seg" id="jump" role="group" aria-label="地域へ移動"></div>
+    </section>
+
+    <section class="notice warn" aria-label="データ利用上の注意">
+      表示している盛土造成地は<b>「安全性の確認が必要な盛土造成地」で、直ちに危険な場所ではありません</b>。すべての盛土造成地が載っているわけでもありません。このアプリは危険かどうかの判定をしません。
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="機能">
+      <button role="tab" id="tab-look" aria-selected="true" aria-controls="pane-look">1 確かめる</button>
+      <button role="tab" id="tab-rec" aria-selected="false" aria-controls="pane-rec">2 記録する</button>
+      <button role="tab" id="tab-out" aria-selected="false" aria-controls="pane-out">3 届ける</button>
+    </nav>
+
+    <section id="pane-look" role="tabpanel" aria-labelledby="tab-look">
+      <div class="row"><span class="lbl">背景</span><div id="ctl-base" class="seg" role="radiogroup" aria-label="背景地図"></div></div>
+      <div class="row"><span class="lbl">昔の写真</span><div id="ctl-old" class="seg" role="radiogroup" aria-label="年代別の空中写真"></div></div>
+      <div class="row" id="row-op"><label class="lbl" for="op">見比べ</label>
+        <span class="small">現在</span><input id="op" type="range" min="0" max="100" step="5" value="60" aria-label="昔の写真の濃さ"><span class="small">昔</span></div>
+      <p class="note">「昔の写真」を選び、スライダーで<b>昔の写真と現在の背景</b>を行き来して、地形や造成の跡の変化を見比べます（ズーム10〜17で表示。範囲外のタイルは空白になります）。</p>
+      <div id="legend" aria-label="凡例"></div>
+      <div id="fill-info" class="card" aria-live="polite">地図上の色付きの範囲をタップすると、盛土造成地の情報が出ます。</div>
+      <p class="small"><button type="button" id="copy-link" class="btn">いまの表示のURLをコピー</button> <span id="copy-msg" class="small" role="status"></span></p>
+    </section>
+
+    <section id="pane-rec" role="tabpanel" aria-labelledby="tab-rec" hidden>
+      <div class="card guide">
+        <b>記録の前に</b>
+        <ul>
+          <li>公道など立ち入ってよい場所から。盛土や私有地、立入禁止の場所には入らない。</li>
+          <li>人や車のナンバーが写る写真は共有しない。</li>
+          <li>差し迫った危険（崩れそう・水が噴き出す等）は、記録より先に119番・110番や市の防災窓口へ。</li>
+        </ul>
+      </div>
+      <p class="note">地図を<b>タップ</b>して位置を決める（<button type="button" id="btn-locate" class="btn">現在地を使う</button>）。位置は<span id="pick-pos">未選択</span>。</p>
+      <p id="pick-hint" class="small" role="status"></p>
+      <form id="rec-form" autocomplete="off">
+        <label for="f-kind">気づいたこと</label>
+        <select id="f-kind"></select>
+        <label for="f-when">気づいた日時</label>
+        <input type="datetime-local" id="f-when">
+        <label for="f-memo">状況メモ（500字まで。個人が特定される情報は書かない）</label>
+        <textarea id="f-memo" rows="3" maxlength="500"></textarea>
+        <label class="chk"><input type="checkbox" id="f-blur"> 位置を約100mにぼかして保存する</label>
+        <button type="submit" class="btn primary" id="btn-save" disabled>この場所を記録する（この端末に保存）</button>
+      </form>
+      <p class="small">記録はこの端末のブラウザ内だけに保存され、外部へ送信されません。ブラウザのデータを消すと消えます。写真はこのアプリでは保存しません。</p>
+    </section>
+
+    <section id="pane-out" role="tabpanel" aria-labelledby="tab-out" hidden>
+      <p class="note">記録 <b id="rec-count">0</b> 件。地図上の黄色い丸（黒ふち）が自分の記録です。</p>
+      <ul id="rec-list" class="reclist"></ul>
+      <div id="report-box" class="card" hidden>
+        <b>通報文のたたき台</b>
+        <textarea id="report-text" rows="9" readonly aria-label="通報文のたたき台"></textarea>
+        <button type="button" id="btn-copy-report" class="btn">文面をコピー</button>
+        <span id="copy-report-msg" class="small" role="status"></span>
+        <p class="small">このアプリは送信しません。文面をコピーして、自治体の窓口（電話・メール・フォーム）へ。通報先は市町村・県で異なるため、各自治体の案内を確認してください。静岡県の例は国のガイドライン2.3に紹介されています。</p>
+      </div>
+      <div class="row wrap">
+        <button type="button" id="btn-geojson" class="btn">GeoJSONで書き出す</button>
+        <button type="button" id="btn-csv" class="btn">CSVで書き出す</button>
+        <label class="btn" for="f-import">GeoJSONを読み込む</label>
+        <input type="file" id="f-import" accept=".geojson,.json,application/geo+json,application/json" hidden>
+        <button type="button" id="btn-clear" class="btn danger">全記録を消す</button>
+      </div>
+      <p id="io-msg" class="small" role="status"></p>
+      <p class="small">書き出したファイルは、自治会の仲間への共有や、地図ソフト（QGIS等）での確認に使えます。読み込みはこの端末内で行い、外部へ送信しません。</p>
+    </section>
+
+    <footer class="small">
+      <b>出典</b>
+      <ul>
+        <li>国土交通省 国土数値情報「大規模盛土造成地」A54（2023年版・データ基準日2023-03-31、静岡県分から熱海市・伊東市を抽出）。<a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-A54-2023.html" target="_blank" rel="noopener">配布ページ</a>、ライセンス CC BY 4.0。位置は加工（座標を小数5桁に丸め・2市のみ抽出）。</li>
+        <li>背景: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院 地理院タイル</a>（標準地図・淡色地図・シームレス空中写真・年代別の写真 1961〜1969年／1974〜1978年）。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従う。</li>
+        <li>地図描画: MapLibre GL JS 4.7.1（BSD-3-Clause）。</li>
+        <li>より正確な確認は国の<a href="https://disaportal.gsi.go.jp/hazardmap/maps/index.html" target="_blank" rel="noopener">重ねるハザードマップ</a>（土砂災害警戒区域などを重ねて表示できます）と、各自治体の案内で。</li>
+        <li>背景: 国土交通省・農林水産省「不法・危険盛土等への対処方策ガイドライン」は、盛土は住民の通報で見つかることが多く通報しやすい環境が重要としています（<a href="https://www.mlit.go.jp/toshi/web/content/001634495.pdf" target="_blank" rel="noopener">PDF</a>）。</li>
+        <li>宅地建物取引業法に基づく重要事項説明等の根拠には利用できません。</li>
+      </ul>
+    </footer>
+  </div>
+</aside>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

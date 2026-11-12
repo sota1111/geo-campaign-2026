@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>相談前の1枚シート — 相続した土地の「売る・貸す・活かす・手放す」</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <h1>相談前の1枚シート</h1>
+  <p class="lead">相続した土地を地図で指すと、公開データから集めた判断材料が「専門家に聞くこと」に変わり、売る・貸す・活かす・手放すの4つの出口ごとに1枚で出ます。</p>
+  <p class="warn"><strong>動く最小限のデモです。</strong>地図データは徳島市のみ。金額の推定や「売るべき」といった結論は出しません。法律・税金の助言ではなく、相談先に聞くことの一覧です。</p>
+</header>
+
+<main>
+  <section id="step1" class="panel">
+    <h2>1. 土地の場所を地図で指す</h2>
+    <form id="search" class="row">
+      <label class="sr" for="q">住所・目印を検索</label>
+      <input id="q" type="search" placeholder="例: 徳島市役所、徳島市幸町" autocomplete="off">
+      <button type="submit">検索</button>
+    </form>
+    <div class="row opts">
+      <label>重ねる地図
+        <select id="overlay">
+          <option value="">なし</option>
+          <option value="01_flood_l2_shinsuishin_data">洪水浸水想定区域（想定最大規模）</option>
+          <option value="03_hightide_l2_shinsuishin_data">高潮浸水想定区域</option>
+          <option value="04_tsunami_newlegend_data">津波浸水想定</option>
+          <option value="05_kyukeishakeikaikuiki">土砂災害警戒区域（急傾斜地）</option>
+          <option value="05_dosekiryukeikaikuiki">土砂災害警戒区域（土石流）</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="zoneToggle" checked> 用途地域の範囲を重ねる</label>
+    </div>
+    <div id="map" role="application" aria-label="地図。クリックまたはタップで土地の位置を指定" tabindex="0">
+      <div id="tiles"></div>
+      <canvas id="zones"></canvas>
+      <div id="pin" hidden></div>
+      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button></div>
+      <div class="attr">地図: 国土地理院タイル／重ねる地図: ハザードマップポータルサイト（国土地理院）</div>
+    </div>
+    <p class="hint">地図をクリック（タップ）すると、その位置を土地として扱います。ドラッグで移動、ボタンで拡大縮小できます。</p>
+    <p><button type="button" id="sampleBtn" class="secondary">地図で指さずに、サンプル（架空）の土地の1枚シートを見る</button></p>
+  </section>
+
+  <section id="step2" class="panel">
+    <h2>2. 地図では分からないことを選ぶ（任意）</h2>
+    <p class="hint">選んだ内容は、この端末の中だけで使います。送信・保存はしません。</p>
+    <div class="grid">
+      <fieldset><legend>土地に建物はありますか</legend>
+        <label><input type="radio" name="building" value="不明" checked> 分からない</label>
+        <label><input type="radio" name="building" value="あり"> ある</label>
+        <label><input type="radio" name="building" value="なし"> ない</label>
+      </fieldset>
+      <fieldset><legend>地目（登記上の種類）</legend>
+        <label><input type="radio" name="landUse" value="不明" checked> 分からない</label>
+        <label><input type="radio" name="landUse" value="農地"> 田・畑（農地）</label>
+        <label><input type="radio" name="landUse" value="その他"> 宅地・その他</label>
+      </fieldset>
+      <fieldset><legend>道路に接していますか</legend>
+        <label><input type="radio" name="road" value="不明" checked> 分からない</label>
+        <label><input type="radio" name="road" value="あり"> 接している</label>
+        <label><input type="radio" name="road" value="なし"> 接していない・不明確</label>
+      </fieldset>
+      <fieldset><legend>相続登記は済んでいますか</legend>
+        <label><input type="radio" name="registered" value="不明" checked> 分からない</label>
+        <label><input type="radio" name="registered" value="済"> 済んでいる</label>
+        <label><input type="radio" name="registered" value="未"> まだ</label>
+      </fieldset>
+    </div>
+  </section>
+
+  <section id="step3" class="panel">
+    <h2>3. 1枚シートを印刷・PDF保存する</h2>
+    <p id="status" role="status">地図で土地を指すと、ここに状況が出ます。</p>
+    <p><button type="button" id="printBtn" disabled>印刷・PDFで保存する</button> <span class="hint">印刷画面で「PDFに保存」を選ぶとPDFになります。</span></p>
+    <div id="sheet" class="sheet" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer>
+  <h2>出典・ライセンス・限界</h2>
+  <ul>
+    <li><strong>地図</strong>: 国土地理院タイル（標準地図）。出典: 国土地理院。</li>
+    <li><strong>災害リスク</strong>: ハザードマップポータルサイト（国土地理院）の公開タイル（洪水浸水想定区域・高潮・津波・土砂災害警戒区域）。指した1点の画素の色を読んでおり、区域境界付近では実際と異なることがあります。深さの区分は凡例色からの目安です。標高は地理院の標高タイル（DEM PNG）から読み取った参考値です。</li>
+    <li><strong>用途地域</strong>: 国土数値情報（用途地域データ）令和元年度版・徳島県（国土交通省）を加工して作成。CC BY 4.0（一部制限）。利用にあたっては各市区町村の利用条件があります。最新の都市計画とは異なる場合があります。</li>
+    <li><strong>公共交通</strong>: GTFSデータリポジトリ掲載の徳島市営バス・徳島バス・上八万コミュニティバス・松茂町・北島町・鳴門市の各GTFS（CC BY 4.0）と鉄道駅位置を加工。直線距離のみで、便数や運行日は含みません。</li>
+    <li><strong>サンプル（架空）</strong>: 「サンプルの土地」ボタンで出るシートは架空の土地の例です。実在の土地の情報ではありません。</li>
+    <li><strong>この画面にないもの</strong>: 取引価格・地価・将来人口・医療機関・小学校区は、国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）で確認する項目として示すだけで、この画面では取得していません。</li>
+    <li><strong>プライバシー</strong>: 指した位置と選択内容はこの端末内だけで扱い、保存・送信しません。ただし、地図やハザードの画像を地理院のサーバーから取得するため、表示範囲に対応する画像の要求が国土地理院に届きます。</li>
+    <li><strong>免責</strong>: 国のデータを加工した参考情報で、法的・税務的な判断や査定ではありません。必ず相談先（市役所・不動産会社・司法書士・法務局・農業委員会など）で確認してください。</li>
+  </ul>
+</footer>
+
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
