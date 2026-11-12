@@ -81,6 +81,11 @@ class TestData(unittest.TestCase):
             if f["pref"] == "京都府":
                 self.assertTrue(34.7 < f["lat"] < 35.8 and 135.0 < f["lon"] < 136.0, f)
         self.assertIn("推定", " ".join(f["name"] for f in self.f))
+        # 受入可否が未確認の拠点は unconfirmed で印を付け、画面は既定でこれを計算に含めない（監査 M2）
+        unconf = [f for f in self.f if f.get("unconfirmed")]
+        self.assertEqual(len(unconf), 1)
+        self.assertIn("推定", unconf[0]["name"])
+        self.assertIn("未確認", unconf[0]["note"])
 
     def test_no_personal_fields(self):
         text = (DATA / "plants.json").read_text(encoding="utf-8")
@@ -107,6 +112,17 @@ class TestScreen(unittest.TestCase):
         t = (HERE / "web" / "app.js").read_text(encoding="utf-8")
         for m in re.findall(r"getJSON\('([^']+)'", t):
             self.assertTrue(m.startswith("data/"), m)
+
+    def test_defaults_do_not_treat_one_answer_as_correct(self):
+        # 監査 M2・M4 / OR W2: 既定は「調達期間の終了」（特定の年数を正解扱いしない）、未確認の拠点は既定で除く。
+        # 循環した説明と出典未確認の「京都府ページ」の帰属は画面に置かない
+        a = (HERE / "web" / "app.js").read_text(encoding="utf-8")
+        self.assertRegex(a, r"est: false, basis: 0,")
+        self.assertRegex(a, r"id: 'fit'")
+        self.assertNotIn("京都府ページ", a)
+        self.assertNotIn("食い違わない", a)
+        h = (HERE / "web" / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn("京都府が公表するリサイクル施設", h)
 
     def test_hypothesis_and_limits_stated_on_screen(self):
         t = (HERE / "web" / "index.html").read_text(encoding="utf-8")

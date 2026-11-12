@@ -11,7 +11,7 @@
 <body>
 <header>
   <h1>使用済み太陽光パネルの「回収圏」計画 <span>発電所の位置と廃棄時期の推定を、リサイクル施設までの距離に重ねる（最小デモ・京都府分）</span></h1>
-  <p class="lead">再エネ事業計画認定情報（資源エネルギー庁）の太陽光設備を地図にし、京都府が公表するリサイクル施設からの距離と、いつ頃出るかの<b>仮説</b>を並べます。</p>
+  <p class="lead">再エネ事業計画認定情報（資源エネルギー庁）の太陽光設備を地図にし、公表資料から集めたリサイクル施設からの距離と、いつ頃出るかの<b>仮説</b>を並べます。</p>
 </header>
 
 <main>
@@ -19,7 +19,7 @@
     <div class="box limits" role="note">
       <b>このデモの読み方（必読）</b>
       <ul>
-        <li><b>実データ</b>: 認定情報は<span id="asof">2026年9月30日時点</span>の京都府ファイル（出力20kW未満の太陽光は元データに含まれない）。リサイクル施設は京都府が公表する3社、京都環境保全公社の北部拠点（推定）、および府外のJPEA掲載2社。</li>
+        <li><b>実データ</b>: 認定情報は<span id="asof">2026年9月30日時点</span>の京都府ファイル（出力20kW未満の太陽光は元データに含まれない）。リサイクル施設は、京都府公表の3社（府ページ）と、府外のJPEA掲載2社（大阪府・三重県）、および京都環境保全公社の北部拠点（会社概要からの所在地の推定。パネルの受け入れ可否も未確認のため、既定では計算に含めない）。</li>
         <li><b>廃棄時期は仮説</b>: 「運転開始年＋N年」などで置いた推定で、実際の撤去時期ではありません。Nは利用者が選ぶ仮の値で、公的な根拠は確認していません。</li>
         <li><b>距離は直線</b>: 道路距離・運搬費・施設の受入能力・許可の範囲は見ていません。位置は町字の代表点で、同じ町字の設備は同じ点に重なります。</li>
         <li>出力（kW）のまま扱い、トン数には換算していません。事業者名などは画面にも書き出しにも含めません。</li>
@@ -31,6 +31,7 @@
       <div class="row"><span class="lab">廃棄時期</span><div id="ctl-basis" class="seg" role="radiogroup" aria-label="廃棄時期の置き方"></div></div>
       <div class="row"><span class="lab">対象年</span><div id="ctl-cut" class="seg" role="radiogroup" aria-label="この年までに出る分を見る"></div></div>
       <div class="row"><span class="lab">施設</span><div id="ctl-scope" class="seg" role="radiogroup" aria-label="使う施設の範囲"></div></div>
+      <div class="row"><span class="lab">未確認の拠点</span><div id="ctl-est" class="seg" role="radiogroup" aria-label="受入可否が未確認の拠点を含めるか"></div></div>
       <div class="row"><span class="lab">回収圏</span><div id="ctl-radius" class="seg" role="radiogroup" aria-label="回収圏の半径（直線）"></div></div>
       <p class="note" id="basis-note"></p>
     </div>

@@ -45,7 +45,8 @@
   "source_url": "https://www.kyoto-kankyo.net/corporation/outline.html",
   "lon": 135.30948,
   "lat": 35.22465,
-  "geocoded_as": "京都府京丹波町猪鼻"
+  "geocoded_as": "京都府京丹波町猪鼻",
+  "unconfirmed": true
  },
  {
   "name": "近畿電電輸送株式会社（寝屋川）",

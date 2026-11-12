@@ -3,8 +3,8 @@
   'use strict';
   var N = window.Nb;
   var BASES = [
-    { id: 'fit', label: '調達期間の終了時（最も早い置き方）', basis: { type: 'fit' }, text: '調達期間（FIT）の終了年月はデータの列にある。終了時点で撤去する最も早い場合を置く。実際に撤去するとは限らない。' },
-    { id: 'l25', label: '運転開始＋25年', basis: { type: 'life', years: 25 }, text: '運転開始年に25年を足した仮の値。京都府ページの「2030年代後半以降に顕著に増加」と大きくは食い違わない置き方として選んだ説明用の仮置きで、25年の公的根拠は確認していない。' },
+    { id: 'fit', label: '調達期間の終了時（最も早い置き方）', basis: { type: 'fit' }, text: '調達期間（FIT）の終了年月はデータの列にある。終了時点で撤去する最も早い場合を置く。実際に撤去するとは限らず、ほかの置き方も同じく仮の値で、どれも正解ではない。' },
+    { id: 'l25', label: '運転開始＋25年', basis: { type: 'life', years: 25 }, text: '運転開始年に25年を足した仮の値。公的根拠は確認していない。' },
     { id: 'l30', label: '運転開始＋30年', basis: { type: 'life', years: 30 }, text: '運転開始年に30年を足した仮の値。公的根拠は確認していない。' },
     { id: 'l35', label: '運転開始＋35年', basis: { type: 'life', years: 35 }, text: '運転開始年に35年を足した仮の値。公的根拠は確認していない。' }
   ];
@@ -12,7 +12,7 @@
   var RADII = [10, 20, 30, 50];
   var SITE_COLORS = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#8B5E3C', '#7A7A00', '#6A3D9A'];
   var HOME_PREF = '京都府';
-  var S = { meta: null, munis: [], rows: [], allFacs: [], facs: [], scope: 'all', basis: 1, cut: 2045, radius: 20, cand: null, placing: false, res: null, base: null, sug: null };
+  var S = { meta: null, munis: [], rows: [], allFacs: [], facs: [], scope: 'all', est: false, basis: 0, cut: 2045, radius: 20, cand: null, placing: false, res: null, base: null, sug: null };
   var map = null, mapReady = false, markers = [];
 
   function $(id) { return document.getElementById(id); }
@@ -25,12 +25,16 @@
   function km1(x) { return x.toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   function getJSON(url) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); }); }
   function isExt(f) { return f.pref && f.pref !== HOME_PREF; }
-  function applyScope() { S.facs = S.scope === 'in' ? S.allFacs.filter(function (f) { return !isExt(f); }) : S.allFacs.slice(); }
+  /* 受入可否が未確認の拠点（facilities.json の unconfirmed）。既定では含めない。 */
+  function facsFor(scope, est) { return S.allFacs.filter(function (f) { return (scope !== 'in' || !isExt(f)) && (est || !f.unconfirmed); }); }
+  function applyScope() { S.facs = facsFor(S.scope, S.est); }
+  function hasUnconf() { return S.allFacs.some(function (f) { return f.unconfirmed; }); }
+  function unconfNames() { return S.allFacs.filter(function (f) { return f.unconfirmed; }).map(function (f) { return f.name; }).join('、'); }
   function avgKm(t) { return t.kwKm ? t.kmKw / t.kwKm : 0; }
   function curBasis() { return BASES[S.basis]; }
   function opts() { return { basis: curBasis().basis, cutoff: S.cut, radiusKm: S.radius }; }
-  function sites(withCand) {
-    var s = S.facs.map(function (f, i) { return { lat: f.lat, lon: f.lon, name: f.name, label: String(i + 1) }; });
+  function sites(withCand, facs) {
+    var s = (facs || S.facs).map(function (f, i) { return { lat: f.lat, lon: f.lon, name: f.name, label: String(i + 1) }; });
     if (withCand && S.cand) s.push({ lat: S.cand.lat, lon: S.cand.lon, name: '候補拠点（試算）', label: '候' });
     return s;
   }
@@ -59,6 +63,8 @@
       seg($('ctl-basis'), BASES.map(function (b, i) { return { value: i, label: b.label }; }), S.basis, function (v) { S.basis = v; update(); });
       seg($('ctl-cut'), CUTS.map(function (y) { return { value: y, label: y + '年まで' }; }), S.cut, function (v) { S.cut = v; update(); });
       seg($('ctl-scope'), [{ value: 'all', label: '府外の施設も含める' }, { value: 'in', label: '京都府内の施設のみ' }], S.scope, function (v) { S.scope = v; S.cand = null; S.sug = null; applyScope(); update(); });
+      seg($('ctl-est'), [{ value: false, label: '受入が未確認の拠点を除く' }, { value: true, label: '未確認の拠点も含める' }], S.est, function (v) { S.est = v; S.cand = null; S.sug = null; applyScope(); update(); });
+      if (!hasUnconf()) $('ctl-est').parentNode.hidden = true;
       seg($('ctl-radius'), RADII.map(function (r) { return { value: r, label: r + ' km' }; }), S.radius, function (v) { S.radius = v; update(); });
       initMap();
       update();
@@ -86,6 +92,7 @@
     if (!S.rows.length) return;
     S.base = N.analyze(S.rows, S.munis, sites(false), opts());
     S.res = S.cand ? N.analyze(S.rows, S.munis, sites(true), opts()) : S.base;
+    S.alt = hasUnconf() ? N.analyze(S.rows, S.munis, sites(false, facsFor(S.scope, !S.est)), opts()) : null;
     $('basis-note').textContent = '仮説: ' + curBasis().text;
     if (S.meta) $('asof').textContent = S.meta.as_of.replace(/^(\d+)-(\d+)-(\d+)$/, function (_m, y, mo, d) { return y + '年' + +mo + '月' + +d + '日'; }) + '時点';
     var none = S.base.total.plants === 0;
@@ -113,6 +120,7 @@
     var h = '<div class="sent">仮説「' + esc(curBasis().label) + '」では、' + S.cut + '年までに出ると推定した設備は<b>' + n(t.plants) + '件・' + mw(t.kw) + ' MW</b>（京都府の認定設備 ' + n(t.allPlants) + '件・' + mw(t.allKw) + ' MW のうち）。' +
       'このうち、最寄りの施設まで直線で<b>' + o.radiusKm + ' kmより遠い</b>のは<b class="big">' + n(t.outPlants) + '件・' + mw(t.outKw) + ' MW（' + pct(t.outKw, t.kw) + '%）</b>。' +
       '出力で重み付けした最寄り施設までの平均距離は' + km1(avgKm(t)) + ' km（直線）。' +
+      altSentence() +
       (t.noPos ? '（位置が不明の' + n(t.noPos) + '件は距離の計算から除いています）' : '') + '</div>';
     $('summary').innerHTML = h;
     var th = '<table><tr><th class="l">リサイクル施設（出典は施設ごと。「府外」は京都府外）</th><th>最寄りとなる設備</th><th>出力(MW)</th><th>うち圏外(MW)</th><th>平均距離(km)</th></tr>';
@@ -120,8 +128,16 @@
       var f = i < S.facs.length ? S.facs[i] : null;
       th += '<tr><td class="l"><span class="sw" style="background:' + SITE_COLORS[i] + '"></span>' + (f ? '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' + (isExt(f) ? '<span class="tag-ext">府外・' + esc(f.pref) + '</span>' : '') : esc(siteName(i))) + '</td><td>' + n(b.plants) + '件</td><td>' + mw(b.kw) + '</td><td>' + mw(b.outKw) + '</td><td>' + km1(b.kw ? b.kmKw / b.kw : 0) + '</td></tr>';
     });
-    th += '</table><p class="note">「最寄り」は直線距離で最も近い施設。施設の処理能力・受入可否・府県をまたぐ運搬の可否は見ていません。「京都府内の施設のみ」に切り替えると、府外の施設を除いて計算します。</p>';
+    th += '</table><p class="note">「最寄り」は直線距離で最も近い施設。施設の処理能力・受入可否・府県をまたぐ運搬の可否は見ていません。「京都府内の施設のみ」に切り替えると府外の施設を除き、「未確認の拠点も含める」に切り替えると受入可否が未確認の拠点を加えて計算します。</p>';
     $('fac-table').innerHTML = th;
+  }
+
+  /* 受入が未確認の拠点を含む場合と含まない場合の両方の圏外割合を出す（候補拠点は含めない） */
+  function altSentence() {
+    if (!S.alt || !S.alt.total.plants) return '';
+    var a = S.base.total, b = S.alt.total, o = opts();
+    var inc = S.est ? a : b, exc = S.est ? b : a;
+    return '<br><span class="altnote">受入可否が未確認の拠点（' + esc(unconfNames()) + '）を含む場合の圏外は' + pct(inc.outKw, inc.kw) + '%、含まない場合は' + pct(exc.outKw, exc.kw) + '%（' + o.radiusKm + ' km・直線。どちらが実態に近いかは未確認）。</span>';
   }
 
   function renderChart() {
@@ -241,6 +257,7 @@
     rows.push(['データ区分', m.real_data ? '実データ（公表データを加工）' : '架空サンプル']);
     rows.push(['廃棄時期の置き方（仮説）', curBasis().label, curBasis().text]);
     rows.push(['対象年', S.cut + '年までに出ると推定した設備', '回収圏の半径(直線km)', S.radius]);
+    rows.push(['受入が未確認の拠点', S.est ? '含める' : '除く', S.alt && S.alt.total.plants ? '含む場合の圏外 ' + pct((S.est ? S.base : S.alt).total.outKw, (S.est ? S.base : S.alt).total.kw) + '% / 含まない場合 ' + pct((S.est ? S.alt : S.base).total.outKw, (S.est ? S.alt : S.base).total.kw) + '%' : '']);
     rows.push(['使った施設', S.scope === 'in' ? '京都府内の施設のみ' : '府外の施設も含める（府外: ' + S.facs.filter(isExt).map(function (f) { return f.name + '（' + f.pref + '）'; }).join('、') + '）']);
     if (t.plants === 0) rows.push(['注意', zeroReason()]);
     rows.push(['候補拠点（試算）', S.cand ? '緯度' + S.cand.lat.toFixed(4) + ' 経度' + S.cand.lon.toFixed(4) : 'なし']);
@@ -283,7 +300,7 @@
       '廃棄時期は仮説。運転開始年（運転開始報告年月の年）に年数を足す、または調達期間終了年を使った推定で、実際の撤去時期ではない。年数に公的な根拠は確認していない。',
       '元データは出力20kW未満の太陽光を含まない。運転開始前の設備（' + st.not_started + '件）は推定の対象外。位置を特定できなかった設備は除いている（' + st.unplaced + '件）。',
       '位置は設備所在地の町字の代表点（' + st.town + '件）、町字が引けなかったものは市区町村の代表点（' + st.muni + '件）。同じ町字の設備は同じ点に重なる。複数地番の設備は代表地番のみを使用。',
-      '距離は直線。道路距離・運搬費・施設の受入能力・許可の範囲・処理できるパネルの種類・府県をまたぐ運搬の可否は見ていない。リサイクル施設は、京都府の公表3社、京都環境保全公社の北部の拠点（所在地は会社概要からの推定）、JPEA一覧の府外2社（大阪府・三重県）で、これで全てではない。兵庫・滋賀・奈良・和歌山・福井の施設は、取れた公開リストになく、含まない。',
+      '距離は直線。道路距離・運搬費・施設の受入能力・許可の範囲・処理できるパネルの種類・府県をまたぐ運搬の可否は見ていない。リサイクル施設は、京都府の公表3社、京都環境保全公社の北部の拠点（所在地は会社概要からの推定で、パネルの受け入れ可否も未確認。既定では計算に含めない）、JPEA一覧の府外2社（大阪府・三重県）で、これで全てではない。兵庫・滋賀・奈良・和歌山・福井の施設は、取れた公開リストになく、含まない。',
       '出力（kW）のまま扱い、パネルの重量には換算していない。認定情報は最新状況を反映しておらず、失効した認定を含む場合がある（公表サイトの注意書き）。',
       '候補拠点の試算は距離だけの目安。用地・許可・道路は未検討。',
       '個人・事業者を特定する項目（事業者名・代表者・住所・電話・設備ID）は取り込んでいない。'

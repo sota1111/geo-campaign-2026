@@ -53,7 +53,7 @@ FACILITIES = [
     {"name": "株式会社京都環境保全公社（京都北部営業所・推定）", "pref": "京都府", "address": "京都府船井郡京丹波町猪鼻冠石2-1", "geo_q": "京都府船井郡京丹波町猪鼻冠石2",
      "url": "https://www.kyoto-kankyo.net/corporation/outline.html",
      "note": "同社の太陽光パネルのページは「京都北部・南部に搬入拠点」とするが所在地を書いていない。会社概要の「京都北部営業所」（瑞穂環境保全センターと同住所）を北部の拠点と推定した。パネルの搬入をこの住所で受けるかは未確認",
-     "source": "京都環境保全公社 会社概要（本社・事業所）と太陽光パネルリサイクルのページ", "source_url": "https://www.kyoto-kankyo.net/corporation/outline.html"},
+     "source": "京都環境保全公社 会社概要（本社・事業所）と太陽光パネルリサイクルのページ", "source_url": "https://www.kyoto-kankyo.net/corporation/outline.html", "unconfirmed": True},
     {"name": "近畿電電輸送株式会社（寝屋川）", "pref": "大阪府", "address": "大阪府寝屋川市讃良西町6-23", "geo_q": "大阪府寝屋川市讃良西町6", "url": "https://www.kdy.co.jp/pr/index.html",
      "note": "JPEA一覧の記載。京都府公表の八幡市の拠点とは別の住所", "source": JPEA_SRC[0], "source_url": JPEA_SRC[1]},
     {"name": "株式会社エコアドバンス伊賀工場", "pref": "三重県", "address": "三重県伊賀市三田字中川原521-1", "geo_q": "三重県伊賀市三田中川原521", "url": "https://ecoadvance.co.jp/solar.html",
