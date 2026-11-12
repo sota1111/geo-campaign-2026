@@ -6,6 +6,16 @@ import { haversine, inPolygon, type Poly } from './lib.ts'
 
 export const REINFOLIB_URL = 'https://www.reinfolib.mlit.go.jp/'
 export const GENERATOR = 'fetch-reinfolib.ts'
+
+// ---- 利用規約が求める表示（https://www.reinfolib.mlit.go.jp/help/termsOfUse/ 、2026-11-12 閲覧） ----
+/** API利用規約 第7条のクレジット（文言は規約のまま。変えない） */
+export const REINFOLIB_CREDIT = 'このサービスは、国土交通省の不動産情報ライブラリのAPI機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません'
+/** 利用規約「コンテンツの利用に係るPDL1.0に関する重要情報」(1) の出典記載例どおり */
+export const REINFOLIB_ATTRIBUTION = '出典：国土交通省　不動産情報ライブラリ（' + REINFOLIB_URL + '）'
+/** 同 (1) 編集・加工した場合の追加記載（利用したコンテンツの名称と、加工した旨） */
+export const REINFOLIB_PROCESSED = '「不動産価格（取引価格）情報」「地価公示・地価調査」「都市計画決定GISデータ（区域区分）」（国土交通省）をもとに作成者が集計・照合して作成'
+/** API利用規約 第8条(1)：アプリの責任の所在と、作成者・利用者の責任範囲 */
+export const REINFOLIB_RESPONSIBILITY = 'このアプリは作成者が開発・運営し、表示内容の責任は作成者が負います（国が作成・監修したものではありません）。表示は参考情報で、判断は利用者が行ってください（重要事項説明などの手続きには使えません）'
 /** 町名ごとの取引集計は、この件数以上の時だけ出す（少数だと個別の取引が推測できるため） */
 export const MIN_TRADES = 3
 /** 地価公示の標準地を「近く」とみなす距離（m） */

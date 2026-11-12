@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  DAYS, DAY_FULL, DAY_LABEL, PERIODS, PERIOD_LABEL, citationText, compareRow, condIndex, fmtMin, levelLabel, lostPopulation,
+  DAYS, ODPT_NOTICE, DAY_FULL, DAY_LABEL, PERIODS, PERIOD_LABEL, citationText, compareRow, condIndex, fmtMin, levelLabel, lostPopulation,
   needLevel, nodeFacts, pct, shortName, summarize, type Cell, type Lost, type Near, type RegionData, type RegionIndex,
 } from './lib'
 import type { CondState } from './Conclusion'
@@ -358,7 +358,7 @@ export function AboutPanel({
         <p>
           出典: {has('GTFSデータリポジトリ') && <A href="https://www.gtfs-data.jp/">GTFSデータリポジトリ</A>}
           {data.coverage.sources.length > 1 && '、'}
-          {has('公共交通オープンデータセンター') && <><A href="https://www.odpt.org/">公共交通オープンデータセンター</A>（公開API https://api-public.odpt.org/api/v4/ 、キー不要）</>}
+          {has('公共交通オープンデータセンター') && <><A href="https://www.odpt.org/">公共交通オープンデータセンター</A>（{data.feeds.some((f) => f.license === '公共交通オープンデータ基本ライセンス') ? '公開API（キー不要）と、開発者登録が必要なAPI' : '公開API https://api-public.odpt.org/api/v4/ 、キー不要'}）</>}
           。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。
         </p>
         <div className="overflow-x-auto">
@@ -391,6 +391,7 @@ export function AboutPanel({
             </TableBody>
           </Table>
         </div>
+        {has('公共交通オープンデータセンター') && <p className="text-xs text-muted-foreground">{ODPT_NOTICE}</p>}
         <p className="text-xs text-muted-foreground">データ生成日: {data.built}。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>
       </section>
       <section>

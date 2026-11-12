@@ -1,7 +1,8 @@
-/* 不動産情報ライブラリ（国土交通省）の API から、徳島市の対象データを取得して public/data/biz-realestate/reinfolib.json に書く前処理。
+/* 不動産情報ライブラリ（国土交通省）の API から、徳島市の対象データを取得して contests/ichibiz-2026/app/realestate/web/data/reinfolib.json（同梱データ）に書く前処理。
+ * ビルド時に scripts/copy-data.mjs が public/data/biz-realestate/ にコピーする。
  * ビルドの前に手元で1回実行する（ブラウザからは API を呼ばない。キーが公開されるうえ、公式も CORS エラーのためブラウザ送信を勧めていない）。
  *
- *   REINFOLIB_API_KEY=（発行されたキー） node src/apps/biz-realestate/fetch-reinfolib.ts
+ *   node --env-file=../../.env src/apps/biz-realestate/fetch-reinfolib.ts   # キーはリポジトリ直下 .env の REINFOLIB_API_KEY（雛形 .env.example）
  *   node src/apps/biz-realestate/fetch-reinfolib.ts --check      # キー不要。取得する範囲と本数だけ表示（通信しない）
  *
  * キーは環境変数だけから読む。ファイル・引数・ログには出さない。通信は GET のみ（外部への送信なし）。
@@ -24,7 +25,8 @@ const now = new Date()
 const tradeYears = (opt('--trade-years') ?? `${now.getFullYear() - 2},${now.getFullYear() - 1}`).split(',').map((s) => s.trim()).filter(Boolean)
 const landYear = Number(opt('--land-year') ?? now.getFullYear() - 1)
 const Z = 13 // XPT002 は 13〜15、XKT001 は 11〜15 で指定できる。両方で使える最小の 13（本数が最も少ない）
-const outFile = path.resolve(opt('--out') ?? path.join(root, 'public/data/biz-realestate/reinfolib.json'))
+// 既定は同梱データの置き場所（リポジトリに入る）。public/data/ に直接書くと、次のビルドで copy-data が同梱版で上書きするため
+const outFile = path.resolve(opt('--out') ?? path.resolve(root, '../ichibiz-2026/app/realestate/web/data/reinfolib.json'))
 const only = (opt('--only') ?? 'trade,landPrice,division').split(',')
 const DELAY_MS = 300
 

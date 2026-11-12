@@ -448,6 +448,12 @@ export function altConditions(cell: Cell, o: { fi: number; day: Day; per: Period
   return { periods, longerW }
 }
 
+/** 公共交通オープンデータ開発者ガイドラインが一般ユーザへの通知を求める事項（出典・無保証・事業者へ問い合わせない）。静的版 lib.js と同文 */
+export const ODPT_NOTICE =
+  '本アプリが利用する公共交通データの一部は、公共交通オープンデータセンターにおいて提供されるものです。' +
+  '公共交通事業者により提供されたデータを元にしていますが、必ずしも正確・完全なものとは限りません。' +
+  '本アプリの表示内容について、公共交通事業者への直接の問合せは行わないでください。'
+
 // ---------- 結論カードの「使ったデータ」一行 ----------
 const SOURCE_LABEL: Record<string, string> = {
   'gtfs-data': 'GTFSデータリポジトリ（公共交通のオープンデータ）',

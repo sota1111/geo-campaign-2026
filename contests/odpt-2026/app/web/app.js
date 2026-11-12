@@ -654,7 +654,7 @@
       h += '<h2>この地域（' + esc(d.name) + '）に収録したGTFSデータ</h2>';
       h += '<p>出典: ' + (d.coverage.sources.indexOf('GTFSデータリポジトリ') >= 0 ? '<a href="https://www.gtfs-data.jp/" target="_blank" rel="noopener">GTFSデータリポジトリ</a>' : '') +
         (d.coverage.sources.length > 1 ? '、' : '') +
-        (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0 ? '<a href="https://www.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（公開API https://api-public.odpt.org/api/v4/ 、キー不要）' : '') +
+        (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0 ? '<a href="https://www.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（' + (d.feeds.some(function (f) { return f.license === '公共交通オープンデータ基本ライセンス'; }) ? '公開API（キー不要）と、開発者登録が必要なAPI' : '公開API https://api-public.odpt.org/api/v4/ 、キー不要') + '）' : '') +
         '。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。</p>';
       h += '<table><tr><th>事業者</th><th>データ名</th><th>取得元</th><th>ライセンス・クレジット</th><th>更新日</th><th>データ有効期間</th><th>診断の基準日（平日/休日）</th></tr>';
       d.feeds.forEach(function (f) {
@@ -666,7 +666,11 @@
           '</td><td>' + esc(f.updated) + '</td><td>' + esc((f.valid[0] || '?') + '〜' + (f.valid[1] || '?')) + warn + '</td><td>' +
           esc(f.ref.wd + ' / ' + f.ref.hol) + '</td></tr>';
       });
-      h += '</table><p class="note">データ生成日: ' + esc(d.built) + '。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>';
+      h += '</table>';
+      if (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0) {
+        h += '<p class="note">' + esc(L.ODPT_NOTICE) + '</p>';
+      }
+      h += '<p class="note">データ生成日: ' + esc(d.built) + '。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>';
     }
     h += '<h2>その他のデータ</h2><ul>' +
       '<li>鉄道駅: 国土数値情報「鉄道データ」N02-22（国土交通省、令和4年12月31日時点）を加工して作成。GTFSに収録していない鉄道の駅の位置を地図に示し、駅から徒歩' + (d ? d.params.rail_walk_min : 15) + '分圏の地区を「鉄道駅が近い（未評価）」とするためだけに使っています（時刻表・運行は使っていません）。新設駅・廃止駅は反映されていない場合があります。</li>' +

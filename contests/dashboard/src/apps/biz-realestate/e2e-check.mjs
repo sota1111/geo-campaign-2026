@@ -84,6 +84,13 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   await sleep(500)
   console.log(label, 'summary:', await ev(`[...document.querySelectorAll('[data-testid=summary] > div')].map(d=>d.textContent).join(' | ')`))
   console.log(label, 'exit-sell:', await ev(`document.querySelector('[data-testid=exit-sell]').innerText.slice(0,300)`))
+  // 不動産情報ライブラリ: 同梱の取得結果が読めていれば、シートに「ライブラリ由来」の行と規約のクレジットが出る
+  console.log(label, 'lib rows:', await ev(`JSON.stringify([...document.querySelectorAll('[data-testid=sheet] [data-testid=lib-badge]')].map(b=>b.closest('div,li')?.innerText.replace(/\\s+/g,' ').slice(0,160)))`))
+  console.log(label, 'lib credit in sheet:', await ev(`document.querySelector('[data-testid=lib-credit]')?.textContent.includes('API機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません')`))
+  await ev(`document.querySelector('[data-step=conditions]')?.click()`); await sleep(800)
+  console.log(label, 'step3 lib-box:', await ev(`document.querySelector('[data-testid=lib-status]')?.textContent.slice(0,120)`), '| terms:', await ev(`!!document.querySelector('[data-testid=lib-terms]')`))
+  await shot(`${label}-3a-conditions.png`, true)
+  await ev(`document.querySelector('[data-step=answers]')?.click()`); await sleep(500)
   await shot(`${label}-3-sheet.png`, true)
   if (!mobile) {
     for (const [name, act] of [['print', null], ['print-example', `document.querySelector('[data-step=place]').click()`]]) {

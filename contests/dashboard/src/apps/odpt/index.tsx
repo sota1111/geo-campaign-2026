@@ -46,7 +46,7 @@ const STATIONS = [
 ]
 
 const SOURCES = [
-  { name: '公共交通の時刻表（GTFS）', provider: 'GTFSデータリポジトリ／公共交通オープンデータセンター（各事業者）', license: 'フィードごとに CC0 1.0／CC BY 4.0 等（「出典・前提」タブに事業者別の一覧）', url: 'https://www.gtfs-data.jp/', note: '停留所の集約・本数集計・到達時間の計算という加工を行っています。' },
+  { name: '公共交通の時刻表（GTFS）', provider: 'GTFSデータリポジトリ／公共交通オープンデータセンター（各事業者）', license: 'フィードごとに CC0 1.0／CC BY 4.0／公共交通オープンデータ基本ライセンス 等（「出典・前提」タブに事業者別の一覧）', url: 'https://www.gtfs-data.jp/', note: '停留所の集約・本数集計・到達時間の計算という加工を行っています。' },
   { name: '人口', provider: '政府統計の総合窓口（e-Stat）令和2年国勢調査 地域メッシュ統計', license: '政府統計の総合窓口の利用規約（出典明記）', url: 'https://www.e-stat.go.jp/', note: '250mメッシュを500mに集約。加工して作成。' },
   { name: '病院・学校・鉄道駅', provider: '国土数値情報（国土交通省）P04-20・P29-21・N02-22', license: '国土数値情報の利用規約（出典明記）', url: 'https://nlftp.mlit.go.jp/ksj/', note: '加工して作成。' },
   { name: '背景地図', provider: '国土地理院 地理院タイル', url: 'https://maps.gsi.go.jp/development/ichiran.html' },

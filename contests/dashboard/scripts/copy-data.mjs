@@ -40,7 +40,7 @@ const SOURCES = {
     ],
   },
   'biz-idea': { src: 'ichibiz-2026/app/idea/data', files: ['lore.json', 'samples.json'] },
-  'biz-realestate': { src: 'ichibiz-2026/app/realestate/web/data', files: ['tokushima.json'] },
+  'biz-realestate': { src: 'ichibiz-2026/app/realestate/web/data', files: ['tokushima.json', 'reinfolib.json'] },
 }
 
 let count = 0

@@ -23,7 +23,9 @@ import {
   buildDigest, buildSheet, GLOSSARY, glossaryFor, pickSearchHit, SAMPLE_ANSWERS, sheetToText, summarize,
   type Answers, type AreaData, type Exit, type Facts, type Tone, type Zone,
 } from './lib'
-import { isReinfolibData, lookupLibrary, REINFOLIB_URL, type ReinfolibData } from './reinfolib'
+import {
+  isReinfolibData, lookupLibrary, REINFOLIB_ATTRIBUTION, REINFOLIB_CREDIT, REINFOLIB_PROCESSED, REINFOLIB_RESPONSIBILITY, REINFOLIB_URL, type ReinfolibData,
+} from './reinfolib'
 
 const LIB_URL = REINFOLIB_URL
 const CENTER: [number, number] = [134.5548, 34.0703]
@@ -42,8 +44,8 @@ function buildSources(lib: ReinfolibData | null) {
   return [
     ...BASE_SOURCES.slice(0, -1),
     lib
-      ? { name: '不動産情報ライブラリ（事前に取得した同梱データ）', provider: '国土交通省「不動産情報ライブラリ」のAPI（' + got.join('・') + '）。取得日 ' + lib.fetchedAt, url: LIB_URL, license: '同ライブラリの利用約款に従う（出典の表記・加工の明記・免責）', note: '画面の「ライブラリ由来」の印の付いた行が、このデータによる。ビルド前に手元でAPIから取得して同梱したもので、ブラウザからAPIは呼んでいない。国土交通省が作成したデータを、このアプリが加工（地点との照合・集計）した。取引価格は町名ごとの中央値で、個別の物件の価格ではない。地価公示・地価調査は標準地の価格で、この土地の価格ではない。' }
-      : { name: '不動産情報ライブラリ（この画面では未取得）', provider: '国土交通省「不動産情報ライブラリ」', url: LIB_URL, note: 'この画面の数値・判定は、ライブラリのAPIからは取得していない（APIキーの承認待ちで、取得データをまだ同梱していない）。ライブラリで確認できる項目（取引価格・地価公示・将来人口・医療機関・小学校区・区域区分、用途地域や洪水浸水想定区域の最新情報）は、この画面の手順3と1枚シートに「ライブラリで確認する項目」として示すだけ。' },
+      ? { name: '不動産情報ライブラリ（事前に取得した同梱データ）', provider: '国土交通省「不動産情報ライブラリ」のAPI（' + got.join('・') + '）。取得日 ' + lib.fetchedAt, url: LIB_URL, license: '不動産情報ライブラリ利用規約・API利用規約（公共データ利用規約 第1.0版）。' + REINFOLIB_ATTRIBUTION, note: '画面の「ライブラリ由来」の印の付いた行が、このデータによる。ビルド前に手元でAPIから取得して同梱したもので、ブラウザからAPIは呼んでいない。' + REINFOLIB_PROCESSED + '。取引価格は町名ごとの中央値で、個別の物件の価格ではない。地価公示・地価調査は標準地の価格で、この土地の価格ではない。' + REINFOLIB_CREDIT + '。' + REINFOLIB_RESPONSIBILITY + '。' }
+      : { name: '不動産情報ライブラリ（この画面では未取得）', provider: '国土交通省「不動産情報ライブラリ」', url: LIB_URL, note: 'この画面の数値・判定は、ライブラリのAPIからは取得していない（取得データ reinfolib.json が同梱されていない、または読み込めなかった）。ライブラリで確認できる項目（取引価格・地価公示・将来人口・医療機関・小学校区・区域区分、用途地域や洪水浸水想定区域の最新情報）は、この画面の手順3と1枚シートに「ライブラリで確認する項目」として示すだけ。' },
     BASE_SOURCES[BASE_SOURCES.length - 1],
   ]
 }
@@ -59,7 +61,7 @@ const QUESTIONS: { key: keyof Answers; legend: string; short: string; options: [
   { key: 'registered', legend: '相続登記は済んでいますか', short: '相続登記', options: [['不明', '分からない'], ['済', '済んでいる'], ['未', 'まだ']] },
 ]
 // この画面の項目と不動産情報ライブラリ（国土交通省）の対応。ライブラリのAPI名は提出文書（reinfolib.md・2026-11-09 公式API仕様で確認）による。
-// 「この画面はライブラリから取得していない」ことを明示する（ライブラリ由来とは書かない）。
+// ここに並ぶ項目は、ライブラリ以外のデータで出している（ライブラリ由来とは書かない）。ライブラリから取得した項目は「ライブラリ由来」の行で別に出す。
 const LIB_SCREEN: { item: string; from: string; lib: string }[] = [
   { item: '用途地域・建ぺい率・容積率', from: '国土数値情報（令和元年度版・徳島県）を同梱', lib: 'ライブラリにも「用途地域」（XKT002）がある。最新はそちらで確認' },
   { item: '洪水浸水想定区域', from: 'ハザードマップポータル（国土地理院）のタイル', lib: 'ライブラリにも「洪水浸水想定区域（想定最大規模）」（XKT026）がある' },
@@ -418,9 +420,9 @@ export default function App() {
         <p className="mt-3 text-xs text-muted-foreground print:mt-0 print:text-[6.5pt] print:text-black">
           出典: 国土地理院タイル・住所検索・逆ジオコーダ（町名の表示）、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
           {lib
-            ? <>「ライブラリ由来」の項目は、国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/ 、{lib.fetchedAt}取得）のデータを加工して作成。他の項目はAPIから取得していません。将来人口・医療機関・小学校区などはライブラリで確認してください。</>
+            ? <span data-testid="lib-credit">「ライブラリ由来」の項目は、{REINFOLIB_ATTRIBUTION}（{lib.fetchedAt}取得）。{REINFOLIB_PROCESSED}。{REINFOLIB_CREDIT}。{REINFOLIB_RESPONSIBILITY}。</span>
             : <>この画面は国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）のAPIから取得していません。上の「ライブラリで確認する項目」はそちらで確認してください。</>}
-          国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
+          {lib ? '' : '国のデータを加工した参考情報であり、'}法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
         </p>
         </MobileFold>
       </CardContent>
@@ -689,9 +691,12 @@ function LibraryBox({ lib }: { lib: ReinfolibData | null }) {
     <section className="space-y-1.5 rounded-md border-2 border-sky-700 p-2 text-xs" aria-label="不動産情報ライブラリとの関係" data-testid="lib-box">
       <h3 className="text-sm font-bold">不動産情報ライブラリ（国土交通省）との関係</h3>
       {lib ? (
-        <p data-testid="lib-status">「ライブラリ由来」の印の付いた行は、ライブラリのAPIから事前に取得した同梱データ（{got.join('・')}、取得日 {lib.fetchedAt}）。印のない行は、ライブラリのAPIから取得したものではありません。この地点に該当するデータがない項目は、行が出ません。</p>
+        <>
+          <p data-testid="lib-status">「ライブラリ由来」の印の付いた行は、ライブラリのAPIから事前に取得した徳島市のデータ（{got.join('・')}、取得日 {lib.fetchedAt}）をこの地点に照らしたもの。印のない行は、ライブラリのAPIから取得したものではありません。この地点に該当するデータがない項目は、行が出ません。</p>
+          <p className="rounded bg-muted/50 p-1.5" data-testid="lib-terms">{REINFOLIB_CREDIT}。{REINFOLIB_RESPONSIBILITY}。{REINFOLIB_ATTRIBUTION}。{REINFOLIB_PROCESSED}。</p>
+        </>
       ) : (
-        <p data-testid="lib-status"><b>この画面の数値・判定は、ライブラリのAPIから取得したものではありません。</b>（APIキーの承認待ちで、取得データをまだ同梱していません。）</p>
+        <p data-testid="lib-status"><b>この画面の数値・判定は、ライブラリのAPIから取得したものではありません。</b>（ライブラリの取得データを読み込めませんでした。）</p>
       )}
       <details>
         <summary className="min-h-8 cursor-pointer py-1 font-bold">項目ごとの対応（ライブラリにもある項目・ライブラリで確認する項目）</summary>
@@ -702,7 +707,7 @@ function LibraryBox({ lib }: { lib: ReinfolibData | null }) {
         </ul>
         <p className="mt-1.5 font-bold">ライブラリで確認する項目{lib ? '（取得していないもの）' : '（この画面では取得していません）'}</p>
         <ul className="list-disc pl-5">{LIB_ONLY.filter((m) => !(m.key && lib?.[m.key])).map((m) => <li key={m.text}>{m.text}</li>)}</ul>
-        <p className="mt-1">ライブラリ：<a className="text-primary underline" href={LIB_URL} target="_blank" rel="noreferrer">{LIB_URL}</a>（括弧内はライブラリのAPI名）</p>
+        <p className="mt-1">不動産情報ライブラリ（国土交通省）へのリンク：<a className="text-primary underline" href={LIB_URL} target="_blank" rel="noreferrer">{LIB_URL}</a>（括弧内はライブラリのAPI名）</p>
       </details>
     </section>
   )
@@ -713,7 +718,7 @@ function SustainCard({ lib }: { lib: ReinfolibData | null }) {
   const rows: [string, string][] = [
     ['想定する使い手', '相続した土地の持ち主（無料）。自治体の空き家相談窓口（職員と相談者が同じシートを見る窓口版。有償）'],
     ['料金', '相続人は無料。窓口版の金額は未定'],
-    ['データの更新', lib ? `不動産情報ライブラリのAPIから事前に取得して同梱（取得日 ${lib.fetchedAt}）。更新するには、手元でもう一度取得してから公開し直す` : '用途地域などは同梱データ（令和元年度版）。ライブラリのAPIから事前に取得する仕組みは用意済みだが、APIキーの承認待ちで、取得データはまだ無い'],
+    ['データの更新', lib ? `不動産情報ライブラリのAPIから事前に取得して同梱（取得日 ${lib.fetchedAt}）。更新するには、手元でもう一度取得してから公開し直す` : '用途地域などは同梱データ（令和元年度版）。ライブラリの取得データは、この画面では読み込めていない'],
     ['更新・運用する担い手', '未定'],
     ['位置の扱い', '検索にだけ使い、記録しない'],
   ]

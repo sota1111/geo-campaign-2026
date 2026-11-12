@@ -1,5 +1,5 @@
 /* 相談前の1枚シート: 純粋ロジック（元アプリ web/lib.js の TypeScript 版＋画面用の要約）。DOM・ネットワークには触れない。 */
-import { yen, type LibFacts } from './reinfolib.ts'
+import { REINFOLIB_ATTRIBUTION, REINFOLIB_CREDIT, REINFOLIB_PROCESSED, REINFOLIB_RESPONSIBILITY, yen, type LibFacts } from './reinfolib.ts'
 
 export type Ring = [number, number][]
 export type Poly = Ring[]
@@ -224,7 +224,8 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
     if (m.includes('調整')) {
       exits.sell.push({ basis: 'library', fact, ask: '建てられる建物の条件を市役所の都市計画担当に聞く。買い手の想定を不動産会社に聞く。', who: '市役所・不動産会社' })
       exits.use.push({ basis: 'library', fact, ask: '自分で建てる・使う場合に必要な手続きを市役所に聞く。', who: '市役所' })
-    } else {
+    } else if (!f.zone) {
+      // 用途地域が分かっている時は、用途地域の項目が同じこと（建てられる建物の条件）を聞いているので重ねない
       exits.sell.push({ basis: 'library', fact, ask: '用途地域とあわせて、建てられる建物の条件を市役所の都市計画担当に聞く。', who: '市役所' })
     }
   }
@@ -233,7 +234,7 @@ export function buildSheet(f: Facts, answers?: Answers): Sheet {
     const { point: p, dist, year } = f.lib.landPrice
     exits.sell.push({
       basis: 'library',
-      fact: '近くの標準地「' + p.lot + '」（' + (p.kind || '地価公示・地価調査') + '・' + fmtApprox(dist) + '・' + (p.year || year + '年') + '）の価格は1平方メートルあたり' + yen(p.price) + '（参考値。この土地の価格ではない）。',
+      fact: '近くの標準地「' + p.lot + '」（' + (p.kind || '地価公示・地価調査') + (p.use ? '・' + p.use : '') + '・' + fmtApprox(dist) + '・' + (p.year || year + '年') + '）の価格は1平方メートルあたり' + yen(p.price) + '（参考値。この土地の価格ではない）。',
       ask: 'この参考値と、実際の土地への当てはめ方（形・接道などによる違い）を不動産会社に聞く。',
       who: '不動産会社',
     })
@@ -340,10 +341,14 @@ export function summarize(f: Facts): SummaryRow[] {
   }
   // 不動産情報ライブラリ由来（同梱の取得結果がこの地点に該当した分だけ。無ければ行を出さない）
   const L = f.lib
-  if (L?.division) rows.push({ key: 'lib-division', label: '区域区分', value: L.division.main + (L.division.classes.length > 1 ? '（データ上の区分: ' + L.division.classes.join('・') + '）' : ''), tone: 'ok', lib: true })
+  if (L?.division) {
+    // 「都市計画区域」は市街化区域・市街化調整区域と常に重なるので、それらがある時は併記しない（区分が本当に複数ある時だけ並べる）
+    const shown = L.division.classes.length > 1 ? L.division.classes.filter((c) => c !== '都市計画区域') : L.division.classes
+    rows.push({ key: 'lib-division', label: '区域区分', value: L.division.main + (shown.length > 1 ? '（データ上の区分: ' + shown.join('・') + '）' : ''), tone: 'ok', lib: true })
+  }
   if (L?.landPrice) {
     const { point: p, dist, year } = L.landPrice
-    rows.push({ key: 'lib-land', label: '近くの地価（参考）', value: '標準地「' + p.lot + '」（' + (p.kind || '地価公示・地価調査') + '、' + (p.year || year + '年') + '、' + fmtApprox(dist) + '）1平方メートルあたり' + yen(p.price) + '。この土地の価格ではない', tone: 'ok', lib: true })
+    rows.push({ key: 'lib-land', label: '近くの地価（参考）', value: '標準地「' + p.lot + '」（' + (p.kind || '地価公示・地価調査') + (p.use ? '・' + p.use : '') + '、' + (p.year || year + '年') + '、' + fmtApprox(dist) + '）1平方メートルあたり' + yen(p.price) + '。この土地の価格ではない', tone: 'ok', lib: true })
   }
   if (L?.trade) {
     const { stat, scope, period } = L.trade
@@ -418,5 +423,7 @@ export function sheetToText(sheet: Sheet, rows: SummaryRow[], digest: string[], 
   }
   L.push('', '【データにない項目（相談先で確かめる）】', ...sheet.missing.map((m) => '・' + m))
   L.push('', '国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。')
+  // 不動産情報ライブラリ由来の行があるときは、利用規約が求める出典・加工の明記・クレジット・責任の所在を付ける
+  if (rows.some((r) => r.lib)) L.push(REINFOLIB_ATTRIBUTION, REINFOLIB_PROCESSED + '。', REINFOLIB_CREDIT + '。', REINFOLIB_RESPONSIBILITY + '。')
   return L.join('\n')
 }
