@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>路面下リスクの二段階調査｜衛星で絞り、地中レーダで確かめる（デモ・架空データ）</title>
+<meta name="description" content="衛星由来の指標と下水道台帳で道路区間に点数を付け、地中レーダを投入する区間を選び、結果を点数に戻す流れを体験するデモです。表示はすべてサンプル（架空）データです。">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="道路区間の地図（架空の市）"></div>
+<div id="badge" role="note">サンプル（架空）データ</div>
+
+<aside id="panel">
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <header id="head">
+    <h1>路面下リスクの二段階調査</h1>
+    <p class="sub">衛星で絞り、地中レーダ（GMS3等）で確かめる<span class="round" id="round"></span></p>
+  </header>
+  <nav id="steps" role="tablist" aria-label="調査の段階">
+    <button type="button" role="tab" id="tab-1" data-step="1" aria-selected="true"><b>1</b>絞る</button>
+    <button type="button" role="tab" id="tab-2" data-step="2" aria-selected="false"><b>2</b>選ぶ</button>
+    <button type="button" role="tab" id="tab-3" data-step="3" aria-selected="false"><b>3</b>戻す</button>
+  </nav>
+  <div id="panel-body">
+    <div class="fake" role="note">このデモの道路・衛星指標・レーダ結果は<b>すべて架空のサンプル</b>です。実在の場所・精度・効果を示すものではありません。</div>
+    <section id="s1" class="step" aria-labelledby="tab-1"></section>
+    <section id="s2" class="step" hidden aria-labelledby="tab-2"></section>
+    <section id="s3" class="step" hidden aria-labelledby="tab-3"></section>
+    <section id="detail" aria-live="polite"></section>
+    <section id="legend" aria-label="凡例"></section>
+    <p class="foot"><button id="btn-about" type="button">出典・データの扱い・限界</button></p>
+  </div>
+</aside>
+
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <h2 id="modal-title">出典・データの扱い・限界</h2>
+    <div id="about-body"></div>
+    <button id="btn-close" type="button">閉じる</button>
+  </div>
+</div>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

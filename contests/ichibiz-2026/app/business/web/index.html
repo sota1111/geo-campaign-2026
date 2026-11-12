@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>この便を減らすと誰が困る？ バス路線の見直し案を比べる（デモ）</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>この便を減らすと誰が困る？ <span>バス路線の見直し案を地区ごとに比べる（自治体向けサービスの最小デモ）</span></h1>
+  <p class="lead">路線の廃止案を2〜3案つくり、案ごとに「病院・小中学校へ公共交通で行けなくなる人」（65歳以上を含む）を並べて比べ、資料用のCSVに書き出します。</p>
+</header>
+
+<main>
+  <section id="panel">
+    <div class="box limits" role="note">
+      <b>このデモでできること／できないこと</b>
+      <ul>
+        <li>できる: 路線の<b>廃止</b>（その路線の全便を止める）を案にして比べる。</li>
+        <li>できない（未対応）: <b>減便（本数を減らす）</b>、停留所の移設、乗継の変更、運賃・代替交通。</li>
+        <li><b>単独路線の停止</b>だけが事前計算されています。複数の路線を1つの案に入れた場合の人数は「<b>少なくとも</b>」の下限で、同時に止めたときだけ新たに行けなくなる人は含みません（足し合わせではなく、地区の重複を除いた集計です）。</li>
+        <li>収録した5地域・事業者のデータのみ（JR・大手民鉄は未収録）。計画・検討の参考であり、個別の移動の保証ではありません。</li>
+      </ul>
+    </div>
+
+    <div class="box">
+      <h2><span class="step">1</span>地域と診断の条件</h2>
+      <label for="region">地域</label>
+      <select id="region"></select>
+      <p id="region-note" class="note"></p>
+      <div class="row"><span class="lab">曜日</span><div id="ctl-day" class="seg" role="radiogroup" aria-label="曜日"></div></div>
+      <div class="row"><span class="lab">時間帯</span><div id="ctl-period" class="seg" role="radiogroup" aria-label="時間帯"></div></div>
+      <div class="row"><span class="lab">許容時間</span><div id="ctl-w" class="seg" role="radiogroup" aria-label="許容時間"></div></div>
+      <p class="note">「行ける」= その時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可）→徒歩で、許容時間内に施設の近くへ着けること（待ち時間込み）。歩いて着ける地区は路線を止めても影響を受けません。</p>
+    </div>
+
+    <div class="box">
+      <h2><span class="step">2</span>見直し案をつくる（路線の廃止）</h2>
+      <div id="plans"></div>
+      <p class="note" id="plans-note"></p>
+    </div>
+
+    <div class="box">
+      <h2><span class="step">3</span>案を比べる</h2>
+      <div id="compare" class="scroll"></div>
+      <div id="sentences"></div>
+    </div>
+
+    <div class="box">
+      <h2>地区ごとの内訳</h2>
+      <div class="row"><span class="lab">案</span><div id="ctl-plan" class="seg" role="radiogroup" aria-label="案"></div></div>
+      <div class="row"><span class="lab">行き先</span><div id="ctl-fac" class="seg" role="radiogroup" aria-label="行き先"></div></div>
+      <div id="districts" class="scroll"></div>
+    </div>
+
+    <div class="box">
+      <h2><span class="step">4</span>資料用に書き出す</h2>
+      <p class="note">比較表・地区別の内訳・診断の前提・出典を1つのCSV（UTF-8、Excelで開けるBOM付き）にしてダウンロードします。この端末の中で作るだけで、どこにも送信しません。</p>
+      <button id="btn-csv" type="button" class="primary">比較表をCSVでダウンロード</button>
+      <button id="btn-about" type="button">出典・ライセンス・前提</button>
+    </div>
+  </section>
+
+  <section id="mapwrap">
+    <div id="map" aria-label="地図（選んだ案で行けなくなる地区をピンクで表示）"></div>
+    <div id="legend"><span class="sw lost"></span>選んだ案で行けなくなる500mメッシュ <span class="sw rt"></span>止める路線</div>
+  </section>
+</main>
+
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="about-title">
+  <div class="modal-box"><button id="modal-close" type="button" aria-label="閉じる">×</button><div id="about"></div></div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

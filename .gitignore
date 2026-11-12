@@ -8,3 +8,4 @@ __pycache__/
 node_modules/
 .venv/
 .claude/worktrees/
+reports/design/*/*.png
