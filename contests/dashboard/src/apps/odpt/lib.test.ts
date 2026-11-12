@@ -4,6 +4,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 import * as L from './lib'
+import { coverageScope, expiredNote, ODPT_NOTICE, soonNote } from './lib'
 
 const root = path.resolve(import.meta.dirname, '../../..')
 const req = createRequire(import.meta.url)
@@ -158,5 +159,31 @@ describe('共有リンクの読み取り・使ったデータの一行', () => {
   it('ODPTセンターのフィードは公共交通オープンデータセンター（ODPT）と書く', () => {
     const tokyo = load('tokyo.json') as L.RegionData
     expect(L.dataUsedLine(tokyo, [])).toContain('公共交通オープンデータセンター（ODPT）')
+  })
+})
+
+describe('診断の範囲・データの期限の文言（収録データから作る）', () => {
+  it('範囲: 東京のように鉄道系を収録した地域で「バスだけ」と言わない', () => {
+    expect(coverageScope(['バス', '地下鉄', '路面電車', '鉄道'])).toBe('収録した事業者のバス・地下鉄・路面電車・鉄道（JR・大手私鉄など未収録の鉄道は対象外）')
+    expect(coverageScope(['バス'])).toBe('収録した事業者のバス（鉄道は対象外）')
+  })
+  const feeds = [
+    { org: '小田急バス', valid: ['2026-10-01', '2026-11-30'] as [string, string] },
+    { org: '京王バス', valid: ['2026-10-01', '2026-12-31'] as [string, string] },
+    { org: '東京都交通局', valid: ['2026-10-01', '2027-06-30'] as [string, string] },
+  ]
+  it('期限切れ: 切れた事業者名と日付を出す。切れていなければ空', () => {
+    expect(expiredNote(feeds, '2026-11-12')).toBe('')
+    expect(expiredNote(feeds, '2026-12-01')).toBe('この地域の時刻表のうち1件（小田急バス）は2026-11-30で有効期間が切れています。その事業者の路線は古いダイヤで計算しています。')
+    expect(expiredNote(feeds, '2027-01-15')).toMatch(/^この地域の時刻表のうち2件（小田急バス・京王バス）は2026-11-30から順に/)
+  })
+  it('期限前: 利用者向けに「◯日以降、一部の事業者は古いダイヤ」と言う', () => {
+    expect(soonNote(feeds, '2026-11-12', '2027-03-12')).toBe('2026-11-30以降、一部の事業者（小田急バスほか1件）は古いダイヤでの計算になります（公開期間中に最新の時刻表で作り直す予定です）。')
+    expect(soonNote(feeds, '2027-01-01', '2027-03-12')).toBe('')
+  })
+  it('ODPTの通知: 出典・無保証・事業者へ問い合わせない、の3点を含む', () => {
+    expect(ODPT_NOTICE).toMatch(/公共交通オープンデータセンターにおいて提供/)
+    expect(ODPT_NOTICE).toMatch(/正確・完全なものとは限りません/)
+    expect(ODPT_NOTICE).toMatch(/公共交通事業者への直接の問合せは行わないでください/)
   })
 })

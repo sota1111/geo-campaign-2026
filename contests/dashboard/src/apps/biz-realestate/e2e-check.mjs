@@ -21,6 +21,17 @@ ws.onmessage = (m) => {
   if (d.method === 'Runtime.exceptionThrown') logs.push('EXC ' + (d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text).split('\n')[0])
   if (d.method === 'Runtime.consoleAPICalled' && d.params.type === 'error') logs.push('ERR ' + d.params.args.map((a) => a.value || a.description).join(' ').slice(0, 200))
   if (d.method === 'Log.entryAdded' && d.params.entry.level === 'error') logs.push('LOG ' + d.params.entry.text + ' ' + (d.params.entry.url || ''))
+  if (d.method === 'Fetch.requestPaused') onPaused(d.params)
+}
+// 印刷の固定ケース用: 国土地理院の地名検索・逆ジオコーダの応答だけを差し替える（外部へは送らない）。mock が null の間はそのまま通す
+let mock = null
+const CORS = [{ name: 'Access-Control-Allow-Origin', value: '*' }, { name: 'Content-Type', value: 'application/json' }]
+function onPaused({ requestId, request }) {
+  if (!mock) return send('Fetch.continueRequest', { requestId })
+  const body = request.url.includes('msearch.gsi.go.jp') ? mock.search : request.url.includes('mreversegeocoder') ? mock.rev : undefined
+  if (body === undefined) return send('Fetch.continueRequest', { requestId })
+  if (body === null) return send('Fetch.fulfillRequest', { requestId, responseCode: 503, responseHeaders: CORS, body: '' })
+  return send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: CORS, body: Buffer.from(JSON.stringify(body)).toString('base64') })
 }
 const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
 const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true })).result.result.value
@@ -88,7 +99,11 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   console.log(label, 'lib rows:', await ev(`JSON.stringify([...document.querySelectorAll('[data-testid=sheet] [data-testid=lib-badge]')].map(b=>b.closest('div,li')?.innerText.replace(/\\s+/g,' ').slice(0,160)))`))
   console.log(label, 'lib credit in sheet:', await ev(`document.querySelector('[data-testid=lib-credit]')?.textContent.includes('API機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません')`))
   await ev(`document.querySelector('[data-step=conditions]')?.click()`); await sleep(800)
-  console.log(label, 'step3 lib-box:', await ev(`document.querySelector('[data-testid=lib-status]')?.textContent.slice(0,120)`), '| terms:', await ev(`!!document.querySelector('[data-testid=lib-terms]')`))
+  console.log(label, 'step3 lib-box:', await ev(`document.querySelector('[data-testid=lib-status]')?.textContent.slice(0,120)`), '| short source:', await ev(`document.querySelector('[data-testid=lib-source-short]')?.textContent.slice(0,80)`))
+  // 規約のクレジット（第7条）は、手順3の導線から開く「出典・ライセンス」にある（画面上で常に見つけられること）
+  await ev(`document.querySelector('[data-testid=lib-terms-link]')?.click()`); await sleep(600)
+  console.log(label, 'credit in dialog via step3 link:', await ev(`!![...document.querySelectorAll('[role=dialog]')].find(d=>d.textContent.includes('API機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません'))`))
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(400)
   await shot(`${label}-3a-conditions.png`, true)
   await ev(`document.querySelector('[data-step=answers]')?.click()`); await sleep(500)
   await shot(`${label}-3-sheet.png`, true)
@@ -106,4 +121,69 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   }
   console.log(label, 'console errors:', JSON.stringify(logs, null, 1))
 }
+
+// ---- 印刷の固定ケース（A4・1ページに収まること。デザイン審査 api-integration-20261112 の重大1） ----
+// 4問回答・3問回答、取引価格の行あり（逆ジオコーダの応答を差し替え）、市街化調整区域の地点（区域区分が「売る」「活かす」にも出る、いちばん長いケース）
+const ALL4 = { '土地に建物はありますか': 'ある', '地目（登記上の種類）': '田・畑（農地）', '道路に接していますか': '接していない・不明確', '相続登記は済んでいますか': 'まだ' }
+const ANS3 = { ...ALL4, '道路に接していますか': '分からない' }
+const rev = (town) => ({ results: { muniCd: '36201', lv01Nm: town } })
+const CASES = [
+  // [名前, 地点（null＝徳島駅付近の例）, 逆ジオコーダの応答（null＝応答なし）, 回答, 期待する取引の行]
+  ['ex-4ans-noaddr', null, null, ALL4, 'none'],
+  ['ex-4ans-addr', null, rev('寺島本町西一丁目'), ALL4, 'trade'],
+  ['ex-3ans-addr', null, rev('寺島本町西一丁目'), ANS3, 'trade'],
+  ['chosei-4ans-trade', [134.5352, 34.0245], rev('方上町'), ALL4, 'trade'], // 市街化調整区域（方上町・標準地 徳島-20 の近く）
+  ['chosei-3ans-trade', [134.5352, 34.0245], rev('方上町'), ANS3, 'trade'],
+  ['hachiman-4ans-trade', [134.5292, 34.0445], rev('八万町'), ALL4, 'trade'],
+]
+await send('Fetch.enable', { patterns: [{ urlPattern: '*msearch.gsi.go.jp*' }, { urlPattern: '*mreversegeocoder.gsi.go.jp*' }] })
+await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
+let ng = 0
+for (const [name, pt, revBody, ans, expectTrade] of CASES) {
+  logs.length = 0
+  mock = { search: pt ? [{ geometry: { coordinates: pt }, properties: { title: 'テスト地点（差し替え）' } }] : [], rev: revBody }
+  await send('Page.navigate', { url: 'http://127.0.0.1:8847/apps/biz-realestate/' })
+  await sleep(2500)
+  if (pt) {
+    await ev(`document.querySelector('#rs-q').focus()`); await send('Input.insertText', { text: 'テスト地点' })
+    await ev(`document.querySelector('form[role=search] button[type=submit]').click()`); await sleep(1500)
+    await ev(`document.querySelector('[data-testid=use-hit] button').click()`)
+  } else {
+    await ev(`document.querySelector('[data-testid=use-example]').click()`)
+  }
+  for (let i = 0; i < 40 && !(await ev(`!!document.querySelector('[data-testid=sheet]') && !document.querySelector('[data-testid=status]')?.textContent.includes('集めています')`)); i++) await sleep(500)
+  await sleep(1500)
+  await ev(`document.querySelector('[data-step=answers]').click()`); await sleep(500)
+  for (const [g, v] of Object.entries(ans)) {
+    // 既に選ばれている選択肢を押すと解除されるので、選ばれていない時だけ押す
+    await ev(`(b => b.getAttribute('aria-checked') === 'true' || b.click())([...document.querySelector('[role=group][aria-label="${g}"]').querySelectorAll('[role=radio]')].find(b=>b.textContent.trim()===${JSON.stringify(v)}))`)
+    await sleep(150)
+  }
+  await ev(`document.querySelector('[data-step=print]').click()`); await sleep(800)
+  const info = JSON.parse(await ev(`JSON.stringify({
+    division: [...document.querySelectorAll('[data-testid=sheet] dt')].find(d=>d.textContent==='区域区分')?.nextElementSibling?.textContent ?? null,
+    trade: !![...document.querySelectorAll('[data-testid=sheet] dt')].find(d=>d.textContent==='取引価格の傾向' && /中央値/.test(d.nextElementSibling.textContent)),
+    tradeNone: !![...document.querySelectorAll('[data-testid=sheet] dt')].find(d=>d.textContent==='取引価格の傾向' && /照合/.test(d.nextElementSibling.textContent)),
+    printRow: document.querySelector('[data-testid=lib-print-row]')?.textContent ?? null,
+    credit: !!document.querySelector('[data-testid=lib-credit]')?.textContent.includes('API機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません'),
+    answers: document.querySelector('[data-testid=answers]')?.innerText.replace(/\s+/g,' '),
+  })`))
+  await send('Emulation.setEmulatedMedia', { media: 'print' }); await sleep(500)
+  const pdf = await send('Page.printToPDF', { paperWidth: 8.27, paperHeight: 11.69, preferCSSPageSize: true, printBackground: true })
+  await send('Emulation.setEmulatedMedia', { media: '' })
+  const buf = Buffer.from(pdf.result.data, 'base64')
+  fs.writeFileSync(path.join(out, `case-${name}.pdf`), buf)
+  const n = pages(buf)
+  const tradeOk = expectTrade === 'trade' ? info.trade : info.tradeNone
+  const ok = n === 1 && info.credit && tradeOk && !logs.some((l) => l.startsWith('EXC'))
+  if (!ok) ng++
+  console.log(`PRINT-CASE ${name}: pages=${n} credit=${info.credit} trade=${info.trade} tradeNone=${info.tradeNone} division=${info.division} ${ok ? 'OK' : 'NG'}`)
+  console.log(`  answers: ${info.answers}`)
+  console.log(`  print row: ${info.printRow}`)
+  if (logs.length) console.log('  console errors:', JSON.stringify(logs))
+}
+mock = null
+console.log(ng ? `PRINT-CASES: ${ng} NG` : 'PRINT-CASES: all 1 page')
+if (ng) process.exitCode = 1
+
 ws.close(); chrome.kill()

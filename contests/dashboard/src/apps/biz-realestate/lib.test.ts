@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  buildDigest, buildSheet, glossaryFor, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, sheetToText,
+  libPrintLine, buildDigest, buildSheet, glossaryFor, pickSearchHit, classifyFlood, demElevation, findZone, haversine, inPolygon, lonLatToWorld, SAMPLE_ANSWERS, sheetToText,
   summarize, tileOf, transitAround, worldToLonLat, type AreaData, type Facts,
 } from './lib'
 import { analyze, reverseGeocode, REVERSE_GEOCODE_TIMEOUT_MS } from './collect'
@@ -333,9 +333,9 @@ describe('不動産情報ライブラリ: 検証・照合・表示', () => {
     const f = base({ zone: { name: '商業地域', bcr: 80, far: 600, polys: [] }, lib })
     const s = buildSheet(f, {})
     expect(s.libSections).toEqual(['division', 'landPrice', 'trade'])
-    const sell = exit(s, 'sell')!.items.filter((i) => i.basis === 'library')
+    const sell = exit(s, 'sell')!.items.filter((i) => i.basis === 'library' && i.media !== 'print')
     expect(sell).toHaveLength(2) // 市街化区域で用途地域が分かっている時、区域区分は用途地域の項目と同じ問いになるので売るには重ねない（行には出る）
-    expect(exit(buildSheet(base({ zone: null, lib }), {}), 'sell')!.items.filter((i) => i.basis === 'library')).toHaveLength(3)
+    expect(exit(buildSheet(base({ zone: null, lib }), {}), 'sell')!.items.filter((i) => i.basis === 'library' && i.media !== 'print')).toHaveLength(3)
     expect(text(sell)).toMatch(/333,000円/)
     expect(text(sell)).toMatch(/この土地の価格ではない/)
     expect(text(sell)).toMatch(/個別の物件の価格ではない/)
@@ -346,6 +346,34 @@ describe('不動産情報ライブラリ: 検証・照合・表示', () => {
     expect(s.otherItems.join()).not.toMatch(/取引価格|地価公示|区域区分/)
     expect(sheetToText(s, summarize(f), [], '', [])).toMatch(/ライブラリ由来/)
     expect(rows.find((r) => r.key === 'lib-land')!.value).toMatch(/地価公示・商業地/) // 標準地の用途を併記（住宅地の土地に商業地の価格を当てたと誤読させない）
+  })
+  it('印刷用: 地価と取引は売るで1項目（印刷だけ）にまとめ、条件の行も1行にまとめる。テキストのコピーには印刷用の項目を入れない', () => {
+    const lib = lookupLibrary(fixture, 134.5515, 34.0745, '徳島県徳島市寺島本町東三丁目付近')!
+    const f = base({ zone: null, lib })
+    const s = buildSheet(f, {})
+    const sell = exit(s, 'sell')!.items
+    expect(sell.filter((i) => i.media === 'screen').map((i) => i.libKey)).toEqual(['landPrice', 'trade'])
+    const merged = sell.filter((i) => i.media === 'print')
+    expect(merged).toHaveLength(1)
+    expect(merged[0].fact).toMatch(/333,000円\/㎡（この土地の価格ではない）.*寺島本町東.*個別の物件の価格ではない/)
+    const line = libPrintLine(f)!
+    expect(line).toMatch(/^市街化区域／標準地 .*333,000円\/㎡.*／寺島本町東の取引 中央値/)
+    expect(sheetToText(s, summarize(f), [], '', [])).not.toContain(merged[0].fact)
+    expect(libPrintLine(base({ lib: null }))).toBeNull()
+  })
+  it('取引価格のデータは取得済みで、この地点に当てられない時: 「？」の行を出し、「確認する項目」には入れない（取得していないと誤読させない）', () => {
+    const lib = lookupLibrary(fixture, 134.5515, 34.0745, null)!
+    expect(lib.trade).toBeUndefined()
+    expect(lib.tradeUnmatched).toMatch(/町名が分からず/)
+    const f = base({ lib })
+    const row = summarize(f).find((r) => r.key === 'lib-trade-none')!
+    expect(row).toMatchObject({ tone: 'unknown', label: '取引価格の傾向' })
+    expect(row.lib).toBeFalsy()
+    expect(row.value).toMatch(/取得済み/)
+    expect(row.value).not.toMatch(/円/)
+    expect(buildSheet(f, {}).otherItems.join()).not.toMatch(/取引価格/)
+    expect(libPrintLine(f)).toMatch(/取引価格: 町名が分からず/)
+    expect(lookupLibrary(fixture, 134.5515, 34.0745, '徳島県鳴門市撫養町')!.tradeUnmatched).toMatch(/徳島市内の住所と確認できず/)
   })
   it('利用規約の表示: API利用規約第7条のクレジットは規約の文言のまま。出典は記載例どおり', () => {
     expect(REINFOLIB_CREDIT).toBe('このサービスは、国土交通省の不動産情報ライブラリのAPI機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません')

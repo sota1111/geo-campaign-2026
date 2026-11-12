@@ -24,7 +24,7 @@ import {
 } from './panels'
 import {
   altConditions, dataUsedLine, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
-  needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
+  coverageScope, expiredNote, ODPT_NOTICE, soonNote, needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
   type Day, type Lost, type Period, type RegionData, type RegionIndex,
 } from './lib'
 
@@ -40,13 +40,20 @@ const todayIso = () => {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
 }
 
+/** 地名検索を待つ上限（ms） */
+const SEARCH_TIMEOUT_MS = 8000
 const STATIONS = [
   { label: '熊本駅', q: '熊本駅' }, { label: '富山駅', q: '富山駅' }, { label: '徳島駅', q: '徳島駅' },
   { label: '飯田駅', q: '飯田駅' }, { label: '王子駅', q: '王子駅' },
 ]
 
-const SOURCES = [
-  { name: '公共交通の時刻表（GTFS）', provider: 'GTFSデータリポジトリ／公共交通オープンデータセンター（各事業者）', license: 'フィードごとに CC0 1.0／CC BY 4.0／公共交通オープンデータ基本ライセンス 等（「出典・前提」タブに事業者別の一覧）', url: 'https://www.gtfs-data.jp/', note: '停留所の集約・本数集計・到達時間の計算という加工を行っています。' },
+/** 右上の「出典・ライセンス」。公共交通オープンデータセンターのデータを使う地域では、ガイドラインの一般ユーザーへの通知（ODPT_NOTICE）を時刻表の項目に入れる */
+const gtfsSource = (odpt: boolean) => ({
+  name: '公共交通の時刻表（GTFS）', provider: 'GTFSデータリポジトリ／公共交通オープンデータセンター（各事業者）',
+  license: 'フィードごとに CC0 1.0／CC BY 4.0／公共交通オープンデータ基本ライセンス 等（サイドバーの「参考: 出典・前提」に事業者別の一覧）', url: 'https://www.gtfs-data.jp/',
+  note: '停留所の集約・本数集計・到達時間の計算という加工を行っています。' + (odpt ? '【公共交通オープンデータセンターのデータについて】' + ODPT_NOTICE : ''),
+})
+const SOURCES_REST = [
   { name: '人口', provider: '政府統計の総合窓口（e-Stat）令和2年国勢調査 地域メッシュ統計', license: '政府統計の総合窓口の利用規約（出典明記）', url: 'https://www.e-stat.go.jp/', note: '250mメッシュを500mに集約。加工して作成。' },
   { name: '病院・学校・鉄道駅', provider: '国土数値情報（国土交通省）P04-20・P29-21・N02-22', license: '国土数値情報の利用規約（出典明記）', url: 'https://nlftp.mlit.go.jp/ksj/', note: '加工して作成。' },
   { name: '背景地図', provider: '国土地理院 地理院タイル', url: 'https://maps.gsi.go.jp/development/ichiran.html' },
@@ -223,6 +230,8 @@ export default function App() {
     return { cell, v, near, facility, transitLevel, alts, dataLine, labels: stopLabels(data.nodes, near, data.routes), lastWd: lastService(data.nodes, near, 'wd'), lastHol: lastService(data.nodes, near, 'hol') }
   }, [data, pt, cellIdx, cond])
 
+  const expNote = useMemo(() => (data ? expiredNote(data.feeds, todayIso()) : ''), [data])
+  const sources = useMemo(() => [gtfsSource(!!data?.coverage.sources.includes('公共交通オープンデータセンター')), ...SOURCES_REST], [data])
   const copyText = useMemo(() => {
     if (!diag || !data) return ''
     const fmtLast = (l: ReturnType<typeof lastService>) => (l ? `${fmtMin(l.t)}（${l.name}・約${l.m}m）` : '運行なし')
@@ -235,10 +244,11 @@ export default function App() {
         : `【${placeLabel || '選んだ地点'}】診断範囲外です（停留所から遠い、または人口データなし）`,
       ...(diag.v ? [diag.dataLine] : []),
       ...(diag.v && fl === '病院' ? ['病院の診療時間・予約は確認できていません。出かける前に電話で確認してください。'] : []),
+      ...(diag.v && expNote ? ['※' + expNote] : []),
       shareUrl,
     ]
     return withSampleMark(lines.join('\n'))
-  }, [diag, data, placeLabel, shareUrl, cond])
+  }, [diag, data, placeLabel, shareUrl, cond, expNote])
 
   const writeClipboard = useCallback(async (text: string, ok: () => void) => {
     const fallback = () => {
@@ -296,11 +306,13 @@ export default function App() {
     setSearching(true); setSearchMsg('検索中…'); setCands([])
     let rs: Cand[] = []
     let failed = false
+    let timedOut = false
     try {
-      const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q))
+      // 地名検索が応答しない時に「検索中…」のまま止めない（8秒で打ち切り、停留所名から探す・地図をタップする案内に切り替える）
+      const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) })
       if (!r.ok) throw new Error('status ' + r.status)
       rs = parseGsi(await r.json()).map((h) => ({ ...h, rid: regionForPoint(index.regions, h.lon, h.lat) }))
-    } catch { failed = true }
+    } catch (e) { failed = true; timedOut = (e as Error)?.name === 'TimeoutError' || (e as Error)?.name === 'AbortError' }
     const cur = data?.id
     // 並び順: 選択中の地域で診断できる場所 → 選択中の地域の範囲内 → 他の収録地域 → 範囲外
     rs = rs.map((r) => ({ ...r, inCell: r.rid === cur && cellIdx[meshCodeAt(r.lon, r.lat)] != null }))
@@ -316,7 +328,9 @@ export default function App() {
     const first = rs.find((r) => r.rid)
     if (!first) {
       setSearchMsg(failed
-        ? '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認するか、地図をタップして地点を選んでください。'
+        ? timedOut
+          ? '住所検索が応答しません（国土地理院の地名検索）。地図をタップして場所を選んでください。'
+          : '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認するか、地図をタップして地点を選んでください。'
         : rs.length
           ? `見つかった場所（${rs[0].title}）は、収録している5地域（${index.regions.map((x) => shortName(x.name)).join('・')}）の範囲外です。`
           : `「${q}」に該当する場所が見つかりませんでした。`)
@@ -487,7 +501,7 @@ export default function App() {
     const expired = data.feeds.filter((f) => f.valid[1] && f.valid[1] < iso)
     const soon = data.feeds.filter((f) => f.valid[1] && f.valid[1] >= iso && f.valid[1] < data.public_until)
     if (expired.length) return `有効期間が切れたデータが${expired.length}件あります（${expired.map((f) => `${f.org} ${f.valid[1]}`).slice(0, 3).join('、')}${expired.length > 3 ? ' ほか' : ''}）。ダイヤが変わっている可能性があり、この診断は現在の運行を示しません。`
-    if (soon.length) return `${soon.length}件のデータは${soon.map((f) => f.valid[1]!).sort()[0]}から順に有効期間が終わります。切れた後は最新のGTFSで作り直す必要があります。`
+    if (soon.length) return soonNote(data.feeds, iso, data.public_until)
     return ''
   }, [data])
 
@@ -514,14 +528,14 @@ export default function App() {
         lastWd: diag?.lastWd ?? null, lastHol: diag?.lastHol ?? null, nearCount: diag?.near.length ?? 0,
         nearest: diag && diag.near[0] ? { name: diag.labels[0], m: Math.round(diag.near[0].d), wd: data.nodes[diag.near[0].i][3], hol: data.nodes[diag.near[0].i][4] } : null,
         facility: diag?.facility ?? null, transitLevel: diag?.transitLevel ?? null, walkInM: data.params.walk_in_m, alts: diag?.alts ?? null,
-        dataLine: diag?.dataLine ?? '', fromLink: fromLink && step === 'verdict',
+        dataLine: diag?.dataLine ?? '', fromLink: fromLink && step === 'verdict', expiredNote: expNote,
       }
     : null
   const coverageTip = data
     ? `収録しているのは${data.coverage.sources.join('・')}のGTFS ${data.coverage.feeds}件（${data.coverage.modes.join('・')}）のみ。` +
-      (data.coverage.modes.filter((m) => m !== 'バス').length ? `鉄道は${data.coverage.modes.filter((m) => m !== 'バス').join('・')}のみ収録し、JR等は未収録。` : '鉄道（JR等）は未収録。') +
+      (data.coverage.modes.filter((m) => m !== 'バス').length ? `鉄道系で収録しているのは${data.coverage.modes.filter((m) => m !== 'バス').join('・')}の一部の事業者だけで、JR・大手私鉄などは未収録。` : '鉄道（JR等）は未収録。') +
       'デマンド交通・予約制の便も未収録です。実データに基づく推計。' + (dataWarn ? `【データの期限】${dataWarn}` : '')
-    : '収録した事業者のバスのみが対象です。'
+    : '収録した事業者の路線だけが対象です。'
   const needPt = <NoPoint />
   // 同名の候補を見分けるための補足（データにある範囲）: 現在の地域内なら最寄りの停留所、いずれも座標
   const candInfo = (c: Cand) => {
@@ -583,7 +597,7 @@ export default function App() {
             </div>
           </form>
           <p className="text-xs text-muted-foreground">
-            <Term tip={coverageTip}>診断の範囲</Term>: 収録した事業者のバスだけが対象です（実データに基づく推計）。
+            <Term tip={coverageTip}>診断の範囲</Term>: {data ? coverageScope(data.coverage.modes) : '収録した事業者の路線'}だけが対象です（実データに基づく推計）。
           </p>
           {!hasPt && (
             <div className="flex flex-wrap items-center gap-1">
@@ -705,7 +719,7 @@ export default function App() {
       <PageHeader
         appId="odpt"
         compact
-        actions={<SourceDialog sources={SOURCES} />}
+        actions={<SourceDialog sources={sources} />}
       />
       <StepLayout title={stepTitle} hint={stepDefs.find((x) => x.id === step)?.hint} aside={mapAside}>
         {panel}

@@ -448,11 +448,48 @@ export function altConditions(cell: Cell, o: { fi: number; day: Day; per: Period
   return { periods, longerW }
 }
 
-/** 公共交通オープンデータ開発者ガイドラインが一般ユーザへの通知を求める事項（出典・無保証・事業者へ問い合わせない）。静的版 lib.js と同文 */
+/** 本アプリの開発者の連絡先（ガイドラインの通知③）。公開前に入れる（contests/odpt-2026/app/README.md の公開前チェックリスト）。静的版 lib.js の ODPT_CONTACT と同じ値にする */
+export const ODPT_CONTACT = ''
+/** 公共交通オープンデータ開発者ガイドラインが一般ユーザへの通知を求める事項（出典・無保証・事業者へ問い合わせない・開発者の連絡先）。静的版 lib.js と同文 */
 export const ODPT_NOTICE =
   '本アプリが利用する公共交通データの一部は、公共交通オープンデータセンターにおいて提供されるものです。' +
   '公共交通事業者により提供されたデータを元にしていますが、必ずしも正確・完全なものとは限りません。' +
-  '本アプリの表示内容について、公共交通事業者への直接の問合せは行わないでください。'
+  '本アプリの表示内容について、公共交通事業者への直接の問合せは行わないでください。' +
+  (ODPT_CONTACT ? '本アプリに関するお問い合わせ: ' + ODPT_CONTACT : '')
+
+// ---------- 診断の範囲・データの期限（画面の文言。収録データから作る） ----------
+/** 「収録した事業者のバス・地下鉄・鉄道」の「バス・地下鉄・鉄道」の部分。収録モード（data.coverage.modes）から作る */
+export function coverageScope(modes: string[]): string {
+  const rail = modes.filter((m) => m !== 'バス')
+  const bus = modes.includes('バス')
+  return '収録した事業者の' + [bus ? 'バス' : '', ...rail].filter(Boolean).join('・') + (rail.length ? '（JR・大手私鉄など未収録の鉄道は対象外）' : '（鉄道は対象外）')
+}
+
+/** 今日（YYYY-MM-DD）の時点で有効期間が切れたフィード */
+export function expiredFeeds(feeds: Pick<Feed, 'org' | 'valid'>[], iso: string) {
+  return feeds.filter((f) => f.valid[1] && f.valid[1] < iso)
+}
+
+/** 結論の画面と家族に送る文面に出す、期限切れの注意（利用者向け）。期限切れがなければ '' */
+export function expiredNote(feeds: Pick<Feed, 'org' | 'valid'>[], iso: string): string {
+  const ex = expiredFeeds(feeds, iso)
+  if (!ex.length) return ''
+  const orgs = [...new Set(ex.map((f) => f.org))]
+  const first = ex.map((f) => f.valid[1]!).sort()[0]
+  const names = orgs.slice(0, 3).join('・') + (orgs.length > 3 ? `ほか${orgs.length - 3}事業者` : '')
+  return ex.length === 1
+    ? `この地域の時刻表のうち1件（${names}）は${first}で有効期間が切れています。その事業者の路線は古いダイヤで計算しています。`
+    : `この地域の時刻表のうち${ex.length}件（${names}）は${first}から順に有効期間が切れています。それらの事業者の路線は古いダイヤで計算しています。`
+}
+
+/** 期限前（公開期間の途中で切れる）フィードの、利用者向けの注意。切れたものがある時は expiredNote を使う */
+export function soonNote(feeds: Pick<Feed, 'org' | 'valid'>[], iso: string, publicUntil: string): string {
+  const soon = feeds.filter((f) => f.valid[1] && f.valid[1] >= iso && f.valid[1] < publicUntil)
+  if (!soon.length) return ''
+  const s = [...soon].sort((a, b) => a.valid[1]!.localeCompare(b.valid[1]!))
+  const first = s[0]
+  return `${first.valid[1]}以降、一部の事業者（${first.org}${s.length > 1 ? `ほか${s.length - 1}件` : ''}）は古いダイヤでの計算になります（公開期間中に最新の時刻表で作り直す予定です）。`
+}
 
 // ---------- 結論カードの「使ったデータ」一行 ----------
 const SOURCE_LABEL: Record<string, string> = {

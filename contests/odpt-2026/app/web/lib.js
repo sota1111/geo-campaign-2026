@@ -261,10 +261,13 @@
       none: s.none, nonePct: pct(s.none, s.pop), none65: s.none65, none65Pct: pct(s.none65, s.pop65) };
   }
 
-  /* 公共交通オープンデータ開発者ガイドラインが一般ユーザへの通知を求める事項（出典・無保証・事業者へ問い合わせない） */
+  /* 本アプリの開発者の連絡先（ガイドラインの通知③）。公開前に入れる（README の公開前チェックリスト）。ダッシュボード版 lib.ts の ODPT_CONTACT と同じ値にする */
+  var ODPT_CONTACT = '';
+  /* 公共交通オープンデータ開発者ガイドラインが一般ユーザへの通知を求める事項（出典・無保証・事業者へ問い合わせない・開発者の連絡先） */
   var ODPT_NOTICE = '本アプリが利用する公共交通データの一部は、公共交通オープンデータセンターにおいて提供されるものです。' +
     '公共交通事業者により提供されたデータを元にしていますが、必ずしも正確・完全なものとは限りません。' +
-    '本アプリの表示内容について、公共交通事業者への直接の問合せは行わないでください。';
+    '本アプリの表示内容について、公共交通事業者への直接の問合せは行わないでください。' +
+    (ODPT_CONTACT ? '本アプリに関するお問い合わせ: ' + ODPT_CONTACT : '');
 
   /* ---------- 出典の例文 ---------- */
   function citationText(d, o) {
@@ -290,6 +293,6 @@
     meshBounds: meshBounds, condIndex: condIndex, needLevel: needLevel,
     cellStatus: cellStatus, reachable: reachable, summarize: summarize, lostPopulation: lostPopulation, pct: pct, levelLabel: levelLabel,
     fmtMin: fmtMin, distM: distM, nearbyNodes: nearbyNodes, indexCells: indexCells,
-    meshCodeAt: meshCodeAt, nodeFacts: nodeFacts, ODPT_NOTICE: ODPT_NOTICE
+    meshCodeAt: meshCodeAt, nodeFacts: nodeFacts, ODPT_NOTICE: ODPT_NOTICE, ODPT_CONTACT: ODPT_CONTACT
   };
 });

@@ -365,7 +365,7 @@
     var c = d.coverage || {};
     var railModes = (c.modes || []).filter(function (m) { return m !== 'バス'; });
     var t = '収録しているのは' + esc((c.sources || []).join('・')) + 'のGTFS ' + c.feeds + '件（' + esc((c.modes || []).join('・')) + '）のみ。';
-    t += railModes.length ? '鉄道は' + esc(railModes.join('・')) + 'のみ収録し、JR等そのほかの鉄道は未収録です。'
+    t += railModes.length ? '鉄道系で収録しているのは' + esc(railModes.join('・')) + 'の一部の事業者だけで、JR・大手私鉄などは未収録です。'
       : '鉄道（JR等）は未収録です。';
     t += 'デマンド交通・予約制の便も未収録です。';
     if (c.rail_checked) {
@@ -388,7 +388,8 @@
         (expiredNow.length > 3 ? ' ほか' : '') + '）。ダイヤが変わっている可能性があり、この診断は現在の運行を示しません。';
     } else if (soon.length) {
       var first = soon.map(function (f) { return f.valid[1]; }).sort()[0];
-      msg += soon.length + '件のデータは' + first + 'から順に有効期間が終わります。切れた後は最新のGTFSで作り直す必要があります。';
+      var firstOrg = soon.filter(function (f) { return f.valid[1] === first; })[0].org;
+      msg += first + '以降、一部の事業者（' + esc(firstOrg) + (soon.length > 1 ? 'ほか' + (soon.length - 1) + '件' : '') + '）は古いダイヤでの計算になります（公開期間中に最新の時刻表で作り直す予定です）。';
     }
     var el = $('data-warn');
     el.hidden = !msg;
@@ -618,7 +619,7 @@
       var ir = STATE.index.regions.filter(function (x) { return x.id === c.id; })[0];
       return esc(L.shortName(c.name)) + '＝' + esc((ir.operators || []).join('・')) + '（' + esc(c.coverage.modes.join('・')) + '）';
     }).join('、') + '。';
-    h += 'たとえば東京は都営（東京都交通局）のみ、飯田・下伊那は南信州地域のバスのみで、民営バスやJR等は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。割合・人数は、各地域の診断範囲（収録停留所から' + d.params.diag_radius_m + 'm以内）の人口が分母です。</p>';
+    h += 'どの地域も、ここに挙げていない事業者（JR・大手私鉄など）は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。割合・人数は、各地域の診断範囲（収録停留所から' + d.params.diag_radius_m + 'm以内）の人口が分母です。</p>';
     $('compare-result').innerHTML = h;
   }
 
@@ -656,6 +657,10 @@
         (d.coverage.sources.length > 1 ? '、' : '') +
         (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0 ? '<a href="https://www.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（' + (d.feeds.some(function (f) { return f.license === '公共交通オープンデータ基本ライセンス'; }) ? '公開API（キー不要）と、開発者登録が必要なAPI' : '公開API https://api-public.odpt.org/api/v4/ 、キー不要') + '）' : '') +
         '。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。</p>';
+      // ガイドラインの一般ユーザーへの通知は、事業者の一覧より前に置く
+      if (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0) {
+        h += '<p class="note" id="odpt-notice">' + esc(L.ODPT_NOTICE) + '</p>';
+      }
       h += '<table><tr><th>事業者</th><th>データ名</th><th>取得元</th><th>ライセンス・クレジット</th><th>更新日</th><th>データ有効期間</th><th>診断の基準日（平日/休日）</th></tr>';
       d.feeds.forEach(function (f) {
         var warn = f.expired ? ' <b class="warn">期限切れ</b>' : (f.ends_before_public_end ? ' <b class="warn">公開期間（〜' + esc(d.public_until) + '）の途中で終了</b><br><span class="note">この日以降は時刻表が変わっている可能性があります。資料に使うときは基準日を明記してください。</span>' : '');
@@ -667,9 +672,6 @@
           esc(f.ref.wd + ' / ' + f.ref.hol) + '</td></tr>';
       });
       h += '</table>';
-      if (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0) {
-        h += '<p class="note">' + esc(L.ODPT_NOTICE) + '</p>';
-      }
       h += '<p class="note">データ生成日: ' + esc(d.built) + '。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>';
     }
     h += '<h2>その他のデータ</h2><ul>' +

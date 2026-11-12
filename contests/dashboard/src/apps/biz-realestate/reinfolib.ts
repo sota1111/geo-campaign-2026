@@ -161,6 +161,8 @@ export interface LibFacts {
   division?: { classes: string[]; main: string }
   landPrice?: { point: LandPoint; dist: number; year: number }
   trade?: { stat: TradeStat; scope: 'district' | 'city'; period: string }
+  /** 取引価格のデータは取得済みだが、この地点には当てなかった理由（町名が取れない等）。区域区分か標準地が当たった地点（＝取得範囲内）でだけ付ける */
+  tradeUnmatched?: string
 }
 
 /** 「徳島県徳島市寺島本町東三丁目付近」のような住所から、丁目を除いた町名（寺島本町東）を取り出す */
@@ -198,6 +200,9 @@ export function lookupLibrary(d: ReinfolibData | null, lon: number, lat: number,
     const dist = town ? d.trade.districts.find((s) => s.name === town) : undefined
     if (dist) out.trade = { stat: dist, scope: 'district', period: d.trade.period }
     else if (town && d.trade.city) out.trade = { stat: d.trade.city, scope: 'city', period: d.trade.period }
+    else if (out.division || out.landPrice) {
+      out.tradeUnmatched = !address ? '町名が分からず照合できなかった' : !town ? d.city.name + '内の住所と確認できず照合していない' : '町名の集計がなく照合できなかった'
+    }
   }
   return out.division || out.landPrice || out.trade ? out : null
 }
