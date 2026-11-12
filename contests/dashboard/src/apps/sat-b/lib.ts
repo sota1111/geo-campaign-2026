@@ -146,22 +146,76 @@ export function rank(sites: Site[], w: Weights, refDate: string, results: Patrol
 export interface Pt { x: number; y: number }
 export const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y)
 
-/** 上位 n 件を、起点から近い順に回る（最近傍法。道路距離ではなく地図上の直線距離） */
-export function planRoute<T extends Pt>(ranked: T[], origin: Pt, n: number) {
-  const pool = ranked.slice(0, Math.max(0, n))
+function tourLength(route: Pt[], origin: Pt): number {
+  let total = 0
+  let cur = origin
+  for (const p of route) { total += dist(cur, p); cur = p }
+  return route.length ? total + dist(cur, origin) : 0
+}
+
+/** 近い順に回る初期解（最近傍法） */
+function nearestOrder<T extends Pt>(points: T[], origin: Pt): T[] {
+  const pool = points.slice()
   const route: T[] = []
   let cur: Pt = origin
-  let total = 0
   while (pool.length) {
     let bi = 0
     for (let i = 1; i < pool.length; i++) if (dist(cur, pool[i]) < dist(cur, pool[bi])) bi = i
     const nx = pool.splice(bi, 1)[0]
-    total += dist(cur, nx)
     route.push(nx)
     cur = nx
   }
-  total += route.length ? dist(cur, origin) : 0
-  return { route, total }
+  return route
+}
+
+/** 2-opt: 区間の逆順化で短くなる限り入れ替える（起点は固定の周回路） */
+function twoOpt<T extends Pt>(start: T[], origin: Pt): T[] {
+  let best = start.slice()
+  let len = tourLength(best, origin)
+  let improved = true
+  while (improved) {
+    improved = false
+    for (let i = 0; i < best.length - 1; i++) {
+      for (let j = i + 1; j < best.length; j++) {
+        const cand = [...best.slice(0, i), ...best.slice(i, j + 1).reverse(), ...best.slice(j + 1)]
+        const l = tourLength(cand, origin)
+        if (l < len - 1e-9) { best = cand; len = l; improved = true }
+      }
+    }
+  }
+  return best
+}
+
+/** 全順列から最短の周回路を選ぶ（8件以下） */
+function exactOrder<T extends Pt>(points: T[], origin: Pt): T[] {
+  let best = nearestOrder(points, origin)
+  let bestLen = tourLength(best, origin)
+  const cur: T[] = []
+  const used = new Array(points.length).fill(false)
+  const walk = (len: number) => {
+    if (len >= bestLen) return
+    if (cur.length === points.length) {
+      const l = tourLength(cur, origin)
+      if (l < bestLen - 1e-9) { best = cur.slice(); bestLen = l }
+      return
+    }
+    for (let i = 0; i < points.length; i++) {
+      if (used[i]) continue
+      used[i] = true; cur.push(points[i])
+      walk(len + dist(cur.length > 1 ? cur[cur.length - 2] : origin, points[i]))
+      cur.pop(); used[i] = false
+    }
+  }
+  walk(0)
+  return best
+}
+
+/** 上位 n 件を、起点から出て起点へ戻る周回路で回る順に並べる。
+ *  8件以下は全順列で最短、それ以上は最近傍法の結果を 2-opt で改善する。距離は地図上の直線距離（道路距離ではない） */
+export function planRoute<T extends Pt>(ranked: T[], origin: Pt, n: number) {
+  const pool = ranked.slice(0, Math.max(0, n))
+  const route = pool.length <= 8 ? exactOrder(pool, origin) : twoOpt(nearestOrder(pool, origin), origin)
+  return { route, total: tourLength(route, origin), nearest: tourLength(nearestOrder(pool, origin), origin) }
 }
 
 /** 区分ごとの巡視結果の集計（件数のみ） */

@@ -1,4 +1,4 @@
-import { Radar, Wand2 } from 'lucide-react'
+import { ArrowDown, Download, Radar, Wand2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -99,6 +99,54 @@ function RankTable({
   )
 }
 
+/** 衛星指標の作り方（どの衛星データから、どう区画の値と点数にするか）。実装済みの部分と架空の部分を印で分ける */
+const INDICATOR_STAGES: { no: string; title: string; body: string; mark: string; real: boolean }[] = [
+  {
+    no: '1', title: '衛星データ: Sentinel-1（SAR）',
+    body: '欧州宇宙機関（ESA）の無料の衛星。観測幅250km、商用利用を含め無料。2機体制の6日回帰に戻る計画（提案書A・出典一覧）。',
+    mark: '想定（この画面では未取得）', real: false,
+  },
+  {
+    no: '2', title: 'InSAR解析: 地表の動き（mm/年）',
+    body: '複数回の観測を重ねて、区画ごとの地表変位（負＝沈下）を出す。InSAR処理は実装しておらず、この画面の値は人が決めた式と乱数による架空値。',
+    mark: '架空値で代用', real: false,
+  },
+  {
+    no: '3', title: '区画値: 0〜1 にそろえる',
+    body: '区画（メッシュ）ごとに、沈下が −8mm/年以下で1、動きなしで0。地図の青みが濃い区画ほど大きい。路線単位ではなく区画単位で付ける。',
+    mark: 'この画面で計算（入力は架空）', real: true,
+  },
+  {
+    no: '4', title: '点数: 台帳と合わせる',
+    body: '点数 ＝ 衛星の重み × 区画値 ＋ 台帳の重み × 管の古さ（60年で1）。点数の高い区間から、地中レーダの調査対象を選ぶ。',
+    mark: 'この画面で計算（台帳は架空）', real: true,
+  },
+]
+function IndicatorFlow() {
+  return (
+    <section className="space-y-1 rounded-md border bg-muted/30 p-2.5" aria-label="衛星指標の作り方" data-testid="indicator-flow">
+      <h3 className="text-xs font-bold">衛星指標の作り方（4段階）</h3>
+      <ol className="space-y-0.5">
+        {INDICATOR_STAGES.map((st, i) => (
+          <li key={st.no}>
+            <div className={cn('rounded border bg-background px-2 py-1 text-xs', !st.real && 'border-dashed border-amber-500')}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <span className="font-medium">{st.no}. {st.title}</span>
+                <span className={cn('text-[10px]', st.real ? 'text-muted-foreground' : 'font-medium text-amber-800')}>{st.real ? '◆' : '◇'} {st.mark}</span>
+              </div>
+              <p className="text-muted-foreground">{st.body}</p>
+            </div>
+            {i < INDICATOR_STAGES.length - 1 && <ArrowDown className="mx-auto my-0.5 size-3 text-muted-foreground" aria-hidden />}
+          </li>
+        ))}
+      </ol>
+      <p className="text-[11px] text-muted-foreground">
+        公開の地盤変動データ（InSAR）を区画ごとに取り込むことは、キー不要・ライセンス明確・時間内、の条件で確認できなかったため行っていません。2・3段階の入力は架空です（◇＝架空・未実装、◆＝計算は実装済み）。
+      </p>
+    </section>
+  )
+}
+
 /* ---------- 1 候補区間の点数を見る ---------- */
 export function TopPanel({
   candidates, focus, onFocus,
@@ -113,6 +161,7 @@ export function TopPanel({
       <p className="text-xs text-muted-foreground">
         点数 ＝ 衛星の指標と、下水道台帳の布設年の古さの重み付き和。衛星は空洞を直接見つけず、調べる順番を決める入口です。
       </p>
+      <IndicatorFlow />
       <div className="grid grid-cols-2 gap-2">
         <Metric label="未調査の生活道路" value={`${candidates.length} 区間`} sub={`合計 ${fmt1(km)} km`} testId="m-count" />
         <Metric
@@ -144,7 +193,7 @@ export function WeightPanel({ w, setW, candidates, focus, onFocus }: {
 
 /* ---------- 3 予算内で調査対象を選ぶ ---------- */
 export function PickPanel({
-  budgetKm, setBudgetKm, segs, candidates, selected, toggle, focus, onFocus, onAuto, onClear,
+  budgetKm, setBudgetKm, segs, candidates, selected, toggle, focus, onFocus, onAuto, onClear, onExport,
 }: {
   budgetKm: number
   setBudgetKm: (v: number) => void
@@ -156,6 +205,7 @@ export function PickPanel({
   onFocus: (id: string) => void
   onAuto: () => void
   onClear: () => void
+  onExport: () => void
 }) {
   const km = totalKm(segs, selected)
   const over = km > budgetKm + 1e-9
@@ -164,6 +214,18 @@ export function PickPanel({
   const inTop = [...selected].filter((id) => top15.has(id)).length
   return (
     <div className="space-y-3">
+      <div className="sticky -top-4 z-10 -mx-4 -mt-4 mb-1 space-y-1 border-b bg-background px-4 pb-2 pt-3 shadow-sm" aria-live="polite" data-testid="sel-sticky">
+        <div className="flex items-baseline justify-between text-sm">
+          <span>選択中 <b className="text-lg" data-testid="sel-count">{selected.size}</b> 区間</span>
+          <span className={cn('font-medium', over && 'text-[#b45309]')} data-testid="sel-km">{fmt1(km)} / {fmt1(budgetKm)} km</span>
+        </div>
+        <Progress value={Math.min(100, (km / budgetKm) * 100)} className={over ? '[&>div]:bg-[#b45309]' : ''} />
+        <div className="min-h-4 text-xs leading-4 text-muted-foreground" data-testid="sel-breakdown">
+          {selected.size > 0 ? `上位15区間のうち ${inTop} 区間＋それ以外 ${selected.size - inTop} 区間を選びました。` : 'まだ区間を選んでいません。'}
+        </div>
+        {over && <div className="text-sm font-medium text-[#b45309]">▲ 上限を超えています。区間を外すか、延長を増やしてください。</div>}
+      </div>
+
       <div className="space-y-1.5">
         <div className="flex items-baseline justify-between gap-2">
           <label className="text-sm font-medium" id="bud-label">走らせられる延長（予算＝走行延長に換算した仮の値）</label>
@@ -178,24 +240,11 @@ export function PickPanel({
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={onAuto} data-testid="auto"><Wand2 />点数の上位から自動で選ぶ</Button>
         <Button size="sm" variant="outline" onClick={onClear} data-testid="clear">選択をクリア</Button>
+        <Button size="sm" variant="outline" onClick={onExport} disabled={selected.size === 0} data-testid="export-targets"><Download />調査対象をCSVで書き出す</Button>
       </div>
       <p className="text-xs text-muted-foreground">
         延長の上限（{fmt1(budgetKm)}km）まで点数順に選ぶため、表の上位15に入らない区間も含まれます。地図の道路のタップでも選択／解除できます。
       </p>
-
-      <div className="space-y-1" aria-live="polite">
-        <div className="flex items-baseline justify-between text-sm">
-          <span>選択中 <b className="text-lg" data-testid="sel-count">{selected.size}</b> 区間</span>
-          <span className={cn('font-medium', over && 'text-[#b45309]')} data-testid="sel-km">{fmt1(km)} / {fmt1(budgetKm)} km</span>
-        </div>
-        <Progress value={Math.min(100, (km / budgetKm) * 100)} className={over ? '[&>div]:bg-[#b45309]' : ''} />
-        {selected.size > 0 && (
-          <div className="text-xs text-muted-foreground" data-testid="sel-breakdown">
-            上位15区間のうち {inTop} 区間＋それ以外 {selected.size - inTop} 区間を選びました。
-          </div>
-        )}
-        {over && <div className="text-sm font-medium text-[#b45309]">▲ 上限を超えています。区間を外すか、延長を増やしてください。</div>}
-      </div>
 
       <div className="text-sm font-medium">候補 {rows.length} 区間（点数の高い順）</div>
       <Table>
@@ -312,7 +361,7 @@ export function ApplyPanel({
           <Alert className="border-primary/40 bg-primary/5">
             <AlertTitle>第{round}回に反映済みです</AlertTitle>
             <AlertDescription className="text-foreground">
-              衛星指標の重みは {pct(applied.oldW)}% → {pct(applied.newW)}%。結果は「第2回の順位を確かめる」の手順で見られます。
+              衛星指標の重みは {pct(applied.oldW)}% → {pct(applied.newW)}%。結果は、左の手順リストの「第2回の順位を確かめる」を押すと見られます（強調表示しています）。
             </AlertDescription>
           </Alert>
         ) : (
@@ -361,7 +410,7 @@ export function ApplyPanel({
 
 /* ---------- 6 第2回の順位を確かめる ---------- */
 export function Round2Panel({
-  round, msg, prev, candidates, focus, onFocus,
+  round, msg, prev, candidates, focus, onFocus, onExport,
 }: {
   round: number
   msg: string
@@ -369,6 +418,7 @@ export function Round2Panel({
   candidates: Scored[]
   focus: string | null
   onFocus: (id: string) => void
+  onExport: () => void
 }) {
   if (!prev || round < 2) {
     return <Alert><AlertDescription>第2回の順位はまだありません。「較正を反映して第2回へ進む」まで済ませると、ここに第1回との対比が出ます。</AlertDescription></Alert>
@@ -402,6 +452,7 @@ export function Round2Panel({
       </Table>
       <div className="text-sm font-medium">第{round}回の順位 上位10区間（「前回」＝第{prev.round}回の順位）</div>
       <RankTable rows={candidates.slice(0, 10)} focus={focus} onFocus={onFocus} prev={prev} />
+      <Button size="sm" variant="outline" onClick={onExport} data-testid="export-round2"><Download />第{round}回の順位をCSVで書き出す</Button>
     </div>
   )
 }

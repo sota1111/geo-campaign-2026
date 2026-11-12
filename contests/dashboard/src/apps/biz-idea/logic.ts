@@ -40,12 +40,16 @@ export interface RecordInput {
   placeName: string; placeType?: string; teller?: string; heardOn?: string; story: string; basis: string
   claimedKinds?: string[]; certainty: string; visibility: string; license: string
   checked?: string[]; lon: number | string | null; lat: number | string | null
+  /** 保存時点の伝承碑との突き合わせ結果（理由つきの1文）。手順2を経ていなければ空 */
+  crossNote?: string
 }
 export interface MemoryRecord {
   id: string; placeName: string; placeType: string; teller: string; heardOn: string; story: string
   basis: string; claimedKinds: string[]; certainty: string; visibility: Visibility; license: string
   checked: string[]; lon: number; lat: number; verified: boolean; verifiedBy: string
   verifiedAt?: string; createdAt: string; sample: boolean
+  /** 保存時点の伝承碑との突き合わせ結果（理由つき）。確認役が判断する材料 */
+  crossNote?: string
 }
 
 const rad = (d: number) => (d * Math.PI) / 180
@@ -150,6 +154,7 @@ export function createRecord(
       verifiedBy: '',
       createdAt: nowIso,
       sample: false,
+      ...(trim(input.crossNote) ? { crossNote: trim(input.crossNote) } : {}),
     },
   }
 }
@@ -185,6 +190,7 @@ export function toGeoJSON(
         story: r.story, basis: r.basis, claimedKinds: r.claimedKinds, certainty: r.certainty,
         visibility: r.visibility, license: r.license, checked: r.checked,
         verified: r.verified, verifiedBy: r.verifiedBy || '', sample: !!r.sample,
+        crossCheck: r.crossNote || '',
       },
     })),
   }

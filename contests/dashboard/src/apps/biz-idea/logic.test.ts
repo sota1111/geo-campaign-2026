@@ -73,6 +73,14 @@ describe('記録・確認・書き出し', () => {
     }
     expect(createRecord({ ...good(), story: '' }, 'x').ok).toBe(false)
   })
+  it('突き合わせの理由（crossNote）は記録とGeoJSONに残り、無ければ空', () => {
+    const a = createRecord({ ...good(), crossNote: '手がかりあり（洪水の碑 350 m）' }, '2026-11-11T00:00:00.000Z')
+    const b = createRecord(good(), '2026-11-11T00:00:01.000Z')
+    if (!a.ok || !b.ok) throw new Error('x')
+    expect(b.record.crossNote).toBeUndefined()
+    const props = toGeoJSON([a.record, b.record]).features.map((f) => (f.properties as { crossCheck: string }).crossCheck)
+    expect(props).toEqual(['手がかりあり（洪水の碑 350 m）', ''])
+  })
   it('公開条件: 確認済み・公開・利用条件あり。非公開/利用不可/サンプルは対象外', () => {
     const r = createRecord(good(), '2026-11-11T00:00:00.000Z')
     if (!r.ok) throw new Error('x')

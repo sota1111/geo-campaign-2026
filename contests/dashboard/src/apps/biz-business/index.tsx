@@ -30,6 +30,11 @@ import { markCsv } from '../_samples/mark'
 const APP = 'biz-business'
 const SAMPLE_MODE = isSampleMode()
 const PLAN_IDS = ['A', 'B', 'C']
+// 案A・案Bを同時に地図へ出す時の見た目。色だけに頼らず、塗りの縁と路線の線種も変える
+const BOTH_STYLE = [
+  { name: '橙の塗り・実線の縁／青い長めの破線', fill: '#D55E00', edge: '#7a3500', edgeDash: [1, 0], route: '#0072B2', routeDash: [3, 1.5] },
+  { name: '紫の塗り・点線の縁／緑の点線', fill: '#CC79A7', edge: '#5b2a47', edgeDash: [0.6, 1.2], route: '#117733', routeDash: [0.3, 1.6] },
+]
 const n = (x: number) => x.toLocaleString('ja-JP')
 
 interface RegionInfo { id: string; name: string }
@@ -63,9 +68,10 @@ function Seg<T extends string>({ value, options, onChange, label }: {
 export default function App() {
   const [step, setStep] = useState<StepId>(SAMPLE_MODE ? 'export' : 'cond')
   const [visited, setVisited] = useState<Record<string, boolean>>({})
-  const [mapOverride, setMapOverride] = useState<number | null>(null)
+  const [mapOverride, setMapOverride] = useState<number | 'both' | null>(null)
   const [regions, setRegions] = useState<RegionInfo[]>([])
-  const [regionId, setRegionId] = useHashState('region', 'tokushima')
+  const [regionId, setRegionIdRaw] = useHashState('region', 'tokushima')
+  const setRegionId = (v: string) => { setCondTouched(true); setRegionIdRaw(v) }
   const [data, setData] = useState<RegionData | null>(null)
   const [W, setW] = useState<WhatIf | null>(null)
   const [error, setError] = useState('')
@@ -78,6 +84,11 @@ export default function App() {
   // 利用者が案の路線を実際に操作したか（初期値の自動入力だけでは「済」にしない）
   const [edited, setEdited] = useState<Record<number, boolean>>({})
   const [lastAction, setLastAction] = useState('')
+  // 「済」は利用者の操作だけで付ける（初期表示・見ただけでは付けない）
+  const [condTouched, setCondTouched] = useState(false)
+  const [verdictAck, setVerdictAck] = useState(false)
+  // 代替交通を仮に入れた場合の比較（仮定）。0=なし、n=行けなくなる人が多い上位n地区を補えたと仮定
+  const [altN, setAltN] = useState(0)
   const [routeQ, setRouteQ] = useState<string[]>(['', '', ''])
 
   const pick = (s: StepId) => {
@@ -155,7 +166,7 @@ export default function App() {
   }, [data, W, plans, day, per, need])
 
   // 案Bの初期値は例（病院への影響が大きい路線）。手順「案Bを作る」を開く（または作る）まで、案Bは比較に入れない
-  const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0 && (k !== 1 || !!visited.planB))
+  const ks = plans.map((_, k) => k).filter((k) => plans[k].routes.length > 0 && (k !== 1 || !!visited.planB || !!edited[1]))
   const verdict = calc && ks.length >= 2 ? pickSmaller(ks.map((k) => calc.results[k][0])) : null
   const smaller = verdict ? verdict.winners.map((i) => ks[i]) : []
   const firm = verdict?.firm ?? false
@@ -185,14 +196,57 @@ export default function App() {
       })
       return `${plans[k].name}（${plans[k].routes.map(routeFull).join('・')}を廃止）: ${condText}で、${parts.join('。')}。`
     })
-    return reversalText ? [...base, reversalText] : base
+    const conclusion = smaller.length
+      ? `結論: ${fl0}へ行けなくなる人が少ない（影響が小さい）案は${smaller.length === ks.length ? '差なし（同数）' : smaller.map((k) => plans[k].name).join('・')}です（${firm ? '確定' : '暫定。複数路線の案は下限値のため、大小は確定できません'}）。`
+      : ''
+    return [...base, ...(conclusion ? [conclusion] : []), ...(reversalText ? [reversalText] : [])]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, calc, plans, condText, reversalText])
+  }, [data, calc, plans, condText, reversalText, smaller.join(','), firm])
 
   // 地図に出す案: 案A・案Bの手順ではその案、それ以外は選択中の案
   const defaultMapPlan = step === 'cond' || step === 'planA' ? 0 : step === 'planB' ? 1 : (smaller[0] ?? ks[0] ?? 0)
-  const mapPlan = mapOverride !== null && plans[mapOverride] ? mapOverride : defaultMapPlan
+  const numOverride = typeof mapOverride === 'number' ? mapOverride : null
+  const mapPlan = numOverride !== null && plans[numOverride] ? numOverride : defaultMapPlan
+  // 案Aと案Bを同じ地図に重ねる（結論・書き出しの手順では最初からこの表示）。2案がそろわない時は1案表示
+  const canBoth = ks.length >= 2
+  const bothMode = canBoth && (mapOverride === 'both' || (mapOverride === null && (step === 'verdict' || step === 'export')))
   const mapLayers = useMemo<MapLayer[]>(() => {
+    if (bothMode && data && calc) {
+      const line = (idx: number[]) => ({
+        type: 'Feature' as const, properties: {},
+        geometry: { type: 'LineString' as const, coordinates: idx.map((i) => [data.nodes[i][0], data.nodes[i][1]]) },
+      })
+      const cellsFc = (cs: number[]) => ({
+        type: 'FeatureCollection' as const,
+        features: cs.map((k) => {
+          const b = meshBounds(data.cells[k][0])
+          return {
+            type: 'Feature' as const, properties: { pop: data.cells[k][1] },
+            geometry: { type: 'Polygon' as const, coordinates: [[[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [b[0], b[1]]]] },
+          }
+        }),
+      })
+      const out: MapLayer[] = [{
+        id: 'routes', type: 'line',
+        data: { type: 'FeatureCollection', features: data.patterns.map((p) => line(p[1])) },
+        paint: { 'line-color': '#555555', 'line-width': 0.8, 'line-opacity': 0.45 },
+      }]
+      // 案ごとに色＋線種を変える（A=橙の塗り＋実線の縁・青の長い破線、B=紫の塗り＋点線の縁・緑の点線）
+      ks.slice(0, 2).forEach((k, i) => {
+        const l = calc.results[k][selFac]
+        const st = BOTH_STYLE[i]
+        out.push(
+          { id: `lost-${i}`, type: 'fill', data: cellsFc(l.cells), paint: { 'fill-color': st.fill, 'fill-opacity': 0.4, 'fill-outline-color': st.edge } },
+          { id: `edge-${i}`, type: 'line', data: cellsFc(l.cells), paint: { 'line-color': st.edge, 'line-width': 2, 'line-dasharray': st.edgeDash } },
+          {
+            id: `plan-${i}`, type: 'line',
+            data: { type: 'FeatureCollection', features: data.patterns.filter((p) => plans[k].routes.includes(p[0])).map((p) => line(p[1])) },
+            paint: { 'line-color': st.route, 'line-width': 4, 'line-opacity': 0.95, 'line-dasharray': st.routeDash },
+          },
+        )
+      })
+      return out
+    }
     if (!data || !calc || !plans[mapPlan] || !plans[mapPlan].routes.length) return []
     const l = calc.results[mapPlan]?.[selFac]
     if (!l) return []
@@ -232,7 +286,7 @@ export default function App() {
       },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, calc, plans, mapPlan, selFac])
+  }, [data, calc, plans, mapPlan, selFac, bothMode])
 
   const updatePlan = (k: number, f: (p: Plan) => Plan) => {
     setEdited((e) => (e[k] ? e : { ...e, [k]: true }))
@@ -281,27 +335,34 @@ export default function App() {
     )
   }
 
+  /** 初期値（例の路線）のまま案を確定する。利用者の明示的な操作として「済」にする */
+  const confirmPlan = (k: number) => {
+    setEdited((e) => (e[k] ? e : { ...e, [k]: true }))
+    toast.success(`${plans[k].name}を例の路線のまま確定しました`)
+  }
   const hasA = (plans[0]?.routes.length ?? 0) > 0
   const hasB = (plans[1]?.routes.length ?? 0) > 0
-  // 「済」の共通ルール: 見る手順・初期値で成り立つ手順は、前提が満たされた状態で表示したら済。する手順（書き出し）は主操作で済
-  const prereq: Record<StepId, boolean> = { cond: !!data, planA: hasA && !!edited[0], planB: hasB && !!edited[1], verdict: ks.length >= 2, export: false }
+  // 案Bは、手順「案Bを作る」を開くまで比較に入れない（進捗の「済」とは別）
   useEffect(() => {
-    if (prereq[step]) setVisited((v) => (v[step] ? v : { ...v, [step]: true }))
+    if (step === 'planB') setVisited((v) => (v.planB ? v : { ...v, planB: true }))
   })
-  // 実行サンプル: 被験者は全手順を開きCSVを書き出したので、前提が満たされたら済にする（実際のダウンロードはしない）
+  // 実行サンプル: 被験者は全手順を操作しCSVを書き出したので、前提が満たされたら済にする（実際のダウンロードはしない）
   useEffect(() => {
     if (!SAMPLE_MODE || !data || !calc || (plans[0]?.routes.length ?? 0) === 0 || (plans[1]?.routes.length ?? 0) === 0) return
-    setVisited((v) => (v.cond && v.planA && v.planB && v.verdict ? v : { cond: true, planA: true, planB: true, verdict: true }))
+    setVisited({ planB: true })
+    setCondTouched(true)
+    setEdited({ 0: true, 1: true })
+    setVerdictAck(true)
     setExported(true)
     setLastAction(`実行サンプル: 被験者が plan-comparison-${data.id}-${day}${per}${w}.csv を書き出しました（この画面ではダウンロードは行っていません）。`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, calc === null])
   useAppSteps(
     [
-      { id: 'cond', title: TITLES.cond.title, hint: '初期値のままで可', done: !!visited.cond },
-      { id: 'planA', title: TITLES.planA.title, hint: '止める路線を選ぶ', done: !!visited.planA },
-      { id: 'planB', title: TITLES.planB.title, hint: '複数路線にする場合は路線を足す', done: !!visited.planB },
-      { id: 'verdict', title: TITLES.verdict.title, hint: '結論と詳細表', done: !!visited.verdict },
+      { id: 'cond', title: TITLES.cond.title, hint: '条件を変えるか、そのままで確定', action: '条件を変える、または「この条件のままで確定」を押すと完了', done: condTouched },
+      { id: 'planA', title: TITLES.planA.title, hint: '止める路線を選ぶ', action: '路線を変える、または例のままで確定すると完了', done: hasA && !!edited[0] },
+      { id: 'planB', title: TITLES.planB.title, hint: '複数路線にする場合は路線を足す', action: '路線を変える、または例のままで確定すると完了', done: hasB && !!edited[1] },
+      { id: 'verdict', title: TITLES.verdict.title, hint: '結論と詳細表', action: '2案を比べ、「この結論を確認した」を押すと完了', done: verdictAck && ks.length >= 2 },
       { id: 'export', title: TITLES.export.title, hint: 'CSVまたは文章コピー', action: '書き出す（またはコピーする）と完了', done: exported },
     ],
     {
@@ -343,19 +404,27 @@ export default function App() {
       {data && (
         <>
           <div className="space-y-1"><Label>曜日</Label>
-            <Seg label="曜日" value={day} onChange={setDay} options={DAYS.map((k) => ({ value: k, label: DAY_LABEL[k] }))} /></div>
+            <Seg label="曜日" value={day} onChange={(v) => { setCondTouched(true); setDay(v) }} options={DAYS.map((k) => ({ value: k, label: DAY_LABEL[k] }))} /></div>
           <div className="space-y-1"><Label>時間帯</Label>
-            <Seg label="時間帯" value={per} onChange={setPer} options={PERIODS.map((k) => ({ value: k, label: `${PERIOD_LABEL[k]}${data.params.start_hours[k]}時` }))} /></div>
+            <Seg label="時間帯" value={per} onChange={(v) => { setCondTouched(true); setPer(v) }} options={PERIODS.map((k) => ({ value: k, label: `${PERIOD_LABEL[k]}${data.params.start_hours[k]}時` }))} /></div>
           <div className="space-y-1"><Label>許容時間（病院・学校まで）</Label>
-            <Seg label="許容時間" value={String(w)} onChange={(v) => setWmin(+v)} options={data.params.thresholds.map((t) => ({ value: String(t), label: `${t}分` }))} /></div>
+            <Seg label="許容時間" value={String(w)} onChange={(v) => { setCondTouched(true); setWmin(+v) }} options={data.params.thresholds.map((t) => ({ value: String(t), label: `${t}分` }))} /></div>
         </>
       )}
       <p className="text-xs text-muted-foreground">
         「行ける」= その時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可）→徒歩で、許容時間内に施設の近くへ着けること（待ち時間込み）。歩いて着ける地区は路線を止めても影響を受けません。
       </p>
+      <div className="space-y-1" data-testid="confirm-cond">
+        {condTouched
+          ? <p className="text-xs font-medium">✓ 条件を確かめました（{condText}。いつでも変えられます）。</p>
+          : <>
+              <Button size="sm" disabled={!data} onClick={() => { setCondTouched(true); toast.success('この条件で確定しました') }}>この条件のままで確定</Button>
+              <p className="text-xs text-muted-foreground">いま入っているのは初期値（{condText}）です。条件を変えるか、このまま確定すると、この手順が済になります。</p>
+            </>}
+      </div>
       <p className="flex items-start gap-1.5 rounded-md bg-muted/50 p-2 text-xs">
         <Info className="mt-0.5 size-3.5 shrink-0" />
-        <span>できるのは路線の廃止（全便停止）の比較のみ。減便・代替交通は未対応で、複数路線の人数は下限値です（詳細は右上の「出典・ライセンス」）。</span>
+        <span>できるのは路線の廃止（全便停止）の比較のみ。減便は未対応、代替交通は「補えたと仮定した残り人数」の算術のみ（手順4）で、複数路線の人数は下限値です（詳細は右上の「出典・ライセンス」）。</span>
       </p>
     </div>
   )
@@ -416,6 +485,13 @@ export default function App() {
             選べるのは基準日に便がある{calc.selectable.length}路線／収録{data.routes.length}路線（全便の停止のみ。減便は未対応）。
           </p>
         </div>
+        {p.routes.length > 0 && !edited[k] && (
+          <div className="space-y-1" data-testid={`confirm-plan-${k}`}>
+            <Button size="sm" onClick={() => confirmPlan(k)}>{p.name}を例の路線のままで確定</Button>
+            <p className="text-xs text-muted-foreground">いま入っているのは例です。路線を変えるか、この例のままで確定すると、この手順が済になります。</p>
+          </div>
+        )}
+        {p.routes.length > 0 && edited[k] && <p className="text-xs font-medium" data-testid={`plan-done-${k}`}>✓ {p.name}は確定済みです（路線はいつでも変えられます）。</p>}
         {l && p.routes.length > 0 && (
           <div className="rounded-lg border bg-muted/40 p-3" data-testid={`plan-result-${k}`}>
             <div className="text-xs text-muted-foreground">この案で{fl0}へ行けなくなる人（{condText}）</div>
@@ -431,7 +507,13 @@ export default function App() {
   const verdictPanel = () => {
     if (!data || !calc) return loading
     if (ks.length < 2) {
-      return <Alert><Info className="size-4" /><AlertDescription>比較するには、案Aと案Bの両方に路線を選び、手順「案Bを作る」を開いてください（左の手順から）。</AlertDescription></Alert>
+      return <Alert><Info className="size-4" /><AlertDescription className="space-y-2">
+          <p>比較するには、案Aと案Bの両方に路線を選んで確定してください。</p>
+          {[0, 1].filter((k) => plans[k]?.routes.length && !edited[k]).map((k) => (
+            <Button key={k} size="sm" variant="outline" onClick={() => confirmPlan(k)} data-testid="confirm-plan-verdict">{plans[k].name}を例の路線のままで確定する</Button>
+          ))}
+          {!(plans[0]?.routes.length && plans[1]?.routes.length) && <p>案A・案Bのどちらかが未選択です。左の手順「案Aを作る」「案Bを作る」で路線を選んでください。</p>}
+        </AlertDescription></Alert>
     }
     const actPlan = ks.includes(mapPlan) ? mapPlan : ks[0]
     const lg = calc.results[actPlan][selFac]
@@ -446,6 +528,10 @@ export default function App() {
           <p className="text-sm">{fl0}へ行けなくなる人が少ない案です。同数なら65歳以上が少ない方を選んでいます。</p>
           {firm && anyLowerBound && <p className="text-sm">複数路線の案の「少なくとも」がすでに相手の確定値を上回るため、結論は変わりません。</p>}
           {!firm && <p className="text-sm font-medium">暫定: 複数路線の案は「少なくとも」の下限値で、実際の人数はこれ以上になりうるため大小は確定できません。</p>}
+          <p className="text-xs text-muted-foreground">地図は案A・案Bを同時に表示しています（橙の塗り・実線の縁・青い破線＝案A／紫の塗り・点線の縁・緑の点線＝案B）。</p>
+          {verdictAck
+            ? <p className="text-xs font-medium" data-testid="verdict-done">✓ 結論を確認済みです。</p>
+            : <Button size="sm" data-testid="verdict-ack" onClick={() => { setVerdictAck(true); toast.success('結論を確認しました') }}>この結論を確認した</Button>}
         </div>
         {reversalText && (
           <Alert className="border-2 border-foreground/70" role="alert">
@@ -466,6 +552,12 @@ export default function App() {
                 <div className="text-xs text-muted-foreground">{fl0}へ行けなくなる人</div>
                 <div className="text-xl font-bold">{lostText(l)}</div>
                 <div className="text-sm">うち65歳以上 <b>{lb(l.exact)}{n(l.lost65)}人</b></div>
+                {l.groups[0] && <div className="mt-0.5 text-xs">最も多い地区: 「{l.groups[0].name}」付近 {n(l.groups[0].lost)}人（うち65歳以上 {n(l.groups[0].lost65)}人）</div>}
+                {altN > 0 && (() => {
+                  const top = l.groups.slice(0, altN)
+                  const r = l.lost - top.reduce((a, g) => a + g.lost, 0), r65 = l.lost65 - top.reduce((a, g) => a + g.lost65, 0)
+                  return <div className="mt-1 rounded bg-muted/60 p-1 text-xs" data-testid={`alt-result-${k}`}>代替で補えた場合（仮定）: {lb(l.exact)}{n(r)}人（うち65歳以上 {lb(l.exact)}{n(r65)}人）</div>
+                })()}
                 {!l.exact && (
                   <div className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
                     <span>重複を除いた下限。足し算ではありません。</span>
@@ -480,14 +572,23 @@ export default function App() {
           })}
         </div>
 
+        <div className="space-y-1 rounded-lg border border-dashed p-2" data-testid="alt-transport">
+          <div className="text-sm font-bold">代替交通を入れたら（仮定）</div>
+          <Seg label="代替交通で補う地区数" value={String(altN)} onChange={(v) => setAltN(+v)}
+            options={[0, 1, 3, 5].map((v) => ({ value: String(v), label: v ? `上位${v}地区` : 'なし' }))} />
+          <p className="text-xs text-muted-foreground">
+            行けなくなる人が多い地区から順に、デマンド交通などで全員が{fl0}へ行けるようになったと仮定した残り人数です（算術のみ。実際に補えるか・費用は評価していません。効果の見込みではありません）。
+          </p>
+        </div>
+
         <details className="rounded-lg border p-2" data-testid="detail-table">
           <summary className="cursor-pointer text-sm font-bold">詳細比較表（{condText}）</summary>
           <div className="mt-2">
           <div className="rounded border">
-            <Table>
+            <Table className="table-fixed text-xs [&_td]:whitespace-normal [&_th]:whitespace-normal [&_td]:px-1.5 [&_th]:px-1.5">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-28">指標</TableHead>
+                  <TableHead className="w-[34%]">指標</TableHead>
                   {ks.map((k) => <TableHead key={k} className="text-right">{plans[k].name}</TableHead>)}
                 </TableRow>
               </TableHeader>
@@ -581,7 +682,19 @@ export default function App() {
         <Button size="lg" className="h-12 w-full text-base" onClick={exportCsv} data-testid="export-csv"><Download className="size-5" />会議資料用にCSVで書き出す</Button>
         <Button variant="outline" size="sm" onClick={copySentences} data-testid="copy-text"><Copy className="size-4" />文章だけをコピー（本文に貼る場合）</Button>
         <p className="text-xs text-muted-foreground">使い分け: 表に貼る・集計に使う → CSV／報告書や議事録の本文に貼る → 文章。この端末の中で作るだけで、送信しません。</p>
+        {!ks.includes(1) && hasB && (
+          <p className="rounded-md bg-muted/50 p-2 text-xs" data-testid="export-no-b">案Bは未確定のため、書き出し・コピーに含まれていません。左の手順「案Bを作る」で確定してください。</p>
+        )}
         {lastAction && <p role="status" className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium">{lastAction}</p>}
+        <div className="space-y-1 rounded-lg border border-dashed p-2.5 text-xs" data-testid="sustain-note">
+          <b className="text-sm">継続の想定（構想段階。実運用はまだ始まっていません）</b>
+          <ul className="list-disc space-y-0.5 pl-4">
+            <li><b>想定顧客</b>: 地域公共交通計画を担う市町村・都道府県の交通担当部署。市町村は全国1,718（総務省）。このうち、専任担当者が1名または不在の少人数の自治体を最初の顧客層に想定。<u>最初に声をかける自治体の数・名前は未定</u>。</li>
+            <li><b>導入の手順（想定）</b>: 少額の試行導入から始める → 初回のデータ取り込み・資料づくりを支援 → 年額ライセンス。住民向けの診断は無償。<u>価格は未定</u>（費用は自治体が負担する想定）。</li>
+            <li><b>GTFSの更新</b>: GTFS未整備・更新停止の事業者には、整備を支援し同意を得る手順を作る想定。<u>更新を日常的に担う人は未定</u>。このデモの時刻表データの更新日は{data ? data.feeds.map((f) => `${f.org} ${f.updated}`).join('、') : '—'}。</li>
+            <li><b>体制</b>: 個人開発のため、保守の協力先を探している段階（相手は未定）。判断は自治体が行い、意思決定を代替しない。</li>
+          </ul>
+        </div>
         <details className="rounded-lg border p-2" data-testid="export-preview">
           <summary className="cursor-pointer text-sm font-bold">書き出す内容のプレビュー（文章全文・CSV先頭）</summary>
           <div className="mt-2 space-y-3">
@@ -627,18 +740,40 @@ export default function App() {
       {data && (
         <div className="absolute left-[8.5rem] right-14 top-2 flex flex-wrap items-center gap-1 rounded-md bg-background/90 p-1 shadow" data-testid="map-plan-toggle">
           <span className="px-1 text-xs font-bold">表示中:</span>
-          <ToggleGroup type="single" variant="outline" size="sm" value={String(mapPlan)} aria-label="地図に表示する案"
-            onValueChange={(v) => v && setMapOverride(+v)}>
+          <ToggleGroup type="single" variant="outline" size="sm" value={bothMode ? 'both' : String(mapPlan)} aria-label="地図に表示する案"
+            onValueChange={(v) => v && setMapOverride(v === 'both' ? 'both' : +v)}>
             {plans.map((p, k) => p.routes.length ? (
               <ToggleGroupItem key={k} value={String(k)} className="h-7 px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                 {p.name}
               </ToggleGroupItem>
             ) : null)}
+            {canBoth && (
+              <ToggleGroupItem value="both" className="h-7 px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                A・B 並べて
+              </ToggleGroupItem>
+            )}
           </ToggleGroup>
         </div>
       )}
       <div className="pointer-events-none absolute left-2 right-14 top-12 max-w-[22rem] rounded-md bg-background/90 p-1.5 text-xs shadow" data-testid="map-legend">
-        {legendPlan && legendPlan.routes.length > 0 && data
+        {bothMode && data && calc
+          ? <div className="space-y-0.5">
+              <b>{data.facility_labels[data.facility_order[selFac]]}へ行けなくなる人（案を並べて比較）</b>
+              {ks.slice(0, 2).map((k, i) => {
+                const l = calc.results[k][selFac], st = BOTH_STYLE[i]
+                return (
+                  <div key={k} className="flex items-center gap-1.5" data-testid={`compare-${i}`}>
+                    <svg width="34" height="10" aria-hidden="true">
+                      <line x1="1" y1="5" x2="33" y2="5" stroke={st.route} strokeWidth="3" strokeDasharray={i === 0 ? '8 4' : '1 4'} strokeLinecap={i === 0 ? 'butt' : 'round'} />
+                    </svg>
+                    <span className="inline-block size-3 shrink-0 border-2" style={{ background: st.fill + '99', borderColor: st.edge, borderStyle: i === 0 ? 'solid' : 'dotted' }} />
+                    <span><b>{plans[k].name}</b> {lostText(l)}（65歳以上 {lb(l.exact)}{n(l.lost65)}人）</span>
+                  </div>
+                )
+              })}
+              <div className="text-[11px] text-muted-foreground">{BOTH_STYLE[0].name}＝{plans[ks[0]].name}／{BOTH_STYLE[1].name}＝{plans[ks[1]].name}</div>
+            </div>
+          : legendPlan && legendPlan.routes.length > 0 && data
           ? <><b>{legendPlan.name}・{data.facility_labels[data.facility_order[selFac]]}</b>: オレンジ＝行けなくなる地区（500m）／青の破線＝止める路線</>
           : '路線を選ぶと、行けなくなる地区が表示されます'}
       </div>

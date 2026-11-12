@@ -44,6 +44,14 @@ describe('巡視計画', () => {
     expect(p.total).toBeGreaterThan(0)
     expect(planRoute(r, real.origin, 0).route).toHaveLength(0)
   })
+  it('回り順は最近傍法より長くならない（5件・10件・20件）', () => {
+    const r = rank(real.sites, DEFAULT_WEIGHTS_REAL, real.refDate, [], 'real')
+    for (const n of [5, 10, 20]) {
+      const p = planRoute(r, real.origin, n)
+      expect(p.route).toHaveLength(n)
+      expect(p.total).toBeLessThanOrEqual(p.nearest + 1e-6)
+    }
+  })
   it('周回距離の目安は km 単位として妥当（市内）', () => {
     const r = rank(real.sites, DEFAULT_WEIGHTS_REAL, real.refDate, [], 'real')
     const km = planRoute(r, real.origin, 5).total / 1000

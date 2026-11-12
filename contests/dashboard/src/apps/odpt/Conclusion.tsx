@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { TIPS, Term } from './Term'
 import {
-  DAY_FULL, DAY_LABEL, PERIOD_LABEL, fmtMin, type Day, type Last, type RegionData, type Status, type Verdict,
+  DAY_FULL, DAY_LABEL, PERIOD_LABEL, fmtMin, type Alternatives, type Day, type Last, type RegionData, type Status, type Verdict,
 } from './lib'
 
 export interface CondState { fi: number; day: Day; per: 'm' | 'd' | 'e'; w: number }
@@ -30,6 +30,11 @@ export interface DiagView {
   facility: NearFacility | null
   transitLevel: string | null
   walkInM: number
+  alts: Alternatives | null
+  /** 「使ったデータ: ○○の時刻表（…）」の一行（lib の dataUsedLine） */
+  dataLine: string
+  /** 共有リンクから開いた直後か */
+  fromLink: boolean
 }
 
 export const condText = (data: RegionData, c: CondState) =>
@@ -51,6 +56,35 @@ export function MapSummary({ d }: { d: DiagView | null }) {
   )
 }
 
+/** 「行けません」のときの次の一歩。画面にある事実（近い停留所・最終便・ほかの時間帯・許容時間・休日）だけを使う */
+function NextSteps({ d, fl }: { d: DiagView; fl: string }) {
+  const { data, cond, verdict: v, nearest, alts } = d
+  if (!v) return null
+  const hr = (p: 'm' | 'd' | 'e') => `${PERIOD_LABEL[p]}${data.params.start_hours[p]}時発`
+  const okPeriods = alts?.periods.filter((p) => p.ok) ?? []
+  const lastTxt = nearest
+    ? `最終は 平日 ${nearest.wd[3] > 0 ? fmtMin(nearest.wd[5]) : '運行なし'}・休日 ${nearest.hol[3] > 0 ? fmtMin(nearest.hol[5]) : '運行なし'}`
+    : ''
+  return (
+    <div className="rounded-md border border-orange-300 bg-white p-3 text-sm" data-testid="next-steps">
+      <p className="font-medium">行けないときの次の一歩（この画面の計算結果から）</p>
+      <ul className="mt-1 list-disc space-y-1 pl-5">
+        <li>
+          {nearest
+            ? <>いちばん近い停留所は <b>{nearest.name}</b>（約{nearest.m}m）。{lastTxt}。時刻を確かめて、乗れる便から逆算して出かけます。</>
+            : <>半径{d.walkInM}m以内に、収録した事業者の停留所はありません。家族の送迎や、収録していない交通（タクシー・予約制の便など）を検討する目安になります。</>}
+        </li>
+        {okPeriods.length > 0
+          ? <li>{DAY_FULL[cond.day]}でも <b>{okPeriods.map((p) => hr(p.per)).join('・')}</b> なら、{cond.w}分以内に{fl}へ行けます。受診や外出の時間を変えられるか確かめます。</li>
+          : <li>{DAY_FULL[cond.day]}の朝・昼・夕のどれで出発しても、{cond.w}分以内には行けない計算です。</li>}
+        {alts?.longerW && <li>許容時間を <b>{alts.longerW.w}分</b> まで延ばすと行けます。時間に余裕のある日なら、この条件で確かめます。</li>}
+        {v.otherOk && <li>{DAY_FULL[v.otherDay]}なら行けます（{v.otherYesNo}）。</li>}
+      </ul>
+      <p className="mt-1 text-xs text-muted-foreground">条件を変えるには、サイドバーの「条件を確認する」を開きます。行けるかどうかは時刻表データによる推計です。</p>
+    </div>
+  )
+}
+
 /** 手順3: 結論 */
 export function VerdictPanel({ d }: { d: DiagView }) {
   const { data, cond, verdict: v } = d
@@ -63,40 +97,62 @@ export function VerdictPanel({ d }: { d: DiagView }) {
       </div>
     )
   }
+  const hospital = fl === '病院'
+  const nr = d.nearest
+  const lastOf = (k: 'wd' | 'hol') => (nr && nr[k][3] > 0 ? fmtMin(nr[k][5]) : '運行なし')
   return (
     <div className="space-y-3 text-sm">
-      {d.placeLabel && <p className="text-xs text-muted-foreground">場所: {d.placeLabel}</p>}
-      <div className={`rounded-md border-2 p-3 ${v.ok ? 'border-blue-700 bg-blue-50 text-blue-950' : 'border-orange-600 bg-orange-50 text-orange-950'}`}>
-        <p className="flex items-center gap-2 text-xl font-bold" data-testid="verdict-main">
-          {v.ok ? <Check className="size-6 shrink-0" /> : <X className="size-6 shrink-0" />}
-          <span>{fl}へ {cond.w}分以内に {v.yesNo}</span>
-        </p>
-        <p className="mt-1">{STATUS_NOTE[v.status]}。{v.extra}</p>
-        <div className="mt-2 border-t border-current/20 pt-2" data-testid="verdict-basis">
-          <p className="font-medium">根拠</p>
-          {d.facility && (
-            <p>いちばん近い{fl}: <b>{d.facility.name}</b>（直線で約{d.facility.m}m・<Term tip={TIPS.walk}>徒歩の目安</Term>約{d.facility.min}分）</p>
-          )}
-          {v.status === 'walk' && <p>歩きだけで{cond.w}分以内に着ける、と計算した地点です。</p>}
-          {v.status === 'transit' && (
-            <p>公共交通（乗り継ぎ・待ち時間を含む）で <b>{d.transitLevel ?? `${cond.w}分以内`}</b> に着ける区分です。乗る路線・経路は元データにないため表示できません。</p>
-          )}
-          {!v.ok && <p>最寄りの{fl}までは、{cond.w}分以内には着けない計算です。</p>}
-          <p className="text-xs opacity-80">最寄りの{fl}は直線距離で選んだ目安で、実際に向かう{fl}とは限りません。</p>
-        </div>
-      </div>
-      {d.popInfo && (
-        <p className="text-xs text-muted-foreground">
-          この<Term tip={TIPS.mesh}>約500m四方のエリア</Term>の人口 {d.popInfo.pop}人（65歳以上 {d.popInfo.pop65}人）。人数は<Term tip={TIPS.hide}>概数</Term>です。
+      {d.fromLink && (
+        <p className="rounded-md border border-blue-300 bg-blue-50 p-2 text-xs text-blue-950" data-testid="from-link">
+          共有リンクから開きました。送り主が選んだ地点・条件の結論です。条件はサイドバーの「条件を確認する」で変えて確かめ直せます。
         </p>
       )}
+      <section aria-label="家族に送る1枚" data-testid="family-sheet" className="overflow-hidden rounded-md border-2 border-foreground/70 bg-white">
+        <div className="flex items-center justify-between gap-2 bg-foreground px-3 py-1 text-xs font-bold text-background">
+          <span>家族に送る1枚</span>
+          <span className="font-normal">手順6で、この内容をコピーして送れます</span>
+        </div>
+        <div className="space-y-2 p-3">
+          <p className="text-xs text-muted-foreground" data-testid="sheet-cond">{d.placeLabel || '選んだ地点'}から ／ {condText(data, cond)}</p>
+          <div className={`rounded-md border-2 p-3 ${v.ok ? 'border-blue-700 bg-blue-50 text-blue-950' : 'border-orange-600 bg-orange-50 text-orange-950'}`}>
+            <p className="flex items-center gap-2 text-xl font-bold" data-testid="verdict-main">
+              {v.ok ? <Check className="size-6 shrink-0" /> : <X className="size-6 shrink-0" />}
+              <span>{fl}へ {cond.w}分以内に {v.yesNo}</span>
+            </p>
+            <p className="mt-1">{STATUS_NOTE[v.status]}。{v.extra}</p>
+          </div>
+          <p data-testid="sheet-last">
+            <b>最終便</b>　{nr ? `最寄りの停留所 ${nr.name}（約${nr.m}m）の最終: 平日 ${lastOf('wd')}・休日 ${lastOf('hol')}` : `半径${d.walkInM}m以内に停留所がありません`}
+          </p>
+          {!v.ok && <NextSteps d={d} fl={fl} />}
+          <p className="text-xs" data-testid="data-used">{d.dataLine}</p>
+          {hospital && <p className="text-xs" data-testid="phone-note">病院の診療時間・予約は確認できていません。出かける前に、病院へ電話で確認してください。</p>}
+        </div>
+      </section>
+      <div className="space-y-1 rounded-md border p-2" data-testid="verdict-basis">
+        <p className="font-medium">くわしい根拠</p>
+        {d.facility && (
+          <p>いちばん近い{fl}: <b>{d.facility.name}</b>（直線で約{d.facility.m}m・<Term tip={TIPS.walk}>徒歩の目安</Term>約{d.facility.min}分）</p>
+        )}
+        {v.status === 'walk' && <p>歩きだけで{cond.w}分以内に着ける、と計算した地点です。</p>}
+        {v.status === 'transit' && (
+          <p>公共交通（乗り継ぎ・待ち時間を含む）で <b>{d.transitLevel ?? `${cond.w}分以内`}</b> に着ける区分です。乗る路線・経路は元データにないため表示できません。</p>
+        )}
+        {!v.ok && <p>最寄りの{fl}までは、{cond.w}分以内には着けない計算です。</p>}
+        <p className="text-xs text-muted-foreground">最寄りの{fl}は直線距離で選んだ目安で、実際に向かう{fl}とは限りません。</p>
+        {d.popInfo && (
+          <p className="text-xs text-muted-foreground">
+            この<Term tip={TIPS.mesh}>約500m四方のエリア</Term>の人口 {d.popInfo.pop}人（65歳以上 {d.popInfo.pop65}人）。人数は<Term tip={TIPS.hide}>概数</Term>です。
+          </p>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground">時刻表データによる推計で、実際の運行を保証するものではありません。収録した事業者のバスのみが対象で、鉄道・予約制の便・病院の診療時間は評価していません。</p>
     </div>
   )
 }
 
 /** 手順4: 平日と休日の比較 */
-export function HolPanel({ d }: { d: DiagView }) {
+export function HolPanel({ d, onPickDay }: { d: DiagView; onPickDay: (day: Day) => void }) {
   const { data, cond, verdict: v } = d
   if (!v) return <NoPoint text="この地点は診断範囲外のため、比べられません。別の地点を選んでください。" />
   const hr = data.params.start_hours[cond.per]
@@ -108,17 +164,19 @@ export function HolPanel({ d }: { d: DiagView }) {
           const cur = day === cond.day
           const ok = cur ? v.ok : v.otherOk
           return (
-            <div key={day} className={`rounded-md border p-2 ${cur ? 'border-2 border-foreground' : ''}`}>
+            <button key={day} type="button" aria-pressed={cur} onClick={() => onPickDay(day)} data-testid={`pick-${day}`}
+              className={`rounded-md border p-2 text-left hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${cur ? 'border-2 border-foreground' : ''}`}>
               <div className="text-xs text-muted-foreground">{DAY_LABEL[day]}{day === 'hol' ? <>（<Term tip={TIPS.sunday}>日曜ダイヤ</Term>）</> : ''}{cur ? '・選択中' : ''}</div>
               <div className="flex items-center gap-1 font-bold">
                 {ok ? <Check className="size-4 text-blue-700" /> : <X className="size-4 text-orange-700" />}
                 {cur ? v.yesNo : v.otherYesNo}
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
       <p className="text-muted-foreground">{v.cmp}</p>
+      <p className="text-xs text-muted-foreground" data-testid="compare-hint">選んでいない側の枠を押すと、結論を切り替えて見比べられます（切り替えると、この手順が済になります）。</p>
     </div>
   )
 }
@@ -159,22 +217,29 @@ export function LastPanel({ d }: { d: DiagView }) {
   )
 }
 
-/** 手順6: コピー */
+/** 手順5: コピー。コピー済みかどうかは、いまの文面と一致するかで表示する（手順を戻っても保持） */
 export function CopyPanel({
-  copyText, onCopy, copied, isLocal,
-}: { copyText: string; onCopy: () => void; copied: boolean; isLocal: boolean }) {
+  copyText, onCopy, copied, isLocal, expiry,
+}: { copyText: string; onCopy: () => void; copied: boolean; isLocal: boolean; expiry: string }) {
   return (
     <div className="space-y-2 text-sm">
       <Button size="lg" onClick={onCopy} className="h-12 w-full text-base" data-testid="copy-conclusion">
         {copied ? <Check className="size-5" /> : <Copy className="size-5" />}
-        {copied ? 'コピーしました' : '結論とリンクをコピー'}
+        {copied ? 'コピー済み（もう一度コピーする）' : '結論とリンクをコピー'}
       </Button>
       <p className="font-medium text-blue-800" role="status" data-testid="copy-done">
         {copied ? 'コピーしました。LINEやメールに貼り付けて送れます。' : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
       </p>
-      <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">コピーされる文面（自動でコピーできない時は、ここを選んでコピー）</label>
-      <Textarea id="odpt-copy-preview" readOnly rows={5} value={copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+      <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">家族に送る文面（手順3の「1枚」と同じ内容。自動でコピーできない時は、ここを選んでコピー）</label>
+      <Textarea id="odpt-copy-preview" readOnly rows={7} value={copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
       {isLocal && <p className="text-xs text-muted-foreground">※いまは手元の確認用アドレスです。公開後のアドレスで共有すると、相手も開けます。</p>}
+      <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">
+        <p className="font-medium text-foreground">データの更新と、使う人たち（想定）</p>
+        <ul className="mt-1 list-disc space-y-1 pl-4">
+          <li>時刻表は、事業者がGTFSデータリポジトリ・公共交通オープンデータセンターに公開するデータです。ダイヤが変わると診断も古くなるため、有効期間が切れる前に最新のGTFSで作り直します（現在は開発者が前処理で作り直す方式で、この画面からは更新できません）。{expiry}</li>
+          <li>家族に送る使い方のほか、自治体職員・議員・住民が同じ画面で現状と路線変更の影響（「参考: 路線を止めたら？」）を話し合う材料にすることを想定しています。自治体との連携や導入の実績は、まだありません。</li>
+        </ul>
+      </div>
     </div>
   )
 }

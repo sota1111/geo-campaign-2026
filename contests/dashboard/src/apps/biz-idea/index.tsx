@@ -47,7 +47,7 @@ const EMPTY_FORM: FormState = {
 const PLACE_TYPES = ['旧地名', '小字', '通称地名', 'その他']
 const EMPTY_RECORDS: MemoryRecord[] = []
 const CENTER: [number, number] = [132.485, 34.475]
-const DESCRIPTION = '地域の聞き取り担当として、地名にまつわる災害の言い伝えを公開データで確かめ、聞き取った話を記録して地図に残す。'
+const DESCRIPTION = '地域の聞き取り担当として、地名にまつわる災害の言い伝えの手がかりを公開データで探し、聞き取った話を記録して地図に残す。'
 
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   place: { title: '地名を選ぶ', hint: '地名と語りは架空のサンプル。地図のオレンジのピンでも選べます' },
@@ -163,6 +163,9 @@ export default function BizIdeaApp() {
   const [map, setMap] = useState<maplibregl.Map | null>(null)
   const [zoom, setZoom] = useState(12)
   const [done, setDone] = useState({ cross: sample, overlay: sample, published: sample })
+  // 「済」は今回の操作だけで付ける。ブラウザに残っていた前回の記録は数えない
+  const [touched, setTouched] = useState({ saved: sample, confirmed: sample })
+  const priorIds = useRef<Set<string>>(new Set(records.map((r) => r.id)))
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [dlgVis, setDlgVis] = useState('')
   const [dlgLic, setDlgLic] = useState('CC BY 4.0')
@@ -243,10 +246,8 @@ export default function BizIdeaApp() {
     [cross, near],
   )
 
-  /* 手順2: 突き合わせの結果を表示した（地名があり、災害の種類を選んだ状態で手順2を開いている）ら済 */
-  useEffect(() => {
-    if (step === 'cross' && focus && form.claimedKinds.length) setDone((d) => (d.cross ? d : { ...d, cross: true }))
-  }, [step, focus, form.claimedKinds.length])
+  /* 手順2: 「この結果を確認した」を押す、または探す範囲を変えたら済（開いて見ただけでは済にしない） */
+  const markCross = () => setDone((d) => (d.cross ? d : { ...d, cross: true }))
 
   const selectPlace = useCallback((p: SamplePlace) => {
     closePopup()
@@ -329,7 +330,7 @@ export default function BizIdeaApp() {
   /* 記録 */
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    const r = createRecord({ ...form, lon: focus?.lon ?? null, lat: focus?.lat ?? null }, new Date().toISOString())
+    const r = createRecord({ ...form, lon: focus?.lon ?? null, lat: focus?.lat ?? null, crossNote: crossNoteText }, new Date().toISOString())
     if (!r.ok) {
       setErrors(r.errors)
       toast.error(`記録できません: ${r.errors[0]}${r.errors.length > 1 ? ` ほか${r.errors.length - 1}件` : ''}`)
@@ -337,6 +338,7 @@ export default function BizIdeaApp() {
     }
     setErrors([])
     setRecords((rs) => [...rs, r.record])
+    setTouched((t) => ({ ...t, saved: true }))
     setLastSavedId(r.record.id)
     // 二重登録を防ぐため、話・出典・語り手だけ空に戻す。地名・位置などは続けて記録できるよう保持する
     setForm((f) => ({ ...f, story: '', basis: '', teller: '' }))
@@ -368,6 +370,7 @@ export default function BizIdeaApp() {
         ? `「${rec.placeName}」を確認済み・公開にしました。公開分に入ります`
         : `「${rec.placeName}」を確認済みにしました（公開範囲「${VISIBILITY[dlgVis as keyof typeof VISIBILITY]}」のため、公開分には入りません）`,
     )
+    setTouched((t) => ({ ...t, confirmed: true }))
     setConfirmId(null)
   }
   const removeRecord = (id: string) => { closePopup(); setRecords((rs) => rs.filter((r) => r.id !== id)) }
@@ -387,6 +390,19 @@ export default function BizIdeaApp() {
     if (onlyPub) setDone((d) => ({ ...d, published: true }))
   }
   const publishableCount = records.filter(isPublishable).length
+  // 突き合わせの結果を、理由つきの1文にして記録に添える（確認役が判断しやすくする）
+  const crossNoteText = !form.claimedKinds.length || !focus ? '' : cross.level === 'clue'
+    ? `保存時の突き合わせ: 半径${fmtDist(radius)}以内に、語られている種類（${cross.matchedKinds.join('・')}）の伝承碑が${cross.hits.length}件（${cross.hits.slice(0, 3).map((h) => `${h.item.name} ${fmtDist(h.dist)}`).join('、')}）。手がかりの有無であり、話の正誤や危険度は示さない。`
+    : `保存時の突き合わせ: 半径${fmtDist(radius)}以内に、語られている種類（${form.claimedKinds.join('・')}）の伝承碑は収録になし（範囲内の伝承碑${near.length}件）。碑が無いだけの場合もあり、話が誤りという意味ではない。`
+  const priorLeft = records.filter((r) => priorIds.current.has(r.id)).length
+  const priorNotice = priorLeft > 0 && (
+    <div className="space-y-1 rounded-md border-2 border-dashed border-[#D55E00] bg-orange-50 p-2 text-xs text-orange-950" role="status" data-testid="prior-records">
+      <p><b>このブラウザに前回までの記録が{priorLeft}件残っています。</b>手順の進捗（済）には数えていません。書き出しには含まれます。</p>
+      <Button type="button" size="sm" variant="outline" className="h-7 border-red-700 text-red-800" onClick={() => setConfirmClear(true)}>
+        <Trash2 className="size-3.5" />この端末の記録を全消去
+      </Button>
+    </div>
+  )
   const savedRec = records.find((r) => r.id === lastSavedId) ?? null
   const confirmRec = records.find((r) => r.id === confirmId) ?? null
 
@@ -396,10 +412,10 @@ export default function BizIdeaApp() {
       { id: 'place', title: '地名を選ぶ', hint: '地名と語りは架空のサンプル', done: !!focus },
       { id: 'cross', title: '伝承碑と突き合わせる', hint: '半径内の自然災害伝承碑（実データ）と比べる', done: done.cross },
       { id: 'overlay', title: '昔の地図・写真と重ねる', hint: 'おすすめの重ね地図あり', action: '重ね地図を選ぶと完了', done: done.overlay },
-      { id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', done: records.length > 0 },
+      { id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', action: '保存すると完了', done: touched.saved },
       {
         id: 'confirm', title: '確認して公開範囲を選ぶ', hint: 'デモでは自分が確認役を兼ねる',
-        done: records.some((r) => r.verified && r.visibility !== 'undecided'),
+        action: '記録を確認済みにして公開範囲を選ぶと完了', done: touched.confirmed && records.some((r) => r.verified && r.visibility !== 'undecided'),
       },
       { id: 'export', title: '公開分を書き出す', hint: '確認済み・公開の記録だけ', action: '書き出すと完了', done: done.published },
     ],
@@ -435,7 +451,8 @@ export default function BizIdeaApp() {
           )}
         </div>
       )}
-      <Note>オレンジの地名か、地名の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。</Note>
+      {priorNotice}
+      <Note>オレンジの地名か、下の一覧から選びます（どれも架空）。地図の何もない所をクリック／タップすると、新しい地名の位置を指定できます。手順1〜3の進捗は再読み込みで消えます。{isSampleMode() ? '' : '手順4以降の保存した記録は端末に残ります。'}</Note>
       {!places.length && (
         <div className="space-y-2" role="status" aria-label="地名を読み込み中">
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
@@ -465,7 +482,7 @@ export default function BizIdeaApp() {
       <p className="text-sm">選択中: <b>{selectedLabel}</b></p>
       <div className="space-y-1">
         <Label htmlFor="radius-select">伝承碑を探す範囲</Label>
-        <NativeSelect id="radius-select" value={String(radius)} onChange={(v) => setRadius(Number(v))}
+        <NativeSelect id="radius-select" value={String(radius)} onChange={(v) => { setRadius(Number(v)); markCross() }}
           options={[500, 1000, 2000, 5000].map((r) => [String(r), `半径 ${fmtDist(r)}`])} />
       </div>
       <KindsField idPrefix="k-check" value={form.claimedKinds} onChange={(v) => set('claimedKinds', v)} />
@@ -482,6 +499,11 @@ export default function BizIdeaApp() {
             <b>△ 公開データでは見つからず</b>: 半径{fmtDist(radius)}以内に、語られている種類（{form.claimedKinds.join('・')}）の伝承碑はありません。
             <Note>碑が建てられていないだけの場合もあり、話が誤りという意味ではありません。範囲を広げるか、郷土資料・語り手への再確認で確かめます。</Note>
           </div>
+        )}
+        {form.claimedKinds.length > 0 && (
+          done.cross
+            ? <p className="text-xs font-medium" data-testid="cross-done">✓ 突き合わせの結果を確認しました（この結果は記録に添えられます）。</p>
+            : <Button size="sm" data-testid="cross-ack" onClick={() => { markCross(); toast.success('突き合わせの結果を確認しました') }}>この結果を確認した</Button>
         )}
         {near.length ? (
           <>
@@ -547,10 +569,10 @@ export default function BizIdeaApp() {
         <Slider id="opacity-slider" min={20} max={100} step={5} value={[opacity]} onValueChange={(v) => setOpacity(v[0])} />
       </div>
       <Note>
-        {overlay.note}
+        <span className="block min-h-[3.75rem]">{overlay.note}
         {overlayId !== 'none' && '（出典: 国土地理院 地理院タイル）'}
         {overlay.minzoom != null && ` 表示される縮尺: ズーム${overlay.minzoom}〜${overlay.maxzoom}（現在ズーム${zoom}）。`}
-        {overlay.minzoom != null && zoom < overlay.minzoom && ' ※ 現在の縮尺では表示されません。地図を拡大してください。'}
+        {overlay.minzoom != null && zoom < overlay.minzoom && ' ※ 現在の縮尺では表示されません。地図を拡大してください。'}</span>
       </Note>
       <fieldset className="space-y-2 border-t pt-3">
         <legend className="text-sm font-bold">見て気づいたこと（自分の目で見て選ぶ）</legend>
@@ -572,6 +594,7 @@ export default function BizIdeaApp() {
   const recordPanel = !focus ? needPlace : (
     <form onSubmit={submit} noValidate className="relative flex min-h-full flex-col">
       <div className="flex-1 space-y-3">
+        {priorNotice}
         <div className="rounded-md border-2 border-black bg-yellow-50 p-2 text-sm">
           <p><b>必須</b>: 地名／聞き取った話／話の出典／位置（選択済み）</p>
           <p className="text-xs text-muted-foreground"><b>任意</b>: 語り手・聞いた日・種類・災害の種類・確からしさ。公開範囲は「未定」のまま保存でき、確認のときに決めます。</p>
@@ -606,6 +629,7 @@ export default function BizIdeaApp() {
         <div className="space-y-1"><Label htmlFor="f-vis">公開範囲 <Opt /></Label>
           <NativeSelect id="f-vis" value={form.visibility} onChange={(v) => set('visibility', v)} options={Object.entries(VISIBILITY)} />
           <Note>初期値は「未定」で、勝手に公開されることはありません。公開分に入るには「公開」を選び、確認済みにする必要があります。</Note></div>
+        {crossNoteText && <Note>手順2の突き合わせ結果（{cross.level === 'clue' ? '手がかりあり' : '公開データでは見つからず'}）を、理由つきで記録に添えて書き出します。</Note>}
         <Note>位置: 経度 {focus.lon.toFixed(5)}・緯度 {focus.lat.toFixed(5)}{focus.place ? '（サンプル地名の位置）' : '（地図で指定）'}。手順3で選んだ「見て気づいたこと」: {form.checked.length}件</Note>
         {errors.length > 0 && (
           <Alert variant="destructive" role="alert"><AlertTitle>記録できません</AlertTitle>
@@ -621,6 +645,7 @@ export default function BizIdeaApp() {
 
   const confirmPanel = (
     <div className="space-y-3">
+      {priorNotice}
       <Note>記録は必ず「未確認」から始まります。確認役が出典などを確かめて「確認済み」にし、公開範囲を選びます。このデモでは、あなたが確認役を兼ねます（実運用では図書館・郷土資料館等の担当者が行います）。</Note>
       {!records.length && <div className="rounded-md border p-3 text-sm">まだ記録がありません。手順「聞き取りを記録する」で1件保存してください。</div>}
       <ul className="space-y-2">
@@ -704,6 +729,16 @@ export default function BizIdeaApp() {
         <Note>非公開を除くすべて（未確認を含む）。確認作業や内部の見直し用で、<b>公開には使いません</b>。対象: {records.filter((r) => r.visibility !== 'private').length}件</Note>
         <Button variant="outline" className="w-full" onClick={() => exportGeo(false)}><Download className="size-4" />全記録を書き出し</Button>
       </div>
+      <div className="space-y-1 rounded-md border border-dashed p-2" data-testid="sustain-note">
+        <b className="text-sm">継続の想定（構想段階。実運用はまだ始まっていません）</b>
+        <ul className="list-disc space-y-0.5 pl-4 text-xs leading-relaxed text-muted-foreground">
+          <li><b>運営の担い手（想定）</b>: 住民が出典つきで投稿し、図書館・郷土資料館・学校の担当者が確認して公開する。確認役は郷土資料の整理や防災学習の一部として担う想定。<u>具体的な機関・担当者・人数は未定</u>。</li>
+          <li><b>始め方（想定）</b>: まず1地区から。旧地名は郷土資料から登録し、伝承碑や旧版地図は利用条件を確かめて重ねる。<u>最初の地区は未定</u>。</li>
+          <li><b>使う場面（想定）</b>: 現地を歩くと近くの地名や語りを位置に合わせて知らせ、学校の防災学習に使う。このデモには未実装。</li>
+          <li><b>費用</b>: 地図は公開データで作り運営費を抑える想定。<u>収益の仕組みと費用の額は未定</u>。</li>
+          <li><b>公開</b>: 書き出したGeoJSONを地域のオープンデータサイト等に載せる想定（このデモは掲載しない）。投稿者は公開範囲と利用条件を選べ、求めがあれば非公開にする。</li>
+        </ul>
+      </div>
       <Note>書き出したGeoJSONは、地域のオープンデータサイト等に掲載する想定です（このデモは掲載しません）。</Note>
       <Note>ファイルは端末内で作成し、送信しません。地名に「（架空）」が付く記録は、このデモのための架空の内容です。実際の公開データとしては使わないでください。</Note>
     </div>
@@ -719,7 +754,7 @@ export default function BizIdeaApp() {
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/80" role="status">
           <div className="space-y-2 text-center text-sm">
             <Skeleton className="mx-auto h-24 w-48" />
-            地図を読み込み中…
+            地図を読み込み中…（数秒かかることがあります）
           </div>
         </div>
       )}

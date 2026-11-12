@@ -65,6 +65,11 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await send('Page.reload')
   await sleep(2500)
   await shot(`${label}-1-initial`)
+  // 前回の記録がある状態で開いたとき: 済にならず、前回の記録の案内が出る
+  await ev(`localStorage.setItem('biz-idea:records', JSON.stringify([{id:'old-1',placeName:'前回の記録（架空）',placeType:'旧地名',teller:'x',heardOn:'',story:'s',basis:'b',claimedKinds:['洪水'],certainty:'不明',visibility:'public',license:'CC BY 4.0',checked:[],lon:132.48,lat:34.47,verified:true,verifiedBy:'x',createdAt:'2026-11-01T00:00:00.000Z',sample:false}]))`)
+  await send('Page.reload'); await sleep(2500)
+  console.log(label, 'with prior records:', await statuses(), '| notice:', await ev(`(document.querySelector('[data-testid=prior-records]')||{innerText:'none'}).innerText.split(String.fromCharCode(10)).join(' ').slice(0,90)`))
+  await ev('localStorage.clear()'); await send('Page.reload'); await sleep(2500)
   console.log(label, 'overflow-x ok:', await ev('document.documentElement.scrollWidth<=window.innerWidth'), 'tabs in page:', await ev(`document.querySelectorAll('[role=tab]').length`), 'initial', await statuses())
   console.log(label, 'H place', await panelTitle(), await heights())
 
@@ -77,6 +82,9 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   let t = await body()
   console.log(label, '手がかりあり:', /手がかりあり/.test(t), await statuses(), await heights())
   console.log(label, "手順2におすすめ重ねボタンなし:", !/この話を昔の地図で確かめる/.test(t))
+  console.log(label, 'cross: opened only ->', await statuses())
+  console.log(label, 'cross ack', await clickText('button', 'この結果を確認した')); await sleep(500)
+  console.log(label, 'cross: after ack ->', await statuses())
   await shot(`${label}-3-cross`)
 
   console.log(label, 'step overlay', await stepClick('overlay'), await panelTitle(), '(押しただけ:', await statuses(), ')')

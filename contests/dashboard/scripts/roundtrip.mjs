@@ -34,10 +34,10 @@ for (const id of ids) {
   await ev(`document.querySelector('[data-app-card="${id}"] a').click()`)
   await sleep(2500)
   const url1 = await ev('location.pathname + location.hash')
-  await ev(`document.querySelector('header a[href$="index.html"]').click()`)
+  await ev(`document.querySelector('header a[href*="index.html"]').click()`)
   await sleep(1500)
-  const url2 = await ev('location.pathname')
-  out.push({ id, opened: url1, back: url2 })
+  const url2 = await ev('location.pathname + location.hash'); const tab = await ev("document.querySelector('[role=tab][data-state=active] span')?.textContent")
+  out.push({ id, opened: url1, back: url2, activeTab: tab })
 }
 console.log(JSON.stringify({ out, errs }, null, 2))
 ws.close(); chrome.kill()

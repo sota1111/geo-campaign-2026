@@ -40,7 +40,7 @@ const pages = (b) => (b.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).
 for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
   logs.length = 0
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
-  await send('Page.navigate', { url: 'http://127.0.0.1:8847/#/apps/biz-realestate' })
+  await send('Page.navigate', { url: 'http://127.0.0.1:8847/apps/biz-realestate/' })
   await sleep(2500)
   await shot(`${label}-1-initial.png`, true)
   console.log(label, 'overflowX', await ev('document.documentElement.scrollWidth > window.innerWidth'))
@@ -86,8 +86,8 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   console.log(label, 'exit-sell:', await ev(`document.querySelector('[data-testid=exit-sell]').innerText.slice(0,300)`))
   await shot(`${label}-3-sheet.png`, true)
   if (!mobile) {
-    for (const [name, act] of [['print', null], ['print-sample', `[...document.querySelectorAll('button')].find(b=>b.textContent.includes('サンプル（架空）の土地')).click()`]]) {
-      if (act) { await ev(act); await sleep(800) }
+    for (const [name, act] of [['print', null], ['print-example', `document.querySelector('[data-step=place]').click()`]]) {
+      if (act) { await ev(act); await sleep(800); await ev(`document.querySelector('[data-testid=use-example]').click()`); await sleep(6000); await ev(`document.querySelector('[data-step=print]').click()`); await sleep(800) }
       await send('Emulation.setEmulatedMedia', { media: 'print' })
       await sleep(500)
       const pdf = await send('Page.printToPDF', { paperWidth: 8.27, paperHeight: 11.69, preferCSSPageSize: true, printBackground: true })

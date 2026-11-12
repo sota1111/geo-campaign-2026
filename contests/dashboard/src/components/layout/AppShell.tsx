@@ -48,8 +48,8 @@ function PortalSidebar() {
                         <span className="flex w-full flex-col items-start gap-0.5 py-0.5">
                           <span>{a.name}</span>
                           <span className="flex flex-wrap items-center gap-1">
-                            <DataBadge kind={a.dataKind} className="px-1.5 py-0 text-[10px]" />
-                            <span className="text-[10px] text-muted-foreground">{a.audience}</span>
+                            <DataBadge kind={a.dataKind} className="px-1.5 py-0 text-xs" />
+                            <span className="text-xs text-muted-foreground">{a.audience}</span>
                           </span>
                         </span>
                       </a>
