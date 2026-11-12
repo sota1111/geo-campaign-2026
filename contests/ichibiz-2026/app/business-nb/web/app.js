@@ -10,8 +10,9 @@
   ];
   var CUTS = [2035, 2040, 2045, 2050, 2060];
   var RADII = [10, 20, 30, 50];
-  var SITE_COLORS = ['#0072B2', '#E69F00', '#009E73', '#CC79A7'];
-  var S = { meta: null, munis: [], rows: [], facs: [], basis: 1, cut: 2045, radius: 20, cand: null, placing: false, res: null, base: null, sug: null };
+  var SITE_COLORS = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#8B5E3C', '#7A7A00', '#6A3D9A'];
+  var HOME_PREF = '京都府';
+  var S = { meta: null, munis: [], rows: [], allFacs: [], facs: [], scope: 'all', basis: 1, cut: 2045, radius: 20, cand: null, placing: false, res: null, base: null, sug: null };
   var map = null, mapReady = false, markers = [];
 
   function $(id) { return document.getElementById(id); }
@@ -23,6 +24,9 @@
   function pct(a, b) { return b ? Math.round(a * 1000 / b) / 10 : 0; }
   function km1(x) { return x.toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   function getJSON(url) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); }); }
+  function isExt(f) { return f.pref && f.pref !== HOME_PREF; }
+  function applyScope() { S.facs = S.scope === 'in' ? S.allFacs.filter(function (f) { return !isExt(f); }) : S.allFacs.slice(); }
+  function avgKm(t) { return t.kwKm ? t.kmKw / t.kwKm : 0; }
   function curBasis() { return BASES[S.basis]; }
   function opts() { return { basis: curBasis().basis, cutoff: S.cut, radiusKm: S.radius }; }
   function sites(withCand) {
@@ -46,13 +50,15 @@
 
   function init() {
     Promise.all([getJSON('data/plants.json'), getJSON('data/facilities.json')]).then(function (rs) {
-      S.meta = rs[0].meta; S.munis = rs[0].munis; S.rows = rs[0].rows; S.facs = rs[1];
+      S.meta = rs[0].meta; S.munis = rs[0].munis; S.rows = rs[0].rows; S.allFacs = rs[1]; applyScope();
+      if (!S.allFacs.length) { $('summary').innerHTML = '<p class="warn">リサイクル施設のデータが入っていないため、回収圏を計算できません（data/facilities.json が空です）。</p>'; return; }
       if (!S.meta.real_data) {
         var d = document.createElement('div'); d.className = 'fake'; d.textContent = 'このデータは架空のサンプルです。実在の設備・事業者ではありません。';
         $('panel').insertBefore(d, $('panel').firstChild);
       }
       seg($('ctl-basis'), BASES.map(function (b, i) { return { value: i, label: b.label }; }), S.basis, function (v) { S.basis = v; update(); });
       seg($('ctl-cut'), CUTS.map(function (y) { return { value: y, label: y + '年まで' }; }), S.cut, function (v) { S.cut = v; update(); });
+      seg($('ctl-scope'), [{ value: 'all', label: '府外の施設も含める' }, { value: 'in', label: '京都府内の施設のみ' }], S.scope, function (v) { S.scope = v; S.cand = null; S.sug = null; applyScope(); update(); });
       seg($('ctl-radius'), RADII.map(function (r) { return { value: r, label: r + ' km' }; }), S.radius, function (v) { S.radius = v; update(); });
       initMap();
       update();
@@ -71,6 +77,7 @@
     $('btn-suggest').addEventListener('click', function () {
       var s = N.suggestSite(S.rows, sites(false), opts());
       if (s) { S.cand = { lat: s.lat, lon: s.lon }; S.sug = s; update(); }
+      else $('cand-result').innerHTML = '<div class="zero">' + esc(zeroReason() || '候補を探せませんでした。') + '</div>';
     });
     $('btn-clear').addEventListener('click', function () { S.cand = null; S.sug = null; update(); });
   }
@@ -81,23 +88,39 @@
     S.res = S.cand ? N.analyze(S.rows, S.munis, sites(true), opts()) : S.base;
     $('basis-note').textContent = '仮説: ' + curBasis().text;
     if (S.meta) $('asof').textContent = S.meta.as_of.replace(/^(\d+)-(\d+)-(\d+)$/, function (_m, y, mo, d) { return y + '年' + +mo + '月' + +d + '日'; }) + '時点';
+    var none = S.base.total.plants === 0;
+    $('btn-suggest').disabled = none;
+    $('btn-suggest').title = none ? '対象年までに出ると推定した設備が0件のため、候補を探せません' : '';
     renderSummary(); renderChart(); renderCand(); renderMunis(); renderMap();
   }
 
   function siteName(i) { return i < S.facs.length ? S.facs[i].name : '候補拠点（試算）'; }
 
+  /* 対象が0件のときの理由（この仮説・対象年では、まだ出ると推定される設備がない） */
+  function zeroReason() {
+    var my = S.base ? S.base.minYear : null;
+    return '仮説「' + curBasis().label + '」では、' + (my ? '推定の廃棄時期が最も早い設備でも' + my + '年' : '廃棄時期を推定できる設備がなく') + 'で、' + S.cut + '年までに出ると推定される設備はありません（0件）。' +
+      '圏外の割合は計算できません（0%ではありません）。対象年を後ろにするか、廃棄時期を早い置き方にしてください。';
+  }
+
   function renderSummary() {
     var t = S.res.total, o = opts();
+    if (t.plants === 0) {
+      $('summary').innerHTML = '<div class="zero"><b>対象は0件です。</b>' + esc(zeroReason()) + '</div>';
+      $('fac-table').innerHTML = '';
+      return;
+    }
     var h = '<div class="sent">仮説「' + esc(curBasis().label) + '」では、' + S.cut + '年までに出ると推定した設備は<b>' + n(t.plants) + '件・' + mw(t.kw) + ' MW</b>（京都府の認定設備 ' + n(t.allPlants) + '件・' + mw(t.allKw) + ' MW のうち）。' +
       'このうち、最寄りの施設まで直線で<b>' + o.radiusKm + ' kmより遠い</b>のは<b class="big">' + n(t.outPlants) + '件・' + mw(t.outKw) + ' MW（' + pct(t.outKw, t.kw) + '%）</b>。' +
-      '出力で重み付けした最寄り施設までの平均距離は' + km1(t.kw ? t.kmKw / t.kw : 0) + ' km（直線）。</div>';
+      '出力で重み付けした最寄り施設までの平均距離は' + km1(avgKm(t)) + ' km（直線）。' +
+      (t.noPos ? '（位置が不明の' + n(t.noPos) + '件は距離の計算から除いています）' : '') + '</div>';
     $('summary').innerHTML = h;
-    var th = '<table><tr><th class="l">リサイクル施設（京都府の公表）</th><th>最寄りとなる設備</th><th>出力(MW)</th><th>うち圏外(MW)</th><th>平均距離(km)</th></tr>';
+    var th = '<table><tr><th class="l">リサイクル施設（出典は施設ごと。「府外」は京都府外）</th><th>最寄りとなる設備</th><th>出力(MW)</th><th>うち圏外(MW)</th><th>平均距離(km)</th></tr>';
     S.res.bySite.forEach(function (b, i) {
       var f = i < S.facs.length ? S.facs[i] : null;
-      th += '<tr><td class="l"><span class="sw" style="background:' + SITE_COLORS[i] + '"></span>' + (f ? '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(siteName(i))) + '</td><td>' + n(b.plants) + '件</td><td>' + mw(b.kw) + '</td><td>' + mw(b.outKw) + '</td><td>' + km1(b.kw ? b.kmKw / b.kw : 0) + '</td></tr>';
+      th += '<tr><td class="l"><span class="sw" style="background:' + SITE_COLORS[i] + '"></span>' + (f ? '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' + (isExt(f) ? '<span class="tag-ext">府外・' + esc(f.pref) + '</span>' : '') : esc(siteName(i))) + '</td><td>' + n(b.plants) + '件</td><td>' + mw(b.kw) + '</td><td>' + mw(b.outKw) + '</td><td>' + km1(b.kw ? b.kmKw / b.kw : 0) + '</td></tr>';
     });
-    th += '</table><p class="note">「最寄り」は直線距離で最も近い施設。施設の処理能力・受入可否は見ていません。</p>';
+    th += '</table><p class="note">「最寄り」は直線距離で最も近い施設。施設の処理能力・受入可否・府県をまたぐ運搬の可否は見ていません。「京都府内の施設のみ」に切り替えると、府外の施設を除いて計算します。</p>';
     $('fac-table').innerHTML = th;
   }
 
@@ -106,6 +129,7 @@
     if (!ys.length) { $('chart').innerHTML = ''; return; }
     var W = 520, H = 190, L = 38, B = 22, T = 8, max = 0;
     ys.forEach(function (y) { if (y.kw > max) max = y.kw; });
+    if (!max) { $('chart').innerHTML = ''; $('chart-legend').innerHTML = ''; return; }
     var bw = (W - L - 4) / ys.length;
     var svg = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="推定の廃棄年ごとの出力合計（積み上げは最寄り施設別）">';
     [0, 0.5, 1].forEach(function (f) {
@@ -132,8 +156,9 @@
     var el = $('cand-result');
     if (!S.cand) { el.innerHTML = ''; return; }
     var a = S.base.total, b = S.res.total;
+    if (a.plants === 0) { el.innerHTML = '<div class="zero">' + esc(zeroReason()) + '（候補拠点の試算は、対象が1件以上のときだけ行います）</div>'; return; }
     el.innerHTML = '<div class="sent">候補拠点（試算）を置くと、回収圏（' + S.radius + ' km）の外は<b>' + mw(a.outKw) + ' MW（' + pct(a.outKw, a.kw) + '%）→ ' + mw(b.outKw) + ' MW（' + pct(b.outKw, b.kw) + '%）</b>、' +
-      '平均距離は' + km1(a.kw ? a.kmKw / a.kw : 0) + ' km → ' + km1(b.kw ? b.kmKw / b.kw : 0) + ' km（いずれも直線・' + S.cut + '年までに出る推定分）。候補は緯度' + S.cand.lat.toFixed(3) + '・経度' + S.cand.lon.toFixed(3) + '付近。' +
+      '平均距離は' + km1(avgKm(a)) + ' km → ' + km1(avgKm(b)) + ' km（いずれも直線・' + S.cut + '年までに出る推定分）。候補は緯度' + S.cand.lat.toFixed(3) + '・経度' + S.cand.lon.toFixed(3) + '付近。' +
       '<br><span class="warn">用地・許可・道路・受入能力は未検討。実在の土地や事業者を指すものではありません。</span></div>';
   }
 
@@ -156,7 +181,8 @@
   }
 
   function initMap() {
-    if (typeof maplibregl === 'undefined') { $('map').innerHTML = '<p class="note" style="padding:12px">地図の部品（MapLibre GL JS）を読み込めませんでした。表と書き出しは使えます。</p>'; return; }
+    if (typeof maplibregl === 'undefined') { $('map').innerHTML = '<p class="note" style="padding:12px">地図の部品（MapLibre GL JS）を読み込めませんでした（ネットワークの制限など）。表と書き出しは使えます。地図が必要な「地図をクリックして置く」は使えません。「距離が最も減る町字を探す」は地図なしでも使えます。</p>';
+      var pb = $('btn-place'); pb.disabled = true; pb.textContent = '地図が読めないため使えません'; pb.title = '地図の部品を読み込めませんでした'; return; }
     map = new maplibregl.Map({
       container: 'map',
       style: { version: 8, sources: { gsi: { type: 'raster', tileSize: 256, maxzoom: 18, tiles: ['https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png'],
@@ -182,7 +208,7 @@
         if (fs.length) {
           var p = fs[0].properties;
           new maplibregl.Popup({ closeButton: true }).setLngLat(e.lngLat).setHTML(
-            '<div style="font-size:12px">出力 ' + n(p.kw) + ' kW<br>運転開始 ' + p.start + '年<br>廃棄時期（仮説） ' + p.year + '年<br>最寄り施設 ' + esc(p.site) + '（直線 ' + km1(+p.km) + ' km）<br>位置の精度: ' + esc(p.prec) + '</div>').addTo(map);
+            '<div style="font-size:12px">出力 ' + n(p.kw) + ' kW<br>運転開始 ' + p.start + '年<br>廃棄時期（仮説） ' + p.year + '年<br>最寄り施設 ' + esc(p.site) + (+p.km >= 0 ? '（直線 ' + km1(+p.km) + ' km）' : '') + '<br>位置の精度: ' + esc(p.prec) + '</div>').addTo(map);
         }
       });
       mapReady = true; renderMap();
@@ -194,15 +220,16 @@
     var ss = sites(!!S.cand), it = S.res.items;
     var feats = S.rows.map(function (r, i) {
       var x = it[i];
-      return { type: 'Feature', properties: { kw: r[2], cut: x.inCut, out: x.out, start: Math.floor(r[3] / 100), year: x.year, km: x.km, site: ss[x.site].name, prec: r[6] === 0 ? '町字' : '市区町村' }, geometry: { type: 'Point', coordinates: [r[1], r[0]] } };
-    });
+      if (!x || !isFinite(r[0]) || r[0] == null || r[1] == null) return null;
+      return { type: 'Feature', properties: { kw: r[2], cut: x.inCut, out: x.out, start: Math.floor(r[3] / 100), year: x.year, km: x.km == null ? -1 : x.km, site: x.site >= 0 && ss[x.site] ? ss[x.site].name : '（なし）', prec: r[6] === 0 ? '町字' : '市区町村' }, geometry: { type: 'Point', coordinates: [r[1], r[0]] } };
+    }).filter(Boolean);
     map.getSource('plants').setData({ type: 'FeatureCollection', features: feats });
     map.getSource('zones').setData({ type: 'FeatureCollection', features: ss.map(function (s) { return circlePoly(s.lat, s.lon, S.radius); }) });
     markers.forEach(function (m) { m.remove(); }); markers = [];
     ss.forEach(function (s, i) {
       var el = document.createElement('div');
-      el.className = 'facmark' + (i >= S.facs.length ? ' cand' : '');
-      el.textContent = s.label; el.title = s.name;
+      el.className = 'facmark' + (i >= S.facs.length ? ' cand' : (isExt(S.facs[i]) ? ' ext' : ''));
+      el.textContent = s.label; el.title = s.name + (i < S.facs.length && isExt(S.facs[i]) ? '（府外・' + S.facs[i].pref + '）' : '');
       markers.push(new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(map));
     });
   }
@@ -214,14 +241,17 @@
     rows.push(['データ区分', m.real_data ? '実データ（公表データを加工）' : '架空サンプル']);
     rows.push(['廃棄時期の置き方（仮説）', curBasis().label, curBasis().text]);
     rows.push(['対象年', S.cut + '年までに出ると推定した設備', '回収圏の半径(直線km)', S.radius]);
+    rows.push(['使った施設', S.scope === 'in' ? '京都府内の施設のみ' : '府外の施設も含める（府外: ' + S.facs.filter(isExt).map(function (f) { return f.name + '（' + f.pref + '）'; }).join('、') + '）']);
+    if (t.plants === 0) rows.push(['注意', zeroReason()]);
     rows.push(['候補拠点（試算）', S.cand ? '緯度' + S.cand.lat.toFixed(4) + ' 経度' + S.cand.lon.toFixed(4) : 'なし']);
     rows.push([]);
     rows.push(['【全体】', '設備(件)', '出力(kW)', '圏外の設備(件)', '圏外の出力(kW)', '圏外の割合(%)', '出力重み付き平均距離(直線km)']);
-    rows.push(['対象年までに出ると推定', t.plants, Math.round(t.kw), t.outPlants, Math.round(t.outKw), pct(t.outKw, t.kw), t.kw ? (t.kmKw / t.kw).toFixed(1) : 0]);
+    rows.push(['対象年までに出ると推定', t.plants, Math.round(t.kw), t.outPlants, Math.round(t.outKw), pct(t.outKw, t.kw), t.kwKm ? (t.kmKw / t.kwKm).toFixed(1) : '']);
+    if (t.plants === 0) rows[rows.length - 1][5] = '';
     rows.push(['（参考）府内の認定設備すべて', t.allPlants, Math.round(t.allKw)]);
     rows.push([]);
     rows.push(['【施設別】', '最寄りとなる設備(件)', '出力(kW)', '圏外の出力(kW)', '平均距離(直線km)']);
-    S.res.bySite.forEach(function (b, i) { rows.push([siteName(i), b.plants, Math.round(b.kw), Math.round(b.outKw), b.kw ? (b.kmKw / b.kw).toFixed(1) : 0]); });
+    S.res.bySite.forEach(function (b, i) { rows.push([siteName(i) + (i < S.facs.length && isExt(S.facs[i]) ? '（府外・' + S.facs[i].pref + '）' : ''), b.plants, Math.round(b.kw), Math.round(b.outKw), b.kw ? (b.kmKw / b.kw).toFixed(1) : 0]); });
     rows.push([]);
     rows.push(['【年別（推定）】', '設備(件)', '出力(kW)', '圏外の出力(kW)']);
     S.res.yearly.forEach(function (y) { rows.push([y.year, y.plants, Math.round(y.kw), Math.round(y.outKw)]); });
@@ -253,7 +283,7 @@
       '廃棄時期は仮説。運転開始年（運転開始報告年月の年）に年数を足す、または調達期間終了年を使った推定で、実際の撤去時期ではない。年数に公的な根拠は確認していない。',
       '元データは出力20kW未満の太陽光を含まない。運転開始前の設備（' + st.not_started + '件）は推定の対象外。位置を特定できなかった設備は除いている（' + st.unplaced + '件）。',
       '位置は設備所在地の町字の代表点（' + st.town + '件）、町字が引けなかったものは市区町村の代表点（' + st.muni + '件）。同じ町字の設備は同じ点に重なる。複数地番の設備は代表地番のみを使用。',
-      '距離は直線。道路距離・運搬費・施設の受入能力・許可の範囲・処理できるパネルの種類は見ていない。リサイクル施設は京都府が公表する3社のみで、府外・他の処分業者は含まない。',
+      '距離は直線。道路距離・運搬費・施設の受入能力・許可の範囲・処理できるパネルの種類・府県をまたぐ運搬の可否は見ていない。リサイクル施設は、京都府の公表3社、京都環境保全公社の北部の拠点（所在地は会社概要からの推定）、JPEA一覧の府外2社（大阪府・三重県）で、これで全てではない。兵庫・滋賀・奈良・和歌山・福井の施設は、取れた公開リストになく、含まない。',
       '出力（kW）のまま扱い、パネルの重量には換算していない。認定情報は最新状況を反映しておらず、失効した認定を含む場合がある（公表サイトの注意書き）。',
       '候補拠点の試算は距離だけの目安。用地・許可・道路は未検討。',
       '個人・事業者を特定する項目（事業者名・代表者・住所・電話・設備ID）は取り込んでいない。'
@@ -264,7 +294,7 @@
     return [
       '出典: 再生可能エネルギー電子申請サイト「事業計画認定情報 公表用ウェブサイト」京都府ファイル（' + m.as_of + '時点、' + m.published + '公表） ' + m.plants_url + ' を加工して作成（加工: 太陽光のみ抽出、住所を位置に変換、廃棄時期を仮説で推定、距離を計算）。国が作成したものではない。利用ルール ' + m.terms_url,
       '位置の変換: ' + m.geocoder + ' https://msearch.gsi.go.jp/',
-      'リサイクル施設: ' + m.facilities_source + ' ' + m.facilities_url,
+      'リサイクル施設: ' + m.facilities_source + '。出典URL: ' + S.allFacs.map(function (f) { return f.source_url || ''; }).filter(function (v, i, arr) { return v && arr.indexOf(v) === i; }).join(' / ') + '（府外の施設には「府外」と表示）',
       '背景地図: 地理院タイル（淡色地図）（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）'
     ];
   }
@@ -272,8 +302,8 @@
   function openAbout() {
     var h = '<h2 id="about-title" style="margin-top:0">出典・前提・限界</h2><h2>出典</h2><ul>' +
       sources().map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
-    h += '<h2>リサイクル施設（京都府の公表）</h2><ul>' + S.facs.map(function (f) {
-      return '<li>' + esc(f.name) + '（' + esc(f.address) + '）' + (f.note ? '：' + esc(f.note) : '') + '</li>'; }).join('') + '</ul>';
+    h += '<h2>リサイクル施設（施設ごとの出典）</h2><ul>' + S.allFacs.map(function (f) {
+      return '<li>' + esc(f.name) + (isExt(f) ? '【府外・' + esc(f.pref) + '】' : '') + '（' + esc(f.address) + '）' + (f.note ? '：' + esc(f.note) : '') + ' 出典: ' + esc(f.source || '') + ' ' + esc(f.source_url || '') + '</li>'; }).join('') + '</ul>';
     h += '<h2>前提と限界</h2><ul>' + limits().map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>';
     $('about').innerHTML = h; $('modal').hidden = false; $('modal-close').focus();
   }

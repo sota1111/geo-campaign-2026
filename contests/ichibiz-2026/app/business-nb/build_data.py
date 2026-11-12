@@ -30,15 +30,36 @@ KYOTO_FILE = "https://www.fit-portal.go.jp/servlet/servlet.FileDownload?retURL=%
 GSI = "https://msearch.gsi.go.jp/address-search/AddressSearch?q="
 BBOX = (34.6, 35.8, 134.7, 136.2)  # 京都府の外れ値を弾く目安（緯度の下限・上限、経度の下限・上限）
 
-# 京都府「太陽光パネルの3R・適正処理について」（更新日2026年3月5日）の「4.京都府内の太陽光パネルのリサイクル業者」
-# https://www.pref.kyoto.jp/sanpai/pvpanerutekiseisyori.html の記載をそのまま写した。
+# 施設リスト。出典を施設ごとに持つ。府外の施設は pref を京都府以外にし、画面で「府外」と表示する。
+#  (1) 京都府「太陽光パネルの3R・適正処理について」（更新日2026年3月5日）の「4.京都府内の太陽光パネルのリサイクル業者」
+#      の記載をそのまま写した。
+#  (2) 京都環境保全公社 会社概要（本社・事業所）。太陽光パネルのページは「京都北部・南部に搬入拠点」とするだけで所在地を書かない。
+#      会社概要の「京都北部営業所」（京丹波町）を北部の搬入拠点と【推定】して載せた（未確認）。
+#  (3) 太陽光発電協会（JPEA）「適正処理（リサイクル）の可能な産業廃棄物中間処理業者名 一覧表」2026年6月8日更新（v1.9）。
+#      掲載は業者からの申告で、JPEAは内容に責任を負わない旨が書かれている。近畿・北陸・三重の掲載は、京都府内の2社を除くと
+#      大阪府の近畿電電輸送（寝屋川市）、三重県の2社（伊賀市・東員町）、共英製鋼の本社（大阪市北区。工場ではないので除く）のみ。
+#      兵庫・滋賀・奈良・和歌山・福井の事業者は、この一覧には載っていない。三重県東員町（アース建設）は府から遠いので載せていない。
+KYOTO_SRC = ("京都府「太陽光パネルの3R・適正処理について」（更新日2026年3月5日）", "https://www.pref.kyoto.jp/sanpai/pvpanerutekiseisyori.html")
+JPEA_SRC = ("太陽光発電協会（JPEA）「適正処理（リサイクル）の可能な産業廃棄物中間処理業者名 一覧表」（2026年6月8日更新）", "https://www.jpea.gr.jp/wp-content/uploads/20260608_recycle_contr_list_v1.9.pdf")
 FACILITIES = [
-    {"name": "近畿電電輸送株式会社", "address": "京都府八幡市岩田六ノ坪57番1", "geo_q": "京都府八幡市岩田六ノ坪57", "url": "https://www.kdy.co.jp/", "note": ""},
-    {"name": "株式会社浜田", "address": "京都府八幡市下奈良小宮4番2", "geo_q": "京都府八幡市下奈良小宮4", "url": "https://www.kkhamada.com/", "note": "公表ページの所在地は「下奈良小宮4番2、7番」"},
-    {"name": "株式会社京都環境保全公社", "address": "京都府京都市伏見区横大路千両松町126番地", "geo_q": "京都府京都市伏見区横大路千両松町126",
+    {"name": "近畿電電輸送株式会社", "pref": "京都府", "address": "京都府八幡市岩田六ノ坪57番1", "geo_q": "京都府八幡市岩田六ノ坪57", "url": "https://www.kdy.co.jp/", "note": "",
+     "source": KYOTO_SRC[0], "source_url": KYOTO_SRC[1]},
+    {"name": "株式会社浜田", "pref": "京都府", "address": "京都府八幡市下奈良小宮4番2", "geo_q": "京都府八幡市下奈良小宮4", "url": "https://www.kkhamada.com/", "note": "公表ページの所在地は「下奈良小宮4番2、7番」",
+     "source": KYOTO_SRC[0], "source_url": KYOTO_SRC[1]},
+    {"name": "株式会社京都環境保全公社（伏見）", "pref": "京都府", "address": "京都府京都市伏見区横大路千両松町126番地", "geo_q": "京都府京都市伏見区横大路千両松町126",
      "url": "https://www.kyoto-kankyo.net/work/sunlight-panel.html",
-     "note": "同社ページ: 太陽光パネルの処理能力4.6t/日（24時間）、破砕分離。京都府北部にも搬入拠点があるとするが所在地は未確認のため、地図には出していない"},
+     "note": "同社ページ: 太陽光パネルの処理能力4.6t/日（24時間）、破砕分離",
+     "source": KYOTO_SRC[0], "source_url": KYOTO_SRC[1]},
+    {"name": "株式会社京都環境保全公社（京都北部営業所・推定）", "pref": "京都府", "address": "京都府船井郡京丹波町猪鼻冠石2-1", "geo_q": "京都府船井郡京丹波町猪鼻冠石2",
+     "url": "https://www.kyoto-kankyo.net/corporation/outline.html",
+     "note": "同社の太陽光パネルのページは「京都北部・南部に搬入拠点」とするが所在地を書いていない。会社概要の「京都北部営業所」（瑞穂環境保全センターと同住所）を北部の拠点と推定した。パネルの搬入をこの住所で受けるかは未確認",
+     "source": "京都環境保全公社 会社概要（本社・事業所）と太陽光パネルリサイクルのページ", "source_url": "https://www.kyoto-kankyo.net/corporation/outline.html"},
+    {"name": "近畿電電輸送株式会社（寝屋川）", "pref": "大阪府", "address": "大阪府寝屋川市讃良西町6-23", "geo_q": "大阪府寝屋川市讃良西町6", "url": "https://www.kdy.co.jp/pr/index.html",
+     "note": "JPEA一覧の記載。京都府公表の八幡市の拠点とは別の住所", "source": JPEA_SRC[0], "source_url": JPEA_SRC[1]},
+    {"name": "株式会社エコアドバンス伊賀工場", "pref": "三重県", "address": "三重県伊賀市三田字中川原521-1", "geo_q": "三重県伊賀市三田中川原521", "url": "https://ecoadvance.co.jp/solar.html",
+     "note": "JPEA一覧の記載", "source": JPEA_SRC[0], "source_url": JPEA_SRC[1]},
 ]
+WIDE_BBOX = (33.4, 36.6, 133.8, 137.2)  # 施設用（近畿・福井・三重まで）
 
 FW = str.maketrans("０１２３４５６７８９", "0123456789")
 
@@ -52,7 +73,16 @@ def save_cache(c):
     CACHE.write_text(json.dumps(c, ensure_ascii=False, indent=0, sort_keys=True), encoding="utf-8")
 
 
-def geocode(q, cache, offline, floor=0):
+GUN_RE = re.compile(r"^(.{2,3}[都道府県])[^郡市区町村]{1,6}郡")
+
+
+def strip_gun(s):
+    """「京都府与謝郡与謝野町…」→「京都府与謝野町…」。地理院の住所検索は郡部の title から郡を省いて返す
+    （2026-11-13 に実APIで確認: q=京都府与謝郡与謝野町三河内 → title=京都府与謝野町三河内）。比較は郡を除いた形で行う。"""
+    return GUN_RE.sub(r"\1", s).replace("大字", "").replace("字", "")  # 「大山崎町字円明寺佃」のように title に「字」が入る町もある
+
+
+def geocode(q, cache, offline, floor=0, bbox=None):
     """住所文字列 → [lon, lat, title] か None。
     タイトルがクエリで始まるものを採用する。floor を指定した場合は、クエリがタイトルで始まる（小字などを除いた大字までの）候補も、
     市区町村より長ければ採用する（最も長いもの）。"""
@@ -70,11 +100,15 @@ def geocode(q, cache, offline, floor=0):
     else:
         return None  # キャッシュしない（次回再試行）
     res = None
-    qn = q.translate(FW)
+    bb = bbox or BBOX
+    q0 = q.translate(FW)
+    qn = strip_gun(q0)
+    if floor > 1:
+        floor -= len(q0) - len(qn)  # 郡を除いた分だけ、市区町村の長さの基準を縮める
     for f in data:
-        title = f["properties"]["title"].translate(FW)
+        title = strip_gun(f["properties"]["title"].translate(FW))
         lon, lat = f["geometry"]["coordinates"]
-        if not (BBOX[0] <= lat <= BBOX[1] and BBOX[2] <= lon <= BBOX[3]):
+        if not (bb[0] <= lat <= bb[1] and bb[2] <= lon <= bb[3]):
             continue
         if title.startswith(qn):
             res = [lon, lat, title]
@@ -205,9 +239,13 @@ def main():
 
     fac = []
     for f in FACILITIES:
-        g = geocode(f["geo_q"], cache, True)
-        if g is None and not offline:
-            g = geocode(f["geo_q"], cache, False)
+        g = geocode(f["geo_q"], cache, True, bbox=WIDE_BBOX)  # まずキャッシュだけを見る
+        for floor in (1, 0, 1):
+            if g is not None or offline:
+                break
+            cache.pop(f["geo_q"], None)  # 引けなかった記録（空応答の一時的な失敗かもしれない）を捨てて取り直す
+            g = geocode(f["geo_q"], cache, False, floor, bbox=WIDE_BBOX)
+        if not offline:
             save_cache(cache)
         if g is None:
             sys.exit(f"処分業者の位置が取れません: {f['name']} {f['address']}")
@@ -219,7 +257,7 @@ def main():
         "plants_url": FIT_PAGE, "terms_url": "https://www.fit-portal.go.jp/Terms",
         "as_of": "2026-09-30", "published": "2026-10-14", "retrieved": "2026-11-12",
         "geocoder": "国土地理院 住所検索API（町字の代表点。町字が引けない設備は市区町村の代表点）",
-        "facilities_source": "京都府「太陽光パネルの3R・適正処理について」（更新日2026年3月5日）4.京都府内の太陽光パネルのリサイクル業者",
+        "facilities_source": "施設ごとの出典は facilities.json（京都府の公表、京都環境保全公社の会社概要、JPEA 一覧表）",
         "facilities_url": "https://www.pref.kyoto.jp/sanpai/pvpanerutekiseisyori.html",
         "stats": stat, "real_data": True,
         "cols": ["lat", "lon", "kw", "start_ym", "fit_end_ym", "cert_ym", "precision", "muni"],

@@ -69,11 +69,18 @@ class TestData(unittest.TestCase):
         self.assertGreater(st["town"], st["muni"])
 
     def test_facilities(self):
-        self.assertEqual(len(self.f), 3)
+        # 京都府の公表3社＋京都北部の拠点（推定）＋府外（JPEA一覧の掲載）。施設ごとに出典を持ち、府外は pref で区別する
+        self.assertEqual(len(self.f), 6)
+        self.assertEqual(sum(1 for f in self.f if f["pref"] == "京都府"), 4)
+        self.assertEqual(sorted(f["pref"] for f in self.f if f["pref"] != "京都府"), ["三重県", "大阪府"])
         for f in self.f:
             self.assertTrue(f["url"].startswith("https://"))
-            self.assertTrue(34.7 < f["lat"] < 35.2 and 135.5 < f["lon"] < 135.9, f)
-        self.assertIn("pref.kyoto.jp", self.p["meta"]["facilities_url"])
+            self.assertTrue(f["source"] and f["source_url"].startswith("https://"), f)
+            self.assertTrue(f["address"].startswith(f["pref"]), f)
+            self.assertTrue(33.4 < f["lat"] < 36.6 and 133.8 < f["lon"] < 137.2, f)
+            if f["pref"] == "京都府":
+                self.assertTrue(34.7 < f["lat"] < 35.8 and 135.0 < f["lon"] < 136.0, f)
+        self.assertIn("推定", " ".join(f["name"] for f in self.f))
 
     def test_no_personal_fields(self):
         text = (DATA / "plants.json").read_text(encoding="utf-8")

@@ -19,17 +19,18 @@
     <div class="box limits" role="note">
       <b>このデモの読み方（必読）</b>
       <ul>
-        <li><b>実データ</b>: 認定情報は<span id="asof">2026年9月30日時点</span>の京都府ファイル（出力20kW未満の太陽光は元データに含まれない）。リサイクル施設は京都府が公表する3社。</li>
+        <li><b>実データ</b>: 認定情報は<span id="asof">2026年9月30日時点</span>の京都府ファイル（出力20kW未満の太陽光は元データに含まれない）。リサイクル施設は京都府が公表する3社、京都環境保全公社の北部拠点（推定）、および府外のJPEA掲載2社。</li>
         <li><b>廃棄時期は仮説</b>: 「運転開始年＋N年」などで置いた推定で、実際の撤去時期ではありません。Nは利用者が選ぶ仮の値で、公的な根拠は確認していません。</li>
         <li><b>距離は直線</b>: 道路距離・運搬費・施設の受入能力・許可の範囲は見ていません。位置は町字の代表点で、同じ町字の設備は同じ点に重なります。</li>
         <li>出力（kW）のまま扱い、トン数には換算していません。事業者名などは画面にも書き出しにも含めません。</li>
       </ul>
     </div>
 
-    <div class="box">
+    <div class="box step1">
       <h2><span class="step">1</span>仮説を置く</h2>
       <div class="row"><span class="lab">廃棄時期</span><div id="ctl-basis" class="seg" role="radiogroup" aria-label="廃棄時期の置き方"></div></div>
       <div class="row"><span class="lab">対象年</span><div id="ctl-cut" class="seg" role="radiogroup" aria-label="この年までに出る分を見る"></div></div>
+      <div class="row"><span class="lab">施設</span><div id="ctl-scope" class="seg" role="radiogroup" aria-label="使う施設の範囲"></div></div>
       <div class="row"><span class="lab">回収圏</span><div id="ctl-radius" class="seg" role="radiogroup" aria-label="回収圏の半径（直線）"></div></div>
       <p class="note" id="basis-note"></p>
     </div>
@@ -67,7 +68,7 @@
 
   <section id="mapwrap">
     <div id="map" aria-label="地図（太陽光設備とリサイクル施設）"></div>
-    <div id="legend"><span class="sw far"></span>対象年までに出る・回収圏の外 <span class="sw ok"></span>同・回収圏の中 <span class="sw later"></span>対象年より後 <span class="sw fac"></span>リサイクル施設 <span class="sw cand"></span>候補拠点（試算）</div>
+    <div id="legend"><span class="sw far"></span>対象年までに出る・回収圏の外 <span class="sw ok"></span>同・回収圏の中 <span class="sw later"></span>対象年より後 <span class="sw fac"></span>リサイクル施設（京都府内） <span class="sw ext"></span>同（府外・破線） <span class="sw cand"></span>候補拠点（試算）</div>
   </section>
 </main>
 

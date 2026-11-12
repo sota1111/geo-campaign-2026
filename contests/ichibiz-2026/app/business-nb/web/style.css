@@ -51,9 +51,13 @@ tr.base td, tr.base th { background: #f7f7f7; color: #444; }
 @media (max-width: 720px) {
   body { font-size: 14px; }
   header h1 { font-size: 16px; }
-  main { display: block; height: auto; }
-  #panel { overflow: visible; padding: 8px; }
-  #mapwrap { height: 340px; }
+  /* スマホ: 注意書き → 仮説の設定 → 地図 → 結果、の順にする（地図が画面の何枚も下に行かないように） */
+  main { display: flex; flex-direction: column; height: auto; }
+  #panel { display: contents; }
+  #panel > * { order: 3; margin-left: 8px; margin-right: 8px; }
+  #panel > .fake, #panel > .limits { order: 0; }
+  #panel > .step1 { order: 1; }
+  #mapwrap { order: 2; height: 340px; flex: none; margin: 0 0 10px; }
   .lab { width: 100%; }
 }
 
@@ -68,3 +72,8 @@ tr.base td, tr.base th { background: #f7f7f7; color: #444; }
 .legend-row { font-size: 12px; margin: 2px 0 6px; }
 button[aria-pressed=true] { background: #009E73; color: #fff; border-color: #009E73; }
 .fake { background: #fde8e8; border: 2px solid #b00020; padding: 8px 10px; font-weight: bold; margin-bottom: 10px; }
+.facmark.ext { border-style: dashed; border-color: #ffd54f; }
+.sw.ext { background: #14365d; outline: 2px dashed #8a6d00; outline-offset: -2px; margin-left: 8px; }
+.tag-ext { display: inline-block; font-size: 11px; background: #fff3cd; border: 1px solid #c9a227; border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+.zero { background: #fff3e0; border-left: 4px solid #D55E00; padding: 6px 10px; margin: 6px 0; font-size: 13px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
