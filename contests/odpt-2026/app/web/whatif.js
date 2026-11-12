@@ -135,7 +135,7 @@
       });
       h += '</tr>';
     });
-    h += '</table><p class="note">表は「' + ST.w + '分以内・' + esc(fl) + '」で行けなくなる人数。</p></div>';
+    h += '</table><p class="note">表は「' + ST.w + '分以内・' + esc(fl) + '」で行けなくなる人数。<b>0</b>は、その時間帯にはこの路線が無くても結果が変わらないこと（他の路線や徒歩で代わりがきく、その時間帯にこの路線が走っていない、または元から行けない地区だけを通る）を意味します。未計算ではありません。</p></div>';
     el.innerHTML = h;
     $('wi-clear').addEventListener('click', function () { select(null); });
   }

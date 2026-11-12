@@ -6,10 +6,11 @@
 <title>生活アクセス診断マップ｜公共交通で病院・学校へ行けるか</title>
 <meta name="description" content="地区ごとに、平日・休日の朝昼夕に公共交通で病院や小・中学校へ行けるかを地図で診断します。GTFSデータリポジトリ・公共交通オープンデータセンター・国勢調査メッシュ・国土数値情報を使用。">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
-<link rel="stylesheet" href="style.css?v=20261111d">
+<link rel="stylesheet" href="style.css?v=20261111e">
 </head>
 <body>
 <div id="map" aria-label="診断マップ"></div>
+<div id="map-legend" aria-label="地図の色の意味"><b>地図の色</b><span><i style="background:#56B4E9"></i>歩いて行ける</span><span><i style="background:#0072B2"></i>公共交通で行ける</span><span><i style="background:#D55E00"></i>行けない</span><span><i style="background:#8c8c8c"></i>鉄道駅が近い（未評価）</span><span id="ml-lost" hidden><i style="background:#CC79A7"></i>路線を止めると行けなくなる</span></div>
 
 <aside id="panel">
   <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
@@ -107,8 +108,8 @@
 
 <noscript>このページの表示にはJavaScriptが必要です。</noscript>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
-<script src="lib.js?v=20261111d"></script>
-<script src="app.js?v=20261111d"></script>
-<script src="whatif.js?v=20261111d"></script>
+<script src="lib.js?v=20261111e"></script>
+<script src="app.js?v=20261111e"></script>
+<script src="whatif.js?v=20261111e"></script>
 </body>
 </html>

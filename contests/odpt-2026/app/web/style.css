@@ -129,3 +129,13 @@ td.l3 { background: #8fb9db; } td.l4 { background: #5f9ccb; } td.lw { background
 #pt-bar .pt-lbl { font-size: .72rem; color: #6b5200; background: #ffe9a8; border-radius: 4px; padding: 1px 6px; }
 #pt-bar button { margin: 4px 6px 0 0; font-size: .78rem; padding: 3px 8px; border: 1px solid #1b4f8a; background: #fff; color: #1b4f8a; border-radius: 6px; cursor: pointer; }
 .lastbus { background: #eef4fa; border-radius: 6px; padding: 6px 8px; font-size: .85rem; margin: 4px 0 8px; }
+#map-legend { position: fixed; right: 10px; bottom: 34px; z-index: 2; background: rgba(255,255,255,.94); border: 1px solid #ccc; border-radius: 8px; padding: 6px 9px; font-size: .75rem; line-height: 1.6; display: flex; flex-direction: column; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+#map-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+#map-legend span[hidden] { display: none; }
+@media (max-width: 720px) {
+  #map-legend { top: auto; left: 6px; right: auto; bottom: calc(56vh + 28px); flex-direction: row; flex-wrap: wrap; gap: 0 8px; max-width: 64vw; font-size: .64rem; padding: 3px 6px; line-height: 1.5; }
+  #map-legend b { display: none; }
+  body.sheet-closed #map-legend { bottom: 60px; }
+}
+.sum-h { font-size: .95rem; margin: 10px 0 2px; }
+.sum-h .note { display: block; font-weight: normal; }

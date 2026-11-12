@@ -88,7 +88,7 @@
     });
     $('search-form').addEventListener('submit', function (e) { e.preventDefault(); doSearch($('search-q').value); });
     $('btn-compare').addEventListener('click', runCompare);
-    $('btn-share').addEventListener('click', function () { copyText(location.href, 'share-msg'); });
+    $('btn-share').addEventListener('click', function () { copyText(shareUrl(), 'share-msg'); });
     $('btn-cite').addEventListener('click', function () { copyText($('cite-text').value, 'cite-msg'); });
     Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function (b) {
       b.addEventListener('click', function () { goSection(b.getAttribute('data-go')); });
@@ -141,6 +141,11 @@
     // 移動先が分かるよう、一瞬枠を光らせる
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   }
+
+  /* 手元の確認用サーバー（localhost等）のURLは他の人が開けないので、例文では差し替える */
+  function isLocalHost() { return /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === 'file:'; }
+  function pageUrl() { return isLocalHost() ? '公開URLをここに記入' : location.href.replace(/#.*$/, ''); }
+  function shareUrl() { return isLocalHost() ? location.href + '\n※いまは手元の確認用アドレスです。公開後のアドレスで共有してください。' : location.href; }
 
   function copyText(text, msgId) {
     var msg = $(msgId);
@@ -247,7 +252,7 @@
       $('region-note').textContent = d.reason;
       $('search-q').placeholder = '例: ' + ({ kumamoto: '熊本駅、熊本市中央区水前寺', toyama: '富山駅、富山市大町', tokushima: '徳島駅、徳島市幸町', iida: '飯田駅、飯田市主税町', tokyo: '王子駅、北区赤羽' }[d.id] || '駅名や住所');
       renderCoverage();
-      $('cite-text').value = L.citationText(d, { url: location.href.replace(/#.*$/, ''), date: todayIso() });
+      $('cite-text').value = L.citationText(d, { url: pageUrl(), date: todayIso() });
       if (window.WhatIf) window.WhatIf.onRegion(STATE, d, refresh);
       refresh();
       if (pp) diagnose(pp[0], pp[1], { scroll: false });
@@ -280,7 +285,7 @@
     var r = window.WhatIf && window.WhatIf.getSelected ? window.WhatIf.getSelected() : null;
     if (r == null && STATE.pendingRoute != null) r = STATE.pendingRoute;   // 路線の復元が終わるまで URL から落とさない
     history.replaceState(null, '', L.writeHash({ region: STATE.data.id, fi: STATE.fi, day: STATE.day, per: STATE.per, w: STATE.w, route: r, pt: STATE.pt }));
-    if ($('cite-text')) $('cite-text').value = L.citationText(STATE.data, { url: location.href.replace(/#.*$/, ''), date: todayIso() });
+    if ($('cite-text')) $('cite-text').value = L.citationText(STATE.data, { url: pageUrl(), date: todayIso() });
   }
 
   function lonlat(n) { return [n[0], n[1]]; }
@@ -336,6 +341,7 @@
   }
 
   function renderLegend() {
+    if ($('ml-lost')) $('ml-lost').hidden = !STATE.lost;
     var d = STATE.data;
     var fl = d.facility_labels[d.facility_order[STATE.fi]];
     $('legend').innerHTML = '<b>メッシュ（500m四方）の色</b><br>' +
@@ -397,7 +403,8 @@
     var ok65 = L.pct(s.walk65 + s.transit65, s.pop65);
     var fl = d.facility_labels[d.facility_order[STATE.fi]];
     var cond = esc(L.DAY_LABEL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] + '時に出発して<b>' + STATE.w + '分以内</b>に' + esc(fl) + 'へ';
-    var h = '<p class="big">' + cond + '歩くか収録した公共交通で行ける人は<br><b>' + okp + '%</b>' +
+    var h = '<h2 class="sum-h">地域全体の結果<span class="note">（' + esc(L.shortName(d.name)) + 'の診断範囲に住む人全体。選んだ地点の結果ではありません）</span></h2>';
+    h += '<p class="big">' + cond + '歩くか収録した公共交通で行ける人は<br><b>' + okp + '%</b>' +
       '（診断範囲の人口 ' + man(s.pop) + '）</p>';
     h += '<div class="bar" role="img" aria-label="歩いて行ける ' + L.pct(s.walk, s.pop) + '%、公共交通で行ける ' + L.pct(s.transit, s.pop) +
       '%、鉄道駅が近い（未評価） ' + L.pct(s.rail, s.pop) + '%、行けない ' + L.pct(s.none, s.pop) + '%">' +
@@ -408,9 +415,11 @@
       '<span style="--c:' + COLORS.rail + '">鉄道駅が近い（未評価） ' + L.pct(s.rail, s.pop) + '%</span>' +
       '<span style="--c:' + COLORS.none + '">行けない ' + L.pct(s.none, s.pop) + '%</span></div>';
     h += '<table class="ng65"><caption class="note" style="text-align:left">行けない人（' + STATE.w + '分以内に歩いても、収録した公共交通でも着けない）</caption>' +
-      '<tr><th>全体</th><th>65歳以上</th></tr>' +
-      '<tr><td><b>' + s.none.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none, s.pop) + '%）</td>' +
-      '<td><b>' + s.none65.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none65, s.pop65) + '%）</td></tr></table>' +
+      (d.facility_order[STATE.fi] === 'school'
+        ? '<tr><th>全体（住民の人数。児童・生徒数ではありません）</th></tr><tr><td><b>' + s.none.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none, s.pop) + '%）</td></tr></table>'
+        : '<tr><th>全体</th><th>65歳以上</th></tr>' +
+          '<tr><td><b>' + s.none.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none, s.pop) + '%）</td>' +
+          '<td><b>' + s.none65.toLocaleString('ja-JP') + '人</b>（' + L.pct(s.none65, s.pop65) + '%）</td></tr></table>') +
       '<p class="note">パーセントは、診断範囲の人口（全体 ' + man(s.pop) + '／65歳以上 ' + man(s.pop65) + '）に対する割合。「鉄道駅が近い（未評価）」の人は含みません。65歳以上で行ける人は ' + ok65 + '%。' +
       '代替交通・デマンド交通・減便は考慮していません。</p>';
     // 平日/休日 × 朝昼夕の比較
@@ -460,9 +469,10 @@
     var bar = $('pt-bar');
     bar.hidden = false;
     bar.innerHTML = '<span class="pt-lbl">選んだ地点</span> <b>' + esc(vd ? vd.short : '診断範囲外') + '</b>' +
-      '<button type="button" id="pt-goto">詳しく見る</button><button type="button" id="pt-share">この結果のリンクをコピー</button><span id="pt-msg" class="note"></span>';
+      '<button type="button" id="pt-goto">詳しく見る</button><button type="button" id="pt-share">結果の要約とリンクをコピー</button><span id="pt-msg" class="note"></span>';
     $('pt-goto').addEventListener('click', function () { $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-    $('pt-share').addEventListener('click', function () { copyText(location.href, 'pt-msg'); });
+    var ptSummary = (vd ? vd.main + '。' + vd.cmp : 'この地点は診断範囲外です。') + '\n' + shareUrl() + '\n（生活アクセス診断マップ。時刻表データによる推計で、実際の運行を保証するものではありません）';
+    $('pt-share').addEventListener('click', function () { copyText(ptSummary, 'pt-msg'); });
     if (STATE.popup) STATE.popup.remove();
     STATE.popup = new maplibregl.Popup({ offset: [0, -36], maxWidth: '240px', closeOnClick: false })
       .setLngLat([lon, lat]).setText(vd ? vd.short : '診断範囲外（停留所から遠い、または人口データなし）').addTo(map);
@@ -483,17 +493,17 @@
       h += '<h2>近くの停留所（' + d.params.walk_in_m + 'm以内）</h2>';
       var lastOf = function (k) {
         var best = null;
-        near.forEach(function (o) { var n = d.nodes[o.i], t = n[k][5]; if (n[k][3] > 0 && t != null && (best == null || t > best.t)) best = { t: t, name: n[2] || '(名称なし)' }; });
-        return best ? L.fmtMin(best.t) + '（' + esc(best.name) + '）' : '運行なし';
+        near.forEach(function (o) { var n = d.nodes[o.i], t = n[k][5]; if (n[k][3] > 0 && t != null && (best == null || t > best.t)) best = { t: t, name: n[2] || '(名称なし)', m: Math.round(o.d) }; });
+        return best ? '<b>' + L.fmtMin(best.t) + '</b> まで（' + esc(best.name) + '・約' + best.m + 'm）' : '運行なし';
       };
-      h += '<p class="lastbus"><b>近くの停留所で最も遅い終発</b>　平日 ' + lastOf(3) + '／休日 ' + lastOf(4) + '</p>';
-      h += '<p class="note">本数は朝6-9時／昼9-16時／夕16-20時の発車数、終発はその日の最後の発車時刻（基準日の時刻表）。</p>';
+      h += '<p class="lastbus">バスや電車は何時まで？（' + d.params.walk_in_m + 'm以内の停留所で一番遅い最終便）<br>平日 ' + lastOf(3) + '<br>休日 ' + lastOf(4) + '</p>';
+      h += '<p class="note">1日の本数のうち、朝は6-9時・昼は9-16時・夕は16-20時の発車数（それ以外の時間帯の便は1日の本数にだけ含みます）。最終はその日の最後の発車時刻（基準日の時刻表）。</p>';
       near.forEach(function (o, k) {
         var n = d.nodes[o.i];
         n[5].forEach(function (r) { hl[r] = 1; });
         h += '<div class="stop"><b>' + esc(labels[k]) + '</b>（約' + Math.round(o.d) + 'm）<br>' +
-          '平日 朝' + n[3][0] + '／昼' + n[3][1] + '／夕' + n[3][2] + '本、終発 ' + L.fmtMin(n[3][5]) + '<br>' +
-          '休日 朝' + n[4][0] + '／昼' + n[4][1] + '／夕' + n[4][2] + '本、終発 ' + L.fmtMin(n[4][5]) + '<br>' +
+          '平日 1日' + n[3][3] + '本（うち朝' + n[3][0] + '／昼' + n[3][1] + '／夕' + n[3][2] + '）、最終 ' + L.fmtMin(n[3][5]) + '<br>' +
+          '休日 1日' + n[4][3] + '本（うち朝' + n[4][0] + '／昼' + n[4][1] + '／夕' + n[4][2] + '）、最終 ' + L.fmtMin(n[4][5]) + '<br>' +
           '<span class="note">' + L.nodeFacts(n).map(esc).join('。') + '。路線: ' +
           esc(n[5].slice(0, 5).map(function (r) { return d.routes[r][0]; }).join('、')) + (n[5].length > 5 ? ' ほか' + (n[5].length - 5) + '路線' : '') +
           '</span></div>';
@@ -593,6 +603,7 @@
     var key = d.facility_order[STATE.fi];
     var fl = d.facility_labels[key];
     var h = '<p class="note"><b>条件: ' + esc(L.DAY_FULL[STATE.day]) + esc(L.PERIOD_LABEL[STATE.per]) + d.params.start_hours[STATE.per] + '時発・' + STATE.w + '分以内・' + esc(fl) + '</b></p>';
+    h += '<p class="notice warn" style="margin:4px 0"><b>注意:</b> 地域ごとに収録している交通機関が違うため、この表は地域の優劣を示しません（詳しくは表の下）。</p>';
     h += '<table><tr><th>地域</th><th>行ける割合</th><th>行けない人（全体）</th><th>行けない人（65歳以上）</th></tr>';
     STATE.compare.forEach(function (c) {
       var r = L.compareRow(c, key, STATE.day, STATE.per, STATE.w);
@@ -647,7 +658,7 @@
         '。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。</p>';
       h += '<table><tr><th>事業者</th><th>データ名</th><th>取得元</th><th>ライセンス・クレジット</th><th>更新日</th><th>データ有効期間</th><th>診断の基準日（平日/休日）</th></tr>';
       d.feeds.forEach(function (f) {
-        var warn = f.expired ? ' <b class="warn">期限切れ</b>' : (f.ends_before_public_end ? ' <b class="warn">公開期間（〜' + esc(d.public_until) + '）の途中で終了</b>' : '');
+        var warn = f.expired ? ' <b class="warn">期限切れ</b>' : (f.ends_before_public_end ? ' <b class="warn">公開期間（〜' + esc(d.public_until) + '）の途中で終了</b><br><span class="note">この日以降は時刻表が変わっている可能性があります。資料に使うときは基準日を明記してください。</span>' : '');
         h += '<tr><td><a href="' + esc(f.url) + '" target="_blank" rel="noopener">' + esc(f.org) + '</a></td><td>' + esc(f.name) + '</td><td>' +
           (f.source === 'odpt' ? '公共交通オープンデータセンター' : 'GTFSデータリポジトリ') + '</td><td>' +
           (f.license_url ? '<a href="' + esc(f.license_url) + '" target="_blank" rel="noopener">' + esc(f.license) + '</a>' : esc(f.license)) +
@@ -663,7 +674,7 @@
       '<li>施設: 国土数値情報（医療機関データ P04-20［病院のみ］、学校データ P29-21［小学校・中学校］）（国土交通省）を加工して作成。施設の位置・存廃は現在と異なる場合があります。</li>' +
       '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li>' +
       '<li>住所・駅名の検索: <a href="https://msearch.gsi.go.jp/address-search/AddressSearch" target="_blank" rel="noopener">国土地理院 地名検索API</a>（国土地理院）。検索したときだけ、入力した文字列を国土地理院のサーバーへ送って（GET）候補の位置を受け取ります。他には送りません。</li></ul>';
-    h += '<h2>資料に貼れる出典の例</h2><p class="note">画面の「この画面を共有する・出典を書く」にも、地域に合わせた例文とコピーボタンがあります。</p>' + (d ? '<p style="font-size:.8rem;background:#f3f5f8;padding:6px 8px;border-radius:6px">' + esc(L.citationText(d, { url: location.href.replace(/#.*$/, ''), date: todayIso() })) + '</p>' : '');
+    h += '<h2>資料に貼れる出典の例</h2><p class="note">画面の「この画面を共有する・出典を書く」にも、地域に合わせた例文とコピーボタンがあります。</p>' + (d ? '<p style="font-size:.8rem;background:#f3f5f8;padding:6px 8px;border-radius:6px">' + esc(L.citationText(d, { url: pageUrl(), date: todayIso() })) + '</p>' : '');
     h += '<h2>診断の前提と限界</h2><ul>' +
       '<li>「行ける」とは、指定時刻に500mメッシュの中心を出て、徒歩→公共交通（乗継可・乗継時間3分以上）→徒歩で、許容時間内に施設の近くへ着けること。待ち時間を含みます。</li>' +
       '<li>徒歩は直線距離の1.25倍を分速80mで歩くと仮定（道路網・坂・横断は未考慮）。乗車停留所は直線600m以内、降車停留所から施設は直線500m以内。公共交通を使わなくても、同じ徒歩モデルで許容時間内に施設へ歩いて着ければ「歩いて行ける」とします。「行けない」は、歩いても収録した公共交通を使っても許容時間内に着けない場合だけです。</li>' +
