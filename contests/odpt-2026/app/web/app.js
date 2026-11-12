@@ -4,7 +4,7 @@
   var L = window.Lib;
   /* 色覚に配慮: 赤と緑の対比を避け、青（行ける）とオレンジ（行けない）の明暗差で区別する（Okabe-Ito配色を基にした） */
   var COLORS = { walk: '#56B4E9', transit: '#0072B2', none: '#D55E00', rail: '#8c8c8c', lost: '#CC79A7' };
-  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, popup: null, lost: null, req: 0, pt: null, pendingPt: null, pendingRoute: null, compare: null };
+  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, popup: null, lost: null, req: 0, pt: null, pendingPt: null, pendingRoute: null, compare: null, searchReq: 0 };
   var map;
 
   function $(id) { return document.getElementById(id); }
@@ -525,45 +525,83 @@
   }
 
   /* ---------- 住所・駅名検索（国土地理院 地名検索API。キー不要・GETのみ） ---------- */
+  var SEARCH_TIMEOUT_MS = 8000;
   function doSearch(q) {
     q = String(q || '').trim();
     var out = $('search-result');
     if (!q) { out.textContent = '住所や駅名を入力してください。'; return; }
     out.textContent = '検索中…';
-    fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q))
-      .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); })
-      .then(function (j) {
-        var cur = STATE.data && STATE.data.id;
-        var rs = L.parseGsi(j);
-        rs.forEach(function (r) { r.rid = L.regionForPoint(STATE.index.regions, r.lon, r.lat); });
-        rs = rs.map(function (r, i) { return { r: r, k: (r.rid === cur ? 0 : r.rid ? 1 : 2) * 10000 + i }; })
-          .sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; }).slice(0, 5);
-        if (!rs.length) { out.textContent = '「' + q + '」に該当する場所が見つかりませんでした。'; return; }
-        out.innerHTML = '';
-        var first = null;
-        rs.forEach(function (r, i) { if (first == null && r.rid) first = i; });
-        if (first == null) {
-          out.innerHTML = '見つかった場所（' + esc(rs[0].title) + '）は、収録している5地域（' +
-            esc(STATE.index.regions.map(function (x) { return L.shortName(x.name); }).join('・')) + '）の範囲外です。';
-          return;
-        }
-        goToResult(rs[first]);
-        if (rs.length > 1) {
-          var p = document.createElement('div');
-          p.innerHTML = '他の候補:';
-          out.appendChild(p);
-          rs.forEach(function (r, i) {
-            if (i === first) return;
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.textContent = r.title + (r.rid ? '' : '（収録範囲外）');
-            b.disabled = !r.rid;
-            b.addEventListener('click', function () { goToResult(r); });
-            out.appendChild(b);
-          });
-        }
-      })
-      .catch(function () { out.textContent = '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認してください。'; });
+    // 地名検索が応答しない時に「検索中…」のまま止めない（8秒で打ち切り、停留所名から探す・地図をタップする案内に切り替える）
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timedOut = false;
+    var timer = setTimeout(function () { timedOut = true; if (ctl) ctl.abort(); }, SEARCH_TIMEOUT_MS);
+    var req = ++STATE.searchReq;
+    var guard = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, SEARCH_TIMEOUT_MS + 50); });
+    Promise.race([
+      fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q), ctl ? { signal: ctl.signal } : {})
+        .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); }),
+      guard
+    ])
+      .then(function (j) { clearTimeout(timer); if (req === STATE.searchReq) showSearch(q, L.parseGsi(j), false); })
+      .catch(function () { clearTimeout(timer); if (req === STATE.searchReq) showSearch(q, [], timedOut ? 'timeout' : 'error'); });
+  }
+
+  function showSearch(q, rs, failed) {
+    var out = $('search-result');
+    var d = STATE.data, cur = d && d.id;
+    rs.forEach(function (r) {
+      r.rid = L.regionForPoint(STATE.index.regions, r.lon, r.lat);
+      r.inCell = r.rid === cur && STATE.cellIdx[L.meshCodeAt(r.lon, r.lat)] != null;
+    });
+    rs = rs.map(function (r, i) { return { r: r, k: (r.rid === cur ? (r.inCell ? 0 : 1) : r.rid ? 2 : 3) * 10000 + i }; })
+      .sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; }).slice(0, 5);
+    // 地名検索で見つからない／接続できないときは、表示中の地域の停留所名から探す。住所らしい入力では並べない
+    var viaStops = false;
+    if (!rs.some(function (r) { return r.rid; }) && d && !L.looksLikeAddress(q)) {
+      var stops = L.searchStops(d.nodes, q.replace(/^.*[都道府県市区町村]/, '') || q).map(function (s) {
+        var n = d.nodes[s.i];
+        return { title: s.name + '（停留所）', name: s.name, lon: n[0], lat: n[1], rid: d.id, inCell: STATE.cellIdx[L.meshCodeAt(n[0], n[1])] != null };
+      });
+      stops = stops.filter(function (s) { return s.inCell; }).concat(stops.filter(function (s) { return !s.inCell; }));
+      if (stops.length) { viaStops = true; rs = rs.concat(stops); }
+    }
+    var first = null;
+    rs.forEach(function (r, i) { if (first == null && r.rid) first = i; });
+    if (first == null) {
+      if (failed === 'timeout') out.textContent = '住所検索が応答しません（国土地理院の地名検索）。地図をタップして場所を選んでください。';
+      else if (failed) out.textContent = '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認するか、地図をタップして場所を選んでください。';
+      else if (rs.length) out.innerHTML = '見つかった場所（' + esc(rs[0].title) + '）は、収録している5地域（' +
+        esc(STATE.index.regions.map(function (x) { return L.shortName(x.name); }).join('・')) + '）の範囲外です。';
+      else out.textContent = '「' + q + '」に該当する場所が見つかりませんでした。地図をタップして場所を選ぶこともできます。';
+      return;
+    }
+    out.innerHTML = '';
+    var f = rs[first];
+    goToResult(f);
+    var others = rs.filter(function (r, i) { return i !== first; });
+    var note = '';
+    if (viaStops) {
+      var why = failed ? '住所検索が応答しないため' : '住所検索で見つからなかったため';
+      note = f.inCell
+        ? why + '、停留所名から探しました（「' + f.name + '」を選びました）。違う場合は' + (others.length ? '下の候補から選ぶか、' : '') + '地図をタップしてください。'
+        : why + '、停留所名から探しましたが、「' + f.name + '」は診断範囲外でした。地図をタップして場所を選んでください。';
+    } else if (f.rid === cur && !f.inCell) {
+      note = '「' + f.title + '」は診断範囲外でした。別の地域の「' + q + '」かもしれません。' + (others.length ? '下の候補から選んでください。' : '');
+    }
+    if (note) { var m = document.createElement('p'); m.className = 'note'; m.textContent = note; out.appendChild(m); }
+    if (others.length) {
+      var p = document.createElement('div');
+      p.innerHTML = '他の候補:';
+      out.appendChild(p);
+      others.forEach(function (r) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = r.title + (!r.rid ? '（収録範囲外）' : r.rid === cur && !r.inCell ? '（診断範囲外）' : '');
+        b.disabled = !r.rid;
+        b.addEventListener('click', function () { goToResult(r); });
+        out.appendChild(b);
+      });
+    }
   }
 
   function goToResult(r) {

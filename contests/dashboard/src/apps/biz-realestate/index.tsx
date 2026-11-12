@@ -345,8 +345,8 @@ export default function App() {
 
   // ---- 1枚シート（画面の「手順5」プレビューと印刷で同じものを使う） ----
   const sheetEl = sheet && facts && (
-    <Card className="print-sheet print:rounded-none print:border-0 print:p-0 print:shadow-none" id="rs-sheet" data-testid="sheet">
-      <CardHeader className="print:p-0 print:pb-1">
+    <Card className="print-sheet print:gap-1 print:rounded-none print:border-0 print:p-0 print:shadow-none" id="rs-sheet" data-testid="sheet">
+      <CardHeader className="print:gap-0.5 print:p-0 print:pb-0">
         <CardTitle className="text-lg print:text-[13pt]">{sheet.title}</CardTitle>
         <p className="text-xs text-muted-foreground print:text-[8pt] print:text-black">
           {sheet.example && <Badge variant="outline" className="mr-1 border-orange-600 text-orange-800">例（回答は架空）</Badge>}
@@ -374,14 +374,14 @@ export default function App() {
         <MobileFold enabled={!desktop} title="記号の見かた">
         <section aria-label="記号の見かた" data-testid="legend" className="rounded-md border bg-muted/30 p-2 text-xs print:p-1 print:text-[6.5pt]">
           <p className="mb-0.5 font-bold print:mb-0 print:mr-2 print:inline">記号の見かた</p>
-          <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:inline-flex print:flex-wrap print:gap-x-3 print:gap-y-0">
+          <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:inline-flex print:flex-wrap print:gap-x-2 print:gap-y-0">
             <li className="flex items-center gap-1"><CheckCircle2 className="size-3.5 shrink-0 text-sky-700" aria-hidden /><span className="print:hidden">＝ 公開データを取得でき、特に注意点がない（「区域に入らない」を含む）</span><span className="hidden print:inline">＝特に注意点なし</span></li>
             <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden /><span className="print:hidden">＝ 注意が必要（想定区域に入る）</span><span className="hidden print:inline">＝注意が必要</span></li>
             <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden /><span className="print:hidden">＝ 分からない（データにない・範囲外・取得できなかった）</span><span className="hidden print:inline">＝分からない</span></li>
             <li><span className="mr-1 inline-block rounded border px-1">データ</span><span className="print:hidden">＝ 公開データから分かったこと</span><span className="hidden print:inline">＝公開データ</span></li>
-            {lib && <li><span className="mr-1 inline-block rounded border-2 border-sky-700 bg-sky-50 px-1 font-bold">ライブラリ由来</span><span className="print:hidden">＝ 不動産情報ライブラリのAPIから取得したデータ</span><span className="hidden print:inline">＝不動産情報ライブラリのAPIから取得</span></li>}
+            {lib && <li><span className="mr-1 inline-block rounded border-2 border-sky-700 bg-sky-50 px-1 font-bold">ライブラリ由来</span><span className="print:hidden">＝ 不動産情報ライブラリのAPIから取得したデータ</span><span className="hidden print:inline">＝ライブラリのAPIから取得</span></li>}
             <li><span className="mr-1 inline-block rounded border-2 border-orange-700 px-1 font-bold">あなたの回答による</span><span className="print:hidden">＝ 選んだ回答が反映された項目</span><span className="hidden print:inline">＝回答が反映</span></li>
-            <li><span className="mr-1 inline-block rounded border px-1">データなし</span><span className="print:hidden">＝ 該当データがなく、一般的な確認のみ</span><span className="hidden print:inline">＝一般的な確認のみ</span></li>
+            <li><span className="mr-1 inline-block rounded border px-1">データなし</span><span className="print:hidden">＝ 該当データがなく、一般的な確認のみ</span><span className="hidden print:inline">＝一般的な確認</span></li>
           </ul>
         </section>
         </MobileFold>
@@ -395,7 +395,7 @@ export default function App() {
                 <div key={r.key} className={cn('flex gap-1.5 border-b py-1 print:py-0', r.key.startsWith('lib-') && r.key !== 'lib-division' && 'sm:col-span-2', r.key.startsWith('lib-') && printLib && 'print:hidden')}>
                   <T.icon className={cn('mt-0.5 size-4 shrink-0 print:size-3', T.cls)} aria-hidden />
                   <span className="sr-only">{T.sr}：</span>
-                  <dt className="w-24 shrink-0 font-medium sm:w-32 print:w-20">{r.label}</dt>
+                  <dt className="w-24 shrink-0 font-medium sm:w-32 print:w-auto print:min-w-20 print:whitespace-nowrap">{r.label}</dt>
                   <dd className="min-w-0 flex-1">{r.lib && <LibBadge />}<Annotated text={r.value} /></dd>
                 </div>
               )
@@ -427,14 +427,15 @@ export default function App() {
           </div>
         </section>
         <MobileFold enabled={!desktop} title="データにない項目・用語の説明・出典">
-        <div className="grid gap-3 md:grid-cols-2 print:grid-cols-2 print:gap-1.5">
+        {/* 「データにない項目」と「ライブラリで確認する項目」は1つの枠にまとめる。印刷では各1〜2行に詰める（A4・1ページに余白を残すため。デザイン再審査 r2 中C） */}
+        <section aria-label="データにない項目・ライブラリで確認する項目" data-testid="check-items" className="grid gap-3 md:grid-cols-2 print:block print:space-y-0">
           <MissingList sheet={sheet} part="missing" lib={!!lib} />
           <MissingList sheet={sheet} part="other" lib={!!lib} />
-        </div>
+        </section>
         {glossary.length > 0 && (
           <section aria-label="用語の説明" data-testid="glossary">
             <h3 className="text-sm font-bold print:mr-2 print:inline print:text-[8pt]">用語の説明</h3>
-            <ul className="text-xs print:text-[6.5pt]">{glossary.map((g) => <li key={g.term} className={cn('print:mr-2 print:inline', g.re.test('国庫帰属') && 'print:hidden')}><b>{g.term}</b>＝{g.text}</li>)}</ul>
+            <ul className="text-xs print:inline print:text-[6.5pt]">{glossary.map((g) => <li key={g.term} className={cn('print:mr-2 print:inline', g.re.test('国庫帰属') && 'print:hidden')}><b>{g.term}</b>＝{g.text}</li>)}</ul>
           </section>
         )}
         <div className="mt-3 space-y-1 text-xs text-muted-foreground print:mt-0 print:space-y-0 print:text-[6.5pt] print:leading-tight print:text-black">
@@ -813,10 +814,11 @@ function ExitBlock({ e, hiddenOnScreen = false, note = true }: { e: import('./li
 
 function MissingList({ sheet, part, lib }: { sheet: import('./lib').Sheet; part: 'missing' | 'other'; lib: boolean }) {
   const items = part === 'missing' ? sheet.missing : sheet.otherItems
+  // 画面は箇条書き。印刷は見出しに続けて「／」区切りで1段に並べる
   return (
-    <section>
-      <h3 className="text-sm font-bold print:text-[8pt] print:leading-tight">{part === 'missing' ? 'データにない項目（相談先で確かめる）' : (lib ? '不動産情報ライブラリ（国土交通省）で確認する項目（この地点で出ていないもの）' : '不動産情報ライブラリ（国土交通省）で確認する項目（この画面では取得していません）')}</h3>
-      <ul className="list-disc pl-5 text-sm print:pl-4 print:text-[7pt] print:leading-tight">{items.map((m) => <li key={m}><Annotated text={m} /></li>)}</ul>
-    </section>
+    <div data-testid={`check-${part}`} className="print:leading-tight">
+      <h3 className="text-sm font-bold print:mr-1 print:inline print:text-[8pt]">{part === 'missing' ? 'データにない項目（相談先で確かめる）' : (lib ? '不動産情報ライブラリ（国土交通省）で確認する項目（この地点で出ていないもの）' : '不動産情報ライブラリ（国土交通省）で確認する項目（この画面では取得していません）')}<span className="hidden print:inline">：</span></h3>
+      <ul className="list-disc pl-5 text-sm print:inline print:list-none print:p-0 print:text-[7pt]">{items.map((m) => <li key={m} className="print:inline print:after:content-['／'] print:last:after:content-none"><Annotated text={m} /></li>)}</ul>
+    </div>
   )
 }

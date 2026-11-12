@@ -116,8 +116,8 @@ export function VerdictPanel({ d }: { d: DiagView }) {
       )}
       <section aria-label="家族に送る1枚" data-testid="family-sheet" className="overflow-hidden rounded-md border-2 border-foreground/70 bg-white">
         <div className="flex items-center justify-between gap-2 bg-foreground px-3 py-1 text-xs font-bold text-background">
-          <span>家族に送る1枚</span>
-          <span className="font-normal">「1枚をコピーして家族に送る」でコピーできます</span>
+          <span className="shrink-0 whitespace-nowrap">家族に送る1枚</span>
+          <span className="min-w-0 text-right font-normal">「1枚をコピーして家族に送る」でコピーできます</span>
         </div>
         <div className="space-y-2 p-3">
           <p className="text-xs text-muted-foreground" data-testid="sheet-cond">{d.placeLabel || '選んだ地点'}から ／ {condText(data, cond)}</p>

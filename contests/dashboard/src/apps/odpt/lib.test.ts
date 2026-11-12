@@ -119,6 +119,12 @@ describe('元アプリ lib.js と同じ結果（富山市周辺の実データ�
 })
 
 describe('検索の並べ替えと代替条件', () => {
+  it('looksLikeAddress: 数字・丁目・番地を含む入力を住所とみなす（停留所名の部分一致を並べない）', () => {
+    expect(L.looksLikeAddress('北区王子本町一丁目')).toBe(true)
+    expect(L.looksLikeAddress('富山市新総曲輪1-7')).toBe(true)
+    expect(L.looksLikeAddress('八万町３番地')).toBe(true)
+    expect(L.looksLikeAddress('王子駅')).toBe(false)
+  })
   it('matchRank: 完全一致 < 前方一致 < その他', () => {
     expect(L.matchRank('富山駅', '富山駅')).toBe(0)
     expect(L.matchRank('富山駅前郵便局', '富山駅')).toBe(1)

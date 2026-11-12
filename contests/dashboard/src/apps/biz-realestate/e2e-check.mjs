@@ -1,6 +1,6 @@
 // 手動確認用: preview（http://127.0.0.1:8847/）に対し、ヘッドレスChromeで実操作→スクリーンショット・PDF・コンソールエラー確認。
 // usage: node src/apps/biz-realestate/e2e-check.mjs <out_dir>
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -47,6 +47,16 @@ const shot = async (name, full = false) => {
 await send('Runtime.enable'); await send('Page.enable'); await send('Log.enable')
 const click = async (x, y) => { for (const t of ['mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type: t, x, y, button: 'left', clickCount: 1 }) }
 const pages = (b) => (b.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length
+// 印刷の余白: 1ページ目のいちばん下の文字の下端（pt）と、印刷範囲の下端（A4の高さ − @page の余白 6mm）との差。
+// Windows・Mac のフォントで1〜2行増えても2ページにならないよう、約40pt（7.5ptの行で3〜4行分）以上を求める（デザイン再審査 r2 中C）
+const PAGE_MARGIN_PT = 6 / 25.4 * 72
+const MIN_BOTTOM_GAP_PT = 40
+function bottomGap(file) {
+  const html = execFileSync('pdftotext', ['-bbox', '-f', '1', '-l', '1', file, '-'], { encoding: 'utf8' })
+  const pageH = +(/<page width="[\d.]+" height="([\d.]+)"/.exec(html)?.[1] ?? NaN)
+  const yMax = Math.max(...[...html.matchAll(/<word [^>]*yMax="([\d.]+)"/g)].map((m) => +m[1]))
+  return { bottom: Math.round(yMax), limit: Math.round(pageH - PAGE_MARGIN_PT), gap: Math.round(pageH - PAGE_MARGIN_PT - yMax) }
+}
 
 for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
   logs.length = 0
@@ -174,16 +184,17 @@ for (const [name, pt, revBody, ans, expectTrade] of CASES) {
   const buf = Buffer.from(pdf.result.data, 'base64')
   fs.writeFileSync(path.join(out, `case-${name}.pdf`), buf)
   const n = pages(buf)
+  const g = bottomGap(path.join(out, `case-${name}.pdf`))
   const tradeOk = expectTrade === 'trade' ? info.trade : info.tradeNone
-  const ok = n === 1 && info.credit && tradeOk && !logs.some((l) => l.startsWith('EXC'))
+  const ok = n === 1 && g.gap >= MIN_BOTTOM_GAP_PT && info.credit && tradeOk && !logs.some((l) => l.startsWith('EXC'))
   if (!ok) ng++
-  console.log(`PRINT-CASE ${name}: pages=${n} credit=${info.credit} trade=${info.trade} tradeNone=${info.tradeNone} division=${info.division} ${ok ? 'OK' : 'NG'}`)
+  console.log(`PRINT-CASE ${name}: pages=${n} bottom=${g.bottom}pt limit=${g.limit}pt gap=${g.gap}pt(>=${MIN_BOTTOM_GAP_PT}) credit=${info.credit} trade=${info.trade} tradeNone=${info.tradeNone} division=${info.division} ${ok ? 'OK' : 'NG'}`)
   console.log(`  answers: ${info.answers}`)
   console.log(`  print row: ${info.printRow}`)
   if (logs.length) console.log('  console errors:', JSON.stringify(logs))
 }
 mock = null
-console.log(ng ? `PRINT-CASES: ${ng} NG` : 'PRINT-CASES: all 1 page')
+console.log(ng ? `PRINT-CASES: ${ng} NG` : `PRINT-CASES: all 1 page, bottom gap >= ${MIN_BOTTOM_GAP_PT}pt`)
 if (ng) process.exitCode = 1
 
 ws.close(); chrome.kill()

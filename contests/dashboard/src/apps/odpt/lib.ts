@@ -417,6 +417,11 @@ export function searchStops(nodes: StopNode[], q: string, limit = 5): { i: numbe
   return out
 }
 
+/** 住所らしい入力か（数字・「丁目」「番地」を含む）。住所検索が使えない時に、停留所名の部分一致で的外れな候補を並べないために使う */
+export function looksLikeAddress(q: string): boolean {
+  return /[0-9０-９]|丁目|番地/.test(q)
+}
+
 /** 地名検索の並べ替え用。0=名前が完全一致、1=前方一致、2=それ以外（「富山駅」で南富山駅より先に富山駅を出す） */
 export function matchRank(title: string, q: string): number {
   const t = title.trim(), s = q.trim()

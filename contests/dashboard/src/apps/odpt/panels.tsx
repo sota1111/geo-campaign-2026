@@ -347,6 +347,8 @@ export function AboutPanel({
   const cite = citationText(data, { url, date })
   const rw = data.params.rail_walk_min
   const has = (s: string) => data.coverage.sources.includes(s)
+  const srcLabel = (src?: string) => (src === 'odpt' ? '公共交通オープンデータセンター' : 'GTFSデータリポジトリ')
+  const mixedSrc = new Set(data.feeds.map((f) => srcLabel(f.source))).size > 1
   const A = ({ href, children }: { href: string; children: ReactNode }) => (
     <a className="text-primary underline" href={href} target="_blank" rel="noreferrer">{children}</a>
   )
@@ -364,10 +366,12 @@ export function AboutPanel({
         {/* ガイドラインの一般ユーザーへの通知は、事業者の一覧より前に置く（長い一覧の下に埋もれさせない） */}
         {has('公共交通オープンデータセンター') && <p className="rounded-md border bg-muted/40 p-2 text-xs" data-testid="odpt-notice">{ODPT_NOTICE}</p>}
         {/* 事業者ごとのカード（狭い枠で7列の表にすると、有効期間と期限の警告が横スクロールの先に隠れるため） */}
+        {/* 取得元: 全事業者が同じなら一覧の上に1回だけ書く（カードごとに繰り返さない）。混在する地域だけカードに書く */}
+        {mixedSrc ? null : <p className="text-xs text-muted-foreground" data-testid="feed-source">取得元: {srcLabel(data.feeds[0]?.source)}（全{data.feeds.length}件）</p>}
         <ul className="space-y-2" data-testid="feed-cards">
           {data.feeds.map((f) => (
             <li key={f.id} className="rounded-md border p-2 text-xs">
-              <p className="text-sm"><A href={f.url}><b>{f.org}</b></A>　{f.name.replace(/[（(]公共交通オープンデータセンター[）)]$/, '')}<span className="text-muted-foreground">（{f.source === 'odpt' ? '公共交通オープンデータセンター' : 'GTFSデータリポジトリ'}）</span></p>
+              <p className="text-sm"><A href={f.url}><b>{f.org}</b></A>　{f.name.replace(/[（(]公共交通オープンデータセンター[）)]$/, '')}{mixedSrc && <span className="text-muted-foreground">（{srcLabel(f.source)}）</span>}</p>
               <p className="mt-0.5">ライセンス: {f.license_url ? <A href={f.license_url}>{f.license}</A> : f.license}{f.credit && <>　クレジット: {f.credit}</>}</p>
               <p className="mt-0.5">
                 有効期間 {(f.valid[0] || '?') + '〜' + (f.valid[1] || '?')}

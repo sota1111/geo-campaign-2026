@@ -188,9 +188,12 @@ export function StepsTopbar() {
     mainIdx < 0
       ? '完了'
       : badge === '参考'
-        ? `参考：${steps[mainIdx].title}`
+        ? // 題名がすでに「参考: 〜」「参考（〜）」で始まる時は、「参考：」を重ねない
+          /^参考/.test(steps[mainIdx].title) ? steps[mainIdx].title : `参考：${steps[mainIdx].title}`
         : `手順 ${badge}／${p.total}：${steps[mainIdx].title}`
   const showNext = actIdx >= 0 && cur >= 0 && cur !== actIdx
+  // 表示中の手順より前に未完了の必須手順が残っている（飛ばして先へ進んだ）時は「残り」、後ろなら「次」
+  const nextLabel = cur < actIdx ? '残り' : '次'
   return (
     <div className="border-b bg-sidebar md:hidden" data-testid="steps-topbar">
       <button
@@ -205,12 +208,12 @@ export function StepsTopbar() {
           </span>
           {showNext && (
             <span className="block truncate text-[11px] text-muted-foreground" data-testid="steps-topbar-next">
-              次: 手順 {nums[cur]}　{steps[cur].title}
+              {nextLabel}: 手順 {nums[cur]}　{steps[cur].title}
             </span>
           )}
         </span>
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground" data-testid="steps-topbar-progress" title={progressLabel(all)}>
-          {p.done}/{p.total}
+          {p.done}/{p.total} 完了
         </span>
         <ChevronDown className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>

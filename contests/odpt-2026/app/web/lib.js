@@ -249,6 +249,20 @@
   }
 
   /* 「東京都区部（都営バス…）」-> 「東京都区部」 */
+  /* 停留所名の部分一致（地名検索が使えない時の代わり）。同じ名前は1つにまとめる */
+  function searchStops(nodes, q, limit) {
+    var s = String(q || '').trim(), out = [], seen = {};
+    limit = limit || 5;
+    if (!s) return out;
+    nodes.forEach(function (n, i) {
+      if (n[2] && n[2].indexOf(s) >= 0 && !seen[n[2]] && out.length < limit) { seen[n[2]] = 1; out.push({ i: i, name: n[2] }); }
+    });
+    return out;
+  }
+
+  /* 住所らしい入力か（数字・「丁目」「番地」を含む）。住所では停留所名の部分一致を並べない */
+  function looksLikeAddress(q) { return /[0-9０-９]|丁目|番地/.test(String(q || '')); }
+
   function shortName(name) { return String(name).replace(/（.*$/, ''); }
 
   /* ---------- 地域比較 ---------- */
@@ -289,7 +303,7 @@
   return {
     DAYS: DAYS, PERIODS: PERIODS, DAY_LABEL: DAY_LABEL, PERIOD_LABEL: PERIOD_LABEL, DAY_FULL: DAY_FULL,
     verdict: verdict, stopLabels: stopLabels, writeHash: writeHash, parseHash: parseHash, parseGsi: parseGsi,
-    regionForPoint: regionForPoint, shortName: shortName, compareRow: compareRow, citationText: citationText,
+    regionForPoint: regionForPoint, shortName: shortName, searchStops: searchStops, looksLikeAddress: looksLikeAddress, compareRow: compareRow, citationText: citationText,
     meshBounds: meshBounds, condIndex: condIndex, needLevel: needLevel,
     cellStatus: cellStatus, reachable: reachable, summarize: summarize, lostPopulation: lostPopulation, pct: pct, levelLabel: levelLabel,
     fmtMin: fmtMin, distM: distM, nearbyNodes: nearbyNodes, indexCells: indexCells,

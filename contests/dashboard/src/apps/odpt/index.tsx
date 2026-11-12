@@ -23,7 +23,7 @@ import {
   AboutPanel, COLORS, ComparePanel, RegionPanel, StopsPanel, WhatIfPanel, type WhatIfData,
 } from './panels'
 import {
-  altConditions, dataUsedLine, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, lastService, lostPopulation, meshBounds, meshCodeAt,
+  altConditions, dataUsedLine, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, looksLikeAddress, lastService, lostPopulation, meshBounds, meshCodeAt,
   coverageScope, expiredNote, ODPT_NOTICE, soonNote, needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
   type Day, type Lost, type Period, type RegionData, type RegionIndex,
 } from './lib'
@@ -318,11 +318,17 @@ export default function App() {
     rs = rs.map((r) => ({ ...r, inCell: r.rid === cur && cellIdx[meshCodeAt(r.lon, r.lat)] != null }))
     // 名前が完全一致するものを最優先にする（「富山駅」で南富山駅が先に選ばれないように）
     rs = rs.map((r, i) => ({ r, k: matchRank(r.title, q) * 1e8 + (r.rid === cur ? (r.inCell ? 0 : 1) : r.rid ? 2 : 3) * 1e7 + (r.rid === cur && data ? Math.round(distM(r.lon, r.lat, data.center[0], data.center[1])) : i) })).sort((a, b) => a.k - b.k).map((x) => x.r).slice(0, 6)
-    // 地名検索で見つからない／接続できないときは、読み込み済みの地域の停留所名から探す
-    if (!rs.some((r) => r.rid) && data) {
-      searchStops(data.nodes, q.replace(/^.*[都道府県市区町村]/, '') || q).forEach((s) => {
-        rs.push({ title: `${s.name}（停留所）`, lon: data.nodes[s.i][0], lat: data.nodes[s.i][1], rid: data.id })
+    // 地名検索で見つからない／接続できないときは、読み込み済みの地域の停留所名から探す。
+    // 住所らしい入力（数字・丁目など）では、停留所名の部分一致は的外れになりやすいので並べない
+    let viaStops = false
+    if (!rs.some((r) => r.rid) && data && !looksLikeAddress(q)) {
+      const stops: Cand[] = searchStops(data.nodes, q.replace(/^.*[都道府県市区町村]/, '') || q).map((s) => {
+        const [lon, lat] = data.nodes[s.i]
+        return { title: `${s.name}（停留所）`, lon, lat, rid: data.id, inCell: cellIdx[meshCodeAt(lon, lat)] != null }
       })
+      // 診断できる停留所を先にする（同じ順位なら元の順）
+      stops.sort((a, b) => Number(!a.inCell) - Number(!b.inCell))
+      if (stops.length) { viaStops = true; rs.push(...stops) }
     }
     setSearching(false)
     const first = rs.find((r) => r.rid)
@@ -333,12 +339,20 @@ export default function App() {
           : '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認するか、地図をタップして地点を選んでください。'
         : rs.length
           ? `見つかった場所（${rs[0].title}）は、収録している5地域（${index.regions.map((x) => shortName(x.name)).join('・')}）の範囲外です。`
-          : `「${q}」に該当する場所が見つかりませんでした。`)
+          : `「${q}」に該当する場所が見つかりませんでした。地図をタップして場所を選ぶこともできます。`)
       return
     }
     goCand(first)
     const others = rs.filter((r) => r !== first)
     setCands(others)
+    const firstName = first.title.replace(/（停留所）$/, '')
+    if (viaStops) {
+      const why = failed ? '住所検索が応答しないため' : '住所検索で見つからなかったため'
+      setSearchMsg(first.inCell
+        ? `${why}、停留所名から探しました（「${firstName}」を選びました）。違う場合は${others.length ? '下の候補から選ぶか、' : ''}地図をタップしてください。`
+        : `${why}、停留所名から探しましたが、「${firstName}」は診断範囲外でした。地図をタップして場所を選んでください。`)
+      return
+    }
     if (others.length && !(first.rid === cur && !first.inCell)) {
       setSearchMsg(`「${first.title}」を選びました。同じ名前の候補が他にもあります。場所が違う場合は、下の候補から選んでください。`)
     }
