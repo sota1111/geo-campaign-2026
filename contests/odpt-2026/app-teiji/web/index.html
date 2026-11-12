@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>バス定時性カルテ｜路線×時間帯の定時率・区間の遅れ・団子運転</title>
+<meta name="description" content="バスの位置データ（GTFS-RT）を蓄積し、時刻表と突き合わせて、路線×時間帯の定時率・区間ごとの遅れ・団子運転を見える化します。CC BY 4.0 のデータだけを使用。">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<main id="layout">
+  <div id="mapbox">
+    <div id="map" role="img" aria-label="区間の遅れの地図"></div>
+    <div id="map-legend" aria-label="地図の色の意味"></div>
+  </div>
+
+  <aside id="panel">
+    <header>
+      <h1>バス定時性カルテ</h1>
+      <p class="lead">バスの位置データを時刻表と突き合わせ、<b>どの路線の・どの時間帯の・どの区間で遅れるか</b>を見える化します。事業者と自治体がダイヤや運用を見直す材料です。</p>
+    </header>
+
+    <section id="period" class="notice" aria-live="polite"></section>
+
+    <section class="ctl" aria-label="事業者と時間帯">
+      <label for="op" class="lbl-top">事業者（名称順。順位や優劣ではありません）</label>
+      <select id="op"></select>
+      <div class="lbl-top" id="band-label" style="margin-top:8px">時間帯</div>
+      <div id="band" class="seg" role="radiogroup" aria-labelledby="band-label"></div>
+    </section>
+
+    <section id="quality" aria-label="データの状況"></section>
+
+    <section id="routes-sec" aria-label="路線ごとの定時率">
+      <h2>路線×時間帯の定時率・団子運転</h2>
+      <p class="note">定時＝時刻表より1分早い〜5分遅いの範囲。サンプルが足りない行は数値を出さず「サンプル不足」と表示します。</p>
+      <div class="tablewrap"><table id="routes-table"></table></div>
+      <button id="csv-routes" type="button" class="act">この表をCSVで保存</button>
+    </section>
+
+    <section id="seg-sec" aria-label="遅れが増える区間">
+      <h2>遅れが増える区間（上位）</h2>
+      <p class="note">停留所と次の停留所の間で、遅れが何秒増えたか（中央値）。行をタップすると地図で位置を示します。</p>
+      <div class="tablewrap"><table id="seg-table"></table></div>
+      <button id="csv-seg" type="button" class="act">この表をCSVで保存</button>
+    </section>
+
+    <section id="about" aria-label="出典と前提">
+      <h2>出典・ライセンス・前提</h2>
+      <ul class="note" id="about-list"></ul>
+    </section>
+  </aside>
+</main>
+<noscript>このページの表示にはJavaScriptが必要です。</noscript>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
