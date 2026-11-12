@@ -79,7 +79,7 @@
   <section id="v-real" class="view" hidden>
     <p><b>これは実データです。</b> Meta・WRI の高解像度樹高マップ（東京都青梅市周辺 約2.3km四方）の上に、利用者が地図をクリックして<b>仮の線</b>を引くと、線の周囲の樹高を集計します。<b>線は実在の配電線ではありません</b>（実際の配電線の位置は事業者が持つデータで、このデモには入っていません）。</p>
     <div class="filters">
-      <label>線の両側の幅 <select id="x-buf"><option value="10">10 m</option><option value="15" selected>15 m</option><option value="25">25 m</option></select></label>
+      <label>線の両側の幅（集約セル単位） <select id="x-buf"></select></label>
       <label>高木とみなす樹高 <select id="x-tall"><option value="10">10 m以上</option><option value="15" selected>15 m以上</option><option value="20">20 m以上</option></select></label>
       <button id="x-preset">例の線を引く</button>
       <button id="x-undo">1点戻す</button>
@@ -87,7 +87,8 @@
     </div>
     <div class="split">
       <div class="pane">
-        <svg id="xmap" role="img" aria-label="東京都青梅市周辺の樹高マップ（実データ）。クリックで仮の線の頂点を追加"></svg>
+        <div class="mapscroll"><svg id="xmap" role="application" tabindex="0" aria-label="東京都青梅市周辺の樹高マップ（実データ）。クリックまたはタップで仮の線の頂点を追加。キーボードでは矢印キーで十字を動かし、Enter で頂点を追加、Backspace で1点戻す"></svg></div>
+        <p class="legend">スマホでは地図を横にスクロールして、頂点を置きたい場所をタップしてください（1セルが指で狙える大きさになるよう、幅を広げています）。</p>
         <p class="legend" id="x-legend"></p>
       </div>
       <div class="pane">

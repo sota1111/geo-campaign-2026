@@ -18,6 +18,26 @@
   const RESULTS = ['要伐採', '要継続観察', '問題なし', '立入不可・再訪'];
   const SAT_KEYS = ['canopy', 'tall', 'change', 'terrain'];
 
+  // 保存済みの重みが古い形式・空・壊れていても落ちないよう、既定値に重ねて補う（型が違う項目は既定値に戻す）
+  function normalizeWeights(w) {
+    const out = JSON.parse(JSON.stringify(DEFAULT_WEIGHTS));
+    if (!w || typeof w !== 'object') return out;
+    Object.keys(DEFAULT_WEIGHTS).forEach((k) => {
+      const d = DEFAULT_WEIGHTS[k], v = w[k];
+      if (Array.isArray(d)) {
+        if (Array.isArray(v) && v.every((r) => Array.isArray(r) && isFinite(r[0]) && isFinite(r[1]))) out[k] = v.map((r) => [+r[0], +r[1]]);
+      } else if (typeof d === 'object') {
+        if (v && typeof v === 'object' && !Array.isArray(v)) Object.keys(d).forEach((c) => { if (isFinite(v[c]) && v[c] !== null) out[k][c] = +v[c]; });
+      } else if (isFinite(v) && v !== null) out[k] = +v;
+    });
+    return out;
+  }
+  // 保存済みの記録から、形の合わないものを除く
+  function sanitizeResults(a) {
+    if (!Array.isArray(a)) return [];
+    return a.filter((r) => r && typeof r === 'object' && typeof r.siteId === 'string');
+  }
+
   function band(v, table) {
     if (v == null) return 0;
     for (let i = 0; i < table.length; i++) if (v >= table[i][0]) return table[i][1];
@@ -26,34 +46,49 @@
 
   // 戻り値 parts: [表示名, 点, 'sat'|'op']
   function scoreSection(s, w, refYear) {
-    w = w || DEFAULT_WEIGHTS;
-    const yrs = s.lastCut == null ? null : refYear - s.lastCut;
+    w = normalizeWeights(w);
+    const futureCut = s.lastCut != null && s.lastCut > refYear;   // 入力ミスの疑い。負の年数にしない
+    const yrs = s.lastCut == null || futureCut ? null : refYear - s.lastCut;
+    // 衛星指標が欠損（雲・データ欠落）した区間を「0点＝安全」にしない。中間の帯の点を仮に付け、missing に項目名を残す
+    const missing = [];
+    const mid2 = (t) => (t.length ? t[Math.floor(t.length / 2)][1] : 0);
+    const num = (v, label, table) => { if (v == null || !isFinite(v)) { missing.push(label); return [label + 'は欠損（中間点を仮に付与）', mid2(table)]; } return null; };
+    const cMiss = num(s.p90, '樹高', w.canopy), tMiss = num(s.tallPct, '高木の割合', w.tall);
+    const cat = (v, label, table) => { if (v == null || !(v in table)) { missing.push(label); return [label + 'は欠損（中間点を仮に付与）', Math.round(Object.values(table).reduce((a, b) => a + b, 0) / Math.max(1, Object.keys(table).length))]; } return [label + '（' + v + '）', table[v]]; };
+    const chg = cat(s.change, '台風・豪雨前後の変化', w.change), ter = cat(s.terrain, '地形', w.terrain);
     const parts = [
-      ['樹高（線の周囲15mの90%値 ' + s.p90 + ' m）', band(s.p90, w.canopy), 'sat'],
-      ['高木（15m以上）の割合 ' + s.tallPct + '%', band(s.tallPct, w.tall), 'sat'],
-      ['台風・豪雨前後の変化（' + s.change + '）', w.change[s.change] || 0, 'sat'],
-      ['地形（' + s.terrain + '）', w.terrain[s.terrain] || 0, 'sat'],
+      cMiss ? [cMiss[0], cMiss[1], 'sat'] : ['樹高（線の周囲15mの90%値 ' + s.p90 + ' m）', band(s.p90, w.canopy), 'sat'],
+      tMiss ? [tMiss[0], tMiss[1], 'sat'] : ['高木（15m以上）の割合 ' + s.tallPct + '%', band(s.tallPct, w.tall), 'sat'],
+      [chg[0], chg[1], 'sat'],
+      [ter[0], ter[1], 'sat'],
       ['停電の想定戸数 ' + s.customers + ' 戸', band(s.customers, w.customers), 'op'],
       ['重要施設（' + s.facility + '）', w.facility[s.facility] || 0, 'op'],
       ['道路との関係（' + s.road + '）', w.road[s.road] || 0, 'op'],
       ['過去の倒木停電の記録（' + (s.pastFall ? 'あり' : 'なし') + '）', s.pastFall ? w.pastFall : 0, 'op'],
-      [yrs == null ? '前回の伐採（履歴なし・不明）' : '前回の伐採から ' + yrs + ' 年', yrs == null ? w.cutUnknown : band(yrs, w.cutAge), 'op']
+      [futureCut ? '前回の伐採年 ' + s.lastCut + ' が基準年 ' + refYear + ' より後（入力ミスの疑い・不明として扱う）' : yrs == null ? '前回の伐採（履歴なし・不明）' : '前回の伐採から ' + yrs + ' 年', yrs == null ? w.cutUnknown : band(yrs, w.cutAge), 'op']
     ];
     const sum = (src) => parts.filter((p) => !src || p[2] === src).reduce((a, p) => a + p[1], 0);
-    return { score: sum(), satScore: sum('sat'), opScore: sum('op'), parts };
+    return { score: sum(), satScore: sum('sat'), opScore: sum('op'), parts, missing, futureCut };
   }
 
   function latestResult(results, id) {
-    for (let i = results.length - 1; i >= 0; i--) if (results[i].siteId === id) return results[i];
-    return null;
+    // 確認日が新しいものを採る。同じ日（または日付なし）なら、後から入力したものを採る
+    let best = null;
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (!r || r.siteId !== id) continue;
+      if (!best || String(r.date || '') >= String(best.date || '')) best = r;
+    }
+    return best;
   }
 
   // satOnly: 衛星・公開データ由来の点数だけで並べる（事業者データを重ねない場合との比較用）
   function rank(sections, w, refYear, results, satOnly) {
-    results = results || [];
+    results = sanitizeResults(results);
+    w = normalizeWeights(w);
     return sections.map((s) => {
       const sc = scoreSection(s, w, refYear);
-      return Object.assign({}, s, { score: satOnly ? sc.satScore : sc.score, satScore: sc.satScore, opScore: sc.opScore, parts: sc.parts, latest: latestResult(results, s.id) });
+      return Object.assign({}, s, { score: satOnly ? sc.satScore : sc.score, satScore: sc.satScore, opScore: sc.opScore, parts: sc.parts, missing: sc.missing, latest: latestResult(results, s.id) });
     }).sort((a, b) => b.score - a.score || (b.lenM || 0) - (a.lenM || 0) || (a.id < b.id ? -1 : 1))
       .map((s, i) => Object.assign(s, { rank: i + 1 }));
   }
@@ -79,7 +114,10 @@
   function hitStats(sections, results, key) {
     const byId = {}; sections.forEach((s) => (byId[s.id] = s));
     const out = {};
-    results.forEach((r) => {
+    // 同じ区間の再訪で件数を水増ししない: 区間ごとに最新の確認だけを数える
+    const latest = [];
+    sections.forEach((s) => { const r = latestResult(sanitizeResults(results), s.id); if (r) latest.push(r); });
+    latest.forEach((r) => {
       const s = byId[r.siteId]; if (!s) return;
       const o = out[s[key]] || (out[s[key]] = { n: 0, hit: 0 });
       o.n++; if (r.result === '要伐採') o.hit++;
@@ -113,6 +151,10 @@
   // 実データ（樹高の格子）の上で、利用者が引いた仮の線の周囲の樹高を集計する。
   // grid: { n, h[行][列] }、cellM: 1セルの一辺(m)、pts: 格子座標（列, 行。小数可）の折れ線、
   // bufferM: 線から両側に見る幅(m)、tallM: 高木とみなす樹高(m)、chunkM: 区間の長さ(m)
+  // 格子は1セル=cellM（約12m）の集約値なので、bufferM より細かい幅は選べない。幅は「両側 k セル」（k = floor(bufferM/cellM)）に切り捨てる:
+  // bufferM < cellM（例: 10m）は k=0 で線が通るセルだけ、cellM 以上 2*cellM 未満は k=1（線から1セル以内）、25m は k=2。
+  // 線が通るセルは必ず含め、その外側は「セルの中心が線から k セル以内」のものを足す。実際に使った幅は戻り値の bufferCells・bufferUsedM。
+  // 樹高マップの範囲外は「0m（樹木なし）」ではなく outside として返す（outside=true の統計値は null）。
   function alongLine(grid, cellM, pts, bufferM, tallM, chunkM) {
     chunkM = chunkM || 100;
     const n = grid.n, h = grid.h;
@@ -122,9 +164,10 @@
       const L = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) * cellM;
       seg.push({ a: pts[i - 1], b: pts[i], L, from: total }); total += L;
     }
-    if (!total) return { lengthM: 0, cells: 0, max: 0, p90: 0, tallShare: 0, chunks: [] };
-    const step = cellM / 2, r = bufferM / cellM, nCh = Math.ceil(total / chunkM);
+    if (!total) return { lengthM: 0, cells: 0, max: 0, p90: 0, tallShare: 0, chunks: [], outside: false };
+    const k = Math.floor(bufferM / cellM + 1e-9), step = cellM / 2, r = k, nCh = Math.ceil(total / chunkM);
     const chunkCells = Array.from({ length: nCh }, () => new Map());
+    const inside = new Array(nCh).fill(0), samples = new Array(nCh).fill(0);
     const all = new Map();
     const take = (c, rr, ci) => {
       if (c < 0 || rr < 0 || c >= n || rr >= n) return;
@@ -138,20 +181,24 @@
       const t = sg.L ? (dd - sg.from) / sg.L : 0;
       const x = sg.a[0] + (sg.b[0] - sg.a[0]) * t, y = sg.a[1] + (sg.b[1] - sg.a[1]) * t;
       const ci = Math.min(nCh - 1, Math.floor(dd / chunkM));
-      for (let rr = Math.floor(y - r); rr <= Math.ceil(y + r); rr++)
-        for (let c = Math.floor(x - r); c <= Math.ceil(x + r); c++)
-          if (Math.hypot(c + 0.5 - x, rr + 0.5 - y) <= r + 0.5) take(c, rr, ci);
+      samples[ci]++;
+      if (x >= 0 && y >= 0 && x < n && y < n) inside[ci]++;
+      take(Math.floor(x), Math.floor(y), ci);
+      for (let rr = Math.floor(y - r - 0.5); rr <= Math.ceil(y + r + 0.5); rr++)
+        for (let c = Math.floor(x - r - 0.5); c <= Math.ceil(x + r + 0.5); c++)
+          if (Math.hypot(c + 0.5 - x, rr + 0.5 - y) <= r) take(c, rr, ci);
     }
     const stat = (m) => {
       const v = Array.from(m.values()).sort((a, b) => a - b);
-      return { cells: v.length, max: v.length ? v[v.length - 1] : 0, p90: percentile(v, 90), tallShare: v.length ? v.filter((x) => x >= tallM).length / v.length : 0 };
+      if (!v.length) return { cells: 0, max: null, p90: null, tallShare: null, outside: true };
+      return { outside: false, cells: v.length, max: v.length ? v[v.length - 1] : 0, p90: percentile(v, 90), tallShare: v.length ? v.filter((x) => x >= tallM).length / v.length : 0 };
     };
     const whole = stat(all);
-    return Object.assign({ lengthM: total }, whole, {
-      chunks: chunkCells.map((m, i) => Object.assign({ fromM: i * chunkM, toM: Math.min(total, (i + 1) * chunkM) }, stat(m)))
-    });
+    const chunks = chunkCells.map((m, i) => Object.assign({ fromM: i * chunkM, toM: Math.min(total, (i + 1) * chunkM), insideShare: samples[i] ? inside[i] / samples[i] : 0 }, stat(m)));
+    const allSamples = samples.reduce((a, b) => a + b, 0), allInside = inside.reduce((a, b) => a + b, 0);
+    return Object.assign({ lengthM: total, bufferCells: k, bufferUsedM: k * cellM, insideShare: allSamples ? allInside / allSamples : 0 }, whole, { chunks });
   }
 
-  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist };
+  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TreeLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

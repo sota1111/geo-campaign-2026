@@ -26,7 +26,9 @@ tbody tr[data-id]{cursor:pointer}tbody tr.sel{background:#ffe9b8}
 .filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
 button{font:inherit;padding:4px 10px;cursor:pointer}
 #map,#xmap{width:100%;background:#fbfcf9;border:1px solid var(--line)}
-#xmap{cursor:crosshair}
+#xmap{cursor:crosshair;min-width:880px}
+.mapscroll{max-width:100%;overflow-x:auto}
+#xmap:focus-visible{outline:3px solid #1a1a8c}
 .legend,.note{font-size:12px;color:#46503f}
 .mk{cursor:pointer}.mk text{font-size:11px;fill:#fff;text-anchor:middle;pointer-events:none;font-weight:700}
 #detail,#x-result,.share{background:#fff;border:1px solid var(--line);padding:8px 12px;margin-top:8px}

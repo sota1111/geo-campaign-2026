@@ -75,8 +75,11 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   const box = await ev('(()=>{const r=document.querySelector("#xmap").getBoundingClientRect();return [r.left,r.top,r.width,r.height,window.scrollX,window.scrollY]})()');
   await ev('document.querySelector("#xmap").scrollIntoView({block:"start"})');
   const box2 = await ev('(()=>{const r=document.querySelector("#xmap").getBoundingClientRect();return [r.left,r.top,r.width,r.height]})()');
-  await clickAt(box2[0] + box2[2] * 0.35, box2[1] + box2[3] * 0.7);
-  await clickAt(box2[0] + box2[2] * 0.5, box2[1] + box2[3] * 0.45);
+  // 地図はスマホ幅では横スクロール枠（.mapscroll）に収まるので、クリック位置は画面に見えている範囲の中に取る
+  const vis = await ev('(()=>{const r=document.querySelector(".mapscroll").getBoundingClientRect();return [Math.max(0,r.left),Math.min(window.innerWidth,r.right)]})()');
+  const vw = vis[1] - vis[0];
+  await clickAt(vis[0] + vw * 0.35, box2[1] + box2[3] * 0.7);
+  await clickAt(vis[0] + vw * 0.6, box2[1] + box2[3] * 0.45);
   ok(label + ': クリックで頂点が2点置かれ集計が出る', (await ev('App.state.line.length')) === 2 && (await ev('document.querySelectorAll("#x-result tbody tr").length')) >= 3);
   await ev('document.querySelector("#x-clear").click()');
   ok(label + ': 線を消すと案内に戻る', (await ev('App.state.line.length')) === 0 && (await ev('document.querySelector("#x-result").textContent.includes("クリック")')));
