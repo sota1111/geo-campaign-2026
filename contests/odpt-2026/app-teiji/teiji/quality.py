@@ -14,8 +14,10 @@ import argparse
 import datetime as dt
 import json
 import statistics
+from array import array
 from pathlib import Path
 
+from .delay import norm_ts
 from .gtfs import load_schedule
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,21 +26,46 @@ DAY_HOURS = range(7, 19)
 GATE = {"success": 0.95, "vehicles_median": 5, "pos_interval_s": 90, "trip_match": 0.90, "min_daytime_polls": 10}
 
 
-def read_records(raw_dir, dataset, day=None):
-    out = []
+def iter_records(raw_dir, dataset, day=None):
+    """data/raw/<dataset>/*.jsonl を 1 行ずつ読む（全体をメモリに載せない）。"""
     d = Path(raw_dir) / dataset
     if not d.exists():
-        return out
+        return
     for f in sorted(d.glob("*.jsonl")):
         if day and f.stem != day:
             continue
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                try:
-                    out.append(json.loads(line))
-                except ValueError:
-                    pass
-    return out
+        with f.open(encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    try:
+                        yield json.loads(line)
+                    except ValueError:
+                        pass
+
+
+class RecordStream:
+    """何度でも先頭から読み直せる記録の列（iter_records を包む）。"""
+
+    def __init__(self, raw_dir, dataset, day=None):
+        self.args = (raw_dir, dataset, day)
+
+    def __iter__(self):
+        return iter_records(*self.args)
+
+
+def read_records(raw_dir, dataset, day=None):
+    return list(iter_records(raw_dir, dataset, day))
+
+
+def last_record_time(raw_dir, dataset):
+    """最後の jsonl ファイルだけを読んで、記録の最後の時刻（epoch 秒）を返す。なければ None。"""
+    d = Path(raw_dir) / dataset
+    files = sorted(d.glob("*.jsonl")) if d.exists() else []
+    for f in reversed(files):
+        ts = [r.get("t") for r in iter_records(raw_dir, dataset, f.stem) if r.get("t")]
+        if ts:
+            return max(ts)
+    return None
 
 
 def med(xs):
@@ -50,51 +77,90 @@ def pct(a, b):
 
 
 def measure_dataset(recs, schedule=None, today=None):
-    """recs: read_records の結果。schedule: load_schedule の結果（なければ一致率は None）。"""
-    v = [r for r in recs if r["kind"] == "v"]
-    u = [r for r in recs if r["kind"] == "u"]
-    vok = [r for r in v if r.get("ok")]
-    res = {"polls": len(v), "polls_ok": len(vok), "success_rate": pct(len(vok), len(v))}
-    hours = [dt.datetime.fromtimestamp(r["t"], JST).hour for r in vok]
-    day_idx = [i for i, h in enumerate(hours) if h in DAY_HOURS]
-    res["daytime_polls"] = len(day_idx)
-    if v:
-        res["first"] = dt.datetime.fromtimestamp(min(r["t"] for r in v), JST).strftime("%Y-%m-%d %H:%M")
-        res["last"] = dt.datetime.fromtimestamp(max(r["t"] for r in v), JST).strftime("%Y-%m-%d %H:%M")
-    counts = [r["n"] for r in vok]
+    """recs: 記録（時刻順）の反復可能なもの（リストでも iter_records でもよい。1 回だけ読む）。
+    schedule: load_schedule の結果（なければ一致率は None）。"""
+    polls = 0
+    n_ok = 0
+    first_t = last_t = None
+    obs_days = set()
+    hours_ok_day = 0
+    counts, day_counts = array("l"), array("l")
+    fts = set()
+    same_ft = 0
+    seen, ages, diffs = {}, array("l"), array("l")
+    trips_seen, vehicles = set(), set()
+    with_trip = rows_n = stop_hit = stop_rows = 0
+    tu_polls_ok = 0
+    tu_n = array("l")
+    tu_trips = tu_with_delay = tu_vals = tu_nonzero = 0
+    tu_ids = set()
+    for r in recs:
+        kind = r["kind"]
+        if kind == "v":
+            polls += 1
+            t = r["t"]
+            first_t = t if first_t is None else min(first_t, t)
+            last_t = t if last_t is None else max(last_t, t)
+            if not r.get("ok"):
+                continue
+            n_ok += 1
+            d = dt.datetime.fromtimestamp(t, JST)
+            obs_days.add(d.strftime("%Y-%m-%d"))
+            counts.append(r["n"])
+            if d.hour in DAY_HOURS:
+                hours_ok_day += 1
+                day_counts.append(r["n"])
+            if r.get("ft"):
+                fts.add(r["ft"])
+            same_ft += 1 if r.get("same") else 0
+            for row in r.get("v") or []:
+                vid, trip, route, sdate, lat, lon, ts, seq, sid = row
+                ts = norm_ts(ts)
+                rows_n += 1
+                vehicles.add(vid)
+                if trip:
+                    with_trip += 1
+                    trips_seen.add(trip)
+                if ts:
+                    ages.append(t - ts)
+                    if vid in seen and ts != seen[vid]:
+                        diffs.append(ts - seen[vid])
+                    seen[vid] = ts
+                if sid and schedule:
+                    stop_rows += 1
+                    stop_hit += sid in schedule["stops"]
+        elif kind == "u" and r.get("ok"):
+            tu_polls_ok += 1
+            tu_n.append(r["n"])
+            for row in r.get("u") or []:
+                tu_trips += 1
+                tu_ids.add(row[0])
+                if row[4] is not None or any(s[2] is not None or s[4] is not None for s in row[5]):
+                    tu_with_delay += 1
+                for s in row[5]:
+                    for v in (s[2], s[4]):
+                        if v is not None:
+                            tu_vals += 1
+                            tu_nonzero += v != 0
+    res = {"polls": polls, "polls_ok": n_ok, "success_rate": pct(n_ok, polls)}
+    res["daytime_polls"] = hours_ok_day
+    if polls:
+        res["first"] = dt.datetime.fromtimestamp(first_t, JST).strftime("%Y-%m-%d %H:%M")
+        res["last"] = dt.datetime.fromtimestamp(last_t, JST).strftime("%Y-%m-%d %H:%M")
+    res["first_t"], res["last_t"], res["observed_days"] = first_t, last_t, sorted(obs_days)
     res["vehicles_median"] = med(counts)
     res["vehicles_max"] = max(counts) if counts else None
-    day_counts = [vok[i]["n"] for i in day_idx]
     res["vehicles_median_daytime"] = med(day_counts)
     # フィード時刻の更新間隔
-    fts = sorted({r["ft"] for r in vok if r.get("ft")})
+    fts = sorted(fts)
     res["feed_interval_s"] = med([b - a for a, b in zip(fts, fts[1:])])
-    res["same_ft_share"] = pct(sum(1 for r in vok if r.get("same")), len(vok))
-    # 車両ごとの位置更新間隔、位置の古さ
-    seen, ages, diffs = {}, [], []
-    trips_seen, with_trip, rows_n = set(), 0, 0
-    stop_hit = stop_rows = 0
-    for r in vok:
-        for row in r.get("v") or []:
-            vid, trip, route, sdate, lat, lon, ts, seq, sid = row
-            rows_n += 1
-            if trip:
-                with_trip += 1
-                trips_seen.add(trip)
-            if ts:
-                ages.append(r["t"] - ts)
-                if vid in seen and ts != seen[vid]:
-                    diffs.append(ts - seen[vid])
-                seen[vid] = ts
-            if sid and schedule:
-                stop_rows += 1
-                stop_hit += sid in schedule["stops"]
+    res["same_ft_share"] = pct(same_ft, n_ok)
     res["position_interval_s"] = med([d for d in diffs if d > 0])
     res["position_age_s"] = med(ages)
     res["vehicle_rows"] = rows_n
     res["trip_id_present_pct"] = pct(with_trip, rows_n)
     res["distinct_trips"] = len(trips_seen)
-    res["distinct_vehicles"] = len({row[0] for r in vok for row in (r.get("v") or [])})
+    res["distinct_vehicles"] = len(vehicles)
     if schedule:
         hit_all = sum(1 for t in trips_seen if t in schedule["trip_ids"])
         hit_act = sum(1 for t in trips_seen if t in schedule["trip_ids"] and schedule["trips"][t]["active"])
@@ -105,23 +171,8 @@ def measure_dataset(recs, schedule=None, today=None):
         res["gtfs_period"] = f"{schedule['start']}〜{schedule['end']}" if schedule["start"] else ""
         res["gtfs_covers_day"] = bool(today and schedule["start"] and schedule["start"] <= today <= schedule["end"])
     # TripUpdate
-    uok = [r for r in u if r.get("ok")]
-    res["tu_polls_ok"] = len(uok)
-    res["tu_entities_median"] = med([r["n"] for r in uok])
-    tu_trips = tu_with_delay = 0
-    tu_vals = tu_nonzero = 0
-    tu_ids = set()
-    for r in uok:
-        for row in r.get("u") or []:
-            tu_trips += 1
-            tu_ids.add(row[0])
-            if row[4] is not None or any(s[2] is not None or s[4] is not None for s in row[5]):
-                tu_with_delay += 1
-            for s in row[5]:
-                for v in (s[2], s[4]):
-                    if v is not None:
-                        tu_vals += 1
-                        tu_nonzero += v != 0
+    res["tu_polls_ok"] = tu_polls_ok
+    res["tu_entities_median"] = med(tu_n)
     res["tu_with_delay_pct"] = pct(tu_with_delay, tu_trips)
     res["tu_delay_nonzero_pct"] = pct(tu_nonzero, tu_vals)
     if schedule and tu_ids:
@@ -179,10 +230,10 @@ def main():
     src = json.loads((ROOT / "data" / "sources.json").read_text(encoding="utf-8"))
     out = []
     for s in src:
-        recs = read_records(a.raw_dir, s["dataset"], a.day or None)
-        if not recs:
+        recs = RecordStream(a.raw_dir, s["dataset"], a.day or None)
+        last = max((r["t"] for r in recs if r.get("t")), default=None)
+        if last is None:
             continue
-        last = max(r["t"] for r in recs)
         today = dt.datetime.fromtimestamp(last, JST).date()
         gz = Path(a.gtfs_dir) / f"{s['dataset']}.zip"
         sched = load_schedule(str(gz), today, with_stop_times=False) if gz.exists() else None

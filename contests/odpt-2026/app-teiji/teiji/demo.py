@@ -114,14 +114,13 @@ def main():
     recs = make_records(routes)
     src = {"dataset": "synthetic_demo", "name": "合成デモ交通（実在しない・合成データ）", "page": "https://ckan.odpt.org/"}
     pub, rows, agg = build.build_operator(src, recs, sched, DAYS[-1])
-    pub["quality"]["verdict"], pub["quality"]["verdict_reason"] = "合成データ", "実データの品質判定ではありません"
     pub["license"] = "合成データ（実データではない）"
     pub["credit"] = "合成データ。実在の事業者・路線・遅れではありません（画面確認用）"
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "synthetic_demo.json").write_text(json.dumps(pub, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (out / "index.json").write_text(json.dumps({"synthetic": True, "generated": "合成", "note": "合成データです。実在の事業者・路線・遅れではありません。",
-                                                 "operators": [{"id": "synthetic_demo", "name": src["name"], "verdict": "合成", "stop_estimates": len(rows),
+                                                 "operators": [{"id": "synthetic_demo", "name": src["name"], "status": "合成データ", "stop_estimates": len(rows),
                                                                 "first": pub["period"]["first"], "last": pub["period"]["last"],
                                                                 "observed_days": pub["period"]["observed_days"]}]}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"合成デモ: 推定 {len(rows)} 件 -> {out}")

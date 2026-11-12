@@ -12,6 +12,7 @@
 """
 import datetime as dt
 import statistics
+from array import array
 from collections import defaultdict
 
 from .delay import JST
@@ -99,77 +100,97 @@ def bunching_pairs(rows, schedule):
     return out
 
 
-def aggregate(rows, schedule):
-    """rows: delay.estimate_all の行。戻り値は web/CSV 用の辞書。"""
-    route_name = schedule["routes"]
-    # 路線 x 時間帯
-    by = defaultdict(list)
-    trips = defaultdict(set)
-    for r in rows:
-        for b in ("all", band_of(r["sched"])):
-            by[(r["route_id"], b)].append(r["delay_s"])
-            trips[(r["route_id"], b)].add((r["trip_id"], r["date"]))
-    pairs = defaultdict(lambda: [0, 0, 0])
-    for route, band, kind in bunching_pairs(rows, schedule):
-        for b in ("all", band):
-            c = pairs[(route, b)]
-            c[0] += 1
-            c[1] += kind == "bunch"
-            c[2] += kind == "gap"
-    routes = []
-    for (route, band), ds in sorted(by.items()):
-        st = delay_stats(ds)
-        short, long_ = route_name.get(route, ("", ""))
-        row = {"route_id": route, "name": short or long_ or route, "long_name": long_, "band": band, "n_trips": len(trips[(route, band)]), **st}
-        row["enough"] = row["n_trips"] >= MIN_TRIPS and row["n_obs"] >= MIN_OBS
-        n_p, n_b, n_g = pairs.get((route, band), [0, 0, 0])
-        row["bunch_pairs"] = n_p
-        row["bunch_enough"] = n_p >= MIN_PAIRS
-        row["bunch_pct"] = round(100.0 * n_b / n_p, 1) if n_p else None
-        row["gap_pct"] = round(100.0 * n_g / n_p, 1) if n_p else None
-        routes.append(row)
-    # 区間の遅れ
-    by_trip = defaultdict(list)
-    for r in rows:
-        by_trip[(r["trip_id"], r["date"])].append(r)
-    seg = defaultdict(lambda: {"inc": [], "run": []})
-    for (tid, d), rs in by_trip.items():
-        rs.sort(key=lambda r: r["pos"])
-        for a, b in zip(rs, rs[1:]):
-            if b["pos"] - a["pos"] != 1:
+class Accumulator:
+    """日ごとに add_day を呼んで集計を積み上げ、最後に result() で全日程の集計を返す。
+    保持するのは遅れの数値の列（array）と件数だけで、推定の行そのものは持たない（メモリを抑える）。"""
+
+    def __init__(self, schedule):
+        self.schedule = schedule
+        self.by = defaultdict(lambda: array("d"))          # (route, band) -> 遅れ（秒）
+        self.trips = defaultdict(int)                       # (route, band) -> 便×運行日の数
+        self.pairs = defaultdict(lambda: [0, 0, 0])
+        self.seg = defaultdict(lambda: {"inc": array("d"), "run": array("d")})
+        self.sd = defaultdict(lambda: array("d"))
+        self.days = set()
+
+    def add_day(self, rows):
+        """1 運行日以上の推定の行（delay.estimate_day の行）を足す。同じ運行日を 2 回に分けて渡してはいけない。"""
+        trips = defaultdict(set)
+        for r in rows:
+            self.days.add(r["date"])
+            self.sd[r["stop_id"]].append(r["delay_s"])
+            for b in ("all", band_of(r["sched"])):
+                self.by[(r["route_id"], b)].append(r["delay_s"])
+                trips[(r["route_id"], b)].add((r["trip_id"], r["date"]))
+        for k, v in trips.items():
+            self.trips[k] += len(v)
+        for route, band, kind in bunching_pairs(rows, self.schedule):
+            for b in ("all", band):
+                c = self.pairs[(route, b)]
+                c[0] += 1
+                c[1] += kind == "bunch"
+                c[2] += kind == "gap"
+        by_trip = defaultdict(list)
+        for r in rows:
+            by_trip[(r["trip_id"], r["date"])].append(r)
+        for rs in by_trip.values():
+            rs.sort(key=lambda r: r["pos"])
+            for a, b in zip(rs, rs[1:]):
+                if b["pos"] - a["pos"] != 1:
+                    continue
+                for band in ("all", band_of(a["sched"])):
+                    k = (a["route_id"], a["dir"], a["stop_id"], b["stop_id"], band)
+                    self.seg[k]["inc"].append(b["delay_s"] - a["delay_s"])
+                    self.seg[k]["run"].append(b["sched"] - a["sched"])
+
+    def result(self):
+        schedule = self.schedule
+        route_name = schedule["routes"]
+        routes = []
+        for (route, band), ds in sorted(self.by.items()):
+            st = delay_stats(ds)
+            short, long_ = route_name.get(route, ("", ""))
+            row = {"route_id": route, "name": short or long_ or route, "long_name": long_, "band": band, "n_trips": self.trips[(route, band)], **st}
+            row["enough"] = row["n_trips"] >= MIN_TRIPS and row["n_obs"] >= MIN_OBS
+            n_p, n_b, n_g = self.pairs.get((route, band), [0, 0, 0])
+            row["bunch_pairs"] = n_p
+            row["bunch_enough"] = n_p >= MIN_PAIRS
+            row["bunch_pct"] = round(100.0 * n_b / n_p, 1) if n_p else None
+            row["gap_pct"] = round(100.0 * n_g / n_p, 1) if n_p else None
+            routes.append(row)
+        stops = schedule["stops"]
+        segments = []
+        for (route, d, s0, s1, band), v in self.seg.items():
+            n = len(v["inc"])
+            if n < MIN_SEG:
                 continue
-            for band in ("all", band_of(a["sched"])):
-                k = (a["route_id"], a["dir"], a["stop_id"], b["stop_id"], band)
-                seg[k]["inc"].append(b["delay_s"] - a["delay_s"])
-                seg[k]["run"].append(b["sched"] - a["sched"])
-    stops = schedule["stops"]
-    segments = []
-    for (route, d, s0, s1, band), v in seg.items():
-        n = len(v["inc"])
-        if n < MIN_SEG:
-            continue
-        a, b = stops.get(s0), stops.get(s1)
-        if not a or not b:
-            continue
-        run = statistics.median(v["run"])
-        inc = statistics.median(v["inc"])
-        segments.append({"route_id": route, "name": (route_name.get(route, ("", ""))[0] or route), "dir": d, "from_id": s0, "to_id": s1,
-                         "from": a[2], "to": b[2], "from_lat": a[0], "from_lon": a[1], "to_lat": b[0], "to_lon": b[1],
-                         "band": band, "n": n, "median_added_s": round(inc), "p90_added_s": round(pctile(v["inc"], 0.9)),
-                         "sched_run_s": round(run), "added_pct_of_run": round(100.0 * inc / run, 1) if run > 0 else None})
-    segments.sort(key=lambda s: -s["median_added_s"])
-    # 停留所
-    sd = defaultdict(list)
-    for r in rows:
-        sd[r["stop_id"]].append(r["delay_s"])
-    stop_rows = []
-    for sid, ds in sd.items():
-        if len(ds) < MIN_SEG or sid not in stops:
-            continue
-        st = delay_stats(ds)
-        stop_rows.append({"stop_id": sid, "name": stops[sid][2], "lat": stops[sid][0], "lon": stops[sid][1], **st})
-    days = sorted({r["date"] for r in rows})
-    return {"routes": routes, "segments": segments, "stops": stop_rows, "days": days,
-            "params": {"early_s": EARLY_S, "late_s": LATE_S, "bunch_ratio": BUNCH_RATIO, "gap_ratio": GAP_RATIO,
-                       "headway_range_s": [HEADWAY_MIN_S, HEADWAY_MAX_S], "min_trips": MIN_TRIPS, "min_obs": MIN_OBS,
-                       "min_pairs": MIN_PAIRS, "min_segment_obs": MIN_SEG}}
+            a, b = stops.get(s0), stops.get(s1)
+            if not a or not b:
+                continue
+            run = statistics.median(v["run"])
+            inc = statistics.median(v["inc"])
+            segments.append({"route_id": route, "name": (route_name.get(route, ("", ""))[0] or route), "dir": d, "from_id": s0, "to_id": s1,
+                             "from": a[2], "to": b[2], "from_lat": a[0], "from_lon": a[1], "to_lat": b[0], "to_lon": b[1],
+                             "band": band, "n": n, "median_added_s": round(inc), "p90_added_s": round(pctile(v["inc"], 0.9)),
+                             "sched_run_s": round(run), "added_pct_of_run": round(100.0 * inc / run, 1) if run > 0 else None})
+        segments.sort(key=lambda s: -s["median_added_s"])
+        stop_rows = []
+        for sid, ds in self.sd.items():
+            if len(ds) < MIN_SEG or sid not in stops:
+                continue
+            st = delay_stats(ds)
+            stop_rows.append({"stop_id": sid, "name": stops[sid][2], "lat": stops[sid][0], "lon": stops[sid][1], **st})
+        return {"routes": routes, "segments": segments, "stops": stop_rows, "days": sorted(self.days),
+                "params": {"early_s": EARLY_S, "late_s": LATE_S, "bunch_ratio": BUNCH_RATIO, "gap_ratio": GAP_RATIO,
+                           "headway_range_s": [HEADWAY_MIN_S, HEADWAY_MAX_S], "min_trips": MIN_TRIPS, "min_obs": MIN_OBS,
+                           "min_pairs": MIN_PAIRS, "min_segment_obs": MIN_SEG}}
+
+
+def aggregate(rows, schedule):
+    """rows: delay.estimate_all の行（複数の運行日を含んでよい）。または、日ごとに積み上げた Accumulator。
+    戻り値は web/CSV 用の辞書。"""
+    if isinstance(rows, Accumulator):
+        return rows.result()
+    acc = Accumulator(schedule)
+    acc.add_day(rows)
+    return acc.result()

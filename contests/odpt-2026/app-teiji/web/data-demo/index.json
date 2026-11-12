@@ -6,8 +6,8 @@
   {
    "id": "synthetic_demo",
    "name": "合成デモ交通（実在しない・合成データ）",
-   "verdict": "合成",
-   "stop_estimates": 5175,
+   "status": "合成データ",
+   "stop_estimates": 5284,
    "first": "2026-11-16 06:00:09",
    "last": "2026-11-18 18:57:50",
    "observed_days": [

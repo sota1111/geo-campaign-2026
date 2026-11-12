@@ -81,12 +81,10 @@
   function renderQuality(op) {
     var q = op.quality || {};
     var est = op.estimate || {};
-    var v = q.verdict || '—';
-    var h = '<h2>データの状況</h2><p class="note">判定: <b>' + L.esc(v) + '</b>' + (q.verdict_reason ? '（' + L.esc(q.verdict_reason) + '）' : '') + '</p>' +
+    var h = '<h2>データの状況</h2>' +
       '<ul class="note"><li>1回の取得で見えた車両数: 中央値 ' + L.esc(q.vehicles_median) + ' 台、最大 ' + L.esc(q.vehicles_max) + ' 台</li>' +
-      '<li>位置の更新間隔（車両ごと・中央値）: ' + (q.position_interval_s == null ? '—' : L.esc(q.position_interval_s) + ' 秒') + '</li>' +
-      '<li>trip_id が時刻表と一致した率: ' + (q.trip_match_pct == null ? '—' : L.esc(q.trip_match_pct) + '%') + '</li>' +
-      '<li>遅れを推定できた便: ' + L.esc(est.trips_estimated || 0) + ' 便（観測した便 ' + L.esc(est.trips_observed || 0) + '、停留所の推定 ' + L.esc(est.stop_estimates || 0) + ' 件）</li></ul>';
+      '<li>遅れを推定できた便: ' + L.esc(est.trips_estimated || 0) + ' 便（観測した便 ' + L.esc(est.trips_observed || 0) + '、停留所の推定 ' + L.esc(est.stop_estimates || 0) + ' 件）</li></ul>' +
+      (q.verdict ? '<p class="note">日中の取得がまだ足りないため、データの状況は測れていません（' + L.esc(q.verdict) + '）。</p>' : '');
     $('quality').innerHTML = h;
   }
 
@@ -134,7 +132,7 @@
     $('about-list').innerHTML =
       '<li>バス位置・時刻表: ' + L.esc(op.credit) + '（<a href="' + L.esc(op.page) + '" target="_blank" rel="noopener">データセットのページ</a>）。公共交通オープンデータセンター（ODPT）が配信する CC BY 4.0 のデータだけを使っています。</li>' +
       '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li>' +
-      '<li>遅れの推定: 車両位置を停留所列の折れ線に当てはめ、停留所の通過時刻を線形補間して時刻表と比べます。道路形状（shapes）は使わないため、数十秒の誤差を含みます。観測の間隔が5分を超える所は推定しません。</li>' +
+      '<li>遅れの推定: 車両位置を停留所列の折れ線に当てはめ、停留所の通過時刻を線形補間して時刻表と比べます。道路形状（shapes）は使いません。推定の誤差の大きさは検証中で、実データでの精度は確認できていません。停留所に止まっていた時間は到着ではなく「停留所を出た時刻」で時刻表の発車と比べ、観測の間隔が5分を超える所は推定しません。</li>' +
       '<li>定時: 時刻表より ' + (-(p.early_s || -60)) + '秒早い〜' + (p.late_s || 300) + '秒遅い。団子運転: 時刻表で隣り合う同じ路線・方向の2便の通過間隔が、時刻表の間隔の ' + ((p.bunch_ratio || 0.25) * 100) + '% 未満（時刻表の間隔が1〜20分の停留所だけ対象）。これらの基準は仮の設定です。</li>' +
       '<li>サンプル不足: 便数 ' + (p.min_trips || 10) + ' 未満または観測 ' + (p.min_obs || 50) + ' 未満は数値を出しません。</li>' +
       '<li>事業者名を出した順位付けはしません。事業者は名称順に並べているだけです。便ごとの推定などの詳細は、事業者向けに別ファイル（CSV）で渡します。</li>' +
