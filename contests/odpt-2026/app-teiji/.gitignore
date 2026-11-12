@@ -1,0 +1,5 @@
+data/raw/
+data/gtfs/
+out/
+__pycache__/
+*.pyc
