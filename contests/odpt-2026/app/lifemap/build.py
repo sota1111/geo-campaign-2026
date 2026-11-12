@@ -5,6 +5,7 @@ python3 -m lifemap.build [--today YYYY-MM-DD] [--region ID] [--whatif-top N]
 import argparse
 import datetime as dt
 import json
+import re
 from pathlib import Path
 
 from . import access, fetch, sources
@@ -84,12 +85,26 @@ def prune_patterns(pats):
     return kept
 
 
+def loaded_feed_defs(reg, paths):
+    """regions.json の feeds のうち、取得できた（paths['feed'] にある）もの。トークン必須で飛ばしたものは除く。"""
+    return [f for f in reg["feeds"] if fetch.feed_key(f) in paths["feed"]]
+
+
+def covered_rail(reg, paths):
+    """GTFSに収録済みの鉄道 [(運営会社, 路線名 or None)]。地域の rail_covered と、読み込めたフィードの rail_covered。"""
+    out = [tuple(c) for c in reg.get("rail_covered") or []]
+    for f in loaded_feed_defs(reg, paths):
+        if isinstance(f, dict):
+            out += [tuple(c) for c in f.get("rail_covered") or []]
+    return out
+
+
 def rail_stations(reg, paths):
-    """GTFSに無い鉄道の駅（国土数値情報 N02）。regions.json の rail_covered（収録済みの事業者・路線）は除く。
+    """GTFSに無い鉄道の駅（国土数値情報 N02）。収録済みの事業者・路線（covered_rail）は除く。
     戻り値 [(lat, lon, 駅名, 運営会社)]（同じ事業者・駅名は1つにまとめる）。paths['rail'] が無ければ None。"""
     if not paths.get("rail"):
         return None
-    covered = [tuple(c) for c in reg.get("rail_covered") or []]
+    covered = covered_rail(reg, paths)
     seen = {}
     for lat, lon, name, op, line in sources.read_rail_stations(paths["rail"], reg["bbox"]):
         if any(op == c_op and (c_line is None or c_line == line) for c_op, c_line in covered):
@@ -99,13 +114,23 @@ def rail_stations(reg, paths):
 
 
 def updated_from_version(version):
+    """feed_version から更新日。先頭8桁が日付ならそれ、無ければ文字列中の 20YYMMDD（例: edo_20260715_001）。"""
     v = (version or "")[:8]
-    return f"{v[:4]}-{v[4:6]}-{v[6:]}" if len(v) == 8 and v.isdigit() else ""
+    if len(v) == 8 and v.isdigit():
+        return f"{v[:4]}-{v[4:6]}-{v[6:]}"
+    m = re.search(r"(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)", version or "")
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else ""
+
+
+def updated_from_query(f):
+    """ODPTセンターの版を日付で選ぶフィード（query.date=YYYYMMDD）は、その日付をカタログ上の版の日付として使う。"""
+    d = str(((f.get("query") or {}) if isinstance(f, dict) else {}).get("date", ""))
+    return f"{d[:4]}-{d[4:6]}-{d[6:]}" if len(d) == 8 and d.isdigit() else ""
 
 
 def build_region(reg, paths, meta_idx, today, whatif_top=0):
     bbox = reg["bbox"]
-    feed_defs = reg["feeds"]
+    feed_defs = loaded_feed_defs(reg, paths)
     feed_keys = [fetch.feed_key(f) for f in feed_defs]
     feeds = [load_feed(paths["feed"][k], bbox, today) for k in feed_keys]
     net = Network(feeds, feed_keys)
@@ -201,7 +226,7 @@ def build_region(reg, paths, meta_idx, today, whatif_top=0):
             "name": fm.get("feed_name", k[1]),
             "license": fm.get("feed_license", ""),
             "license_url": fm.get("feed_license_url", ""),
-            "updated": fm.get("last_updated_at", "") or updated_from_version(fd.get("version")),
+            "updated": fm.get("last_updated_at", "") or updated_from_version(fd.get("version")) or updated_from_query(f),
             "valid": [fmt_date(fd["start"]), fmt_date(fd["end"])],
             "ref": {d: fmt_date(fd["ref"][d]) for d in DAYTYPES},
             "url": fm.get("page_url") if is_odpt else f"https://www.gtfs-data.jp/search/organization/{k[0]}",

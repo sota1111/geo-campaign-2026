@@ -133,7 +133,7 @@ export const APPS: AppMeta[] = [
     purpose:
       '相続した土地の所有者が、売る・貸す・活かす・手放すのどれにするか専門家に相談する前に、土地の条件と聞くべきことを1枚にまとめる。',
     dataKind: 'partial',
-    dataNote: '徳島市の用途地域・災害想定区域などは実データ。「サンプルの土地」は架空',
+    dataNote: '徳島市の用途地域・災害想定区域、不動産情報ライブラリの取引価格・地価公示/地価調査・区域区分（2026-11-12取得）は実データ。「サンプルの土地」は架空',
     originalPath: 'contests/ichibiz-2026/app/realestate/web/',
   },
 ]

@@ -137,4 +137,12 @@ const ct = L.citationText({ name: 'X市', coverage: { sources: ['GTFSデータ�
   { url: 'https://example.org/app/', date: '2026-11-11' });
 assert.ok(ct.includes('A社（CC0 1.0）、B市（CC BY 4.0、B市交通局）') && ct.includes('2026-11-11') && ct.includes('国土地理院'));
 
+// 地名検索が使えない時の停留所名検索・住所らしさの判定（デザイン再審査 r2 中B）
+const sn = [[0, 0, '王子駅前', 0, 0, []], [0, 0, '王子駅前', 0, 0, []], [0, 0, '王子二丁目', 0, 0, []], [0, 0, '', 0, 0, []]];
+assert.deepEqual(L.searchStops(sn, '王子駅'), [{ i: 0, name: '王子駅前' }]);
+assert.deepEqual(L.searchStops(sn, '王子').map((x) => x.name), ['王子駅前', '王子二丁目']);
+assert.deepEqual(L.searchStops(sn, ' '), []);
+assert.ok(L.looksLikeAddress('北区王子本町一丁目') && L.looksLikeAddress('富山市新総曲輪1-7') && L.looksLikeAddress('徳島市八万町３'));
+assert.ok(!L.looksLikeAddress('王子駅') && !L.looksLikeAddress('富山駅'));
+
 console.log('lib_test OK');
