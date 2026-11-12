@@ -1,4 +1,4 @@
-/* 不動産情報ライブラリ（国土交通省）の API から、徳島市周辺の9項目を取得して web/data/ に書く前処理。
+/* 不動産情報ライブラリ（国土交通省）の API から、徳島市周辺の12項目を取得して web/data/ に書く前処理。
  * ブラウザからは API を呼ばない（キーが公開されるため。公式もブラウザからのリクエストを勧めていない）。公開前に手元で1回実行する。
  *
  *   node --env-file=<.envのパス> tools/fetch-reinfolib.mjs            # 取得して web/data/ に書く
@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   GENERATOR, SOURCE, POP_YEARS, tilesFor,
-  extractPlan, extractMesh, extractSchools, extractPreschools, extractMedical, extractElderCare, extractSchoolDistricts, extractAreas, rasterize,
+  extractPlan, extractMesh, extractSchools, extractPreschools, extractMedical, extractElderCare, extractSchoolDistricts, extractAreas, rasterizeLevels, extractFloodLevels, extractLeveledByLabel, extractLiquefaction,
 } from './extract.mjs';
 
 const here = import.meta.dirname;
@@ -22,7 +22,9 @@ const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 const outDir = path.resolve(opt('--out') ?? path.join(here, '../web/data'));
 
 const CITY = { code: '36201', name: '徳島市' };
-const BBOX = [134.42, 33.98, 134.66, 34.16]; // 徳島市周辺（相談前の1枚シートの地図データと同じ範囲）
+// 徳島市周辺。南端は 33.95（徳島市の最南のメッシュ中心は北緯33.957。以前の 33.98 では南部の校区が切れていた）
+const BBOX = [134.42, 33.95, 134.66, 34.16];
+const raster = (r, bbox = BBOX) => [rasterizeLevels(r.items, bbox, r.labels)];
 const BASE = process.env.REINFOLIB_BASE_URL || 'https://www.reinfolib.mlit.go.jp/ex-api/external/';
 const DELAY_MS = 300;
 const key = process.env.REINFOLIB_API_KEY;
@@ -33,7 +35,7 @@ function tileOf(lon, lat, z) {
   return { x: Math.floor(((lon + 180) / 360) * n), y: Math.floor((0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n) };
 }
 
-// 項目の定義。z は公式の指定範囲（XKT026 は 14〜15、他は 11〜15）。点・小さな多角形は z13（本数が少ない）。
+// 項目の定義。z は公式の指定範囲（XKT026・XKT028 は 14〜15、他は 11〜15）。点・小さな多角形は z13（本数が少ない）。
 const LAYERS = [
   { api: 'XKT003', label: '立地適正化計画', z: 13, file: 'plan.json', make: extractPlan },
   { api: 'XKT013', label: '将来推計人口（250mメッシュ）', z: 13, file: 'population.json', make: extractMesh },
@@ -43,7 +45,10 @@ const LAYERS = [
   { api: 'XKT010', label: '医療機関', z: 13, file: 'facilities.json', part: 'medical', make: extractMedical },
   { api: 'XKT011', label: '福祉施設（老人福祉施設）', z: 13, file: 'facilities.json', part: 'elder', make: extractElderCare },
   { api: 'XKT029', label: '土砂災害警戒区域', z: 13, file: 'hazards.json', part: 'sediment', make: (f) => extractAreas(f, 4) },
-  { api: 'XKT026', label: '洪水浸水想定区域（想定最大規模）', z: 14, file: 'hazards.json', part: 'flood', make: (f) => [rasterize(extractAreas(f, 5), BBOX)], countOf: (rows) => rows[0].cells },
+  { api: 'XKT026', label: '洪水浸水想定区域（想定最大規模）', z: 14, file: 'hazards.json', part: 'flood', make: (f) => raster(extractFloodLevels(f, 5)), countOf: (rows) => rows[0].cells },
+  { api: 'XKT028', label: '津波浸水想定', z: 14, file: 'hazards.json', part: 'tsunami', make: (f) => raster(extractLeveledByLabel(f, (p) => p.A40_003, 5)), countOf: (rows) => rows[0].cells },
+  { api: 'XKT027', label: '高潮浸水想定区域', z: 13, file: 'hazards.json', part: 'surge', make: (f) => raster(extractLeveledByLabel(f, (p) => p.A49_003, 5)), countOf: (rows) => rows[0].cells },
+  { api: 'XKT025', label: '液状化の発生傾向（地形区分に基づく）', z: 13, file: 'hazards.json', part: 'liquefaction', make: (f) => raster(extractLiquefaction(f, 5)), countOf: (rows) => rows[0].cells },
 ];
 const only = (opt('--only') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const targets = LAYERS.filter((l) => !only.length || only.includes(l.api));
@@ -53,7 +58,7 @@ class ApiError extends Error {}
 
 async function get(api, params) {
   const url = `${BASE}${api}?${new URLSearchParams(params)}`;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 6; attempt++) {
     let res = null;
     try {
       res = await fetch(url, { headers: { 'Ocp-Apim-Subscription-Key': key } });
@@ -63,9 +68,9 @@ async function get(api, params) {
       // 401/403=キーが無効・未承認、400=パラメータ。再試行しても同じなので止める（応答本文は出さない）
       throw new ApiError(`HTTP ${res.status}${res.status === 401 || res.status === 403 ? '（キーが無効、または未承認の可能性）' : '（パラメータ・ズームの範囲を確認）'}`);
     }
-    await sleep(1000 * attempt);
+    await sleep(1000 * attempt * attempt);
   }
-  throw new ApiError('接続できませんでした（3回失敗）');
+  throw new ApiError('接続できませんでした（6回失敗。429＝アクセス集中を含む）');
 }
 
 async function fetchLayer(l) {
@@ -103,7 +108,7 @@ async function main() {
     try {
       const { rows, tiles, received } = await fetchLayer(l);
       const f = files[l.file];
-      if (l.part) f[l.part] = l.api === 'XKT026' ? rows[0] : rows; else f.items = rows;
+      if (l.part) f[l.part] = l.countOf ? rows[0] : rows; else f.items = rows;
       manifest.layers[l.api] = { label: l.label, status: 'ok', file: l.file, part: l.part ?? null, z: l.z, tiles, received, count: l.countOf ? l.countOf(rows) : rows.length, fetchedAt: today };
       console.log(`  取得: ${received}件を受信 → ${l.countOf ? l.countOf(rows) + 'セル（約18m格子）' : rows.length + '件'}を保存`);
     } catch (e) {

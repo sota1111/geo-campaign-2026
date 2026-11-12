@@ -13,7 +13,7 @@
   /** 利用規約（PDL1.0 重要情報(1)）の出典の記載例 */
   const ATTRIBUTION = '出典：国土交通省　不動産情報ライブラリ（' + REINFOLIB_URL + '）';
   /** 加工した旨（利用したコンテンツの名称と、作成者が加工した旨） */
-  const PROCESSED = '「都市計画決定GISデータ（立地適正化計画）」「国土数値情報（将来推計人口250mメッシュ・小学校区・学校・保育園・幼稚園等・医療機関・福祉施設・土砂災害警戒区域・洪水浸水想定区域）」（国土交通省）をもとに、作成者が位置の照合・集計をして作成';
+  const PROCESSED = '「都市計画決定GISデータ（立地適正化計画）」「国土数値情報（将来推計人口250mメッシュ・小学校区・学校・保育園・幼稚園等・医療機関・福祉施設・土砂災害警戒区域・洪水浸水想定区域・高潮浸水想定区域・津波浸水想定）」「地形区分に基づく液状化の発生傾向図」（いずれも国土交通省）をもとに、作成者が位置の照合・集計をして作成';
   /** API利用規約 第8条(1)：作成者の責任の所在と、国が作成・監修したものではない旨 */
   const RESPONSIBILITY = 'このアプリは作成者が開発・運営し、表示内容の責任は作成者が負います（国が作成・監修したものではありません）。表示は参考情報で、判断は利用者が行ってください（重要事項説明などの手続きには使えません）';
   /** 将来人口は推計である旨 */
@@ -21,8 +21,12 @@
 
   const PLAN_PDF = 'https://www.city.tokushima.tokushima.jp/shisei/machi_keikaku/townplanning/loa_rat_plan/ricchi_todokede.files/todokede_tebiki_2025.4.pdf';
   const PLAN_PAGE = 'https://www.city.tokushima.tokushima.jp/shisei/machi_keikaku/townplanning/loa_rat_plan/';
-  /** 徒歩圏の半径（m）。不動産の表示に関する公正競争規約は徒歩1分=80m としている。10分=800m */
+  /** 徒歩圏の半径（m。直線距離）。不動産の表示に関する公正競争規約は徒歩1分=80m（道路距離）としている。10分=800m */
   const WALK_RADIUS = 800;
+  /** 少人数の目安。周辺の基準年（2025年）の推計人口がこれ未満なら、増減率を出さない */
+  const SMALL_POP = 100;
+  /** 0〜14歳の人数の目安。基準年がこれ未満なら増減率を出さない */
+  const SMALL_CHILD = 30;
   /** 将来人口を集計する半径（m） */
   const POP_RADIUS = 500;
   /** 地図で指した位置のメッシュを探す上限（m）。250mメッシュの対角の半分（約177m）より少し大きい */
@@ -80,27 +84,73 @@
     XKT011: { label: '福祉施設', name: '国土数値情報（福祉施設）' },
     XKT029: { label: '土砂災害警戒区域', name: '国土数値情報（土砂災害警戒区域）' },
     XKT026: { label: '洪水浸水想定区域', name: '国土数値情報（洪水浸水想定区域（想定最大規模））' },
+    XKT028: { label: '津波浸水想定', name: '国土数値情報（津波浸水想定）' },
+    XKT027: { label: '高潮浸水想定区域', name: '国土数値情報（高潮浸水想定区域）' },
+    XKT025: { label: '液状化の発生傾向', name: '国土交通省都市局（地形区分に基づく液状化の発生傾向図）' },
   };
   const isArr = Array.isArray;
   function validPlan(d) { return d && isArr(d.items) && d.items.length && d.items.every((e) => e && typeof e.id === 'number' && isArr(e.polys)); }
-  function validPop(d) { return d && isArr(d.years) && isArr(d.items) && d.items.length && d.items.every((m) => m && isArr(m.v) && m.v.length === d.years.length * 4); }
+  function validPop(d) { return d && isArr(d.years) && isArr(d.items) && d.items.length && d.items.every((m) => m && typeof m.sc === 'string' && m.sc && isArr(m.v) && m.v.length === d.years.length * 4); }
   function validDistricts(d) { return d && isArr(d.items) && d.items.length && d.items.every((e) => e && e.name && isArr(e.polys)); }
   function validPoints(a) { return isArr(a) && a.length && a.every((p) => p && typeof p.lon === 'number' && typeof p.lat === 'number' && p.name); }
   function validAreas(a) { return isArr(a) && a.length && a.every(isArr); }
-  function validRaster(r) { return !!r && typeof r.bits === 'string' && r.w > 0 && r.h > 0 && r.dx > 0 && r.dy > 0 && typeof r.west === 'number' && typeof r.north === 'number' && r.bits.length >= Math.floor((Math.ceil((r.w * r.h) / 8) * 4) / 3); }
-  /** 格子（base64 のビット列）を Uint8Array にする */
+  const rasterBase = (r) => !!r && r.w > 0 && r.h > 0 && r.dx > 0 && r.dy > 0 && typeof r.west === 'number' && typeof r.north === 'number';
+  /** 格子の形式: bits（1セル1ビット。区域の内外のみ）または lv（セルごとの区分の連長符号化。0=区域外） */
+  function validRaster(r) {
+    if (!rasterBase(r)) return false;
+    if (typeof r.lv === 'string') return !!r.labels && typeof r.labels === 'object';
+    return typeof r.bits === 'string' && r.bits.length >= Math.floor((Math.ceil((r.w * r.h) / 8) * 4) / 3);
+  }
+  /** 連長符号化（値1バイト＋長さ。tools/extract.mjs の rleEncode と対）を total バイトに戻す。形式が不正なら null */
+  function rleDecode(b64, total) {
+    const bin = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+    const out = new Uint8Array(total);
+    let p = 0, o = 0;
+    while (p < bin.length) {
+      const v = bin.charCodeAt(p++);
+      let n = 0, sh = 0, c;
+      do { if (p >= bin.length) return null; c = bin.charCodeAt(p++); n += (c & 127) * Math.pow(2, sh); sh += 7; } while (c & 128);
+      if (o + n > total) return null;
+      out.fill(v, o, o + n); o += n;
+    }
+    return o === total ? out : null;
+  }
+  /** 格子を使える形にする。lv 形式は levels（セルごとの区分）、bits 形式は grid（ビット列）。壊れていれば null */
   function decodeRaster(r) {
+    if (typeof r.lv === 'string') {
+      const levels = rleDecode(r.lv, r.w * r.h);
+      return levels ? Object.assign({}, r, { levels: levels }) : null;
+    }
     const bin = typeof atob === 'function' ? atob(r.bits) : Buffer.from(r.bits, 'base64').toString('binary');
     const a = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
     return Object.assign({}, r, { grid: a });
   }
-  /** 格子の中に入るか。範囲外は false */
-  function inRaster(r, lon, lat) {
+  function cellIndex(r, lon, lat) {
     const col = Math.floor((lon - r.west) / r.dx), row = Math.floor((r.north - lat) / r.dy);
-    if (col < 0 || row < 0 || col >= r.w || row >= r.h) return false;
-    const idx = row * r.w + col;
-    return !!(r.grid[idx >> 3] & (1 << (idx & 7)));
+    if (!(col >= 0 && row >= 0 && col < r.w && row < r.h)) return -1;
+    return row * r.w + col;
+  }
+  /** セルがオンか（描画用） */
+  function cellOn(r, idx) { return r.levels ? r.levels[idx] > 0 : !!(r.grid[idx >> 3] & (1 << (idx & 7))); }
+  /** 指した位置のセルの区分（0=区域外・範囲外。bits 形式は区域内=1） */
+  function levelAt(r, lon, lat) {
+    const idx = cellIndex(r, lon, lat);
+    if (idx < 0) return 0;
+    return r.levels ? r.levels[idx] : (r.grid[idx >> 3] >> (idx & 7)) & 1;
+  }
+  /** 格子の中に入るか。範囲外は false */
+  function inRaster(r, lon, lat) { return levelAt(r, lon, lat) > 0; }
+  /** 位置の約20m以内（隣のセルまで）に、区域の内外の境界があるか。maxLevel は周囲の最大の区分 */
+  function rasterAround(r, lon, lat) {
+    const c = levelAt(r, lon, lat) > 0;
+    let mixed = false, maxLevel = 0;
+    for (const a of [-1.1, 0, 1.1]) for (const b of [-1.1, 0, 1.1]) {
+      const v = levelAt(r, lon + a * r.dx, lat + b * r.dy);
+      if ((v > 0) !== c) mixed = true;
+      if (v > maxLevel) maxLevel = v;
+    }
+    return { level: levelAt(r, lon, lat), mixed: mixed, maxLevel: maxLevel };
   }
 
   /** manifest と各ファイルの内容から、使える項目だけを残した data を作る。status は画面の「未取得」表示に使う。 */
@@ -123,17 +173,22 @@
       if (validPoints(fac[part])) (data.fac = data.fac || {})[part] = fac[part]; else drop(api, 'データの形式が不正です');
     }
     const hz = f.hazards || {};
-    for (const [api, part] of [['XKT029', 'sediment'], ['XKT026', 'flood']]) {
+    for (const [api, part] of [['XKT029', 'sediment'], ['XKT026', 'flood'], ['XKT028', 'tsunami'], ['XKT027', 'surge'], ['XKT025', 'liquefaction']]) {
       if (status[api].state !== 'ok') continue;
-      if (part === 'flood' ? validRaster(hz[part]) : validAreas(hz[part])) (data.hazard = data.hazard || {})[part] = part === 'flood' ? decodeRaster(hz[part]) : hz[part]; else drop(api, 'データの形式が不正です');
+      if (part === 'sediment') { if (validAreas(hz[part])) (data.hazard = data.hazard || {})[part] = hz[part]; else drop(api, 'データの形式が不正です'); continue; }
+      const dr = validRaster(hz[part]) ? decodeRaster(hz[part]) : null;
+      if (dr) (data.hazard = data.hazard || {})[part] = dr; else drop(api, 'データの形式が不正です');
     }
+    // 市区町村の判定に小学校区（市区町村コードつき）も使う
+    if (data.pop && data.districts) data.pop.districts = data.districts;
     return data;
   }
 
   // ---- 位置の照合 ----
-  /** 指した位置の市区町村コード。将来人口メッシュ（SHICODE つき）のうち最も近い中心を、MESH_SNAP 以内で探す。メッシュが無い場所（海・川・無人地帯）は null */
+  /** 指した位置の市区町村コード。まず小学校区の多角形（A27_001 の市区町村コード。pop.districts にあれば）、無ければ将来人口メッシュ（SHICODE つき）のうち最も近い中心を MESH_SNAP 以内で探す。どちらも無い場所（海・川・無人地帯）は null */
   function cityAt(pop, lon, lat) {
     if (!pop) return null;
+    for (const d of pop.districts || []) if (d.city && inPolys(lon, lat, d.polys)) return String(d.city);
     let best = null;
     for (const m of pop.meshes) {
       const d = haversine(lon, lat, m.lon, m.lat);
@@ -228,7 +283,7 @@
     if (data.hazard) {
       f.hazard = {};
       if (data.hazard.sediment) f.hazard.sediment = inPolys(lon, lat, data.hazard.sediment);
-      if (data.hazard.flood) f.hazard.flood = inRaster(data.hazard.flood, lon, lat);
+      for (const part of ['flood', 'tsunami', 'surge', 'liquefaction']) if (data.hazard[part]) f.hazard[part] = rasterAround(data.hazard[part], lon, lat);
     }
     return f;
   }
@@ -237,11 +292,21 @@
   const UNFETCHED = '未取得';
   const unfetched = (data, apis) => apis.filter((a) => data.status[a].state !== 'ok').map((a) => APIS[a].label + '（' + a + '）は' + UNFETCHED + '（' + data.status[a].reason + '）');
   const ok = (data, a) => data.status[a].state === 'ok';
-  const relation = (loc, city) => {
+  /** 周辺と市全体の差（ポイント）を、評価語（「大きい・小さい」）を使わずに述べる */
+  const gap = (loc, city) => {
     if (loc == null || city == null) return '';
-    const d = loc - city;
-    return Math.abs(d) < 5 ? '市全体と同じ程度' : d < 0 ? '市全体より減り方が大きい（または増え方が小さい）' : '市全体より減り方が小さい（または増える）';
+    const d = Math.round(loc - city);
+    return d === 0 ? '市全体と同じ値' : '市全体との差は ' + (d > 0 ? '+' : '−') + Math.abs(d) + ' ポイント';
   };
+  /** 少人数の時は割合を出さず、この文言にする */
+  const SMALL_TEXT = '人数が少なく比較に向かない';
+  /** 年次: 先頭を基準、末尾を先の年、その間で基準の10年後に最も近い年を中間にする */
+  function pickYears(years) {
+    const y0 = years[0], y2 = years[years.length - 1];
+    let y1 = years[Math.min(1, years.length - 1)];
+    for (const y of years.slice(1, -1)) if (Math.abs(y - (y0 + 10)) < Math.abs(y1 - (y0 + 10))) y1 = y;
+    return [y0, y1, y2];
+  }
 
   function planSection(data, f) {
     const sec = { id: 'plan', title: '1. 市の計画：立地適正化計画の区域か', apis: ['XKT003', 'XKT013'], lines: [], ask: [], missing: unfetched(data, ['XKT003']) };
@@ -254,7 +319,7 @@
     else sec.lines.push({ tag: 'XKT003', text: '立地適正化計画の区域の外にある。' });
     if (p.inCityFunction) sec.lines.push({ tag: 'XKT003', text: '都市機能誘導区域の中にある' + ymd(32) + '。医療・福祉・商業などの施設を集めたい区域。' });
     for (const n of p.other) sec.lines.push({ tag: 'XKT003', text: n + 'の中にある。' });
-    if (!p.inResidential) sec.lines.push({ tag: '市の資料', text: '区域の外でも住むことはできる。居住促進区域の外で3戸以上の住宅を建てる開発・建築などは、着手の30日前までに市への届出が必要（徳島市「立地適正化計画 届出の手引」令和7年4月 p.2〜3）。1戸・2戸の住宅の建築は、手引の届出対象の例に入っていない（1,000㎡以上の開発を除く）。' });
+    if (!p.inResidential) sec.lines.push({ tag: '市の資料', text: '区域の外でも住むことはできる。居住促進区域の外で3戸以上の住宅を建てる開発・建築などは、着手の30日前までに市への届出が必要（徳島市「立地適正化計画 届出の手引」令和7年4月 p.2〜3）。1戸・2戸の住宅の建築は、手引の届出対象の例に入っていない（1,000㎡以上の開発を除く）。届出が要るかどうかは、市の都市計画課か宅地建物取引業者に確かめる。' });
     sec.lines.push({ tag: '注意', text: '区域の内外は、住めるかどうかや価格を示すものではない。市が公表する図が正で、この画面は参考。' });
     sec.ask.push('市の都市計画課に、この場所の区域指定と、区域の見直しの予定を聞く。');
     return sec;
@@ -264,17 +329,23 @@
     const sec = { id: 'pop', title: '2. 周りの将来人口（推計）', apis: ['XKT013'], lines: [], ask: [], missing: unfetched(data, ['XKT013']) };
     const q = f.pop;
     if (!q) return sec;
-    const [y0, y1, y2] = q.years, L = q.local, C = q.city;
-    if (!q.meshN) { sec.lines.push({ tag: 'XKT013', text: '半径' + q.radius + 'm に推計人口のあるメッシュがありません（人のいない場所、または対象外）。' }); return sec; }
-    const lc = changePct(L[y0].p, L[y2].p), cc = changePct(C[y0].p, C[y2].p);
-    sec.lines.push({ tag: 'XKT013', text: '半径' + q.radius + 'm（250mメッシュ' + q.meshN + '個）の人口（推計）: ' + y0 + '年 ' + fmtNum(L[y0].p) + '人 → ' + y1 + '年 ' + fmtNum(L[y1].p) + '人（' + fmtPct(changePct(L[y0].p, L[y1].p)) + '）→ ' + y2 + '年 ' + fmtNum(L[y2].p) + '人（' + fmtPct(lc) + '）。' });
-    sec.lines.push({ tag: '作成者の集計', text: '徳島市全体は' + y0 + '→' + y2 + '年で ' + fmtPct(cc) + '。この周辺は' + (relation(lc, cc) || '比べられない') + '。' });
-    const s0 = share(L[y0], 'c'), s2 = share(L[y2], 'c'), cs0 = share(C[y0], 'c'), cs2 = share(C[y2], 'c');
-    const sp = (v) => (v == null ? '算出不可' : v.toFixed(0) + '%');
-    if (s0 != null) sec.lines.push({ tag: 'XKT013', text: '65歳以上の割合: ' + y0 + '年 ' + sp(s0) + ' → ' + y2 + '年 ' + sp(s2) + '（徳島市全体は ' + sp(cs0) + ' → ' + sp(cs2) + '）。' });
-    if (L[y0].a > 0) sec.lines.push({ tag: 'XKT013', text: '0〜14歳: ' + y0 + '年 ' + fmtNum(L[y0].a) + '人 → ' + y2 + '年 ' + fmtNum(L[y2].a) + '人（' + fmtPct(changePct(L[y0].a, L[y2].a)) + '）。' });
-    if (L[y0].p < 100) sec.lines.push({ tag: '注意', text: '周辺の人口が少なく、推計の誤差が相対的に大きい。' });
-    sec.lines.push({ tag: '注意', text: POP_NOTE + '。' });
+    const [y0, y1, y2] = pickYears(q.years), L = q.local, C = q.city;
+    if (!q.meshN) { sec.lines.push({ tag: 'XKT013', text: '半径' + q.radius + 'm に推計人口のあるメッシュがありません（人のいない場所、または対象外）。この節の数字は出せません。' }); return sec; }
+    const small = L[y0].p < SMALL_POP || L[y2].p <= 0;
+    const lc = small ? null : changePct(L[y0].p, L[y2].p), cc = changePct(C[y0].p, C[y2].p);
+    const head = '半径' + q.radius + 'm（250mメッシュ' + q.meshN + '個）の人口（推計）: ' + y0 + '年 ' + fmtNum(L[y0].p) + '人 → ' + y1 + '年 ' + fmtNum(L[y1].p) + '人 → ' + y2 + '年 ' + fmtNum(L[y2].p) + '人';
+    if (small) {
+      sec.lines.push({ tag: 'XKT013', text: head + '。周辺の人数が少なく（' + y0 + '年で' + SMALL_POP + '人未満、または' + y2 + '年の推計が0人）、増減率は' + SMALL_TEXT + 'ため出さない。' });
+    } else {
+      sec.lines.push({ tag: 'XKT013', text: head + '（' + y0 + '→' + y1 + '年 ' + fmtPct(changePct(L[y0].p, L[y1].p)) + '、' + y0 + '→' + y2 + '年 ' + fmtPct(lc) + '）。' });
+      sec.lines.push({ tag: '作成者の集計', text: '徳島市全体は' + y0 + '→' + y2 + '年で ' + fmtPct(cc) + '。周辺は ' + fmtPct(lc) + '（' + gap(lc, cc) + '）。' });
+      const s0 = share(L[y0], 'c'), s2 = share(L[y2], 'c'), cs0 = share(C[y0], 'c'), cs2 = share(C[y2], 'c');
+      const sp = (v) => (v == null ? '—' : v.toFixed(0) + '%');
+      if (s0 != null && s2 != null) sec.lines.push({ tag: 'XKT013', text: '65歳以上の割合: ' + y0 + '年 ' + sp(s0) + ' → ' + y2 + '年 ' + sp(s2) + '（徳島市全体は ' + sp(cs0) + ' → ' + sp(cs2) + '）。' });
+      if (L[y0].a >= SMALL_CHILD && L[y2].a > 0) sec.lines.push({ tag: 'XKT013', text: '0〜14歳: ' + y0 + '年 ' + fmtNum(L[y0].a) + '人 → ' + y2 + '年 ' + fmtNum(L[y2].a) + '人（' + fmtPct(changePct(L[y0].a, L[y2].a)) + '）。' });
+      else if (L[y0].a > 0) sec.lines.push({ tag: 'XKT013', text: '0〜14歳: ' + y0 + '年 ' + fmtNum(L[y0].a) + '人 → ' + y2 + '年 ' + fmtNum(L[y2].a) + '人（人数が少なく比較に向かないため、増減率は出さない）。' });
+    }
+    sec.lines.push({ tag: '注意', text: '1の区域の内外と人口の増減は、別々の事実を並べたもので、関係（区域の外だから減る、など）は示さない。将来人口は推計で、実際の人口ではない（下の注記）。' });
     sec.ask.push('市に、この地区の将来人口の見通しと、公共施設や公共交通の見直しの予定があるかを聞く。');
     return sec;
   }
@@ -286,41 +357,59 @@
     if (!d.name) { sec.lines.push({ tag: 'XKT004', text: '指した位置を含む小学校区は、取得したデータにありません。' }); return sec; }
     sec.lines.push({ tag: 'XKT004', text: '小学校区は「' + d.name + '」。' });
     if (d.sums && ok(data, 'XKT013')) {
-      const [y0, , y2] = f.pop ? f.pop.years : [2025, 2035, 2050];
+      const [y0, , y2] = pickYears(f.pop ? f.pop.years : [2025, 2035, 2050]);
       const a0 = d.sums[y0], a2 = d.sums[y2];
-      if (a0 && a0.a > 0) {
+      if (a0 && a0.a >= SMALL_CHILD && a2 && a2.a > 0) {
         const cc = f.pop ? changePct(f.pop.city[y0].a, f.pop.city[y2].a) : null;
         sec.lines.push({ tag: '作成者の集計', text: 'この校区（メッシュ' + d.meshN + '個）の0〜14歳（推計）: ' + y0 + '年 ' + fmtNum(a0.a) + '人 → ' + y2 + '年 ' + fmtNum(a2.a) + '人（' + fmtPct(changePct(a0.a, a2.a)) + '）。徳島市全体は ' + fmtPct(cc) + '。' });
       }
     }
+    if (d.sums && ok(data, 'XKT013') && !(d.sums[pickYears(f.pop ? f.pop.years : [2025, 2035, 2050])[0]].a >= SMALL_CHILD)) sec.lines.push({ tag: '注意', text: 'この校区のメッシュ内の0〜14歳が少なく、増減率は' + SMALL_TEXT + 'ため出さない。' });
     sec.lines.push({ tag: '注意', text: '学校の統合・存続は教育委員会が決める。この数字だけでは、学校が続くかどうかは分からない。' });
     sec.ask.push('教育委員会に、この校区の通学区域の見直し・統合の予定を聞く。');
     return sec;
   }
 
   function facSection(data, f) {
-    const sec = { id: 'fac', title: '4. 徒歩圏（800m）の生活施設', apis: ['XKT006', 'XKT007', 'XKT010', 'XKT011'], lines: [], ask: [], missing: unfetched(data, ['XKT006', 'XKT007', 'XKT010', 'XKT011']) };
+    const sec = { id: 'fac', title: '4. 徒歩圏（直線800m）の生活施設', apis: ['XKT006', 'XKT007', 'XKT010', 'XKT011'], lines: [], ask: [], missing: unfetched(data, ['XKT006', 'XKT007', 'XKT010', 'XKT011']) };
     const fac = f.fac;
     if (!fac) return sec;
     const apiOf = { elem: 'XKT006', junior: 'XKT006', pre: 'XKT007', hospital: 'XKT010', clinic: 'XKT010', elder: 'XKT011' };
     for (const g of fac.groups) {
       if (!g.have) continue;
       const near = g.nearest ? '最寄りは' + g.nearest.name + '（約' + fmtDist(g.nearest.dist) + '）' : '';
-      sec.lines.push({ tag: apiOf[g.key], text: g.label + ': ' + (g.count ? g.count + '件（' + g.names.join('、') + (g.count > g.names.length ? ' など' : '') + '）' : '徒歩圏に該当なし' + (near ? '。' + near : '')) + '。' });
+      sec.lines.push({ tag: apiOf[g.key], text: g.label + ': ' + (g.count ? g.count + '件（' + g.names.join('、') + (g.count > g.names.length ? ' など' : '') + '）' : '直線800m以内に該当なし' + (near ? '。' + near : '')) + '。' });
     }
-    sec.lines.push({ tag: '注意', text: '徒歩の目安は、不動産の表示に関する公正競争規約の「1分=80m」（10分=800m）で、直線距離。位置は国土数値情報の整備時点（医療機関は令和2年度、学校・福祉施設は令和5年度）で、その後の閉鎖・開設は反映されない。施設が将来も続くかは、このデータでは分からない。' });
+    sec.lines.push({ tag: '注意', text: 'ここでの徒歩圏は、指した位置から直線800m以内で、道路に沿った距離ではない（規約の「1分=80m」は道路距離。坂・川・踏切・遠回りがあれば実際はより長い）。位置は整備時点（医療機関は令和2年度、学校・福祉施設は令和5年度）のもので、その後の閉鎖・開設は反映されず、将来も続くかは分からない。' });
     sec.ask.push('気になる施設は、現在も運営しているか、受け入れ状況を、施設か自治体に直接確かめる。');
     return sec;
   }
 
+  /** 格子で持つ災害の想定。title は行の見出し、depth は区分の呼び方、noBoundary は境界付近の注記を付けないもの（250mメッシュ） */
+  const RASTER_HAZARDS = [
+    { api: 'XKT026', part: 'flood', title: '洪水浸水想定区域（想定最大規模）', depth: '想定浸水深', suffix: '（重なる所は最も深いもの）', out: '想定区域の外にある' },
+    { api: 'XKT028', part: 'tsunami', title: '津波浸水想定', depth: '想定浸水深', suffix: '', out: '想定区域の外にある' },
+    { api: 'XKT027', part: 'surge', title: '高潮浸水想定区域', depth: '想定浸水深', suffix: '', out: '想定区域の外にある' },
+    { api: 'XKT025', part: 'liquefaction', title: '液状化の発生傾向（地形区分に基づく目安）', depth: '区分', suffix: '', out: '取得したデータに区分がない', noBoundary: true },
+  ];
+  function rasterHazardText(spec, r, v) {
+    const label = (lv) => (r.labels && r.labels[lv]) || '区分不明';
+    if (v.mixed && !spec.noBoundary) {
+      return spec.title + ': 想定区域の境界付近にある（約20m以内に区域の内外の境界があり、中か外かは言い切れない' + (v.maxLevel ? '。付近の' + spec.depth + 'は最大で ' + label(v.maxLevel) : '') + '）。約18m格子に変換しているため、境界付近は±20m程度ずれる。';
+    }
+    if (v.level > 0) return spec.title + ': ' + (spec.noBoundary ? '' : '想定区域の中にある（') + spec.depth + ': ' + label(v.level) + (spec.noBoundary ? '' : spec.suffix + '）') + '。';
+    return spec.title + ': ' + spec.out + '。';
+  }
+
   function hazardSection(data, f) {
-    const sec = { id: 'hazard', title: '5. 災害の想定区域（防災の確認）', apis: ['XKT029', 'XKT026'], lines: [], ask: [], missing: unfetched(data, ['XKT029', 'XKT026']) };
+    const apis = ['XKT029', 'XKT026', 'XKT028', 'XKT027', 'XKT025'];
+    const sec = { id: 'hazard', title: '5. 災害の想定区域（防災の確認）', apis: apis, lines: [], ask: [], missing: unfetched(data, apis) };
     const h = f.hazard;
     if (!h) return sec;
     const yn = (v) => (v ? '想定区域の中にある' : '想定区域の外にある');
-    if ('sediment' in h) sec.lines.push({ tag: 'XKT029', text: '土砂災害警戒区域: ' + yn(h.sediment) + '。' });
-    if ('flood' in h) sec.lines.push({ tag: 'XKT026', text: '洪水浸水想定区域（想定最大規模）: ' + yn(h.flood) + '（約18m格子に変換しているため、境界付近は±20m程度ずれる）。' });
-    sec.lines.push({ tag: '注意', text: '区域の外でも、内水氾濫や小さな河川の氾濫は含まれないことがある。安全・危険の判定ではない。' });
+    if ('sediment' in h) sec.lines.push({ tag: 'XKT029', text: '土砂災害警戒区域: ' + yn(h.sediment) + '。このシートは警戒区域と特別警戒区域を区別していない（特別警戒区域は建築や開発に制限がかかる場合があるため、市のハザードマップで確かめる）。' });
+    for (const spec of RASTER_HAZARDS) if (spec.part in h) sec.lines.push({ tag: spec.api, text: rasterHazardText(spec, data.hazard[spec.part], h[spec.part]) });
+    sec.lines.push({ tag: '注意', text: '扱っていない災害: 内水氾濫、ため池、地すべり、急傾斜地、大規模盛土造成地、災害の履歴、津波の到達時間・地震の揺れ・火災。区域の外は安全を意味せず、同じ区域でも深さは場所で違う。安全・危険の判定ではない。' });
     sec.ask.push('市のハザードマップと避難場所を確認し、不動産会社に重要事項説明（水害ハザードマップ上の位置）を聞く。');
     return sec;
   }
@@ -338,7 +427,7 @@
 
   return {
     REINFOLIB_URL, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, POP_NOTE, PLAN_PDF, PLAN_PAGE, WALK_RADIUS, POP_RADIUS, MESH_SNAP, APIS, PLAN_KUBUN, UNFETCHED, FAC_GROUPS,
-    lonLatToWorld, worldToLonLat, haversine, inRing, inPolygon, inPolys, inBBox, fmtDist, decodeRaster, inRaster,
+    lonLatToWorld, worldToLonLat, haversine, inRing, inPolygon, inPolys, inBBox, fmtDist, decodeRaster, rleDecode, inRaster, levelAt, rasterAround, cellOn, pickYears, RASTER_HAZARDS, SMALL_POP, SMALL_CHILD,
     assemble, cityAt, planAt, sumMeshes, popAround, changePct, fmtPct, fmtNum, share, districtAt, facilitiesAround, collect, buildSheet,
   };
 });

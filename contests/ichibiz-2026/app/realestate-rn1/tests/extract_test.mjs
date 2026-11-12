@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import {
   meshCenter, roundRing, polysOf, extractPlan, extractMesh, extractSchools, extractPreschools, extractMedical, extractElderCare,
   extractSchoolDistricts, extractAreas, rasterize, tilesFor, POP_YEARS,
+  rasterizeLevels, rleEncode, extractFloodLevels, extractLeveledByLabel, extractLiquefaction, FLOOD_RANKS,
 } from '../tools/extract.mjs';
 
 const Lib = createRequire(import.meta.url)('../web/lib.js');
@@ -91,4 +92,35 @@ test('多角形だけを残す関数とタイル範囲', () => {
   const tileOf = (lon, lat, z) => ({ x: Math.floor(lon), y: Math.floor(-lat) });
   const t = tilesFor([0, -3, 2, 0], 13, tileOf);
   assert.strictEqual(t.length, 3 * 4);
+});
+
+test('区分つき格子: 連長符号化の往復、重なる所は大きい区分、洪水ランク・津波ラベル・液状化の区分', () => {
+  const a = new Uint8Array(1000); a.fill(2, 10, 700); a[999] = 255;
+  const back = Lib.rleDecode(rleEncode(a), 1000);
+  assert.deepStrictEqual([...back], [...a]);
+  assert.strictEqual(Lib.rleDecode(rleEncode(a), 999), null);
+  const fl = extractFloodLevels([
+    { properties: { A31a_205: 2 }, geometry: poly(0.1, 0.1, 0.5) },
+    { properties: { A31a_205: 4 }, geometry: poly(0.3, 0.3, 0.5) },
+    { properties: { A31a_205: 9 }, geometry: poly(0.9, 0.9, 0.05) },
+  ], 5);
+  assert.strictEqual(fl.labels[4], FLOOD_RANKS[4]);
+  assert.strictEqual(fl.labels[7], '浸水深の区分なし');
+  const r = Lib.decodeRaster(rasterizeLevels(fl.items, [0, 0, 1, 1], fl.labels, 0.01, 0.01));
+  assert.strictEqual(Lib.levelAt(r, 0.15, 0.15), 2);
+  assert.strictEqual(Lib.levelAt(r, 0.5, 0.5), 4);
+  assert.strictEqual(Lib.levelAt(r, 0.925, 0.925), 7);
+  assert.strictEqual(Lib.levelAt(r, 0.05, 0.05), 0);
+  const ts = extractLeveledByLabel([
+    { properties: { A40_003: '10m以上 ～ 20m未満' }, geometry: poly(0, 0, 1) },
+    { properties: { A40_003: '2m以上 ～ 3m未満' }, geometry: poly(2, 2, 1) },
+    { properties: {}, geometry: poly(5, 5, 1) },
+  ], (p) => p.A40_003);
+  assert.deepStrictEqual(ts.labels, { 1: '2m以上〜3m未満', 2: '10m以上〜20m未満' });
+  assert.strictEqual(ts.items.length, 2);
+  const sg = extractLeveledByLabel([{ properties: { A: '0.3m以上0.5m未満' }, geometry: poly(0, 0, 1) }, { properties: { A: '0.3m未満' }, geometry: poly(2, 2, 1) }, { properties: { A: '1m以上3m未満' }, geometry: poly(4, 4, 1) }], (p) => p.A);
+  assert.deepStrictEqual(Object.values(sg.labels), ['0.3m未満', '0.3m以上0.5m未満', '1m以上3m未満']);
+  const lq = extractLiquefaction([{ properties: { liquefaction_tendency_level: 3, note: 'やや液状化しやすい' }, geometry: poly(0, 0, 1) }, { properties: { note: 'x' }, geometry: poly(2, 2, 1) }]);
+  assert.deepStrictEqual(lq.labels, { 3: 'やや液状化しやすい' });
+  assert.strictEqual(lq.items.length, 1);
 });

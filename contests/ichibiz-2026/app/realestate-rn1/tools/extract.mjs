@@ -178,38 +178,112 @@ export function extractAreas(features, prec = 4) {
   return polys;
 }
 
-/** 洪水浸水想定区域のように多角形が非常に多い（徳島市周辺で約7.5万片・3,400万字）項目は、格子（約18m）に変換して同梱する。
- * 各セルの中心が多角形の内側ならオン（外周と穴は偶奇で判定）。細く短い多角形（セルの幅より狭いもの）は落ちることがある。
- * 返り値: { west, north, dx, dy, w, h, bits（1セル1ビット、行ごとに左から。base64）, polys（入力の多角形数）, cells（オンのセル数） } */
-export function rasterize(polys, bbox, dx = 0.0002, dy = 0.00016) {
-  const [west, south, east, north] = bbox;
-  const w = Math.ceil((east - west) / dx), h = Math.ceil((north - south) / dy);
-  const grid = new Uint8Array(Math.ceil((w * h) / 8));
-  let cells = 0;
-  for (const rings of polys) {
-    let minLat = Infinity, maxLat = -Infinity;
-    for (const r of rings) for (const c of r) { if (c[1] < minLat) minLat = c[1]; if (c[1] > maxLat) maxLat = c[1]; }
-    const r0 = Math.max(0, Math.ceil((north - maxLat) / dy - 0.5)), r1 = Math.min(h - 1, Math.floor((north - minLat) / dy - 0.5));
-    for (let row = r0; row <= r1; row++) {
-      const lat = north - (row + 0.5) * dy;
-      const xs = [];
-      for (const ring of rings) {
-        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-          const yi = ring[i][1], yj = ring[j][1];
-          if (yi > lat !== yj > lat) xs.push(ring[i][0] + ((lat - yi) / (yj - yi)) * (ring[j][0] - ring[i][0]));
-        }
-      }
-      xs.sort((a, b) => a - b);
-      for (let k = 0; k + 1 < xs.length; k += 2) {
-        const c0 = Math.max(0, Math.ceil((xs[k] - west) / dx - 0.5)), c1 = Math.min(w - 1, Math.floor((xs[k + 1] - west) / dx - 0.5));
-        for (let col = c0; col <= c1; col++) {
-          const idx = row * w + col;
-          if (!(grid[idx >> 3] & (1 << (idx & 7)))) { grid[idx >> 3] |= 1 << (idx & 7); cells++; }
-        }
+/** 多角形（外周＋穴）の内側にある格子セルの番号を cb(idx) に渡す。各セルの中心が内側ならオン（外周と穴は偶奇で判定） */
+function scanPoly(rings, g, dx, dy, cb) {
+  const { west, north, w, h } = g;
+  let minLat = Infinity, maxLat = -Infinity;
+  for (const r of rings) for (const c of r) { if (c[1] < minLat) minLat = c[1]; if (c[1] > maxLat) maxLat = c[1]; }
+  const r0 = Math.max(0, Math.ceil((north - maxLat) / dy - 0.5)), r1 = Math.min(h - 1, Math.floor((north - minLat) / dy - 0.5));
+  for (let row = r0; row <= r1; row++) {
+    const lat = north - (row + 0.5) * dy;
+    const xs = [];
+    for (const ring of rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const yi = ring[i][1], yj = ring[j][1];
+        if (yi > lat !== yj > lat) xs.push(ring[i][0] + ((lat - yi) / (yj - yi)) * (ring[j][0] - ring[i][0]));
       }
     }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const c0 = Math.max(0, Math.ceil((xs[k] - west) / dx - 0.5)), c1 = Math.min(w - 1, Math.floor((xs[k + 1] - west) / dx - 0.5));
+      for (let col = c0; col <= c1; col++) cb(row * w + col);
+    }
   }
-  return { west, north, dx, dy, w, h, bits: Buffer.from(grid).toString('base64'), polys: polys.length, cells };
+}
+const gridOf = (bbox, dx, dy) => ({ west: bbox[0], north: bbox[3], w: Math.ceil((bbox[2] - bbox[0]) / dx), h: Math.ceil((bbox[3] - bbox[1]) / dy) });
+
+/** 多角形が非常に多い項目（洪水浸水想定区域など。徳島市周辺で約7.5万片・3,400万字）は、格子（約18m）に変換して同梱する。
+ * 各セルの中心が多角形の内側ならオン。細く短い多角形（セルの幅より狭いもの）は落ちることがある。
+ * 返り値: { west, north, dx, dy, w, h, bits（1セル1ビット、行ごとに左から。base64）, polys（入力の多角形数）, cells（オンのセル数） } */
+export function rasterize(polys, bbox, dx = 0.0002, dy = 0.00016) {
+  const g = gridOf(bbox, dx, dy);
+  const grid = new Uint8Array(Math.ceil((g.w * g.h) / 8));
+  let cells = 0;
+  for (const rings of polys) {
+    scanPoly(rings, g, dx, dy, (idx) => { if (!(grid[idx >> 3] & (1 << (idx & 7)))) { grid[idx >> 3] |= 1 << (idx & 7); cells++; } });
+  }
+  return { west: g.west, north: g.north, dx, dy, w: g.w, h: g.h, bits: Buffer.from(grid).toString('base64'), polys: polys.length, cells };
+}
+
+/** バイト列の連長符号化（値1バイト＋長さ（7ビットずつ・下位から。続きがあれば最上位ビット1））→ base64。lib.js の rleDecode と対 */
+export function rleEncode(a) {
+  const out = [];
+  for (let i = 0; i < a.length;) {
+    let j = i + 1;
+    while (j < a.length && a[j] === a[i]) j++;
+    let n = j - i;
+    out.push(a[i]);
+    while (n >= 128) { out.push((n & 127) | 128); n >>>= 7; }
+    out.push(n);
+    i = j;
+  }
+  return Buffer.from(out).toString('base64');
+}
+
+/** 深さ・区分つきの格子。items = [{ rings, v }]（v は 1〜255 の区分。重なる所は大きいほう）。labels = { 区分: 説明 }。
+ * 返り値: { west, north, dx, dy, w, h, lv（セルごとの区分を連長符号化。base64。0=区域外）, labels, counts（区分ごとのセル数）, polys, cells } */
+export function rasterizeLevels(items, bbox, labels, dx = 0.0002, dy = 0.00016) {
+  const g = gridOf(bbox, dx, dy);
+  const lv = new Uint8Array(g.w * g.h);
+  for (const { rings, v } of items) scanPoly(rings, g, dx, dy, (idx) => { if (v > lv[idx]) lv[idx] = v; });
+  const counts = {};
+  let cells = 0;
+  for (let i = 0; i < lv.length; i++) if (lv[i]) { counts[lv[i]] = (counts[lv[i]] || 0) + 1; cells++; }
+  return { west: g.west, north: g.north, dx, dy, w: g.w, h: g.h, lv: rleEncode(lv), labels, counts, polys: items.length, cells };
+}
+
+/** 洪水浸水想定区域（XKT026）の浸水深ランク（A31a_205）。コード定義は国土数値情報の「浸水ランクコード」（water_depth_code。2026-11-13 確認） */
+export const FLOOD_RANKS = { 1: '0.5m未満', 2: '0.5〜3.0m未満', 3: '3.0〜5.0m未満', 4: '5.0〜10.0m未満', 5: '10.0〜20.0m未満', 6: '20.0m以上' };
+const cleanLabel = (v) => str(v).replace(/\s+/g, '').replace(/～/g, '〜');
+// 浸水深の下限。「0.3m未満」のように下限のないものは 0（「0.3m以上0.5m未満」より浅い）
+const leadNumber = (t) => { if (/^[\d.]+m未満/.test(t)) return 0; const m = /([\d.]+)/.exec(t); return m ? Number(m[1]) : 0; };
+
+/** 多角形に区分をつけて返す。getLabel(properties) が文字列を返す項目（津波・高潮の浸水深など）。
+ * 区分は、ラベルの先頭の数値（浸水深の下限）の小さい順に 1, 2, … とする。区分の無い多角形は読み飛ばす */
+export function extractLeveledByLabel(features, getLabel, prec = 4) {
+  const rows = [];
+  for (const f of features) {
+    const label = cleanLabel(getLabel(f?.properties ?? {}));
+    if (!label) continue;
+    for (const rings of polysOf(f.geometry, prec)) rows.push({ rings, label });
+  }
+  const labels = [...new Set(rows.map((r) => r.label))].sort((a, b) => leadNumber(a) - leadNumber(b) || (a < b ? -1 : 1));
+  const code = new Map(labels.map((l, i) => [l, i + 1]));
+  return { items: rows.map((r) => ({ rings: r.rings, v: code.get(r.label) })), labels: Object.fromEntries(labels.map((l, i) => [i + 1, l])) };
+}
+/** 洪水: A31a_205（1〜6）。範囲外・欠けは 7=「浸水深の区分なし」 */
+export function extractFloodLevels(features, prec = 4) {
+  const items = [];
+  let unknown = false;
+  for (const f of features) {
+    const n = num(f?.properties?.A31a_205);
+    const v = n != null && Number.isInteger(n) && n >= 1 && n <= 6 ? n : 7;
+    if (v === 7) unknown = true;
+    for (const rings of polysOf(f?.geometry, prec)) items.push({ rings, v });
+  }
+  return { items, labels: { ...FLOOD_RANKS, ...(unknown ? { 7: '浸水深の区分なし' } : {}) } };
+}
+/** 液状化（XKT025）: liquefaction_tendency_level の値を区分とし、note（「液状化しやすい」など）を説明にする */
+export function extractLiquefaction(features, prec = 4) {
+  const items = [], labels = {};
+  for (const f of features) {
+    const p = f?.properties ?? {};
+    const v = num(p.liquefaction_tendency_level);
+    if (v == null || !Number.isInteger(v) || v < 1 || v > 254) continue;
+    if (!labels[v] && str(p.note)) labels[v] = cleanLabel(p.note);
+    for (const rings of polysOf(f.geometry, prec)) items.push({ rings, v });
+  }
+  return { items, labels };
 }
 
 /** 「x,y」の組をタイルの範囲から作る（bbox = [西, 南, 東, 北]） */

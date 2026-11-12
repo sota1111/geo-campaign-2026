@@ -10,7 +10,7 @@ h2 { font-size: 1.1rem; margin: 0 0 8px; }
 .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:6px 0; }
 .opts { gap:6px 16px; font-size:.9rem; }
 .sw { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-2px; margin-right:2px; }
-.sw-res { background:var(--res); } .sw-city { background:transparent; border:2px solid var(--city); } .sw-flood { background:var(--flood); } .sw-sed { background:var(--sed); }
+.sw-res { background:var(--res); } .sw-city { background:transparent; border:2px solid var(--city); } .sw-flood { background:var(--flood); } .sw-sed { background:var(--sed); } .sw-tsunami { background:rgb(120,60,190); } .sw-surge { background:rgb(20,150,160); } .sw-liq { background:rgb(200,90,30); }
 input[type=search] { flex:1; min-width:180px; padding:8px; border:1px solid var(--line); border-radius:6px; font-size:1rem; }
 button { padding:8px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-size:1rem; cursor:pointer; }
 button.secondary { background:#fff; color:var(--accent); padding:5px 10px; font-size:.9rem; }
@@ -64,7 +64,9 @@ ul.plain { margin:0; padding-left:1.2rem; font-size:.88rem; }
   main, #step2 { max-width:none; padding:0; margin:0; border:0; }
   .panel { border:0; padding:0; margin:0; }
   .sheet { border:1.5px solid #000; padding:6px 8px; }
-  .sec li { font-size:7.6pt; margin-bottom:2px; line-height:1.4; }
+  .sec li { font-size:7.3pt; margin-bottom:1.5px; line-height:1.35; }
+  .secs { grid-template-columns: 1fr 1fr; gap:5px; }
+  .sec { padding:4px 6px; }
   .sec h4 { font-size:8.6pt; }
   .sheet .fine, .sheet ul.plain { font-size:6.6pt; }
   .sheet h3 { font-size:12pt; }

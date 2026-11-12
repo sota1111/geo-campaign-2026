@@ -6,9 +6,9 @@
    "file": "plan.json",
    "part": null,
    "z": 13,
-   "tiles": 35,
-   "received": 57,
-   "count": 7,
+   "tiles": 42,
+   "received": 67,
+   "count": 9,
    "fetchedAt": "2026-11-12"
   },
   "XKT013": {
@@ -17,9 +17,9 @@
    "file": "population.json",
    "part": null,
    "z": 13,
-   "tiles": 35,
-   "received": 4399,
-   "count": 3962,
+   "tiles": 42,
+   "received": 5039,
+   "count": 4524,
    "fetchedAt": "2026-11-12"
   },
   "XKT004": {
@@ -28,9 +28,9 @@
    "file": "districts.json",
    "part": null,
    "z": 13,
-   "tiles": 35,
-   "received": 195,
-   "count": 71,
+   "tiles": 42,
+   "received": 220,
+   "count": 78,
    "fetchedAt": "2026-11-12"
   },
   "XKT006": {
@@ -39,9 +39,9 @@
    "file": "facilities.json",
    "part": "schools",
    "z": 13,
-   "tiles": 35,
-   "received": 147,
-   "count": 101,
+   "tiles": 42,
+   "received": 157,
+   "count": 110,
    "fetchedAt": "2026-11-12"
   },
   "XKT007": {
@@ -50,9 +50,9 @@
    "file": "facilities.json",
    "part": "preschools",
    "z": 13,
-   "tiles": 35,
-   "received": 274,
-   "count": 274,
+   "tiles": 42,
+   "received": 289,
+   "count": 289,
    "fetchedAt": "2026-11-12"
   },
   "XKT010": {
@@ -61,9 +61,9 @@
    "file": "facilities.json",
    "part": "medical",
    "z": 13,
-   "tiles": 35,
-   "received": 750,
-   "count": 750,
+   "tiles": 42,
+   "received": 778,
+   "count": 778,
    "fetchedAt": "2026-11-12"
   },
   "XKT011": {
@@ -72,9 +72,9 @@
    "file": "facilities.json",
    "part": "elder",
    "z": 13,
-   "tiles": 35,
-   "received": 2511,
-   "count": 268,
+   "tiles": 42,
+   "received": 2669,
+   "count": 287,
    "fetchedAt": "2026-11-12"
   },
   "XKT029": {
@@ -83,9 +83,9 @@
    "file": "hazards.json",
    "part": "sediment",
    "z": 13,
-   "tiles": 35,
-   "received": 5016,
-   "count": 4896,
+   "tiles": 42,
+   "received": 6369,
+   "count": 6217,
    "fetchedAt": "2026-11-12"
   },
   "XKT026": {
@@ -94,9 +94,42 @@
    "file": "hazards.json",
    "part": "flood",
    "z": 14,
-   "tiles": 120,
-   "received": 140556,
-   "count": 559095,
+   "tiles": 144,
+   "received": 154264,
+   "count": 616597,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT028": {
+   "label": "津波浸水想定",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "tsunami",
+   "z": 14,
+   "tiles": 144,
+   "received": 41086,
+   "count": 376376,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT027": {
+   "label": "高潮浸水想定区域",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "surge",
+   "z": 13,
+   "tiles": 42,
+   "received": 34995,
+   "count": 356785,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT025": {
+   "label": "液状化の発生傾向（地形区分に基づく）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "liquefaction",
+   "z": 13,
+   "tiles": 42,
+   "received": 9046,
+   "count": 1304187,
    "fetchedAt": "2026-11-12"
   }
  },
@@ -108,7 +141,7 @@
  },
  "bbox": [
   134.42,
-  33.98,
+  33.95,
   134.66,
   34.16
  ],

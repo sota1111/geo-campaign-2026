@@ -19,13 +19,14 @@ const text = (s) => JSON.stringify(s);
 const STATION = [134.5513, 34.0745], KOKUFU = [134.4845, 34.054], HACHIMAN = [134.519, 34.045];
 const sheetOf = (d, p) => Lib.buildSheet(d, Lib.collect(d, p[0], p[1]));
 
-test('同梱データ: 9項目すべて取得済みで、件数がmanifestと一致する', () => {
+test('同梱データ: 12項目すべて取得済みで、件数がmanifestと一致する', () => {
   const m = rd('manifest.json');
   for (const api of Object.keys(Lib.APIS)) {
     assert.strictEqual(data.status[api].state, 'ok', api + ' ' + text(data.status[api]));
     assert.strictEqual(data.status[api].count, m.layers[api].count);
   }
-  assert.strictEqual(data.plan.length, 7);
+  assert.strictEqual(data.plan.length, 9); // 徳島市3（計画区域・居住誘導・都市機能誘導）＋鳴門市2・阿南市3・吉野川市1（取得範囲の南端を広げて増えた）
+  assert.strictEqual(data.plan.filter((e) => e.cityCode === '36201').length, 3);
   assert.ok(data.pop.meshes.length > 3000);
   assert.deepStrictEqual(data.pop.years, [2025, 2035, 2050]);
 });
@@ -34,7 +35,7 @@ test('同梱データにAPIキーらしき文字列が入っていない（32桁
   const re = /[A-Za-z0-9]{32,}/;
   for (const f of fs.readdirSync(DATA_DIR)) {
     const j = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
-    if (j.flood) delete j.flood.bits;
+    for (const k of ['flood', 'tsunami', 'surge', 'liquefaction']) if (j[k]) { delete j[k].bits; delete j[k].lv; } // 格子（base64）は除く
     assert.ok(!re.test(JSON.stringify(j)), f);
   }
   // 取得スクリプト・画面のソースにもキー値は書かれていない
@@ -113,10 +114,11 @@ test('実データ: 徒歩圏の施設は、近い順・重複なしで件数と
   assert.ok(e.nearest.dist > Lib.WALK_RADIUS);
 });
 
-test('実データ: 災害の想定区域（土砂・洪水）は真偽で返り、洪水は格子の範囲外でfalse', () => {
+test('実データ: 災害の想定区域（土砂は真偽、洪水・津波・高潮・液状化は区分と境界付近の有無）で返り、洪水は格子の範囲外でfalse', () => {
   const f = Lib.collect(data, ...STATION);
   assert.strictEqual(typeof f.hazard.sediment, 'boolean');
-  assert.strictEqual(typeof f.hazard.flood, 'boolean');
+  assert.strictEqual(typeof f.hazard.flood.level, 'number');
+  assert.strictEqual(typeof f.hazard.flood.mixed, 'boolean');
   assert.strictEqual(Lib.inRaster(data.hazard.flood, 100, 10), false);
   // 土砂災害警戒区域: 区域の多角形の内側の点は true（多角形は同梱データそのもの）
   const poly0 = data.hazard.sediment[0];
@@ -198,4 +200,44 @@ test('格子: 点を含む多角形から作った格子で内外を判定でき
   assert.ok(Lib.inRaster(r, 134.25, 34.95));
   assert.ok(!Lib.inRaster(r, 134.05, 34.85));
   assert.ok(!Lib.inRaster(r, 133.9, 34.95) && !Lib.inRaster(r, 134.05, 35.1));
+});
+
+test('格子（区分つき・連長符号化）: 区分・境界付近・壊れたデータの扱い', () => {
+  const lv = new Uint8Array(16); lv[0] = 3; lv[1] = 3; lv[2] = 2; lv[6] = 5; // 4x4。行0: 3,3,2,0 / 行1: 0,0,5,0
+  const out = []; for (let i = 0; i < lv.length;) { let j = i + 1; while (j < lv.length && lv[j] === lv[i]) j++; out.push(lv[i], j - i); i = j; }
+  const r = Lib.decodeRaster({ west: 134, north: 35, dx: 0.1, dy: 0.1, w: 4, h: 4, lv: Buffer.from(out).toString('base64'), labels: { 2: 'B', 3: 'C', 5: 'E' } });
+  assert.strictEqual(Lib.levelAt(r, 134.05, 34.95), 3);
+  assert.strictEqual(Lib.levelAt(r, 134.25, 34.95), 2);
+  assert.strictEqual(Lib.levelAt(r, 134.35, 34.95), 0);
+  assert.strictEqual(Lib.levelAt(r, 134.25, 34.85), 5);
+  assert.ok(Lib.rasterAround(r, 134.05, 34.95).mixed);
+  assert.strictEqual(Lib.decodeRaster({ west: 134, north: 35, dx: 0.1, dy: 0.1, w: 4, h: 4, lv: Buffer.from([1, 3]).toString('base64'), labels: {} }), null);
+});
+
+test('少人数の地点: 増減率を出さず「人数が少なく比較に向かない」と出す。「減り方が大きい」の評価語は出さない', () => {
+  let small = 0, normal = 0;
+  for (let i = 0; i < 60; i++) for (let j = 0; j < 60; j++) {
+    const f = Lib.collect(data, 134.44 + i * 0.0035, 33.96 + j * 0.0032);
+    if (f.cityCode !== '36201') continue;
+    const t = text(Lib.buildSheet(data, f).sections[1]);
+    assert.ok(!/減り方が大きい|減り方が小さい|算出不可|−100%/.test(t));
+    if (f.pop.meshN && f.pop.local[2025].p < Lib.SMALL_POP) { small++; assert.ok(t.includes('人数が少なく比較に向かない') && !/（[+−±]\d+%）/.test(t.split('徳島市全体')[0])); } else if (f.pop.meshN) normal++;
+  }
+  assert.ok(small > 10 && normal > 100, small + '/' + normal);
+});
+
+test('災害の節: 津波・高潮・液状化・洪水の行と、扱っていない災害・土砂の特別警戒区域の注記が出る', () => {
+  const t = text(sheetOf(data, STATION).sections.find((s) => s.id === 'hazard'));
+  for (const w of ['津波浸水想定', '高潮浸水想定区域', '液状化', '洪水浸水想定区域', '特別警戒区域', '扱っていない災害', 'XKT028', 'XKT027', 'XKT025']) assert.ok(t.includes(w), w);
+});
+
+test('徒歩圏は「直線800m（道路距離ではない）」と明記する', () => {
+  const t = text(sheetOf(data, STATION).sections.find((s) => s.id === 'fac'));
+  assert.ok(t.includes('直線800m') && t.includes('道路に沿った距離ではない'));
+});
+
+test('徳島市の南端: 取得範囲が市の最南のメッシュ（北緯33.957）を含む', () => {
+  assert.ok(data.bbox[1] <= 33.95);
+  const south = data.pop.meshes.filter((m) => m.sc === '36201').reduce((a, m) => Math.min(a, m.lat), 90);
+  assert.ok(south < 33.97, String(south));
 });

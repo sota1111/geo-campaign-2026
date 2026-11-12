@@ -4,7 +4,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const GSI = 'https://cyberjapandata.gsi.go.jp/xyz/';
-  const state = { data: null, view: { lon: 134.5548, lat: 34.0703, z: 14 }, pin: null, facts: null, show: { res: true, city: true, flood: false, sed: false }, floodImg: null };
+  const state = { data: null, view: { lon: 134.5548, lat: 34.0703, z: 14 }, pin: null, facts: null, show: { res: true, city: true, flood: false, sed: false, tsunami: false, surge: false, liq: false }, rimg: {}, pending: null };
 
   // ---- 地図 ----
   const map = $('map'), tiles = $('tiles'), cv = $('over'), pinEl = $('pin');
@@ -58,17 +58,18 @@
       }
     }
   }
-  function floodImage() {
-    const r = state.data && state.data.hazard && state.data.hazard.flood;
+  const RCOLOR = { flood: [74, 163, 223], tsunami: [120, 60, 190], surge: [20, 150, 160], liquefaction: [200, 90, 30] };
+  function rasterImage(part) {
+    const r = state.data && state.data.hazard && state.data.hazard[part];
     if (!r) return null;
-    if (state.floodImg) return state.floodImg;
+    if (state.rimg[part]) return state.rimg[part];
     const c = document.createElement('canvas'); c.width = r.w; c.height = r.h;
-    const g = c.getContext('2d'), id = g.createImageData(r.w, r.h), px = id.data;
+    const g = c.getContext('2d'), id = g.createImageData(r.w, r.h), px = id.data, col = RCOLOR[part];
     for (let i = 0; i < r.w * r.h; i++) {
-      if (r.grid[i >> 3] & (1 << (i & 7))) { px[i * 4] = 74; px[i * 4 + 1] = 163; px[i * 4 + 2] = 223; px[i * 4 + 3] = 150; }
+      if (Lib.cellOn(r, i)) { px[i * 4] = col[0]; px[i * 4 + 1] = col[1]; px[i * 4 + 2] = col[2]; px[i * 4 + 3] = 150; }
     }
     g.putImageData(id, 0, 0);
-    return (state.floodImg = c);
+    return (state.rimg[part] = c);
   }
   function drawOverlay() {
     const dpr = window.devicePixelRatio || 1, { w, h } = size();
@@ -78,9 +79,11 @@
     const d = state.data;
     if (d) {
       const code = d.city.code;
-      if (state.show.flood && d.hazard && d.hazard.flood) {
-        const r = d.hazard.flood, a = project(r.west, r.north), b = project(r.west + r.w * r.dx, r.north - r.h * r.dy);
-        g.imageSmoothingEnabled = false; g.drawImage(floodImage(), a.x, a.y, b.x - a.x, b.y - a.y);
+      for (const [k, part] of [['flood', 'flood'], ['tsunami', 'tsunami'], ['surge', 'surge'], ['liq', 'liquefaction']]) {
+        if (state.show[k] && d.hazard && d.hazard[part]) {
+          const r = d.hazard[part], a = project(r.west, r.north), b = project(r.west + r.w * r.dx, r.north - r.h * r.dy);
+          g.imageSmoothingEnabled = false; g.drawImage(rasterImage(part), a.x, a.y, b.x - a.x, b.y - a.y);
+        }
       }
       if (state.show.sed && d.hazard && d.hazard.sediment) {
         g.beginPath(); tracePolys(g, d.hazard.sediment, w, h); g.fillStyle = 'rgba(192,113,26,.45)'; g.fill('evenodd');
@@ -183,7 +186,7 @@
     const d = state.data;
     $('dataStatus').innerHTML = Object.entries(Lib.APIS).map(([api, a]) => {
       const s = d ? d.status[api] : { state: 'missing', reason: 'データを読み込めませんでした' };
-      return '<li><strong>' + esc(api) + '</strong> ' + esc(a.name) + '： ' + (s.state === 'ok' ? '<span class="st-ok">取得済み</span>（' + s.count + (api === 'XKT026' ? 'セル' : '件') + '・' + esc(s.fetchedAt || '') + '）' : '<span class="st-ng">' + Lib.UNFETCHED + '</span>（' + esc(s.reason) + '）') + '</li>';
+      return '<li><strong>' + esc(api) + '</strong> ' + esc(a.name) + '： ' + (s.state === 'ok' ? '<span class="st-ok">取得済み</span>（' + s.count + (['XKT026', 'XKT028', 'XKT027', 'XKT025'].includes(api) ? 'セル（約18m格子）' : '件') + '・' + esc(s.fetchedAt || '') + '）' : '<span class="st-ng">' + Lib.UNFETCHED + '</span>（' + esc(s.reason) + '）') + '</li>';
     }).join('');
     $('fetchedAt').textContent = d && d.fetchedAt ? d.fetchedAt : '—';
   }
@@ -192,7 +195,7 @@
     return '位置を指定しました。下の先行きシートを確認してください。';
   }
   function choose(lon, lat) {
-    if (!state.data) { $('status').textContent = 'データを読み込み中です。少し待ってからもう一度指してください。'; return; }
+    if (!state.data) { state.pending = { lon, lat }; $('status').textContent = 'データを読み込み中です（回線が遅いと十数秒かかります）。読み込みが終わると、指した位置で自動的にシートを出します。'; return; }
     state.pin = { lon, lat };
     state.facts = Lib.collect(state.data, lon, lat);
     $('status').textContent = statusText(state.facts);
@@ -219,7 +222,7 @@
     const lon = Number(b.dataset.lon), lat = Number(b.dataset.lat);
     state.view = { lon, lat, z: 15 }; choose(lon, lat);
   }));
-  const toggles = { tgResidential: 'res', tgCity: 'city', tgFlood: 'flood', tgSediment: 'sed' };
+  const toggles = { tgResidential: 'res', tgCity: 'city', tgFlood: 'flood', tgSediment: 'sed', tgTsunami: 'tsunami', tgSurge: 'surge', tgLiq: 'liq' };
   for (const [id, k] of Object.entries(toggles)) $(id).onchange = (e) => { state.show[k] = e.target.checked; drawOverlay(); };
   $('printBtn').onclick = () => window.print();
 
@@ -239,8 +242,9 @@
     }));
     state.data = Lib.assemble(manifest, files);
   }
+  function runPending() { if (state.pending && state.data) { const p = state.pending; state.pending = null; choose(p.lon, p.lat); } }
   const App = window.App = { state, choose, render, last: null, ready: false };
-  load().then(() => { App.ready = true; renderStatus(); $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE; render(); })
+  load().then(() => { App.ready = true; renderStatus(); runPending(); $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE; render(); })
     .catch(() => { App.ready = true; $('status').textContent = 'データを読み込めませんでした。'; renderStatus(); });
   $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE;
   render();

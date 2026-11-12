@@ -44,7 +44,7 @@ async function run(tag, w, h, mobile) {
   await open(w, h, mobile);
   await shot(`${tag}-1-top.png`);
   check(`${tag}: 横スクロールなし`, await ev('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'));
-  check(`${tag}: データ9項目が取得済み表示`, (await ev('document.querySelectorAll("#dataStatus .st-ok").length')) === 9);
+  check(`${tag}: データ12項目が取得済み表示`, (await ev('document.querySelectorAll("#dataStatus .st-ok").length')) === 12);
   check(`${tag}: クレジット・出典・加工・責任・推計の表示（フッター）`, await ev('["attribution","processed","credit","resp","popnote"].every((i) => document.getElementById(i).textContent.length > 20)'));
   // 例の場所 → 実クリック（地図中央）
   await ev('document.querySelector("button.ex").click(); true');
