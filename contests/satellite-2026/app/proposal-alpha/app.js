@@ -174,7 +174,7 @@
       '<div class="tablewrap"><table><thead><tr><th>区間（線に沿った距離）</th><th>セル数</th><th>最大(m)</th><th>90%値(m)</th><th>' + tall + 'm以上</th><th></th></tr></thead><tbody>' +
       r.chunks.map((c, i) => '<tr' + (i === worst ? ' class="sel"' : '') + '><td>' + Math.round(c.fromM) + '〜' + Math.round(c.toM) + ' m</td><td>' + c.cells + '</td><td>' + val(c, c.max) + '</td><td>' + val(c, c.p90) + '</td><td>' + val(c, c.outside ? 0 : Math.round(c.tallShare * 100), '%') + '</td><td>' + (c.outside ? '' : '<span class="bar" style="width:' + Math.round(c.tallShare * 80) + 'px"></span>') + '</td></tr>').join('') +
       '</tbody></table></div>' +
-      '<p class="note">黄色の行は、この線の中で相対的に高木が多い100m区間（90%値、同じなら高木の割合）。<b>これは電線との離隔距離でも倒木の予測でもありません</b>。樹高マップの元画像は ' + esc(CHM.acq) + ' の撮影（冬季）で現在の樹高ではなく、論文が報告する平均絶対誤差は2.8 m（カリフォルニア州・サンパウロ州での評価。日本での検証値は未確認）です。実運用では、こうして絞った区間にだけ航空LiDARやドローンを当てます。</p>';
+      '<p class="note">黄色の行は、この線の中で相対的に高木が多い100m区間（90%値、同じなら高木の割合）。<b>これは電線との離隔距離でも倒木の予測でもありません</b>。樹高マップの元画像は ' + esc(CHM.acq) + ' の撮影（冬季）で現在の樹高ではなく、論文が報告する平均絶対誤差は3つの検証データの平均で2.8 m（米国NEON 2.7 m・カリフォルニア州 0.6 m・サンパウロ州 5.1 m。日本での検証値は未確認）です。実運用では、こうして絞った区間にだけ航空LiDARやドローンを当てます。</p>';
   }
   function svgPoint(ev) {
     const svg = $('#xmap'), pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
