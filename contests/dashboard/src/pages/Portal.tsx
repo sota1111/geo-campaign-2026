@@ -1,35 +1,78 @@
-import { useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { useState, useSyncExternalStore } from 'react'
+import { ChevronDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { APPS, CONTESTS, isNewPlan } from '@/apps/registry'
-import { CONTEST_INFO, type ContestInfo } from '@/apps/contests-info'
+import { CONTEST_INFO, contestsByDeadline, nextDeadline, type ContestInfo } from '@/apps/contests-info'
 import { LATEST } from '@/apps/eval-results'
 import { Remaining } from '@/components/shared/Remaining'
-import { CONTEST_STATUS, STATUS_REASON, contestCounts } from '@/data/status'
-import { ContestPanel, nextDeadline } from '@/pages/Overview'
+import { CONTEST_STATUS, STAGES, STATUS_LABEL, STATUS_REASON, otherNextCount, type Stage } from '@/data/status'
+import { ContestPanel } from '@/pages/Overview'
 import { EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
 import { Question, asOf } from '@/pages/Progress'
 
 const HASH_KEY = '#open='
-/** URL ハッシュ（#open=id,id）から、開いている詳細を読む。要素の id と一致しない書式なので、読み込み時にブラウザがスクロールすることはない */
-const readOpen = (): string[] => CONTEST_INFO.some((c) => `#${c.id}` === window.location.hash) ? [window.location.hash.slice(1)] : readOpenList()
-const readOpenList = (): string[] =>
+/**
+ * URL ハッシュ（#open=id,id）から、開いている詳細を読む（ブラウザの「戻る」で開いた状態を戻すため）。
+ * 古い形式の #<コンペid> は読まない。アプリからの戻り（index.html）は常に全行が閉じた一覧。
+ * 要素の id と一致しない書式なので、読み込み時にブラウザがスクロールすることはない
+ */
+const readOpen = (): string[] =>
   window.location.hash.startsWith(HASH_KEY)
     ? window.location.hash.slice(HASH_KEY.length).split(',').filter((id) => CONTEST_INFO.some((c) => c.id === id))
     : []
 
-const COLS = 'lg:grid-cols-[15rem_minmax(0,1.1fr)_9.5rem_minmax(0,1fr)_1.5rem]'
+/** スマホ幅（640px 未満）か。詳細を行の下ではなく、下から出るシートで開くために使う */
+const NARROW = '(max-width: 639.98px)'
+function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia(NARROW)
+      m.addEventListener('change', cb)
+      return () => m.removeEventListener('change', cb)
+    },
+    () => window.matchMedia(NARROW).matches,
+    () => false,
+  )
+}
 
-/** 一覧の1行（ボタン）。クリックで直下に詳細が開く。行の位置は変えない */
+const COLS = 'lg:grid-cols-[13rem_minmax(0,0.9fr)_minmax(0,1.3fr)_minmax(0,1fr)_1.5rem]'
+
+const STAGE_WORD: Record<Stage['mark'], string> = { '✓': '済', '？': '判断待ち', '□': 'これから' }
+const STAGE_CLS: Record<Stage['mark'], string> = {
+  '✓': 'border-slate-500 bg-slate-100',
+  '？': 'border-amber-600 bg-amber-100 text-amber-950',
+  '□': 'border-dashed border-slate-500 bg-white',
+}
+
+/** 提出までの段階。件数ではなく、段階ごとの印（✓ 済／？ 判断待ち／□ これから）と文言で示す。色だけに頼らない */
+function Stages({ contest }: { contest: ContestInfo['id'] }) {
+  return (
+    <ol className="flex flex-wrap gap-1" aria-label="提出までの段階" data-testid="row-progress">
+      {STAGES[contest].map((s) => (
+        <li
+          key={s.label}
+          className={`whitespace-nowrap rounded border px-1 py-px text-xs font-bold leading-snug ${STAGE_CLS[s.mark]}`}
+          data-testid="row-stage"
+          data-mark={s.mark}
+        >
+          {s.label} <span aria-hidden>{s.mark}</span>
+          <span className="sr-only">（{STAGE_WORD[s.mark]}）</span>
+          {s.note && <span className={`font-normal ${s.mark === '✓' ? 'hidden lg:inline' : ''}`}>（{s.note}）</span>}
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+/** 一覧の1行（ボタン）。クリックで直下（スマホ幅は下から出るシート）に詳細が開く。行の位置は変えない */
 function ContestRow({ info, open, onToggle }: { info: ContestInfo; open: boolean; onToggle: () => void }) {
   const contest = CONTESTS.find((c) => c.id === info.id)!
   const st = CONTEST_STATUS[info.id]
   const nd = nextDeadline(info)
-  const doneDeadlines = info.deadlines.filter((d) => d.doneAt)
-  const { done, left } = contestCounts(info.id)
-  const pct = Math.round((done / (done + left)) * 100)
   const next = st.next[0]
+  const more = otherNextCount(info.id)
   return (
     <button
       type="button"
@@ -37,48 +80,44 @@ function ContestRow({ info, open, onToggle }: { info: ContestInfo; open: boolean
       aria-expanded={open}
       aria-controls={`detail-${info.id}`}
       data-testid={`row-${info.id}`}
-      className={`grid w-full items-start gap-x-3 gap-y-1.5 rounded-lg px-3 py-2 text-left hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 ${COLS}`}
+      className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-lg bg-card px-3 py-1.5 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 lg:sticky lg:top-12 lg:z-10 lg:gap-y-0.5 lg:py-2 ${COLS} ${open ? 'lg:rounded-b-none' : ''}`}
     >
-      <span className="min-w-0 space-y-0.5">
-        <span className="block text-sm font-bold leading-tight">{contest.name.replace(/20.*$/, '')}</span>
-        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-          <span>
-            次の締切 <span className="font-bold">{nd.text}</span>
+      {/* 1段目（スマホ）: コンペ名と開閉の目印。デスクトップは5列の1段目・2段目に並べる */}
+      <span className="col-start-1 row-start-1 min-w-0 text-sm font-bold leading-tight lg:col-start-1">
+        {contest.name.replace(/20.*$/, '')}
+      </span>
+      <ChevronDown aria-hidden className={`col-start-2 row-start-1 size-5 transition-transform lg:hidden ${open ? 'rotate-180' : ''}`} />
+      {/* 2段目（スマホ）: 状況の札・締切・残り日数 */}
+      <span className="col-span-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs lg:contents">
+        <span className="inline-flex items-center rounded border-2 border-slate-800 px-1.5 py-px text-xs font-bold lg:col-start-2 lg:row-start-1 lg:py-0.5 lg:text-sm" data-testid="row-status">
+          <span aria-hidden>▲&nbsp;</span>
+          <span className="sr-only">提出不可: </span>
+          {STATUS_LABEL[info.id]}
+        </span>
+        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 lg:col-start-1 lg:row-start-2">
+          <span data-testid="row-deadline">
+            <span className="lg:hidden">締切</span>
+            <span className="hidden lg:inline">次の締切</span> <span className="font-bold">{nd.text}</span>
+            {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
           </span>
           <Remaining at={nd.at} />
         </span>
-        {doneDeadlines.map((d) => (
-          <span key={d.label} className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span aria-hidden>✓</span>
-            {d.label} {d.doneLabel ?? '済'}（{Number(d.doneAt!.split('-')[1])}/{Number(d.doneAt!.split('-')[2])}）
-          </span>
-        ))}
+        <span className="hidden lg:col-start-2 lg:row-start-2 lg:block" data-testid="row-reason">{STATUS_REASON[info.id]}</span>
       </span>
-      <span className="min-w-0 space-y-0.5 text-xs">
-        <span className="inline-flex items-center rounded border-2 border-slate-800 px-1.5 py-0.5 text-sm font-bold" data-testid="row-status">
-          <span aria-hidden>▲&nbsp;</span>提出不可
-        </span>
-        <span className="block">{STATUS_REASON[info.id]}</span>
+      <span className="col-span-2 lg:col-span-1 lg:col-start-3 lg:row-span-2 lg:row-start-1">
+        <Stages contest={info.id} />
       </span>
-      <span className="space-y-1 text-xs" data-testid="row-progress">
-        <span className="block font-bold">
-          <span aria-hidden>✓</span> {done} 済・<span aria-hidden>□</span> {left} 残
-        </span>
-        <span className="block h-2 w-full overflow-hidden rounded-sm border border-slate-600 bg-white" aria-hidden>
-          <span className="block h-full bg-slate-700" style={{ width: `${pct}%` }} />
-        </span>
-        <span className="sr-only">
-          全 {done + left} 項目のうち {done} 件済
-        </span>
-      </span>
-      <span className="min-w-0 space-y-0.5 text-xs">
-        <span className="block font-bold text-muted-foreground lg:hidden">総司令官の次の一手</span>
+      <span className="col-span-2 min-w-0 text-xs lg:col-span-1 lg:col-start-4 lg:row-span-2 lg:row-start-1">
         <span className="flex items-start gap-1.5">
+          <span className="shrink-0 whitespace-nowrap font-bold text-muted-foreground lg:hidden">次の一手</span>
           {next.decision && <Question>判断</Question>}
-          <span className="min-w-0 font-medium" data-testid="row-next">{next.text}</span>
+          <span className="min-w-0 font-medium" data-testid="row-next">
+            {next.text}
+            {more > 0 && <span className="ml-1 whitespace-nowrap font-normal text-muted-foreground" data-testid="row-more">（ほか{more}件）</span>}
+          </span>
         </span>
       </span>
-      <ChevronDown aria-hidden className={`hidden size-5 self-center transition-transform lg:block ${open ? 'rotate-180' : ''}`} />
+      <ChevronDown aria-hidden className={`hidden size-5 self-center transition-transform lg:col-start-5 lg:row-span-2 lg:row-start-1 lg:block ${open ? 'rotate-180' : ''}`} />
     </button>
   )
 }
@@ -86,23 +125,38 @@ function ContestRow({ info, open, onToggle }: { info: ContestInfo; open: boolean
 export default function Portal() {
   const [open, setOpen] = useState<string[]>(readOpen)
   const [evalOpen, setEvalOpen] = useState(false)
-  const toggle = (id: string) => {
-    const next = open.includes(id) ? open.filter((x) => x !== id) : [...open, id]
+  const narrow = useNarrow()
+  const write = (next: string[]) => {
     setOpen(next)
     // ハッシュは replaceState で書き換える（スクロールもフォーカス移動も起きない）
     window.history.replaceState(null, '', next.length ? `${HASH_KEY}${next.join(',')}` : window.location.pathname + window.location.search)
   }
-  const sorted = [...CONTEST_INFO].sort((a, b) => Date.parse(nextDeadline(a).at) - Date.parse(nextDeadline(b).at))
+  const rowEl = (id: string) => document.querySelector<HTMLElement>(`[data-testid=row-${id}]`)
+  const toggle = (id: string) => {
+    if (narrow) return write(open.includes(id) ? [] : [id])
+    write(open.includes(id) ? open.filter((x) => x !== id) : [...open, id])
+  }
+  /** 詳細の末尾の「閉じる」: 閉じたあとも行にフォーカスを残す（スクロールはさせない） */
+  const closeFromBottom = (id: string) => {
+    rowEl(id)?.focus({ preventScroll: true })
+    write(open.filter((x) => x !== id))
+  }
+  const sheetId = narrow ? open[open.length - 1] : undefined
+  const sheetInfo = CONTEST_INFO.find((c) => c.id === sheetId)
+  const sorted = contestsByDeadline()
   return (
     <div className="mx-auto max-w-6xl space-y-2">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <h1 className="text-lg font-bold lg:text-xl">統合ダッシュボード</h1>
-        <span className="text-xs text-muted-foreground">{asOf} 時点・締切の近い順。行を押すと、その下に詳細が開きます</span>
+        <h1 className="sr-only text-xl font-bold lg:not-sr-only">統合ダッシュボード</h1>
+        <span className="text-xs text-muted-foreground">
+          {asOf} 時点・締切順<span className="hidden sm:inline">。行を押すと詳細が開きます</span>　<span aria-hidden>✓</span> 済　<span aria-hidden>？</span> 判断待ち{' '}
+          <span aria-hidden>□</span> これから
+        </span>
       </header>
       <ul className="space-y-0.5 text-xs" data-testid="progress-overall">
         <li className="flex gap-1.5">
           <span aria-hidden>▲</span>
-          <span className="font-bold">どの案も提出不可: 本人欄（氏名・所属・体制・経験）が未記入</span>
+          <span className="font-bold">どの案も提出不可: 本人欄<span className="hidden sm:inline">（氏名・所属・体制・経験）</span>が未記入</span>
         </li>
         <li className="flex gap-1.5">
           <span aria-hidden>▲</span>
@@ -114,7 +168,7 @@ export default function Portal() {
         <div className={`hidden gap-x-3 px-3 text-xs font-bold text-muted-foreground lg:grid ${COLS}`} aria-hidden>
           <span>コンペ・次の締切</span>
           <span>状況</span>
-          <span>進捗（項目数）</span>
+          <span>提出までの段階</span>
           <span>総司令官の次の一手（判断が先）</span>
           <span />
         </div>
@@ -123,7 +177,7 @@ export default function Portal() {
           return (
             <div key={info.id} className="rounded-lg border-2 border-slate-600 bg-card" data-testid={`contest-${info.id}`}>
               <ContestRow info={info} open={isOpen} onToggle={() => toggle(info.id)} />
-              {isOpen && (
+              {isOpen && !narrow && (
                 <div
                   id={`detail-${info.id}`}
                   role="region"
@@ -132,12 +186,47 @@ export default function Portal() {
                   data-testid={`detail-${info.id}`}
                 >
                   <ContestPanel info={info} onOpenEval={() => setEvalOpen(true)} />
+                  <div className="mt-3 flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => closeFromBottom(info.id)} data-testid={`close-${info.id}`}>
+                      閉じる <span aria-hidden>▲</span>
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           )
         })}
       </section>
+
+      <Sheet open={!!sheetInfo} onOpenChange={(o) => !o && write([])}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          className="max-h-[88dvh] gap-0 rounded-t-xl p-0"
+          onCloseAutoFocus={(e) => {
+            // 閉じたあと、行にフォーカスを戻す。行へのスクロールはさせない
+            e.preventDefault()
+            if (sheetId) rowEl(sheetId)?.focus({ preventScroll: true })
+          }}
+          data-testid="detail-sheet"
+        >
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b-2 border-slate-600 px-3 py-2">
+            <SheetTitle className="text-base">{sheetInfo?.tabName}の詳細</SheetTitle>
+            <Button variant="outline" size="sm" className="min-h-9" onClick={() => write([])} data-testid="sheet-close">
+              <X className="size-4" aria-hidden />
+              閉じる
+            </Button>
+          </div>
+          <SheetDescription className="sr-only">コンペの詳細。閉じると一覧に戻ります。</SheetDescription>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
+            id={sheetInfo ? `detail-${sheetInfo.id}` : undefined}
+            data-testid={sheetInfo ? `detail-${sheetInfo.id}` : undefined}
+          >
+            {sheetInfo && <ContestPanel info={sheetInfo} onOpenEval={() => setEvalOpen(true)} />}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={evalOpen} onOpenChange={setEvalOpen}>
         <DialogTrigger asChild>

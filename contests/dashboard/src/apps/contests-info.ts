@@ -95,7 +95,7 @@ export const CONTEST_INFO: ContestInfo[] = [
       { label: 'UDC2026 募集要項', url: 'https://urbandata-challenge.jp/udc2026_entry' },
       { label: 'UDC 公式トップ', url: 'https://urbandata-challenge.jp/' },
     ],
-    alsoApps: [{ id: 'odpt', note: '作品①としても提出するアプリ（ODPTタブ）' }],
+    alsoApps: [{ id: 'odpt', note: '作品①としても提出するアプリ（公共交通オープンデータチャレンジにも出します）' }],
   },
   {
     id: 'satellite-2026',
@@ -228,4 +228,16 @@ export function remainingText(atIso: string, now: number = Date.now()): { text: 
   if (hours < 24) return { text: `あと${Math.max(hours, 1)}時間`, past: false, urgent: true }
   const days = Math.floor(ms / 86_400_000)
   return { text: `あと${days}日`, past: false, urgent: days <= 7 }
+}
+
+/** 次に来る、まだ済んでいない締切（済んだ締切は除く。全部過ぎていれば最後の締切） */
+export function nextDeadline(info: ContestInfo) {
+  const now = Date.now()
+  const open = info.deadlines.filter((d) => !d.doneAt)
+  return open.find((d) => new Date(d.at).getTime() > now) ?? open[open.length - 1] ?? info.deadlines[info.deadlines.length - 1]
+}
+
+/** 締切の近い順に並べたコンペ（一覧の本文とサイドバーで共通） */
+export function contestsByDeadline(): ContestInfo[] {
+  return [...CONTEST_INFO].sort((a, b) => Date.parse(nextDeadline(a).at) - Date.parse(nextDeadline(b).at))
 }

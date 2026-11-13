@@ -116,11 +116,65 @@ export const STATUS_REASON: Record<ContestId, string> = {
   'odpt-2026': 'アプリ未公開、応募フォーム下書き中、憲兵の監査は未実施',
 }
 
-/** 一覧の進捗: 出さない案を除く各案の「済」と「残り」の項目数の合計 */
-export function contestCounts(contest: ContestId): { done: number; left: number } {
-  const ps = PLANS.filter((p) => p.contest === contest && p.intent !== '出さない')
-  return {
-    done: ps.reduce((n, p) => n + p.done.length, 0),
-    left: ps.reduce((n, p) => n + p.todo.length + (p.decisions?.length ?? 0), 0),
-  }
+/**
+ * 一覧の「状況」の札。そのコンペで今いちばん止まっている理由の種類（根拠は正本の残作業）。
+ * 4コンペで文言が重ならないようにしてある。提出可否は、一覧上部の「どの案も提出不可」が示す。
+ */
+export const STATUS_LABEL: Record<ContestId, string> = {
+  'satellite-2026': '判断待ち',
+  'ichibiz-2026': '判断・記入待ち',
+  'udc-2026': '案内・公開待ち',
+  'odpt-2026': '下書き・公開待ち',
+}
+
+/** 段階の印: ✓ 済、？ 判断待ち・要確認、□ 未着手・作業中 */
+export type StageMark = '✓' | '？' | '□'
+export interface Stage {
+  label: string
+  mark: StageMark
+  /** 補足（かっこで添える） */
+  note?: string
+}
+
+/**
+ * 一覧の進捗: 提出までの段階。件数ではなく、何が済んで何が残っているかを段階の並びで示す。
+ * 段階の名前はコンペごとに正本（reports/ops/status-20261113.md）の完了・残作業から決めた。
+ * 比較中の案は「案の選定 ？」に分けて出し、提出予定の案の段階には混ぜない。
+ */
+export const STAGES: Record<ContestId, Stage[]> = {
+  'satellite-2026': [
+    { label: '提出文', mark: '✓' },
+    { label: 'デモ', mark: '✓' },
+    { label: '案の選定', mark: '？', note: 'B かα' },
+    { label: '本人欄', mark: '□' },
+    { label: '提出', mark: '□' },
+  ],
+  'ichibiz-2026': [
+    { label: '提出文', mark: '✓' },
+    { label: 'デモ', mark: '✓' },
+    { label: '案の選定', mark: '？', note: '部門ごと' },
+    { label: '本人欄・PPT', mark: '□' },
+    { label: '登録', mark: '□' },
+  ],
+  'udc-2026': [
+    { label: '概要登録', mark: '✓', note: '11/9' },
+    { label: '説明・デモ', mark: '✓', note: '下書き' },
+    { label: '作品②の形', mark: '？', note: 'アプリにするか' },
+    { label: '公開URL', mark: '□' },
+    { label: '本応募', mark: '□' },
+  ],
+  'odpt-2026': [
+    { label: 'アプリ', mark: '✓' },
+    { label: '提出文', mark: '□', note: '下書き中' },
+    { label: 'N2', mark: '？', note: '収集の判断' },
+    { label: '公開・監査', mark: '□' },
+    { label: '提出', mark: '□' },
+  ],
+}
+
+/** 総司令官への「次の一手」の、先頭以外の件数（詳細の「判断待ち」＋「次にやること」の合計から先頭の1件を引く） */
+export function otherNextCount(contest: ContestId): number {
+  const decisions = crossItems().filter((i) => i.kind === 'decision' && i.contest === contest).length
+  const tasks = CONTEST_STATUS[contest].next.filter((n) => !n.decision).length
+  return Math.max(0, decisions + tasks - 1)
 }

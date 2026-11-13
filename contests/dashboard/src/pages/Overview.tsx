@@ -8,15 +8,10 @@ import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
 import { appUrl, siteRoot } from '@/lib/data'
 import { ContestProgress } from '@/pages/Progress'
-import { CONTEST_INFO, type ContestInfo } from '@/apps/contests-info'
+import { CONTEST_INFO, nextDeadline, type ContestInfo } from '@/apps/contests-info'
 import { AppScoreLine } from '@/pages/EvalPanels'
 
-/** 次に来る、まだ済んでいない締切（済んだ締切は除く。全部過ぎていれば最後の締切） */
-export function nextDeadline(info: ContestInfo) {
-  const now = Date.now()
-  const open = info.deadlines.filter((d) => !d.doneAt)
-  return open.find((d) => new Date(d.at).getTime() > now) ?? open[open.length - 1] ?? info.deadlines[info.deadlines.length - 1]
-}
+export { nextDeadline }
 
 /** 新しい案（比較用・未選定）の目印。色だけに頼らず、黒地の文言と破線の枠で示す */
 function NewPlanTag() {

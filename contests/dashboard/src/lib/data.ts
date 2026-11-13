@@ -8,9 +8,9 @@ export function siteRoot(): string {
   return document.getElementById('root')?.dataset.root ?? './'
 }
 
-/** 統合ダッシュボード（ポータル）の URL。tab を渡すと、そのコンペのタブを開いた状態で戻れる（例 satellite-2026） */
-export function portalUrl(tab?: string): string {
-  return `${siteRoot()}index.html${tab ? `#${tab}` : ''}`
+/** 統合ダッシュボード（ポータル）の URL。戻ったときは常に全行が閉じた一覧（ハッシュは付けない） */
+export function portalUrl(): string {
+  return `${siteRoot()}index.html`
 }
 
 /** ?from=<コンペ id> で開かれたとき、そのコンペ id（戻り先のタブ用）。知らない値は無視する */
