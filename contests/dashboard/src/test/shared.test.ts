@@ -79,7 +79,8 @@ describe('mapStyle / registry', () => {
   it('今の案から新しい案を引ける（見比べるリンク用）。ODPT 定時性カルテの状態の文に数値を書かない', () => {
     expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha'])
     expect(newPlansOf('sat-a')).toEqual([])
-    expect(newPlansOf('udc-moritsuchi').map((a) => a.id)).toEqual(['udc-aed'])
+    expect(newPlansOf('udc-moritsuchi')).toEqual([])
+    expect(newPlansOf('biz-idea').map((a) => a.id)).toEqual(['udc-aed'])
     expect(getApp('odpt-teiji')?.stateNote).toMatch(/まだ遅れの集計はありません/)
     expect(getApp('odpt-teiji')?.stateNote).not.toMatch(/\d+\s*(便|件|%|％)/)
   })

@@ -225,17 +225,16 @@ export const APPS: AppMeta[] = [
   {
     id: 'udc-aed',
     plan: 'new',
-    pairWith: 'udc-moritsuchi',
+    pairWith: 'biz-idea',
     embed: 'udc-aed',
     audience: '住民・自治体の担当者向け',
     name: '夜も使えるAED診断マップ',
-    contest: 'udc-2026',
-    division: '作品③（新案・①②に追加）',
+    contest: 'ichibiz-2026',
+    division: 'アイデア部門 IN1 のデモ（UDC には登録しない）',
     pairNote:
-      '作品③として、作品①②に追加して出す案です（置き換えではなく併存）。作品①（生活アクセス診断マップ）と見せ方が近く、類似作品として無効と見なされるおそれがあります（基準は非公開。要確認）。',
-    alsoCompare: ['odpt'],
-    deadline: '2026/12/27 23:59（概要登録は 11/15 23:59）',
-    deadlineAt: '2026-12-27T23:59:00+09:00',
+      'UDC には登録しないことが決まりました（11/13 総司令官）。このアプリはイチBiz アイデア部門 IN1「いま使えるAED地図」のデモとして使います。',
+    deadline: '2026/12/10 20:00',
+    deadlineAt: '2026-12-10T20:00:00+09:00',
     purpose:
       '自治体が公開したAEDの利用可能な曜日・時間から、選んだ曜日と時刻に徒歩圏で使えるAEDがない地区を地図で見て、24時間使えるAEDを1台置いた場合の変化を試算する。',
     dataKind: 'real',
@@ -271,7 +270,7 @@ export const CARDS_ONLY: CardOnly[] = [
     division: 'アイデア部門（新案IN1）',
     deadline: '2026/12/10 20:00',
     pairWith: 'biz-idea',
-    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは11台（2か所。救急車内等4台を除く本案の判定）。提出文のみ（デモは UDC の「夜も使えるAED診断マップ」と共用の予定）。',
+    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは11台（2か所。救急車内等4台を除く本案の判定）。提出文のみ（デモは「夜も使えるAED診断マップ」。UDC には登録しない）。',
     demoAppId: 'udc-aed',
     docs: [
       { label: '課題の文を読む', path: 'submission/idea-in1/problem.txt' },

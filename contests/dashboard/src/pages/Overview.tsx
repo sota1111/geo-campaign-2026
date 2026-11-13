@@ -8,25 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
 import { appUrl, siteRoot } from '@/lib/data'
-import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
+import { Remaining } from '@/components/shared/Remaining'
+import { ContestProgress, PortalProgress } from '@/pages/Progress'
+import { CONTEST_INFO, type ContestInfo } from '@/apps/contests-info'
 import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
 import { LATEST } from '@/apps/eval-results'
-
-/** 残り日数のバッジ。色だけに頼らず、文言と記号で緊急度を示す */
-function Remaining({ at }: { at: string }) {
-  const r = remainingText(at)
-  const cls = r.past
-    ? 'bg-muted text-muted-foreground'
-    : r.urgent
-      ? 'border border-amber-500 bg-amber-100 text-amber-950'
-      : 'border border-sky-300 bg-sky-50 text-sky-950'
-  return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-bold ${cls}`}>
-      {r.urgent && <span aria-hidden>▲&nbsp;</span>}
-      {r.text}
-    </span>
-  )
-}
 
 /** 最も近い、まだ過ぎていない締切（全部過ぎていれば最後の締切） */
 function nextDeadline(info: ContestInfo) {
@@ -51,7 +37,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardHeader className="gap-1 px-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <NewPlanTag />
-          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">{c.demoAppId ? '提出文のみ（デモは UDC と共用）' : 'デモなし'}</span>
+          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">{c.demoAppId ? '提出文のみ（デモは AED マップ）' : 'デモなし'}</span>
         </div>
         <CardTitle className="text-base leading-tight" data-testid={`card-only-title-${c.id}`}>{c.name}</CardTitle>
         <CardDescription className="text-xs">
@@ -84,7 +70,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
             </a>
           ))}
           {c.demoAppId && (
-            <Button asChild size="sm" title={`UDC「${getApp(c.demoAppId)?.name}」のデモを開きます`}>
+            <Button asChild size="sm" title={`「${getApp(c.demoAppId)?.name}」のデモを開きます`}>
               <a href={`${appUrl(c.demoAppId)}?from=${c.contest}`} data-testid={`card-only-demo-${c.id}`}>
                 デモを開く <ArrowRight className="size-4" aria-hidden />
               </a>
@@ -226,6 +212,7 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
   const hasNew = newCount > 0
   return (
     <div className="space-y-3">
+      <ContestProgress contest={info.id} />
       <div className="grid items-start gap-3 lg:grid-cols-[3fr_2fr] lg:grid-rows-[auto_1fr]">
         {/* 概要と締切 */}
         <div className="rounded-lg border bg-card p-3 lg:col-start-1 lg:row-start-1">
@@ -384,6 +371,8 @@ export default function Overview() {
           コンペを選ぶと、募集内容・締切・注意点・審査基準と、そのコンペ向けのアプリが見られます。バッジは実データ／架空データ／一部架空の区別です。
         </p>
       </header>
+
+      <PortalProgress onSelectContest={setTab} />
 
       <Tabs value={tab} onValueChange={setTab} className="gap-2">
         <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-[repeat(4,1fr)_auto]">

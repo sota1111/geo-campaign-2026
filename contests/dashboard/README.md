@@ -41,6 +41,21 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 
 仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
 
+## 進捗の表示（判断待ち・総司令官の作業・案ごとの完了と残作業）
+
+データは `src/data/progress.ts` にあります（型付き TS。元は `reports/ops/status-<日付>.md`）。参謀長は次の順で更新します。
+
+1. 正本の md を直す。
+2. `progress.ts` の `PROGRESS_AS_OF`・`PROGRESS_SOURCE`、`PLANS`（案ごとの `done`・`todo`。担当は `owner: '総司令官' | '部隊'`、正本に担当がなければ省く。`tag` は「判断待ち」「要確認」）、`DECISIONS`（判断待ちの一覧）、`OVERALL`（全体）を、正本と同じ文言に合わせる。
+3. 案を足すときは `PLANS` に1件足し、`contest`・`deadlineAt`・`appId`（registry の id）を入れる。
+4. `npm run typecheck && npm test` で確認。
+
+`PLANS` の各案には `short`（一覧用の短い名前）と `intent`（提出予定／比較中／出さない）も要ります。各コンペの「提出までの状況」（提出可能か1行・次にやること最大3つ）は `src/data/status.ts` の `CONTEST_STATUS` を直します。
+
+ポータルの先頭に全コンペ横断の「総司令官のやること」（`DECISIONS` と `owner: '総司令官'` の `todo` を締切順に自動で並べる）、各コンペのタブの最上段に「提出までの状況」、その下に案ごとのチェックリスト（✓ 完了、□ 未完了＋担当、？ 判断待ち）が出ます。画面確認は `node scripts/progress-shots.mjs <preview URL> docs/screenshots/progress-20261113`（全面撮影・横スクロール・コンソールエラー）。状態は文言と記号（✓ 完了、□ 未完了、◆ 判断待ち・要確認）で示し、色だけに頼りません。
+
+`udc-aed`（夜も使えるAED診断マップ）は 11/13 の決定で UDC には登録せず、イチBiz アイデア部門 IN1 のデモとして `biz-idea` の隣に置いています。UDC タブの進捗には「作品③ UDC には登録しない」と決定を残しています。
+
 ## 新しい案（比較用・未選定）の足し方
 
 総司令官が「今の案」と「新しい案」を見比べて選ぶため、新しい案は今の案と同じコンペ・部門の隣に並べます（ポータルのコンペタブ内で、今の案の右に破線の枠の「新しい案（比較用・未選定）」カード。サイドバーにも同じ表示）。今の案のアプリは変更しません。
