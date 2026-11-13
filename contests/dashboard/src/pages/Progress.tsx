@@ -1,27 +1,23 @@
-import { useState } from 'react'
 import { DeadlineChip, Remaining } from '@/components/shared/Remaining'
-import { CONTESTS, type ContestId } from '@/apps/registry'
+import { type ContestId } from '@/apps/registry'
 import { CONTEST_INFO } from '@/apps/contests-info'
-import { PROGRESS_AS_OF, PROGRESS_SOURCE, plansByContest, type Owner, type PlanProgress, type TodoItem } from '@/data/progress'
-import { CONTEST_STATUS, crossItems, type CrossItem } from '@/data/status'
+import { PROGRESS_AS_OF, plansByContest, type Owner, type PlanProgress, type TodoItem } from '@/data/progress'
+import { CONTEST_STATUS, crossItems } from '@/data/status'
 
-const asOf = PROGRESS_AS_OF.slice(5).replace('-', '/')
-const contestShort = (id: ContestId | 'registry') => (id === 'registry' ? '登録情報' : (CONTESTS.find((c) => c.id === id)?.short ?? id))
+export const asOf = PROGRESS_AS_OF.slice(5).replace('-', '/')
 
-/** 「提出までの状況」の id。「状況を見る」とタブの切り替えがここへスクロールする */
-export const statusId = (c: ContestId) => `status-${c}`
 
 /** 担当の札。色に頼らず、文言と形で区別する。担当が不明な項目は札を出さない */
-function OwnerTag({ owner }: { owner?: Owner }) {
+export function OwnerTag({ owner }: { owner?: Owner }) {
   if (!owner) return null
   if (owner === '総司令官') return <span className="rounded bg-slate-800 px-1 text-xs font-bold text-white">担当: 総司令官</span>
   return <span className="rounded border border-slate-600 px-1 text-xs font-bold">担当: {owner}</span>
 }
 
 /** 判断待ち・要確認は ？ を付ける（アンバーの枠＋記号＋文言） */
-function Question({ children }: { children: React.ReactNode }) {
+export function Question({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded border border-amber-600 bg-amber-100 px-1 text-xs font-bold text-amber-950">
+    <span className="shrink-0 whitespace-nowrap rounded border border-amber-600 bg-amber-100 px-1 text-xs font-bold text-amber-950">
       <span aria-hidden>？</span>
       {children}
     </span>
@@ -46,148 +42,49 @@ function Ref({ r }: { r?: string }) {
 
 const PREFIX = /^(衛星|イチBiz|UDC|ODPT)[ :]\s*/
 
-/** ポータルの先頭: 全コンペ横断の「総司令官のやること」。いちばん近い締切だけ開き、他は件数付きで畳む。判断を先、作業を後に並べる */
-export function PortalProgress({ onOpenStatus }: { onOpenStatus: (id: ContestId) => void }) {
-  const [wide] = useState(() => typeof window === 'undefined' || !window.matchMedia || window.matchMedia('(min-width: 1024px)').matches)
-  const items = crossItems()
-  const groups: { key: string; at?: string; label: string; rows: CrossItem[] }[] = []
-  for (const it of items) {
-    const key = it.at ?? 'none'
-    let g = groups.find((x) => x.key === key)
-    if (!g) groups.push((g = { key, at: it.at, label: '', rows: [] }))
-    g.rows.push(it)
-    if (it.label.length > g.label.length) g.label = it.label
-  }
-  const nDec = items.filter((i) => i.kind === 'decision').length
-  const nCond = items.reduce((n, i) => n + (i.children?.length ?? 0), 0)
+/** そのコンペの判断待ち。選ばれていない案の作業は、判断の下に畳む */
+function DecisionList({ contest }: { contest: ContestId }) {
+  const items = crossItems().filter((i) => i.kind === 'decision' && i.contest === contest)
+  if (items.length === 0) return <span className="text-muted-foreground">なし</span>
   return (
-    <section aria-label="総司令官のやること" className="space-y-1.5 rounded-lg border-2 border-slate-700 bg-card p-3" data-testid="portal-progress">
-      <h2 className="flex flex-wrap items-baseline gap-x-2 text-base font-bold">
-        総司令官のやること
-        <span className="text-xs font-normal text-muted-foreground">
-          締切順・{asOf} 時点（判断 {nDec}件・作業 {items.length - nDec}件。未選定の案の作業 {nCond}件は判断の下に畳む）
-        </span>
-        <span className="text-xs font-normal">
-          <Question>判断</Question> 決める事項（先に並べる）　<span aria-hidden>□</span> 作業
-        </span>
-      </h2>
-      <ul className="space-y-0.5 text-xs lg:flex lg:gap-6" data-testid="progress-overall">
-        <li className="flex gap-1.5">
-          <span aria-hidden>▲</span>
-          <span className="font-bold">どの案も提出不可: 本人欄（氏名・所属・体制・経験）が未記入</span>
-        </li>
-        <li className="flex gap-1.5">
-          <span aria-hidden>▲</span>
-          <span>main へのマージ待ち（締切なし）: PR #13・#14・#12（詳細: {PROGRESS_SOURCE}）</span>
-        </li>
-      </ul>
-      <div data-testid="progress-tasks">
-        {(() => {
-        const cards = groups.map((g, gi) => {
-          const dec = g.rows.filter((r) => r.kind === 'decision').length
-          const task = g.rows.length - dec
-          return (
-            <details key={g.key} open={gi === 0} className="rounded-md border border-slate-500 p-2" data-testid="task-group">
-              <summary className="cursor-pointer text-sm font-bold">
-                {g.at ? `締切 ${g.label}` : '締切の記載なし'}
-                {g.at && (
-                  <>
-                    {' '}
-                    <Remaining at={g.at} />
-                  </>
-                )}
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                  （{dec > 0 && `判断${dec}`}
-                  {dec > 0 && task > 0 && '・'}
-                  {task > 0 && `作業${task}`}）
-                </span>
-              </summary>
-              <ul className="mt-1.5 space-y-1 text-xs">
-                {g.rows.map((r, i) => (
-                  <li
-                    key={i}
-                    className={`flex gap-1.5 ${r.kind === 'decision' ? 'rounded border-l-4 border-amber-600 bg-amber-50 px-1.5 py-1' : ''}`}
-                    data-testid={r.kind === 'decision' ? 'decision-item' : 'task-item'}
-                  >
-                    {r.kind === 'decision' ? (
-                      <span className="shrink-0">
-                        <Question>判断</Question>
-                      </span>
-                    ) : (
-                      <>
-                        <span aria-hidden className="font-bold">□</span>
-                        <span className="sr-only">作業: </span>
-                      </>
-                    )}
-                    <div className="min-w-0">
-                      <span className="mr-1 rounded border border-slate-500 px-1 font-bold">{contestShort(r.contest)}</span>
-                      {r.who && <span className="mr-1 font-bold">{r.who}</span>}
-                      {r.text.replace(PREFIX, '')}
-                      {r.kind === 'decision' && r.contest !== 'registry' && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenStatus(r.contest as ContestId)}
-                          className="ml-1 inline-flex min-h-8 items-center text-xs font-medium text-primary underline underline-offset-2"
-                        >
-                          状況を見る
-                        </button>
-                      )}
-                      {r.children && r.children.length > 0 && (
-                        <details className="mt-1 rounded border border-dashed border-slate-500 bg-card px-1.5 py-0.5" data-testid="conditional-tasks">
-                          <summary className="cursor-pointer font-medium">選んだ案で必要になる作業（{r.children.length}件）</summary>
-                          <ul className="mt-1 space-y-1 pb-1">
-                            {r.children.map((c, j) => (
-                              <li key={j} className="flex gap-1.5" data-testid="conditional-item">
-                                <span aria-hidden className="font-bold">□</span>
-                                <span className="sr-only">作業（選んだ場合）: </span>
-                                <span className="min-w-0">
-                                  <span className="mr-1 font-bold">{c.who}</span>
-                                  {c.text}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
-                      )}
-                    </div>
+    <ul className="space-y-1" data-testid="contest-decisions">
+      {items.map((r) => (
+        <li key={r.text} className="rounded border-l-4 border-amber-600 bg-amber-50 px-1.5 py-1" data-testid="decision-item">
+          <Question>判断</Question> {r.text.replace(PREFIX, '')}
+          {r.label && <span className="ml-1 text-xs text-muted-foreground">（締切 {r.label}）</span>}{' '}
+          <OwnerTag owner="総司令官" />
+          {r.children && r.children.length > 0 && (
+            <details className="mt-1 rounded border border-dashed border-slate-500 bg-card px-1.5 py-0.5 text-xs" data-testid="conditional-tasks">
+              <summary className="cursor-pointer font-medium">選んだ案で必要になる作業（{r.children.length}件）</summary>
+              <ul className="mt-1 space-y-1 pb-1">
+                {r.children.map((c, j) => (
+                  <li key={j} className="flex gap-1.5" data-testid="conditional-item">
+                    <span aria-hidden className="font-bold">□</span>
+                    <span className="sr-only">作業（選んだ場合）: </span>
+                    <span className="min-w-0">
+                      <span className="mr-1 font-bold">{c.who}</span>
+                      {c.text}
+                    </span>
                   </li>
                 ))}
               </ul>
             </details>
-          )
-        })
-        const others = cards.slice(1)
-        return wide ? (
-          <div className="grid items-start gap-2 lg:grid-cols-[1fr_2fr]">
-            {cards[0]}
-            <div className="grid items-start gap-2 lg:grid-cols-2">{others}</div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {cards[0]}
-            <details className="rounded-md border border-slate-500 p-2" data-testid="other-groups">
-              <summary className="cursor-pointer text-sm font-bold">ほかの締切 {others.length}件（開くと件数と内容）</summary>
-              <div className="mt-2 space-y-2">{others}</div>
-            </details>
-          </div>
-        )
-        })()}
-      </div>
-    </section>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 
-/** 各コンペのタブの最上段: 提出までの状況 */
+/** 各コンペの詳細の最上段: 提出までの状況 */
 export function ContestStatusBox({ contest }: { contest: ContestId }) {
   const info = CONTEST_INFO.find((c) => c.id === contest)
   const st = CONTEST_STATUS[contest]
   if (!info || !st) return null
   return (
     <section
-      id={statusId(contest)}
-      tabIndex={-1}
       aria-label="提出までの状況"
-      className="scroll-mt-14 rounded-lg border-2 border-slate-700 bg-card p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
+      className="rounded-lg border-2 border-slate-700 bg-card p-3"
       data-testid={`contest-status-${contest}`}
     >
       <h3 className="text-base font-bold">
@@ -210,10 +107,14 @@ export function ContestStatusBox({ contest }: { contest: ContestId }) {
           <span aria-hidden>▲ </span>
           {st.gap}
         </dd>
+        <dt className="font-bold">判断待ち</dt>
+        <dd>
+          <DecisionList contest={contest} />
+        </dd>
         <dt className="font-bold">次にやること</dt>
         <dd>
           <ol className="space-y-1">
-            {st.next.map((n, i) => (
+            {st.next.filter((n) => !n.decision).map((n, i) => (
               <li key={n.text} className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5" data-testid="next-action">
                 <span className="font-bold">{i + 1}.</span>
                 {n.decision && <Question>判断</Question>}

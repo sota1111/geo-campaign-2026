@@ -82,6 +82,9 @@
   outline-offset: -3px !important;
 }
 
+/* 縦スクロールバーの出入りで幅が変わり、行の高さが動くのを防ぐ（詳細を開いても一覧の位置を動かさない） */
+html { scrollbar-gutter: stable; }
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

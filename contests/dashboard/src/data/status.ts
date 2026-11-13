@@ -107,3 +107,20 @@ export function crossItems(): CrossItem[] {
     .sort((a, b) => t(a.x) - t(b.x) || k(a.x) - k(b.x) || a.i - b.i)
     .map((v) => v.x)
 }
+
+/** 一覧の「状況」の理由（1行。CONTEST_STATUS.gap の要約。事実は同じ） */
+export const STATUS_REASON: Record<ContestId, string> = {
+  'udc-2026': '本応募: 公開URL・記入が未了（概要登録は済）',
+  'satellite-2026': '申請者欄・体制欄が未記入、B とαが未決',
+  'ichibiz-2026': '本人欄・背景欄が未記入、部門ごとの案が未決',
+  'odpt-2026': 'アプリ未公開、応募フォーム下書き中、憲兵の監査は未実施',
+}
+
+/** 一覧の進捗: 出さない案を除く各案の「済」と「残り」の項目数の合計 */
+export function contestCounts(contest: ContestId): { done: number; left: number } {
+  const ps = PLANS.filter((p) => p.contest === contest && p.intent !== '出さない')
+  return {
+    done: ps.reduce((n, p) => n + p.done.length, 0),
+    left: ps.reduce((n, p) => n + p.todo.length + (p.decisions?.length ?? 0), 0),
+  }
+}
