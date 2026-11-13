@@ -4,8 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { AppStepsProvider, useRegisteredSteps } from '@/components/shared/AppSteps'
 import { HeaderSlotContext } from '@/components/shared/HeaderSlot'
-import { CONTESTS, getApp } from '@/apps/registry'
-import { portalUrl } from '@/lib/data'
+import { CONTESTS, alsoComparedBy, getApp, newPlansOf } from '@/apps/registry'
+import { appUrl, portalUrl } from '@/lib/data'
 import { StepsSidebar, StepsTopbar } from './StepsPanel'
 import { SampleBar, sampleUrl } from './SampleBar'
 import { AppIdContext } from '@/components/shared/AppIdContext'
@@ -42,7 +42,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
         <div className="sticky top-0 z-30 bg-background md:shrink-0">
           <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-sm md:h-10 md:flex-nowrap md:overflow-hidden md:py-0">
             <a
-              href={portalUrl(app?.contest)}
+              href={portalUrl()}
               className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-primary hover:bg-accent"
             >
               <ArrowLeft className="size-4" />
@@ -50,6 +50,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
             </a>
             <span className="min-w-0 flex-1 truncate text-xs font-semibold md:hidden">{app?.name}</span>
             <span className="hidden truncate text-xs text-muted-foreground md:inline">
+              {app?.embed && <span className="font-semibold text-foreground">{app.name}　</span>}
               {contest?.short}／{app?.division}
             </span>
             {app && <span className="hidden shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium sm:inline">{app.audience}</span>}
@@ -62,6 +63,27 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 実行サンプルを見る
               </a>
             )}
+            {newPlansOf(appId).map((n) => (
+              <a
+                key={n.id}
+                href={appUrl(n.id)}
+                data-testid="compare-new-link"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+              >
+                新案「{n.name}」と見比べる
+              </a>
+            ))}
+            {alsoComparedBy(appId).map((n) => (
+              <a
+                key={n.id}
+                href={appUrl(n.id)}
+                data-testid="also-compared-link"
+                title={`「${n.name}」と見比べる`}
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+              >
+                「{n.name}」と見比べる
+              </a>
+            ))}
             <div ref={setSlot} className="flex min-w-0 flex-wrap items-center gap-2 max-md:basis-full md:ml-auto md:flex-nowrap" />
           </header>
           <StepsTopbar />

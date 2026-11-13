@@ -1,0 +1,734 @@
+[
+  {
+    "w": 1280,
+    "all": {
+      "svg": [
+        {
+          "series": [
+            {
+              "id": "radar-series-biz-business",
+              "points": "170,45 237.71,91.01 247.99,162.8 213.39,235.1 135.29,217.08 98.44,161.33 91.82,82.65"
+            },
+            {
+              "id": "radar-series-biz-business-nb",
+              "points": "170,45 232.55,95.12 234.93,159.82 196.03,199.06 143.97,199.06 105.07,159.82 91.82,82.65"
+            },
+            {
+              "id": "radar-series-biz-idea",
+              "points": "170,45 232.55,95.12 247.99,162.8 213.39,235.1 138.15,211.13 105.07,159.82 91.82,82.65"
+            },
+            {
+              "id": "radar-series-udc-aed",
+              "points": "170,45 232.55,95.12 234.93,159.82 204.71,217.08 143.97,199.06 105.07,159.82 91.82,82.65"
+            },
+            {
+              "id": "radar-series-biz-realestate",
+              "points": "170,45 232.55,95.12 247.99,162.8 204.71,217.08 141.8,203.56 101.76,160.58 95.73,85.77"
+            },
+            {
+              "id": "radar-series-biz-realestate-rn1",
+              "points": "170,45 232.55,95.12 243.12,161.69 204.71,217.08 143.97,199.06 101.76,160.58 91.82,82.65"
+            }
+          ]
+        },
+        {
+          "series": [
+            {
+              "id": "radar-series-biz-business",
+              "points": "170,71.6 250,145 170,218.4 110,145"
+            },
+            {
+              "id": "radar-series-biz-business-nb",
+              "points": "170,65 250,145 170,205 143.4,145"
+            },
+            {
+              "id": "radar-series-biz-idea",
+              "points": "170,65 250,145 170,211.6 130,145"
+            },
+            {
+              "id": "radar-series-udc-aed",
+              "points": "170,65 263.4,145 170,225 136.6,145"
+            },
+            {
+              "id": "radar-series-biz-realestate",
+              "points": "170,75 250,145 170,220 125,145"
+            },
+            {
+              "id": "radar-series-biz-realestate-rn1",
+              "points": "170,70 250,145 170,225 140,145"
+            }
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "client": 310,
+          "scroll": 497,
+          "cells": [
+            {
+              "id": "biz-business-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-idea-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "udc-aed-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-realestate-0",
+              "text": "5.00\n5〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-0",
+              "text": "5.00\n5〜5・4名"
+            },
+            {
+              "id": "biz-business-1",
+              "text": "4.33\n4〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-idea-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-realestate-1",
+              "text": "4.00\n3〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-1",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-2",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-2",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-idea-2",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-2",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-realestate-2",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-2",
+              "text": "3.75\n3〜4・4名"
+            },
+            {
+              "id": "biz-business-3",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-3",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-idea-3",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "udc-aed-3",
+              "text": "4.00\n3〜5・3名"
+            },
+            {
+              "id": "biz-realestate-3",
+              "text": "4.00\n3〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-3",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-4",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-4",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-idea-4",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "udc-aed-4",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-realestate-4",
+              "text": "3.25\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-4",
+              "text": "3.00\n3〜3・4名"
+            },
+            {
+              "id": "biz-business-5",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-5",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-idea-5",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "udc-aed-5",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-realestate-5",
+              "text": "3.50\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-5",
+              "text": "3.50\n3〜4・4名"
+            },
+            {
+              "id": "biz-business-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-idea-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "udc-aed-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-realestate-6",
+              "text": "4.75\n4〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-6",
+              "text": "5.00\n5〜5・4名"
+            }
+          ]
+        },
+        {
+          "client": 310,
+          "scroll": 497,
+          "cells": [
+            {
+              "id": "biz-business-0",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-0",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-idea-0",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-0",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-realestate-0",
+              "text": "3.50\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-0",
+              "text": "3.75\n3〜4・4名"
+            },
+            {
+              "id": "biz-business-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-idea-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-1",
+              "text": "4.67\n4〜5・3名"
+            },
+            {
+              "id": "biz-realestate-1",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-1",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-2",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-2",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-idea-2",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "udc-aed-2",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-realestate-2",
+              "text": "3.75\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-2",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-3",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-business-nb-3",
+              "text": "1.33\n1〜2・3名"
+            },
+            {
+              "id": "biz-idea-3",
+              "text": "2.00\n2〜2・3名"
+            },
+            {
+              "id": "udc-aed-3",
+              "text": "1.67\n1〜2・3名"
+            },
+            {
+              "id": "biz-realestate-3",
+              "text": "2.25\n2〜3・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-3",
+              "text": "1.50\n1〜2・4名"
+            }
+          ]
+        }
+      ],
+      "sw": 1265
+    }
+  },
+  {
+    "w": 1280,
+    "empty": true
+  },
+  {
+    "w": 1280,
+    "mouseSwitch": {
+      "shown": true,
+      "y": 0,
+      "inner": 0
+    }
+  },
+  {
+    "w": 1280,
+    "portalEntry": {
+      "dialogW": 1007,
+      "dialogScrollW": 1007,
+      "dialogScrollH": 2094,
+      "dialogH": 648,
+      "portalTop": 276.375,
+      "dialogTop": 57.375,
+      "text": "AI評価（模擬）\n\nAI（Sonnet）による模擬評価で、実際の審査結果ではありません。\n\nAI（Sonnet）による模擬評価で、実際の審査結果ではありません。\n\n第2回（2026-11-12）は、第1回（2026-11-11）の改修後の画面に対する評価です。この後の改修は反映していません。第1回は改修前の画面です。\n\n評価者は各回 Sonnet 4名。ポータルから出発し、画面を操作して採点しました（基準: reports/ops/dashboard-rubric-20261111.md）。A はポータル（25点）、B は各アプリの操作性・デザイン（35点）、C は各コンペの審査基準に照らした採点です。審査員の採点や順位を予測するものではありません。表の「前→今」は第1回→第2回、（　）は差です。\n\nポータル A1〜A5 のAI評価（第3回・2026-11-13）\n\nAI（GPT-6.1 sol low）10名による模擬評価で、実際の審査結果ではありません。\n\n評価日 2026-11-13。出典: reports/ops/dashboard-eval-20261113/（ポータルは全評価者が採点）。点は 0〜5 の整数で、図は評価者の平均です。評価者の人数は項目ごとに表の「名」で示します。\n\n1\n3\n5\nA1\nA2\nA3\nA4\nA5\n平均（実線・丸）\n最大（点線）\n最小（破線）\nポータル A 平均（最小〜最大・評価者数）\n項目\t\n平均（最小〜最大・名）\nA1 コンペの理解\t3.90\n3〜4・10名\n\nA2 審査基準の明確さ\t4.40\n4〜5・10名\n\nA3 締切・提出物・注意点\t4.10\n4〜5・10名\n\nA4 アプリへの導線\t4.30\n4〜5・10名\n\nA5 情報設計・視覚階層\t4.00\n4〜4・10名\nポータルの目標の達成数\n目標\t達成数\nP-1\t10/10名\nP-2\t10/10名\nP-3\t10/10名\nP-4\t10/10名\n全アプリの点数（第1回 11/11 → 第2回 11/12）\nコンペ／アプリ\tB 操作性・デザイン\tC コンペの審査基準\n\nODPT\n生活アクセス診断マップ\t26→29/35（+3）83%\n\t16→16/20（±0）80%\n\n\nUDC\n生活アクセス診断マップ\t26→29/35（+3）83%\n\t11→11/15（±0）73%\n\n\nUDC\nみん"
+    }
+  },
+  {
+    "w": 390,
+    "all": {
+      "svg": [
+        {
+          "series": [
+            {
+              "id": "radar-series-biz-business",
+              "points": "170,45 237.71,91.01 247.99,162.8 213.39,235.1 135.29,217.08 98.44,161.33 91.82,82.65"
+            },
+            {
+              "id": "radar-series-biz-business-nb",
+              "points": "170,45 232.55,95.12 234.93,159.82 196.03,199.06 143.97,199.06 105.07,159.82 91.82,82.65"
+            },
+            {
+              "id": "radar-series-biz-idea",
+              "points": "170,45 232.55,95.12 247.99,162.8 213.39,235.1 138.15,211.13 105.07,159.82 91.82,82.65"
+            },
+            {
+              "id": "radar-series-udc-aed",
+              "points": "170,45 232.55,95.12 234.93,159.82 204.71,217.08 143.97,199.06 105.07,159.82 91.82,82.65"
+            },
+            {
+              "id": "radar-series-biz-realestate",
+              "points": "170,45 232.55,95.12 247.99,162.8 204.71,217.08 141.8,203.56 101.76,160.58 95.73,85.77"
+            },
+            {
+              "id": "radar-series-biz-realestate-rn1",
+              "points": "170,45 232.55,95.12 243.12,161.69 204.71,217.08 143.97,199.06 101.76,160.58 91.82,82.65"
+            }
+          ]
+        },
+        {
+          "series": [
+            {
+              "id": "radar-series-biz-business",
+              "points": "170,71.6 250,145 170,218.4 110,145"
+            },
+            {
+              "id": "radar-series-biz-business-nb",
+              "points": "170,65 250,145 170,205 143.4,145"
+            },
+            {
+              "id": "radar-series-biz-idea",
+              "points": "170,65 250,145 170,211.6 130,145"
+            },
+            {
+              "id": "radar-series-udc-aed",
+              "points": "170,65 263.4,145 170,225 136.6,145"
+            },
+            {
+              "id": "radar-series-biz-realestate",
+              "points": "170,75 250,145 170,220 125,145"
+            },
+            {
+              "id": "radar-series-biz-realestate-rn1",
+              "points": "170,70 250,145 170,225 140,145"
+            }
+          ]
+        }
+      ],
+      "tables": [
+        {
+          "client": 497,
+          "scroll": 497,
+          "cells": [
+            {
+              "id": "biz-business-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-idea-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "udc-aed-0",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-realestate-0",
+              "text": "5.00\n5〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-0",
+              "text": "5.00\n5〜5・4名"
+            },
+            {
+              "id": "biz-business-1",
+              "text": "4.33\n4〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-idea-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-realestate-1",
+              "text": "4.00\n3〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-1",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-2",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-2",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-idea-2",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-2",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-realestate-2",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-2",
+              "text": "3.75\n3〜4・4名"
+            },
+            {
+              "id": "biz-business-3",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-3",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-idea-3",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "udc-aed-3",
+              "text": "4.00\n3〜5・3名"
+            },
+            {
+              "id": "biz-realestate-3",
+              "text": "4.00\n3〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-3",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-4",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-4",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-idea-4",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "udc-aed-4",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-realestate-4",
+              "text": "3.25\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-4",
+              "text": "3.00\n3〜3・4名"
+            },
+            {
+              "id": "biz-business-5",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-5",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-idea-5",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "udc-aed-5",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "biz-realestate-5",
+              "text": "3.50\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-5",
+              "text": "3.50\n3〜4・4名"
+            },
+            {
+              "id": "biz-business-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-business-nb-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-idea-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "udc-aed-6",
+              "text": "5.00\n5〜5・3名"
+            },
+            {
+              "id": "biz-realestate-6",
+              "text": "4.75\n4〜5・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-6",
+              "text": "5.00\n5〜5・4名"
+            }
+          ]
+        },
+        {
+          "client": 497,
+          "scroll": 497,
+          "cells": [
+            {
+              "id": "biz-business-0",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-0",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-idea-0",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-0",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-realestate-0",
+              "text": "3.50\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-0",
+              "text": "3.75\n3〜4・4名"
+            },
+            {
+              "id": "biz-business-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-idea-1",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "udc-aed-1",
+              "text": "4.67\n4〜5・3名"
+            },
+            {
+              "id": "biz-realestate-1",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-1",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-2",
+              "text": "3.67\n3〜4・3名"
+            },
+            {
+              "id": "biz-business-nb-2",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-idea-2",
+              "text": "3.33\n3〜4・3名"
+            },
+            {
+              "id": "udc-aed-2",
+              "text": "4.00\n4〜4・3名"
+            },
+            {
+              "id": "biz-realestate-2",
+              "text": "3.75\n3〜4・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-2",
+              "text": "4.00\n4〜4・4名"
+            },
+            {
+              "id": "biz-business-3",
+              "text": "3.00\n3〜3・3名"
+            },
+            {
+              "id": "biz-business-nb-3",
+              "text": "1.33\n1〜2・3名"
+            },
+            {
+              "id": "biz-idea-3",
+              "text": "2.00\n2〜2・3名"
+            },
+            {
+              "id": "udc-aed-3",
+              "text": "1.67\n1〜2・3名"
+            },
+            {
+              "id": "biz-realestate-3",
+              "text": "2.25\n2〜3・4名"
+            },
+            {
+              "id": "biz-realestate-rn1-3",
+              "text": "1.50\n1〜2・4名"
+            }
+          ]
+        }
+      ],
+      "sw": 390
+    }
+  },
+  {
+    "w": 390,
+    "empty": true
+  },
+  {
+    "w": 390,
+    "mouseSwitch": {
+      "shown": true,
+      "y": 0,
+      "inner": 0
+    }
+  },
+  {
+    "w": 390,
+    "portalEntry": {
+      "dialogW": 356,
+      "dialogScrollW": 418,
+      "dialogScrollH": 3547,
+      "dialogH": 715,
+      "portalTop": 402.3046875,
+      "dialogTop": 63.3046875,
+      "text": "AI評価（模擬）\n\nAI（Sonnet）による模擬評価で、実際の審査結果ではありません。\n\nAI（Sonnet）による模擬評価で、実際の審査結果ではありません。\n\n第2回（2026-11-12）は、第1回（2026-11-11）の改修後の画面に対する評価です。この後の改修は反映していません。第1回は改修前の画面です。\n\n評価者は各回 Sonnet 4名。ポータルから出発し、画面を操作して採点しました（基準: reports/ops/dashboard-rubric-20261111.md）。A はポータル（25点）、B は各アプリの操作性・デザイン（35点）、C は各コンペの審査基準に照らした採点です。審査員の採点や順位を予測するものではありません。表の「前→今」は第1回→第2回、（　）は差です。\n\nポータル A1〜A5 のAI評価（第3回・2026-11-13）\n\nAI（GPT-6.1 sol low）10名による模擬評価で、実際の審査結果ではありません。\n\n評価日 2026-11-13。出典: reports/ops/dashboard-eval-20261113/（ポータルは全評価者が採点）。点は 0〜5 の整数で、図は評価者の平均です。評価者の人数は項目ごとに表の「名」で示します。\n\n1\n3\n5\nA1\nA2\nA3\nA4\nA5\n平均（実線・丸）\n最大（点線）\n最小（破線）\nポータル A 平均（最小〜最大・評価者数）\n項目\t\n平均（最小〜最大・名）\nA1 コンペの理解\t3.90\n3〜4・10名\n\nA2 審査基準の明確さ\t4.40\n4〜5・10名\n\nA3 締切・提出物・注意点\t4.10\n4〜5・10名\n\nA4 アプリへの導線\t4.30\n4〜5・10名\n\nA5 情報設計・視覚階層\t4.00\n4〜4・10名\nポータルの目標の達成数\n目標\t達成数\nP-1\t10/10名\nP-2\t10/10名\nP-3\t10/10名\nP-4\t10/10名\n全アプリの点数（第1回 11/11 → 第2回 11/12）\nコンペ／アプリ\tB 操作性・デザイン\tC コンペの審査基準\n\nODPT\n生活アクセス診断マップ\t26→29/35（+3）83%\n\t16→16/20（±0）80%\n\n\nUDC\n生活アクセス診断マップ\t26→29/35（+3）83%\n\t11→11/15（±0）73%\n\n\nUDC\nみん"
+    }
+  }
+]

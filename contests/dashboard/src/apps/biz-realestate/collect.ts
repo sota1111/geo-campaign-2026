@@ -83,10 +83,12 @@ export async function analyze(data: AreaData | null, lon: number, lat: number, p
 }
 
 const MUNI: Record<string, string> = { '36201': '徳島市', '36202': '鳴門市', '36321': '松茂町', '36322': '北島町', '36323': '藍住町' }
-/** 国土地理院の逆ジオコーダ（GET・キー不要）。町名まで。取得失敗は null */
+/** 逆ジオコーダを待つ上限（ms）。応答がないと土地の条件の表示全体が止まるため、超えたら住所なし（null）で進める */
+export const REVERSE_GEOCODE_TIMEOUT_MS = 8000
+/** 国土地理院の逆ジオコーダ（GET・キー不要）。町名まで。取得失敗・時間切れは null */
 export async function reverseGeocode(lon: number, lat: number): Promise<string | null> {
   try {
-    const r = await fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lon}`)
+    const r = await fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lon}`, { signal: AbortSignal.timeout(REVERSE_GEOCODE_TIMEOUT_MS) })
     if (!r.ok) return null
     const j = (await r.json()) as { results?: { muniCd?: string; lv01Nm?: string } }
     const res = j.results

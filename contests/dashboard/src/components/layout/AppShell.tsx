@@ -1,4 +1,3 @@
-import { LayoutDashboard } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
@@ -8,8 +7,10 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { CONTESTS, appsByContest } from '@/apps/registry'
+import { CONTESTS, isNewPlan, orderedAppsByContest } from '@/apps/registry'
 import { appUrl } from '@/lib/data'
+import { contestsByDeadline } from '@/apps/contests-info'
+import { asOf } from '@/pages/Progress'
 
 /** ポータル（統合ダッシュボード）の外枠。各アプリは独立ページなので、リンクは通常の <a>（同じタブ） */
 function PortalSidebar() {
@@ -18,35 +19,25 @@ function PortalSidebar() {
       <SidebarHeader className="border-b">
         <a href="./index.html" className="px-2 py-1 text-sm font-bold leading-tight">
           統合ダッシュボード
-          <span className="block text-xs font-normal text-muted-foreground">4つのコンペ・7つのデモアプリ</span>
+          <span className="block text-xs font-normal text-muted-foreground">4つのコンペ・今の案7件＋新しい案</span>
         </a>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive className="h-auto min-h-8">
-                  <a href="./index.html">
-                    <LayoutDashboard className="size-4" />
-                    概要
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        {CONTESTS.map((c) => (
+        {/* 本文の一覧と同じ、締切の近い順 */}
+        {contestsByDeadline().map((i) => CONTESTS.find((c) => c.id === i.id)!).map((c) => (
           <SidebarGroup key={c.id}>
             <SidebarGroupLabel className="h-auto whitespace-normal py-1 leading-tight">{c.name}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {appsByContest(c.id).map((a) => (
+                {orderedAppsByContest(c.id).map((a) => (
                   <SidebarMenuItem key={a.id}>
                     <SidebarMenuButton asChild className="h-auto min-h-8">
                       <a href={appUrl(a.id)} data-app-link={a.id}>
                         <span className="flex w-full flex-col items-start gap-0.5 py-0.5">
                           <span>{a.name}</span>
+                          {isNewPlan(a) && (
+                            <span className="rounded bg-slate-800 px-1.5 py-0 text-xs font-bold text-white">新しい案（比較用・未選定）</span>
+                          )}
                           <span className="flex flex-wrap items-center gap-1">
                             <DataBadge kind={a.dataKind} className="px-1.5 py-0 text-xs" />
                             <span className="text-xs text-muted-foreground">{a.audience}</span>
@@ -75,9 +66,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
             <SidebarTrigger aria-label="メニューを開閉" />
             <Separator orientation="vertical" className="h-5" />
-            <span className="text-sm font-medium">概要</span>
+            <span className="text-sm font-medium">統合ダッシュボード</span>
+            <span className="text-xs text-muted-foreground">{asOf} 時点</span>
           </header>
-          <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+          <main className="min-w-0 flex-1 p-3 md:p-6">{children}</main>
         </SidebarInset>
         <Toaster />
       </SidebarProvider>

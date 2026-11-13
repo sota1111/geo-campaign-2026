@@ -9,6 +9,10 @@ export interface DeadlineInfo {
   at: string
   /** 表示用 */
   text: string
+  /** 済んでいれば、済んだ日（ISO の日付）。締切の表示を「✓ 済」にする */
+  doneAt?: string
+  /** 済の言い方（例: 登録済）。省けば「済」 */
+  doneLabel?: string
 }
 
 export interface CriterionInfo {
@@ -57,7 +61,7 @@ export const CONTEST_INFO: ContestInfo[] = [
     summary:
       '都市・地域のオープンデータを使ったアプリ・データ・アイデア・アクティビティの4タイプを募集。一般部門とビジネス・プロフェッショナル部門がある。',
     deadlines: [
-      { label: '概要登録', at: '2026-11-15T23:59:00+09:00', text: '11/15 23:59' },
+      { label: '概要登録', at: '2026-11-15T23:59:00+09:00', text: '11/15 23:59', doneAt: '2026-11-09', doneLabel: '登録済' },
       { label: '本応募', at: '2026-12-27T23:59:00+09:00', text: '12/27 23:59' },
     ],
     implementation: '実装は必須ではない（タイプにアイデアもある）。',
@@ -91,7 +95,7 @@ export const CONTEST_INFO: ContestInfo[] = [
       { label: 'UDC2026 募集要項', url: 'https://urbandata-challenge.jp/udc2026_entry' },
       { label: 'UDC 公式トップ', url: 'https://urbandata-challenge.jp/' },
     ],
-    alsoApps: [{ id: 'odpt', note: '作品①としても提出するアプリ（ODPTタブ）' }],
+    alsoApps: [{ id: 'odpt', note: '作品①としても提出するアプリ（公共交通オープンデータチャレンジにも出します）' }],
   },
   {
     id: 'satellite-2026',
@@ -145,7 +149,7 @@ export const CONTEST_INFO: ContestInfo[] = [
       '公式の応募フォームに入力。タイトル50字、課題400字、アイデア700字、背景300字。',
       'ビジネス部門だけ、市場・顧客ニーズ400字と事業化の課題400字が加わる。',
       '不動産情報活用部門だけ、活用する不動産情報ライブラリの情報を書く（字数は未確認）。',
-      'デモアプリの現状: 不動産情報ライブラリの API はまだ使っていない。API キーは申請済み（2026-11-12、審査は5営業日が目安）。',
+      'デモアプリの現状: 不動産情報ライブラリの API から徳島市の取引価格（XIT001）・地価公示/地価調査（XPT002）・区域区分（XKT001）を事前に取得して同梱し、手順3と1枚シートに「ライブラリ由来」の印つきで出す（2026-11-12 取得）。',
     ],
     prize: '賞金総額200万円（予定）。受賞数・個別の額は未定。協賛企業の副賞が出ることもある。',
     criteriaTitle: '審査員が重視しうる点（例示）',
@@ -165,7 +169,7 @@ export const CONTEST_INFO: ContestInfo[] = [
     afterAward: ['通過後は、プレゼン参加・表彰式（2027/3/19 東京ビッグサイト）への現地参加・現況調査への協力が条件。'],
     appNotes: {
       'biz-realestate':
-        'デモの現状: 不動産情報ライブラリの API はまだ使っていません（API キーは2026-11-12に申請済み。審査は5営業日が目安）。',
+        'デモの現状: 不動産情報ライブラリの API から徳島市の取引価格・地価公示/地価調査・区域区分を事前に取得して同梱し、手順3と1枚シートに「ライブラリ由来」の印つきで出しています（2026-11-12 取得）。',
     },
     unconfirmed: [
       '同一アイデアを複数部門に同時に出してよいか（公式に明記なし）。',
@@ -224,4 +228,16 @@ export function remainingText(atIso: string, now: number = Date.now()): { text: 
   if (hours < 24) return { text: `あと${Math.max(hours, 1)}時間`, past: false, urgent: true }
   const days = Math.floor(ms / 86_400_000)
   return { text: `あと${days}日`, past: false, urgent: days <= 7 }
+}
+
+/** 次に来る、まだ済んでいない締切（済んだ締切は除く。全部過ぎていれば最後の締切） */
+export function nextDeadline(info: ContestInfo) {
+  const now = Date.now()
+  const open = info.deadlines.filter((d) => !d.doneAt)
+  return open.find((d) => new Date(d.at).getTime() > now) ?? open[open.length - 1] ?? info.deadlines[info.deadlines.length - 1]
+}
+
+/** 締切の近い順に並べたコンペ（一覧の本文とサイドバーで共通） */
+export function contestsByDeadline(): ContestInfo[] {
+  return [...CONTEST_INFO].sort((a, b) => Date.parse(nextDeadline(a).at) - Date.parse(nextDeadline(b).at))
 }

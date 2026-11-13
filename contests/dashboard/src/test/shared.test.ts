@@ -5,7 +5,7 @@ import { parseHashQuery, withHashQuery } from '@/components/shared/hashState'
 import { useLocalStorage } from '@/components/shared/useLocalStorage'
 import { useHashState } from '@/components/shared/useHashState'
 import { GSI_BASEMAPS, buildStyle, type BasemapId } from '@/components/shared/mapStyle'
-import { APPS, appsByContest, getApp } from '@/apps/registry'
+import { APPS, CARDS_ONLY, CURRENT_APPS, appsByContest, getApp, isNewPlan, newPlansOf } from '@/apps/registry'
 
 describe('toCsv', () => {
   it('BOM付きで、カンマ・引用符・改行をエスケープする', () => {
@@ -56,10 +56,32 @@ describe('mapStyle / registry', () => {
     }
     expect(GSI_BASEMAPS.photo.url).toContain('seamlessphoto')
   })
-  it('7アプリが登録され id が一意', () => {
-    expect(APPS).toHaveLength(7)
-    expect(new Set(APPS.map((a) => a.id)).size).toBe(7)
+  it('今の案7件と新しい案5件が登録され id が一意', () => {
+    expect(CURRENT_APPS).toHaveLength(7)
+    expect(APPS.filter(isNewPlan)).toHaveLength(5)
+    expect(new Set(APPS.map((a) => a.id)).size).toBe(APPS.length)
     expect(getApp('sat-a')?.dataKind).toBe('fictional')
-    expect(appsByContest('ichibiz-2026')).toHaveLength(3)
+    expect(appsByContest('ichibiz-2026').filter((a) => !isNewPlan(a))).toHaveLength(3)
+  })
+  it('新しい案は今の案の隣に並ぶ（pairWith が実在する今の案を指し、同じコンペ）', () => {
+    for (const a of APPS.filter(isNewPlan)) {
+      const pair = getApp(a.pairWith ?? '')
+      expect(pair && !isNewPlan(pair)).toBe(true)
+      expect(pair?.contest).toBe(a.contest)
+      expect(a.embed).toBeTruthy()
+    }
+    for (const c of CARDS_ONLY) {
+      const pair = getApp(c.pairWith)
+      expect(pair?.contest).toBe(c.contest)
+      expect(c.docs.length).toBeGreaterThan(0)
+    }
+  })
+  it('今の案から新しい案を引ける（見比べるリンク用）。ODPT 定時性カルテの状態の文に数値を書かない', () => {
+    expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha'])
+    expect(newPlansOf('sat-a')).toEqual([])
+    expect(newPlansOf('udc-moritsuchi')).toEqual([])
+    expect(newPlansOf('biz-idea').map((a) => a.id)).toEqual(['udc-aed'])
+    expect(getApp('odpt-teiji')?.stateNote).toMatch(/まだ遅れの集計はありません/)
+    expect(getApp('odpt-teiji')?.stateNote).not.toMatch(/\d+\s*(便|件|%|％)/)
   })
 })

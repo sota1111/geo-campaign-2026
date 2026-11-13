@@ -1,0 +1,587 @@
+{
+ "out": [
+  {
+   "label": "1280",
+   "firstScreen": {
+    "viewportH": 765,
+    "bottoms": [
+     254,
+     350,
+     446,
+     549
+    ],
+    "heights": [
+     82,
+     90,
+     90,
+     97
+    ],
+    "fit": true,
+    "scrollWidth": 1265,
+    "scrollHeight": 765,
+    "sidebarOrder": [
+     "衛星データ活用ア",
+     "イチBizアワー",
+     "アーバンデータチ",
+     "公共交通オープン"
+    ]
+   }
+  },
+  {
+   "label": "1280",
+   "id": "satellite-2026",
+   "before": {
+    "top": 174,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 174,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=satellite-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 561,
+    "sheetW": 704,
+    "docH": 765,
+    "sheetTop": 0,
+    "sheetBottom": 765,
+    "bodyClient": 711,
+    "bodyScroll": 1247,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 174,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "1280",
+   "id": "ichibiz-2026",
+   "before": {
+    "top": 262,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 262,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=ichibiz-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 561,
+    "sheetW": 704,
+    "docH": 765,
+    "sheetTop": 0,
+    "sheetBottom": 765,
+    "bodyClient": 711,
+    "bodyScroll": 2237,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 262,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "1280",
+   "id": "udc-2026",
+   "before": {
+    "top": 358,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 358,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=udc-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 561,
+    "sheetW": 704,
+    "docH": 765,
+    "sheetTop": 0,
+    "sheetBottom": 765,
+    "bodyClient": 711,
+    "bodyScroll": 889,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 178,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 358,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "1280",
+   "id": "odpt-2026",
+   "before": {
+    "top": 454,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 454,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=odpt-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 561,
+    "sheetW": 704,
+    "docH": 765,
+    "sheetTop": 0,
+    "sheetBottom": 765,
+    "bodyClient": 711,
+    "bodyScroll": 862,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 151,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 454,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "1280",
+   "deepClose": "button",
+   "pre": {
+    "scrollY": 0,
+    "udcTop": 358,
+    "ichiTop": 262,
+    "docH": 765
+   },
+   "deep": {
+    "inner": 1526,
+    "innerMax": 1526,
+    "scrollY": 0,
+    "docH": 765,
+    "sheetW": 704,
+    "sheetLeft": 561,
+    "closeBtn": {
+     "top": 8,
+     "bottom": 44,
+     "left": 1167,
+     "width": 86,
+     "height": 36
+    },
+    "rowHighlight": true,
+    "sw": 1265
+   },
+   "post": {
+    "scrollY": 0,
+    "udcTop": 358,
+    "ichiTop": 262,
+    "docH": 765,
+    "expanded": "false",
+    "focus": "row-ichibiz-2026",
+    "sheetGone": true
+   },
+   "unchanged": true
+  },
+  {
+   "label": "1280",
+   "deepClose": "esc",
+   "pre": {
+    "scrollY": 0,
+    "udcTop": 358,
+    "ichiTop": 262,
+    "docH": 765
+   },
+   "deep": {
+    "inner": 1526,
+    "innerMax": 1526,
+    "scrollY": 0,
+    "docH": 765,
+    "sheetW": 704,
+    "sheetLeft": 561,
+    "closeBtn": {
+     "top": 8,
+     "bottom": 44,
+     "left": 1167,
+     "width": 86,
+     "height": 36
+    },
+    "rowHighlight": true,
+    "sw": 1265
+   },
+   "post": {
+    "scrollY": 0,
+    "udcTop": 358,
+    "ichiTop": 262,
+    "docH": 765,
+    "expanded": "false",
+    "focus": "row-ichibiz-2026",
+    "sheetGone": true
+   },
+   "unchanged": true
+  },
+  {
+   "label": "1280",
+   "deepClose": "backdrop",
+   "pre": {
+    "scrollY": 0,
+    "udcTop": 358,
+    "ichiTop": 262,
+    "docH": 765
+   },
+   "deep": {
+    "inner": 1526,
+    "innerMax": 1526,
+    "scrollY": 0,
+    "docH": 765,
+    "sheetW": 704,
+    "sheetLeft": 561,
+    "closeBtn": {
+     "top": 8,
+     "bottom": 44,
+     "left": 1167,
+     "width": 86,
+     "height": 36
+    },
+    "rowHighlight": true,
+    "sw": 1265
+   },
+   "post": {
+    "scrollY": 0,
+    "udcTop": 358,
+    "ichiTop": 262,
+    "docH": 765,
+    "expanded": "false",
+    "focus": "row-ichibiz-2026",
+    "sheetGone": true
+   },
+   "unchanged": true
+  },
+  {
+   "label": "1280x500",
+   "shortViewport": "button",
+   "pre": {
+    "scrollY": 120,
+    "ichiTop": 142,
+    "udcTop": 238,
+    "docH": 653,
+    "sw": 1265
+   },
+   "deep": {
+    "scrollY": 120,
+    "ichiTop": 142,
+    "udcTop": 238,
+    "docH": 653,
+    "sw": 1265
+   },
+   "post": {
+    "scrollY": 120,
+    "ichiTop": 142,
+    "udcTop": 238,
+    "docH": 653,
+    "sw": 1265
+   },
+   "focus": "row-ichibiz-2026",
+   "unchanged": true
+  },
+  {
+   "label": "1280x500",
+   "shortViewport": "esc",
+   "pre": {
+    "scrollY": 120,
+    "ichiTop": 142,
+    "udcTop": 238,
+    "docH": 653,
+    "sw": 1265
+   },
+   "deep": {
+    "scrollY": 120,
+    "ichiTop": 142,
+    "udcTop": 238,
+    "docH": 653,
+    "sw": 1265
+   },
+   "post": {
+    "scrollY": 120,
+    "ichiTop": 142,
+    "udcTop": 238,
+    "docH": 653,
+    "sw": 1265
+   },
+   "focus": "row-ichibiz-2026",
+   "unchanged": true
+  },
+  {
+   "label": "390",
+   "firstScreen": {
+    "viewportH": 844,
+    "bottoms": [
+     273,
+     450,
+     627,
+     766
+    ],
+    "heights": [
+     147,
+     171,
+     171,
+     133
+    ],
+    "fit": true,
+    "scrollWidth": 390,
+    "scrollHeight": 890,
+    "sidebarOrder": []
+   }
+  },
+  {
+   "label": "390",
+   "id": "satellite-2026",
+   "before": {
+    "top": 128,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 128,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=satellite-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 0,
+    "sheetW": 390,
+    "docH": 890,
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 1810,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 128,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "id": "ichibiz-2026",
+   "before": {
+    "top": 281,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 281,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=ichibiz-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 0,
+    "sheetW": 390,
+    "docH": 890,
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 3555,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 281,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "id": "udc-2026",
+   "before": {
+    "top": 458,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 458,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=udc-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 0,
+    "sheetW": 390,
+    "docH": 890,
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 1239,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 458,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "id": "odpt-2026",
+   "before": {
+    "top": 635,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 635,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=odpt-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetLeft": 0,
+    "sheetW": 390,
+    "docH": 890,
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 1395,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 635,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "sheetHtmlOverflowX": 390,
+   "sheetScrollY": 0
+  },
+  {
+   "back": "sat-a",
+   "link": "../../index.html",
+   "url": "/index.html",
+   "openRows": 0,
+   "scrollY": 0
+  },
+  {
+   "back": "odpt",
+   "link": "../../index.html",
+   "url": "/index.html",
+   "openRows": 0,
+   "scrollY": 0
+  },
+  {
+   "legacyHash": "#satellite-2026",
+   "openRows": 0,
+   "scrollY": 0
+  }
+ ],
+ "errs": []
+}

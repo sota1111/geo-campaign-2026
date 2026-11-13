@@ -1,0 +1,201 @@
+{
+  "evaluator": 9,
+  "model": "gpt-6.1-sol low",
+  "portal": {
+    "A": [
+      4,
+      5,
+      4,
+      4,
+      4
+    ],
+    "goals": {
+      "P-1": {
+        "achieved": true,
+        "value": "衛星 2026/11/30 12:00、イチBiz 2026/11/30 20:00（ビジネス）、UDC 2026/12/27 23:59（次の未完了締切）、ODPT 2027/1/11 23:59。UDC概要登録11/15 23:59は登録済。",
+        "where": "01-portal.png、05-portal-mobile.png"
+      },
+      "P-2": {
+        "achieved": true,
+        "value": "衛星: 提出文・デモ済、B/α選定・FAQ7・本人欄・提出が残る。イチBiz: 提出文・デモ済、部門ごとの案選定・本人欄/PPT・登録が残る。UDC: 概要登録・説明/デモ済、作品②の形式判断・公開URL・本応募が残る。ODPT: アプリ済、N2収集場所/担当判断・提出文・公開/監査・提出が残る。",
+        "where": "01-portal.png"
+      },
+      "P-3": {
+        "achieved": true,
+        "value": "UDC詳細を開き、閉じる操作の前後で一覧ボタン上端y=358px、ページscrollTop=0のまま。位置移動なし。",
+        "where": "01-portal.png、16-portal-dialog.png"
+      },
+      "P-4": {
+        "achieved": true,
+        "value": "左のアプリ名から担当4アプリへ移動。各アプリ上部「統合ダッシュボード」でトップへ戻れた。",
+        "where": "06-bus-compare.png、09-solar-after.png、11-sat-round2.png、12-fill-site.png"
+      }
+    }
+  },
+  "apps": [
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        4,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 3,
+        "C-BIZ4": 3
+      },
+      "goals": {
+        "G5-1": {
+          "achieved": true,
+          "value": "徳島市周辺・平日朝8時発・20分以内。例を確定して案A=徳島バス28鍛冶屋原線、案B=同21鳴門線を作成。行けなくなる人A 4,190人/65歳以上943人、B 2,190人/同797人。",
+          "where": "06-bus-compare.png"
+        },
+        "G5-2": {
+          "achieved": true,
+          "value": "案B。総数で2,000人、65歳以上で146人少ない。画面も「影響が小さい案: 案B」。",
+          "where": "06-bus-compare.png"
+        },
+        "G5-3": {
+          "achieved": true,
+          "value": "会議資料用にCSVで書き出すを実行。案A・案Bを確定した状態で再実行し、plan-comparison-tokushima-wdm20.csvを取得。画面は5/5完了。",
+          "where": "07-bus-export.png"
+        },
+        "G5-4": {
+          "achieved": true,
+          "value": "複数路線は単独停止結果の地区重複を除いた下限。同時停止で初めて行けなくなる人を含まないので実影響を過小評価し得る。",
+          "where": "17-bus-limits.png"
+        }
+      }
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "B": [
+        5,
+        4,
+        3,
+        3,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 3,
+        "C-BIZ4": 1
+      },
+      "goals": {
+        "G9-1": {
+          "achieved": true,
+          "value": "FIT終了時に廃棄と仮定・2045年まで・府外施設含む・受入未確認拠点除外・直線20km。対象3,084件508.4MW、圏外1,878件322.5MW（容量比63.4%）。",
+          "where": "08-solar-before.png、09-solar-after.png（追加前容量も併記）"
+        },
+        "G9-2": {
+          "achieved": true,
+          "value": "「距離が最も減る町字を探す」で緯度35.281/経度135.312に1拠点追加。圏外753件166.4MW/32.7%へ。容量156.1MW・30.7ポイント減、平均直線距離37.4→16.2km。",
+          "where": "09-solar-after.png、20-solar-summary.png"
+        },
+        "G9-3": {
+          "achieved": true,
+          "value": "結果をCSVでダウンロードを実行。recovery-zone-kyoto-fit-2045-20km.csv取得。",
+          "where": "09-solar-after.png、20-solar-summary.png（数値）、取得CSV"
+        },
+        "G9-4": {
+          "achieved": true,
+          "value": "設備の点は町字代表点で同町字は重なる。廃棄年はFIT終了または運転開始+仮のN年で撤去年ではない。北部営業所の所在地/受入も未確認。道路距離・運搬費・処理能力は未評価。",
+          "where": "08-solar-before.png、09-solar-after.png"
+        }
+      }
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-SAT1": 5,
+        "C-SAT2": 3,
+        "C-SAT3": 3,
+        "C-SAT4": 4,
+        "C-SAT5": 4
+      },
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "最高点0.94はS021・S022・S036（表示小数2桁で同点）。表の1位はS021。",
+          "where": "10-sat-budget.png"
+        },
+        "G3-2": {
+          "achieved": true,
+          "value": "予算3.0kmで上位から自動選択。22区間2.9km（上位15+他7）を選び手順3へ進んだ。",
+          "where": "10-sat-budget.png"
+        },
+        "G3-3": {
+          "achieved": true,
+          "value": "サンプル走査→較正→第2回。衛星重み50→60%、走査済22区間を除いた1位S020→S033（0.75）、上位10の10区間が順位変更。",
+          "where": "11-sat-round2.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "街・道路・台帳・衛星変位・走査結果は架空/乱数。Sentinel-1未取得、InSAR未実装。AUC0.70も実精度ではない。",
+          "where": "10-sat-budget.png、19-sat-model.png"
+        }
+      }
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "B": [
+        5,
+        3,
+        3,
+        4,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-UDC1": 4,
+        "C-UDC2": 3,
+        "C-UDC3": 4
+      },
+      "goals": {
+        "G2-1": {
+          "achieved": true,
+          "value": "熱海駅の例を起点。500m内なし、最寄りは北西約1,100mの熱海市0012・腹付け型（斜面に盛った盛土）。",
+          "where": "12-fill-site.png"
+        },
+        "G2-2": {
+          "achieved": true,
+          "value": "熱海市0012を選び、1974〜78年の写真と航空写真(現在)を切替・スライダー操作。昔60%と100%の表示を見比べた。ただし画像は透過して重なるように見え、境界比較としては分かりにくい。",
+          "where": "13-fill-photos.png、18-fill-old.png"
+        },
+        "G2-3": {
+          "achieved": false,
+          "value": "試験記録1件を端末内に保存し、再訪でも1件残った。ただし保存したものは初期分類「亀裂・段差」の操作確認用記録。写真から確認した実際の変化を正確に記録した成果には達していない。",
+          "where": "14-fill-saved.png、15-fill-mobile.png"
+        },
+        "G2-4": {
+          "achieved": true,
+          "value": "台帳をCSVで書き出すを実行。moritsuchi-records-202611132022.csv取得。市への送信はしていない。",
+          "where": "14-fill-saved.png"
+        }
+      }
+    }
+  ]
+}

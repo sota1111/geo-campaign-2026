@@ -1,4 +1,6 @@
 import { Bot, Bug, CircleHelp, Flag } from 'lucide-react'
+import { PortalEval3 } from '@/pages/Eval3Panels'
+import { EVAL3 } from '@/apps/eval3'
 import { APPS, CONTESTS, type ContestId } from '@/apps/registry'
 import {
   A_ITEMS,
@@ -220,7 +222,19 @@ export function EvalSummary() {
     return ev.c.map((c) => ({ ev, app, c }))
   })
   return (
-    <div className="space-y-3" data-testid="eval-summary">
+    <div className="min-w-0 space-y-3" data-testid="eval-summary">
+      <section className="min-w-0 space-y-2" aria-label="第3回の評価" data-testid="eval-round3">
+        <h2 className="rounded bg-slate-800 px-2 py-1 text-sm font-bold text-white">
+          第3回（{md(EVAL3.date)}）　{EVAL3.model}・評価者{EVAL3.evaluatorCount}名　最新
+        </h2>
+        <PortalEval3 />
+        <p className="text-xs text-muted-foreground">各コンペのアプリの B・C のレーダーは、各コンペの詳細（上の行を押す）で、今の案と新しい案を重ねて見られます。</p>
+      </section>
+
+      <section className="min-w-0 space-y-3" aria-label="第1・2回の評価" data-testid="eval-rounds-past">
+      <h2 className="rounded border-2 border-slate-700 px-2 py-1 text-sm font-bold">
+        第{PREVIOUS.round}回（{md(PREVIOUS.date)}）・第{LATEST.round}回（{md(LATEST.date)}）　Sonnet・評価者各4名　過去回
+      </h2>
       <div className="rounded-lg border-2 border-slate-700 bg-slate-50 p-3 text-sm" role="note">
         <p className="flex items-center gap-1.5 font-bold">
           <Bot className="size-4 shrink-0" aria-hidden />
@@ -230,11 +244,11 @@ export function EvalSummary() {
           {ROUND_NOTICE}第{PREVIOUS.round}回は改修前の画面です。
         </p>
         <p className="mt-1 text-xs">
-          評価者は各回 Sonnet 4名。ポータルから出発し、画面を操作して採点しました（基準: {RUBRIC_PATH}）。A はポータル（{A_MAX}点）、B は各アプリの操作性・デザイン（{B_MAX}点）、C は各コンペの審査基準に照らした採点です。審査員の採点や順位を予測するものではありません。表の「前→今」は第{PREVIOUS.round}回→第{LATEST.round}回、（　）は差です。
+          評価者は第{PREVIOUS.round}・{LATEST.round}回とも Sonnet 4名。ポータルから出発し、画面を操作して採点しました（基準: {RUBRIC_PATH}）。A はポータル（{A_MAX}点）、B は各アプリの操作性・デザイン（{B_MAX}点）、C は各コンペの審査基準に照らした採点です。審査員の採点や順位を予測するものではありません。表の「前→今」は第{PREVIOUS.round}回→第{LATEST.round}回、（　）は差です。
         </p>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[3fr_2fr] [&>*]:min-w-0">
         <section className="rounded-lg border bg-card p-3" aria-label="全アプリの点数一覧">
           <h3 className="mb-1.5 text-sm font-bold">
             全アプリの点数（第{PREVIOUS.round}回 {md(PREVIOUS.date)} → 第{LATEST.round}回 {md(LATEST.date)}）
@@ -328,7 +342,7 @@ export function EvalSummary() {
         ))}
       </section>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 [&>*]:min-w-0">
         <section className="rounded-lg border bg-card p-3" aria-label="ポータルへの指摘">
           <h3 className="mb-1.5 flex items-center gap-1 text-sm font-bold">
             <Flag className="size-4" aria-hidden />
@@ -378,6 +392,7 @@ export function EvalSummary() {
           </details>
         </section>
       </div>
+      </section>
     </div>
   )
 }
