@@ -86,7 +86,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
           {c.demoAppId && (
             <Button asChild size="sm" title={`UDC「${getApp(c.demoAppId)?.name}」のデモを開きます`}>
               <a href={`${appUrl(c.demoAppId)}?from=${c.contest}`} data-testid={`card-only-demo-${c.id}`}>
-                デモを開く（UDC「{getApp(c.demoAppId)?.name}」） <ArrowRight className="size-4" aria-hidden />
+                デモを開く <ArrowRight className="size-4" aria-hidden />
               </a>
             </Button>
           )}

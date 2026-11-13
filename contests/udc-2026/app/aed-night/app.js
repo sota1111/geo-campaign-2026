@@ -24,6 +24,8 @@
     return e;
   }
   function fmt(n) { return Math.round(n).toLocaleString("ja-JP"); }
+  /* 「約」を付ける人数は百人単位に丸める（メッシュ推計に1の位まで出さない） */
+  function fmtA(n) { return (n >= 1000 ? Math.round(n / 100) * 100 : Math.round(n / 10) * 10).toLocaleString("ja-JP"); }
   function pct(x) { return (x * 100).toFixed(x > 0 && x < 0.1 ? 1 : 0) + "%"; }
 
   function radio(container, items, current, onPick) {
@@ -94,13 +96,13 @@
     var kn = mu.kinds;
     var h = $("headline"); h.innerHTML = "";
     /* 見出しの数字は「市境から800m以内を除いた人口」。市境の近くは隣の市のAEDを読み込んでいないため、圏外が多めに出る */
-    h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人: 約" + fmt(coreOk ? cv.popOutCore : cv.popOut) + "人（" + pct(share(cv)) + "）" }));
+    h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人: 約" + fmtA(coreOk ? cv.popOutCore : cv.popOut) + "人（" + pct(share(cv)) + "）" }));
     $("toggle-sum").textContent = "徒歩圏外 " + pct(share(cv)) + "（" + AN.whenLabel(v.d, v.t) + "）　";
     h.appendChild(el("div", { class: "sub", text: mu.name + "・" + AN.whenLabel(v.d, v.t) + "・徒歩圏 直線" + v.r + "m。対象は市の境界から800m以上内側の人口 " + fmt(coreOk ? cv.popCore : cv.popTotal) +
       "人。この時間に使えると確認できたAEDは " + strict.usable.length + "台（" + strict.sites + "か所）。登録 " + mu.with_xy + "台のうち、時間が不明 " + kn.unknown + "台、一般の人が使えない設置位置（救急車内・病室など）" + kn.nonpublic + "台は数えていません。" }));
     h.appendChild(el("div", { class: "rng", text: "確認できたAEDだけなら " + pct(share(strict)) + "、時間が不明のAEDを使えるとしても（夜間は施設の開館時間・条件付きなどを除く）" + pct(share(max)) + "。" }));
     if (coreOk) {
-      h.appendChild(el("div", { class: "edge-note", text: "市境付近（800m以内）を含む市全体（メッシュ人口 " + fmt(cv.popTotal) + "人）では約" + fmt(cv.popOut) + "人（" + pct(cv.popTotal ? cv.popOut / cv.popTotal : 0) +
+      h.appendChild(el("div", { class: "edge-note", text: "市境付近（800m以内）を含む市全体（メッシュ人口 " + fmt(cv.popTotal) + "人）では約" + fmtA(cv.popOut) + "人（" + pct(cv.popTotal ? cv.popOut / cv.popTotal : 0) +
         "）。隣の市のAEDを読み込んでいないので、これは上限です。" }));
     }
     if (v.d <= 4) {
@@ -159,7 +161,7 @@
       var name = S.data.areas[c.area];
       var b = el("button", { type: "button" });
       b.appendChild(el("b", { text: c.rank + ". " + name + "付近" }));
-      b.appendChild(document.createTextNode("　新たに徒歩圏に入る人 約" + fmt(c.pop) + "人"));
+      b.appendChild(document.createTextNode("　新たに徒歩圏に入る人 約" + fmtA(c.pop) + "人"));
       if (c.edge) b.appendChild(el("span", { class: "edge", text: "　※境界付近" }));
       b.addEventListener("click", function () { map.flyTo({ center: [c.lon, c.lat], zoom: 15.5 }); });
       ol.appendChild(el("li", {}, [b]));
@@ -175,12 +177,12 @@
     var near = null;
     S.cov.usable.forEach(function (a) { var d = AN.haversine(lat, lon, a[1], a[2]); if (near === null || d < near) near = d; });
     var card = $("gain-card"); card.innerHTML = "";
-    card.appendChild(el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏（直線" + S.view.r + "m）に入る人: 約" + fmt(g.pop) + "人" })]));
+    card.appendChild(el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏（直線" + S.view.r + "m）に入る人: 約" + fmtA(g.pop) + "人" })]));
     card.appendChild(el("div", { class: "small", text: "いま（" + AN.whenLabel(S.view.d, S.view.t) + "）、この地点から最も近い使えるAEDまで" +
       (near === null ? "（使えるAEDが登録にありません）" : "直線 約" + fmt(near) + "m") + "。人口は250mメッシュの合計で、置ける場所かどうかは考慮していません。" }));
     if (tapped && popup) {
       /* スマホではパネルの結果カードが画面の外になりやすいので、タップした地点の上にも結果を出す */
-      var pb = el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏に入る人: 約" + fmt(g.pop) + "人" }),
+      var pb = el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏に入る人: 約" + fmtA(g.pop) + "人" }),
         el("div", { class: "small", text: near === null ? "いま使えるAEDは登録にありません。" : "いま最も近い使えるAEDまで直線 約" + fmt(near) + "m。" })]);
       popup.setLngLat([lon, lat]).setDOMContent(pb).addTo(map);
     }
@@ -349,9 +351,9 @@
         "circle-stroke-width": ["match", ["get", "s"], "on", 2.5, 1.5] } });
       map.addLayer({ id: "aed-sym", type: "symbol", source: "aed", filter: ["match", ["get", "s"], ["unk", "priv"], true, false], layout: {
         "icon-image": ["match", ["get", "s"], "unk", "aed-unk", "aed-priv"], "icon-allow-overlap": true, "icon-ignore-placement": true,
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "s"], "unk", 0.55, 0.5], 15, ["match", ["get", "s"], "unk", 1, 0.8]] } });
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "s"], "unk", 0.55, 0.5], 15, ["match", ["get", "s"], "unk", 1, 0.8]] } }, "aed");
       map.addLayer({ id: "pick", type: "circle", source: "pick", paint: { "circle-radius": 9, "circle-color": "#7a003c", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
-      popup = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" });
+      popup = new maplibregl.Popup({ closeButton: true, closeOnClick: false, maxWidth: "260px" });
       map.on("click", function (e) {
         var f = map.queryRenderedFeatures(e.point, { layers: ["aed", "aed-sym"] })[0];
         if (f) {

@@ -62,7 +62,7 @@ export function EmbeddedApp({ appId }: { appId: string }) {
         ))}
         {from === 'ichibiz-2026' && (
           <p className="basis-full text-muted-foreground" data-testid="band-from">
-            イチBiz アイデア部門 IN1 のデモとして表示中（戻ると IN1 のカードに着きます）。
+            イチBiz アイデア部門 IN1 のデモとして表示中（戻るとイチBiz タブに着きます。IN1 のカードはその中ほどです）。
           </p>
         )}
         {app.pairNote && <p className="basis-full font-medium">{app.pairNote}</p>}

@@ -70,7 +70,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 data-testid="compare-new-link"
                 className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
               >
-                新しい案「{n.name}」と見比べる
+                新案「{n.name}」と見比べる
               </a>
             ))}
             {alsoComparedBy(appId).map((n) => (
@@ -78,9 +78,10 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 key={n.id}
                 href={appUrl(n.id)}
                 data-testid="also-compared-link"
+                title={`作品③（新案）「${n.name}」と見比べる`}
                 className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
               >
-                作品③（新案）「{n.name}」と見比べる
+                作品③<span className="sr-only">「{n.name}」</span>と見比べる
               </a>
             ))}
             <div ref={setSlot} className="flex min-w-0 flex-wrap items-center gap-2 max-md:basis-full md:ml-auto md:flex-nowrap" />
