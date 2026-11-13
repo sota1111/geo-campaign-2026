@@ -782,7 +782,14 @@ export default function BizIdeaApp() {
   }
 
   const mapAside = (
-    <div className="relative" id="biz-map">
+    <div className="relative scroll-mt-40 md:scroll-mt-0" id="biz-map">
+      {channel === 'orig' && (
+        <button
+          type="button" data-testid="map-return"
+          className="absolute left-2 top-2 z-10 rounded-md border-2 border-black bg-white px-2.5 py-1.5 text-xs font-bold shadow hover:bg-accent"
+          onClick={() => document.querySelector('[data-testid=chimei-compare]')?.scrollIntoView({ block: 'start' })}
+        >写真の比較へ戻る</button>
+      )}
       {!mapIdle && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/80" role="status">
           <div className="space-y-2 text-center text-sm">
