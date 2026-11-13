@@ -131,9 +131,11 @@ test('S1 校区: 校区データが1件も無い区（品川区・荒川区。�
   }
 });
 
-test('P1 提出文: reinfolib.md の「API14種」「3地域で表示済み」が、地域ごとの取得済み項目数と合う', () => {
+test('P1 提出文: reinfolib.md の「本案で使うAPIは最大N種（地域により M〜N種）」が、地域ごとの取得済み項目数と合う', () => {
   const t = fs.readFileSync(path.join(SUB, 'reinfolib.md'), 'utf8');
-  const claimed = Number((t.match(/API(\d+)種/) || [])[1]);
+  const claimed = Number((t.match(/API[^\d]{0,8}(\d+)種/) || [])[1]); // 表記は「APIは最大12種」。「全14種中」はやめた（ライブラリ全体のAPI数と読まれるため。監査 R3）
+  assert.ok(claimed > 0, 'reinfolib.md から「API…N種」を読み取れない');
+  assert.ok(/本案で使うAPI/.test(t) && !/全\d+種/.test(t), '「本案で使うAPI」と主語を明示し、「全N種」と書かない');
   const per = {};
   for (const rid of ['tokushima', 'tokyo23', 'osaka']) {
     const d = D[rid] || load(rid);

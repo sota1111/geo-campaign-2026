@@ -262,3 +262,17 @@ test('範囲外（2026-11-14）: 隣の市は市名で知らせる。シート�
   const t = JSON.stringify(Lib.buildSheet(D.tokyo23, Lib.collect(D.tokyo23, 139.67, 35.6)).sections.find((x) => x.id === 'fac'));
   assert.ok(!/老人福祉施設: 直線800m以内に該当なし/.test(t), t);
 });
+
+test('N3 大阪市の福祉施設（XKT011 elder）は全件が大阪市内。人口メッシュの区コード（27100・27102〜27128）と XKT001 の範囲の両方で調べる（堺市・豊中市などの混入が無い）', () => {
+  const d = D.osaka;
+  const own = new Set(Lib.REGIONS.osaka.codes);
+  const polys = rd('osaka', 'zoning.json').areas.flatMap((a) => a.polys);
+  const bad = [];
+  for (const e of d.fac.elder) {
+    const code = Lib.collect(d, e.lon, e.lat).cityCode; // 区の多角形から求めたコード。市外は null
+    if (!own.has(String(code))) bad.push(`${e.name}（${e.lon}, ${e.lat}）コード=${code}`);
+    else if (!Lib.inPolys(e.lon, e.lat, polys)) bad.push(`${e.name}（${e.lon}, ${e.lat}）XKT001 の範囲外`);
+  }
+  assert.deepStrictEqual(bad.slice(0, 10), [], `大阪市外の福祉施設が ${bad.length} 件混入`);
+  assert.ok(d.fac.elder.length > 1000); // 検査が空振りしない（現在 1,423件）
+});
