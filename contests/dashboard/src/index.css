@@ -84,6 +84,8 @@
 
 /* 縦スクロールバーの出入りで幅が変わり、行の高さが動くのを防ぐ（詳細を開いても一覧の位置を動かさない） */
 html { scrollbar-gutter: stable; }
+/* モーダル（詳細パネル）を開くと react-remove-scroll が scrollbar 幅ぶんの余白を body に足す。gutter で既に確保済みなので打ち消し、開閉で横幅が変わらないようにする */
+html body[data-scroll-locked] { margin-right: 0 !important; padding-right: 0 !important; }
 
 @layer base {
   * {

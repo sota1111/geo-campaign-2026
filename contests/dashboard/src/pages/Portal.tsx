@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useRef, useState, useSyncExternalStore } from 'react'
 import { ChevronDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -66,7 +66,7 @@ function Stages({ contest }: { contest: ContestInfo['id'] }) {
   )
 }
 
-/** 一覧の1行（ボタン）。クリックで直下（スマホ幅は下から出るシート）に詳細が開く。行の位置は変えない */
+/** 一覧の1行（ボタン）。クリックで一覧の上に重ねたパネルに詳細が開く。行の位置もページの高さも変えない */
 function ContestRow({ info, open, onToggle }: { info: ContestInfo; open: boolean; onToggle: () => void }) {
   const contest = CONTESTS.find((c) => c.id === info.id)!
   const st = CONTEST_STATUS[info.id]
@@ -80,7 +80,7 @@ function ContestRow({ info, open, onToggle }: { info: ContestInfo; open: boolean
       aria-expanded={open}
       aria-controls={`detail-${info.id}`}
       data-testid={`row-${info.id}`}
-      className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-lg bg-card px-3 py-1.5 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 lg:sticky lg:top-12 lg:z-10 lg:gap-y-0.5 lg:py-2 ${COLS} ${open ? 'lg:rounded-b-none' : ''}`}
+      className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-lg bg-card px-3 py-1.5 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 lg:gap-y-0.5 lg:py-2 ${COLS} ${open ? 'bg-muted ring-2 ring-inset ring-slate-800' : ''}`}
     >
       {/* 1段目（スマホ）: コンペ名と開閉の目印。デスクトップは5列の1段目・2段目に並べる */}
       <span className="col-start-1 row-start-1 min-w-0 text-sm font-bold leading-tight lg:col-start-1">
@@ -133,15 +133,12 @@ export default function Portal() {
   }
   const rowEl = (id: string) => document.querySelector<HTMLElement>(`[data-testid=row-${id}]`)
   const toggle = (id: string) => {
-    if (narrow) return write(open.includes(id) ? [] : [id])
-    write(open.includes(id) ? open.filter((x) => x !== id) : [...open, id])
+    write(open.includes(id) ? [] : [id])
   }
-  /** 詳細の末尾の「閉じる」: 閉じたあとも行にフォーカスを残す（スクロールはさせない） */
-  const closeFromBottom = (id: string) => {
-    rowEl(id)?.focus({ preventScroll: true })
-    write(open.filter((x) => x !== id))
-  }
-  const sheetId = narrow ? open[open.length - 1] : undefined
+  // 詳細は幅によらず一覧の上に重ねるパネル（スマホ: 下から、デスクトップ: 右から）。背景ページの高さは変わらない
+  const sheetId = open[open.length - 1]
+  const lastId = useRef<string | undefined>(undefined)
+  if (sheetId) lastId.current = sheetId
   const sheetInfo = CONTEST_INFO.find((c) => c.id === sheetId)
   const sorted = contestsByDeadline()
   return (
@@ -177,22 +174,6 @@ export default function Portal() {
           return (
             <div key={info.id} className="rounded-lg border-2 border-slate-600 bg-card" data-testid={`contest-${info.id}`}>
               <ContestRow info={info} open={isOpen} onToggle={() => toggle(info.id)} />
-              {isOpen && !narrow && (
-                <div
-                  id={`detail-${info.id}`}
-                  role="region"
-                  aria-label={`${info.tabName}の詳細`}
-                  className="border-t-2 border-slate-600 p-3"
-                  data-testid={`detail-${info.id}`}
-                >
-                  <ContestPanel info={info} onOpenEval={() => setEvalOpen(true)} />
-                  <div className="mt-3 flex justify-end">
-                    <Button variant="outline" size="sm" onClick={() => closeFromBottom(info.id)} data-testid={`close-${info.id}`}>
-                      閉じる <span aria-hidden>▲</span>
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           )
         })}
@@ -200,13 +181,13 @@ export default function Portal() {
 
       <Sheet open={!!sheetInfo} onOpenChange={(o) => !o && write([])}>
         <SheetContent
-          side="bottom"
+          side={narrow ? 'bottom' : 'right'}
           showCloseButton={false}
-          className="max-h-[88dvh] gap-0 rounded-t-xl p-0"
+          className={narrow ? 'max-h-[88dvh] gap-0 rounded-t-xl p-0' : 'w-[min(44rem,92vw)] gap-0 p-0 sm:max-w-none'}
           onCloseAutoFocus={(e) => {
             // 閉じたあと、行にフォーカスを戻す。行へのスクロールはさせない
             e.preventDefault()
-            if (sheetId) rowEl(sheetId)?.focus({ preventScroll: true })
+            if (lastId.current) rowEl(lastId.current)?.focus({ preventScroll: true })
           }}
           data-testid="detail-sheet"
         >

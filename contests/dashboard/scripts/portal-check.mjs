@@ -70,46 +70,52 @@ for (const [label, w, h0, mobile] of [['1280', 1280, 765, false], ['390', 390, 8
     const opened = await state(id)
     const sheet = await J(`({ sheet: !!document.querySelector('[data-testid=detail-sheet]'), detail: !!document.querySelector('[data-testid=detail-${id}]'), hash: location.hash, bodyOverflow: getComputedStyle(document.body).overflow })`)
     await save(`${label}-02-open-${id}.png`)
-    if (mobile) {
-      const sh = await J(`(() => { const b = document.querySelector('[data-testid=detail-${id}]'); const c = document.querySelector('[data-testid=detail-sheet]').getBoundingClientRect(); return { sheetTop: Math.round(c.top), sheetBottom: Math.round(c.bottom), bodyClient: b.clientHeight, bodyScroll: b.scrollHeight, closeBtn: !!document.querySelector('[data-testid=sheet-close]') } })()`)
+    {
+      const sh = await J(`(() => { const b = document.querySelector('[data-testid=detail-${id}]'); const c = document.querySelector('[data-testid=detail-sheet]').getBoundingClientRect(); return { sheetLeft: Math.round(c.left), sheetW: Math.round(c.width), docH: document.documentElement.scrollHeight, sheetTop: Math.round(c.top), sheetBottom: Math.round(c.bottom), bodyClient: b.clientHeight, bodyScroll: b.scrollHeight, closeBtn: !!document.querySelector('[data-testid=sheet-close]') } })()`)
       // シートの中をスクロールし、ページが動かないこと
-      await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 200, y: 600, deltaX: 0, deltaY: 400 })
+      await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: mobile ? 200 : 1000, y: 600, deltaX: 0, deltaY: 400 })
       await sleep(300)
       const after = await J(`({ inner: Math.round(document.querySelector('[data-testid=detail-${id}]').scrollTop), pageY: Math.round(scrollY) })`)
       await save(`${label}-03-sheet-scrolled-${id}.png`)
       await clickSel('[data-testid=sheet-close]')
       const closed = await state(id)
       out.push({ label, id, before, opened, sheet, sheetInfo: sh, afterWheel: after, closed, sheetGone: await ev(`!document.querySelector('[data-testid=detail-sheet]')`) })
-    } else {
-      await clickSel(row(id))
-      const closed = await state(id)
-      out.push({ label, id, before, opened, sheet, closed })
     }
   }
   if (!mobile) {
-    // 長い詳細（イチBiz）: 下へスクロールしても、開いた行の見出しが上（top=48）に貼り付く。末尾の「閉じる」で閉じる
-    await load()
-    await clickSel(row('ichibiz-2026'))
-    await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 700, y: 400, deltaX: 0, deltaY: 900 })
-    await sleep(300)
-    const stuck = await J(`({ rowTop: ${rect(row('ichibiz-2026'))}.top, scrollY: Math.round(scrollY) })`)
-    await save(`${label}-04-sticky.png`)
-    // 末尾の閉じるボタンが見える位置までスクロールして押す
-    await ev(`window.scrollTo(0, document.querySelector('[data-testid=close-ichibiz-2026]').getBoundingClientRect().bottom + scrollY - innerHeight + 60)`)
-    await sleep(300)
-    const pre = await J(`({ scrollY: Math.round(scrollY), udcTop: ${rect(row('udc-2026'))}.top, closeBtn: ${rect('[data-testid=close-ichibiz-2026]')}, docH: document.documentElement.scrollHeight })`)
-    await save(`${label}-05-bottom-close-before.png`)
-    await clickSel('[data-testid=close-ichibiz-2026]')
-    const post = await J(`({ scrollY: Math.round(scrollY), udcTop: ${rect(row('udc-2026'))}.top, ichiTop: ${rect(row('ichibiz-2026'))}.top, docH: document.documentElement.scrollHeight, expanded: document.querySelector('${row('ichibiz-2026')}').getAttribute('aria-expanded'), focus: document.activeElement?.dataset?.testid })`)
-    await save(`${label}-06-bottom-close-after.png`)
-    out.push({ label, stickyCheck: { stuck, bottomClose: { pre, post } } })
-    // 下へスクロールした状態で別の行を開閉しても動かない
-    await load()
-    await ev('window.scrollTo(0, 0)')
-    await clickSel(row('satellite-2026'))
-    await ev(`window.scrollTo(0, document.querySelector('${row('udc-2026')}').getBoundingClientRect().top + scrollY - 200)`); await sleep(200)
-    const a = await state('udc-2026'); await clickSel(row('udc-2026')); const b = await state('udc-2026'); await clickSel(row('udc-2026')); const c = await state('udc-2026')
-    out.push({ label, scrolledToggle: { before: a, open: b, closed: c } })
+    // 深部から閉じる: イチBizを開き、パネル内を最下部までスクロールして閉じる。背景の scrollY・行 top・scrollHeight が変わらないこと
+    for (const how of ['button', 'esc', 'backdrop']) {
+      await load()
+      const pre = await J(`({ scrollY: Math.round(scrollY), udcTop: ${rect(row('udc-2026'))}.top, ichiTop: ${rect(row('ichibiz-2026'))}.top, docH: document.documentElement.scrollHeight })`)
+      await clickSel(row('ichibiz-2026'))
+      await ev(`(() => { const b = document.querySelector('[data-testid=detail-ichibiz-2026]'); b.scrollTop = b.scrollHeight })()`)
+      await sleep(300)
+      const deep = await J(`(() => { const b = document.querySelector('[data-testid=detail-ichibiz-2026]'); const c = document.querySelector('[data-testid=detail-sheet]').getBoundingClientRect(); return { inner: Math.round(b.scrollTop), innerMax: b.scrollHeight - b.clientHeight, scrollY: Math.round(scrollY), docH: document.documentElement.scrollHeight, sheetW: Math.round(c.width), sheetLeft: Math.round(c.left), closeBtn: ${rect('[data-testid=sheet-close]')}, rowHighlight: document.querySelector('${row('ichibiz-2026')}').className.includes('ring-2'), sw: document.documentElement.scrollWidth } })()`)
+      if (how === 'button') await save(`${label}-05-deep-open.png`)
+      if (how === 'button') await clickSel('[data-testid=sheet-close]')
+      else if (how === 'esc') { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(500) }
+      else await clickAt(150, 700)
+      const post = await J(`({ scrollY: Math.round(scrollY), udcTop: ${rect(row('udc-2026'))}.top, ichiTop: ${rect(row('ichibiz-2026'))}.top, docH: document.documentElement.scrollHeight, expanded: document.querySelector('${row('ichibiz-2026')}').getAttribute('aria-expanded'), focus: document.activeElement?.dataset?.testid ?? null, sheetGone: !document.querySelector('[data-testid=detail-sheet]') })`)
+      if (how === 'button') await save(`${label}-06-deep-closed.png`)
+      out.push({ label, deepClose: how, pre, deep, post, unchanged: pre.scrollY === post.scrollY && pre.ichiTop === post.ichiTop && pre.docH === post.docH && deep.docH === pre.docH })
+    }
+    // 背景ページが縦にスクロールできる高さ（1280×500）で、scrollY>0 のまま深部から開閉しても動かない
+    await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 500, deviceScaleFactor: 1, mobile: false })
+    for (const how of ['button', 'esc']) {
+      await load()
+      await ev('window.scrollTo(0, 120)'); await sleep(200)
+      const snap = () => J(`({ scrollY: Math.round(scrollY), ichiTop: ${rect(row('ichibiz-2026'))}.top, udcTop: ${rect(row('udc-2026'))}.top, docH: document.documentElement.scrollHeight, sw: document.documentElement.scrollWidth })`)
+      const pre = await snap()
+      await clickSel(row('ichibiz-2026'))
+      await ev(`(() => { const b = document.querySelector('[data-testid=detail-ichibiz-2026]'); b.scrollTop = b.scrollHeight })()`)
+      await sleep(900)
+      const deep = await snap()
+      if (how === 'button') await clickSel('[data-testid=sheet-close]')
+      else { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 }); await sleep(500) }
+      const post = await snap()
+      out.push({ label: '1280x500', shortViewport: how, pre, deep, post, focus: (await ev('document.activeElement?.dataset?.testid')) ?? null, unchanged: JSON.stringify(pre) === JSON.stringify(post) && pre.docH === deep.docH })
+    }
+    await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 765, deviceScaleFactor: 1, mobile: false })
   } else {
     // 開いた詳細の先頭がそのまま見えること、横スクロールなし
     await load()
