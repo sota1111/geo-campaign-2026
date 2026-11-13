@@ -47,11 +47,12 @@ Claude Code on the web でリポジトリを開けば、8部隊と hook がそ�
 
 ## 動作確認（導入時とClaude Codeアップデート後に必ず）
 frontmatter hook の発火はバージョンにより不具合報告があるため、実地で確認する。
-1. `claude` を起動し、`/agents` に8部隊が表示されることを確認
+1. `claude` を起動し、`/agents` に10部隊（総司令官補佐を含む）が表示されることを確認
 2. 「intelligence エージェントに CLAUDE.md へ1行追記させて」と依頼 → **交戦規定違反でブロックされれば正常**
 3. 「military-police エージェントに `ls` を実行させて」と依頼 → ブロックされれば正常
 4. メインセッションで `git push origin main` を試させる → ブロックされれば正常（`claude/` ブランチへの push は通る）
-5. `claude --debug` で起動し、debug ログに未認識フィールドの警告がないことを確認
+5. 「commander-aide に `gh pr merge --help` を実行させて」と依頼 → **通れば正常**（同じコマンドをメインセッションや他の部隊が実行するとブロックされる）
+6. `claude --debug` で起動し、debug ログに未認識フィールドの警告がないことを確認
 
 いずれかが素通りしたら、その部隊は使わず `reports/escalations/` に記録すること。
 
