@@ -553,6 +553,7 @@ export default function BizIdeaApp() {
           key={`${focus.lon},${focus.lat}`}
           lon={focus.lon} lat={focus.lat} isSample={focus.place?.id === 's1'}
           channel={channel} onChannel={changeChannel} onInteract={markOverlayDone}
+          onShowMap={() => document.getElementById('biz-map')?.scrollIntoView({ block: 'start' })}
         />
       ) : (
         <Alert><MapPin className="size-4" /><AlertTitle>先に地名を選ぶと、昔と今の写真を見比べられます</AlertTitle>
@@ -781,7 +782,7 @@ export default function BizIdeaApp() {
   }
 
   const mapAside = (
-    <div className="relative">
+    <div className="relative" id="biz-map">
       {!mapIdle && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/80" role="status">
           <div className="space-y-2 text-center text-sm">

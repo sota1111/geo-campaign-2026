@@ -345,10 +345,8 @@ export default function App() {
   useEffect(() => {
     if (step !== 'compare' || selFill === null) return
     setDidCompare(true)
-    if (old === 'none') {
-      setOld('ort_old10')
-      setOp('50')
-    }
+    // 主役は新旧比較。大きな地図への半透明の重ね表示は、旧操作の折りたたみを開いたときだけ出す
+    if (!sample) setOld('none')
     const f = fills.find((x) => x.properties.id === selFill)
     if (f) mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -555,7 +553,7 @@ export default function App() {
   const STEP_META: Record<string, { title: string; hint: string }> = {
     place: { title: '自宅の場所を入れる', hint: '住所・駅名で検索します（熱海駅は例です）' },
     look: { title: '近くの盛土造成地を確かめる', hint: '一覧から選び、型（谷埋め／腹付け）を見ます' },
-    compare: { title: '昔の写真と見比べる', hint: '年代を選び、スライダーで今と昔を行き来します' },
+    compare: { title: '昔の写真と見比べる', hint: '写真の境界を動かして、同じ場所の昔と今を見比べます' },
     rec: { title: '台帳に記録を足す', hint: '地図をタップして位置を決め、気づいたことを1件ずつ台帳に足します' },
     prep: { title: '台帳にまとめて市に届ける', hint: '台帳をCSV／GeoJSONで書き出す。1件の通報文もコピーできます' },
     ref: { title: '参考（出典・注意）', hint: '任意。データの出典と使うときの注意です' },
@@ -776,7 +774,12 @@ export default function App() {
         </ul>
         <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
       </div>
-      <details className="rounded-md border p-2" data-testid="map-overlay-controls">
+      <details
+        className="rounded-md border p-2" data-testid="map-overlay-controls" open={sample || undefined}
+        onToggle={(e) => {
+          if (e.currentTarget.open) { if (old === 'none') setOld('ort_old10'); setOp('50') } else setOld('none')
+        }}
+      >
         <summary className="cursor-pointer text-sm font-bold">地図の上に昔の写真を重ねて見る（広い範囲を見たいとき）</summary>
       <div className="mt-2 space-y-3">
       <div className="space-y-1">
@@ -999,7 +1002,7 @@ export default function App() {
       <p className="shrink-0 border-b bg-accent/40 px-4 py-1 text-xs" data-testid="caution-line">
         対象は熱海市・伊東市のみ。表示は「安全性の確認が必要な盛土造成地」で、直ちに危険ではなく、危険かどうかの判定はしません。
       </p>
-      <StepLayout title={meta.title} hint={meta.hint} aside={mapAside}>
+      <StepLayout title={meta.title} hint={meta.hint} aside={mapAside} asideClassName={step === 'compare' ? 'max-md:!h-[16vh]' : undefined}>
         {panels[step]}
       </StepLayout>
 

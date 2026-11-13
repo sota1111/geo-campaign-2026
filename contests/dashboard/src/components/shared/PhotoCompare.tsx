@@ -2,7 +2,7 @@
    - 境界はドラッグ、またはキーボード（← →、Shift で大きく、Home／End）で動かせる
    - TileMosaic: 地理院タイル（ズーム固定）を画素位置に並べる。画像が無い年代は「この年代の画像なし」を出す（空白で済ませない）
    - ringsToPath: 輪郭（経緯度のリング）を画素座標のパスにする */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 
 export const WIN = 512
 const TILE_BASE = 'https://cyberjapandata.gsi.go.jp/xyz/'
@@ -88,14 +88,27 @@ export function CompareFrame({ children }: { children: ReactNode }) {
 }
 
 export function PhotoCompare({
-  left, right, overlay, ariaLabel, onInteract, testId = 'photo-compare', defaultMode = 'swipe',
+  left, right, overlay, caption, ariaLabel, onInteract, testId = 'photo-compare', defaultMode = 'swipe',
 }: {
-  left: CompareSide; right: CompareSide; overlay?: ReactNode; ariaLabel: string; onInteract?: () => void; testId?: string; defaultMode?: 'swipe' | 'side'
+  left: CompareSide; right: CompareSide; overlay?: ReactNode; /** 写真の直下に常に出す説明（例: 重ねている輪郭の資料名） */ caption?: ReactNode; ariaLabel: string; onInteract?: () => void; testId?: string; defaultMode?: 'swipe' | 'side'
 }) {
   const [mode, setMode] = useState<'swipe' | 'side'>(defaultMode)
   const [pos, setPos] = useState(50)
   const box = useRef<HTMLDivElement>(null)
   const drag = useRef(false)
+  const [boxW, setBoxW] = useState(360)
+  useLayoutEffect(() => {
+    const e = box.current
+    if (!e) return
+    setBoxW(e.getBoundingClientRect().width || 360)
+    const ro = new ResizeObserver(() => setBoxW(e.getBoundingClientRect().width || 360))
+    ro.observe(e)
+    return () => ro.disconnect()
+  }, [mode])
+  // 年代ラベルは、その側の写真がラベルの幅より広く見えているときだけ出す（見えていない側の年代を写真の上に残さない）
+  const labelW = (t: string) => t.length * 11 + 16
+  const showLeft = (pos / 100) * boxW >= labelW(left.label) + 8
+  const showRight = ((100 - pos) / 100) * boxW >= labelW(right.label) + 8
   const move = useCallback((clientX: number) => {
     const r = box.current?.getBoundingClientRect()
     if (!r || r.width === 0) return
@@ -136,14 +149,19 @@ export function PhotoCompare({
         >
           <div className="absolute inset-0">{right.node}{overlay}</div>
           <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>{left.node}{overlay}</div>
-          <span className={`${badge} left-1`}>{left.label}</span>
-          <span className={`${badge} right-1 text-right`}>{right.label}</span>
+          {pos > 0 && pos < 100 && showLeft && <span className={`${badge} left-1`} data-testid="label-left">{left.label}</span>}
+          {pos > 0 && pos < 100 && showRight && <span className={`${badge} right-1 text-right`} data-testid="label-right">{right.label}</span>}
+          {(pos <= 0 || pos >= 100 || (!showLeft && !showRight)) && (
+            <span className={`${badge} left-1 !max-w-[70%]`} data-testid="label-state">
+              {pos <= 0 ? `全面：${right.label}` : pos >= 100 ? `全面：${left.label}` : '境界を広げると年代が出ます'}
+            </span>
+          )}
           <div className="pointer-events-none absolute inset-y-0 z-10 w-0.5 -translate-x-1/2 bg-white shadow-[0_0_0_1px_rgba(0,0,0,.7)]" style={{ left: `${pos}%` }} />
           <div
             role="slider" tabIndex={0} aria-label="新旧の境界。左右の矢印キーで動かす" aria-orientation="horizontal"
             aria-valuemin={0} aria-valuemax={100} aria-valuenow={pos} aria-valuetext={`左の ${pos}% が「${left.label}」、残りが「${right.label}」`}
             onKeyDown={key}
-            className="absolute top-1/2 z-20 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-black bg-white text-sm font-bold shadow focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0072B2]"
+            className="absolute top-9 z-20 flex size-9 -translate-x-1/2 items-center justify-center rounded-full border-2 border-black bg-white text-sm font-bold shadow focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0072B2]"
             style={{ left: `${pos}%` }}
           >⇔</div>
         </div>
@@ -157,6 +175,7 @@ export function PhotoCompare({
           ))}
         </div>
       )}
+      {caption}
     </div>
   )
 }

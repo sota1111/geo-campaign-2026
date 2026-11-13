@@ -89,6 +89,17 @@ export function SitePhotoCompare({ fill, onInteract }: { fill: FillFeature; onIn
           <button key={e} type="button" aria-pressed={era === e} className={btn} onClick={() => { setEra(e); onInteract?.() }}>{ERA_LABEL[e]}</button>
         ))}
       </div>
+      <div className="space-y-0.5 rounded-md border bg-accent/40 p-2 text-xs" data-testid="site-compare-note">
+        <p><b>黄色い線の内側</b>が{id}の範囲（A54・概ねの位置）。範囲内の昔と今で、樹木・田畑・道路・建物の見え方を見比べます。</p>
+        {obs && (
+          <p data-testid="site-obs">
+            {obs.pre ? `見えること（目視）: ${obs.text}` : `${obs.text}この年代では造成前を確認できません。`}
+            {obs.pre && 'ただし写真から谷や沢の位置・盛土の厚さは分かりません。'}
+          </p>
+        )}
+        {!obs && <p>見えること: この地点の読み取りは未実施です。写真は目視で見比べ、昔の様子は断定しません。</p>}
+        {hill && <p>陰影起伏は<b>現在の</b>地形を陰影で表した図です。昔の地形は分かりません（写真より粗く表示されます）。</p>}
+      </div>
       <PhotoCompare
         ariaLabel={`${id}の昔の写真と今の比較`}
         onInteract={onInteract}
@@ -106,17 +117,6 @@ export function SitePhotoCompare({ fill, onInteract }: { fill: FillFeature; onIn
       </div>
       {!prepared && <p className="text-[11px] text-muted-foreground">この地点は補正なしの原画像だけを表示します（補正は偵察で使った3地点のみ）。</p>}
       {oldMissing && !prepared && <p className="text-xs font-bold" role="status">この年代の写真は、この場所には提供されていません。</p>}
-      <div className="space-y-0.5 rounded-md border bg-accent/40 p-2 text-xs" data-testid="site-compare-note">
-        <p><b>黄色い線の内側</b>が{id}の範囲（A54・概ねの位置）です。線の外は薄くしています。<b>範囲内の昔と今で、土地の見え方（樹木・田畑・道路・建物）を見比べてください。</b></p>
-        {obs && (
-          <p data-testid="site-obs">
-            {obs.pre ? `見えること（目視）: ${obs.text}` : `${obs.text}この年代では造成前を確認できません。`}
-            {obs.pre && 'ただし写真から谷や沢の位置・盛土の厚さは分かりません。'}
-          </p>
-        )}
-        {!obs && <p>見えること: この地点の読み取りは未実施です。写真は目視で見比べ、昔の様子は断定しません。</p>}
-        {hill && <p>陰影起伏は<b>現在の</b>地形を陰影で表した図です。昔の地形は分かりません（写真より粗く表示されます）。</p>}
-      </div>
       <p className="text-[11px] leading-snug text-muted-foreground">
         出典：国土地理院 地理院タイル（切出し・{prepared ? 'コントラスト補正・' : ''}輪郭の重ね描きの加工）、国土数値情報 大規模盛土造成地 A54（国土交通省）を加工して作成。
         年代はレイヤに収録された期間で、この場所の個別の撮影年は未確認です。「今」の写真は最新の現況を保証しません。

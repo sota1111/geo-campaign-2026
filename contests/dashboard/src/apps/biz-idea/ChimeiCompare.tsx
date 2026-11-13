@@ -35,7 +35,7 @@ export function inS1Area(lon: number, lat: number) {
 }
 
 export function ChimeiCompare({
-  lon, lat, isSample, channel, onChannel, onInteract,
+  lon, lat, isSample, channel, onChannel, onInteract, onShowMap,
 }: {
   lon: number; lat: number
   /** サンプル地名 s1 か（注目枠と補正画像を使う） */
@@ -43,6 +43,8 @@ export function ChimeiCompare({
   channel: ChannelMode
   onChannel: (m: ChannelMode) => void
   onInteract?: () => void
+  /** 地図（原図）の位置へ移動する（押したときだけ。自動では動かさない） */
+  onShowMap?: () => void
 }) {
   const [era, setEra] = useState<Era>('ort_old10')
   const [clahe, setClahe] = useState(false)
@@ -113,6 +115,12 @@ export function ChimeiCompare({
         left={{ label: `${ERAS[era].short}${claheOn ? '（補正）' : ''}`, node: oldNode }}
         right={{ label: '今（全国最新写真）', node: newNode }}
         overlay={overlay}
+        caption={showOutline ? (
+          <p className="flex items-center gap-1.5 text-xs font-bold" data-testid="channel-caption">
+            <span className="inline-block h-1 w-6 shrink-0 bg-[#0054c8] ring-1 ring-white" />
+            青線＝治水地形分類図の旧河道（近似輪郭）。写真から分かった川筋ではありません
+          </p>
+        ) : undefined}
       />
       {missing && !(s1 && era === 'ort_old10') && <p className="text-xs font-bold" role="status">この年代の画像なし（この場所の昔の写真は提供されていません）。</p>}
 
@@ -141,9 +149,16 @@ export function ChimeiCompare({
             {channel === 'outline' ? '旧河道の輪郭を表示中（押すと消す）' : '旧河道の輪郭を重ねる'}
           </button>
           <button type="button" className={btn} aria-pressed={channel === 'orig'} onClick={() => { onChannel(channel === 'orig' ? 'off' : 'orig'); onInteract?.() }}>
-            {channel === 'orig' ? '原図（治水地形分類図）を地図に表示中' : '原図に戻す（地図に治水地形分類図）'}
+            {channel === 'orig' ? '地図に原図を表示中（押すと消す）' : '上（右）の地図で原図を見る'}
           </button>
         </div>
+        {channel === 'orig' && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-1.5 text-xs" role="status" data-testid="orig-status">
+            <span>原図（治水地形分類図）は写真ではなく、地図の側に表示しています。</span>
+            <button type="button" className={btn} onClick={() => onShowMap?.()}>地図の原図を見る</button>
+            <button type="button" className={btn} onClick={() => document.querySelector('[data-testid=chimei-compare]')?.scrollIntoView({ block: 'start' })}>写真の比較へ戻る</button>
+          </div>
+        )}
         {!outlineOk && <p className="text-[11px] text-muted-foreground">輪郭データは s1 周辺（約1km四方）だけです。この場所では原図のみ表示できます。</p>}
         {showOutline && (
           <p className="text-xs" data-testid="channel-label">
