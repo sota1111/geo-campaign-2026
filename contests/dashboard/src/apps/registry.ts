@@ -36,6 +36,10 @@ export interface AppMeta {
   pairNote?: string
   /** 元の静的版を iframe で開くアプリの、同梱コピーのフォルダ（public/embedded/<embed>/）。省略時は React 版 */
   embed?: string
+  /** 今の状態（データがまだ無い等）。新しい案のカードと帯に出す。数値は書かない */
+  stateNote?: string
+  /** 元の静的版の画面内の見出しが registry の name と違うときの、その見出し（帯に1行で添える） */
+  demoTitle?: string
 }
 
 /** 提出文のみで、デモを持たない案（ポータルに「カードだけ」置く。クリックできるデモはない） */
@@ -45,8 +49,10 @@ export interface CardOnly {
   contest: ContestId
   division: string
   pairWith: string
-  /** カードの本文（何がまだ無いか） */
+  /** カードの本文（何の案か・何がまだ無いか） */
   note: string
+  /** 提出文を読むリンク（サイトルートからの相対パス。copy-data が submission/ の md を .txt にして置く） */
+  docs: { label: string; path: string }[]
 }
 
 export const NEW_PLAN_LABEL = '新しい案（比較用・未選定）'
@@ -166,7 +172,8 @@ export const APPS: AppMeta[] = [
     audience: '配電事業者・自治体向け',
     name: '配電線沿いの優先伐採地図',
     contest: 'satellite-2026',
-    division: '新しい案α',
+    division: '共通テーマ2（新案α）',
+    demoTitle: '配電線 樹木リスク台帳',
     deadline: '2026/11/30 12:00',
     deadlineAt: '2026-11-30T12:00:00+09:00',
     purpose:
@@ -224,6 +231,8 @@ export const APPS: AppMeta[] = [
       'バスの位置データ（GTFS-RT）を時刻表と突き合わせ、どの路線の・どの時間帯の・どの区間で遅れるかを見える化し、ダイヤや運用の見直し材料にする。',
     dataKind: 'real',
     dataNote: '公共交通オープンデータセンターの実データ（CC BY 4.0）。収集の途中で、昼間の品質は未測定',
+    stateNote:
+      'いまはデータを貯め始めたところで、まだ遅れの集計はありません（開くと全事業者が「データ蓄積前」と表示されます）。昼間の収集を 11/13 の 11:00〜12:00 に予定していますが、結果は未確定です。',
     originalPath: 'contests/odpt-2026/app-teiji/web/',
   },
 ]
@@ -231,11 +240,15 @@ export const APPS: AppMeta[] = [
 export const CARDS_ONLY: CardOnly[] = [
   {
     id: 'biz-idea-in1',
-    name: 'IN1',
+    name: '「いま使えるAED」地図　夜間・施錠で使えない場所を、時間帯別のカバー率にする',
     contest: 'ichibiz-2026',
     division: 'アイデア部門（新案IN1）',
     pairWith: 'biz-idea',
-    note: '提出文のみ。デモは UDC の「夜間・休日に使えるAED地図」を使う予定（準備中）。',
+    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは14台（本案の簡易判定）。提出文のみで、デモは UDC の「夜間・休日に使えるAED地図」を使う予定（準備中）。',
+    docs: [
+      { label: '課題の文を読む', path: 'submission/idea-in1/problem.txt' },
+      { label: 'サービス内容の文を読む', path: 'submission/idea-in1/service.txt' },
+    ],
   },
 ]
 
@@ -267,3 +280,8 @@ export function isNewPlan(a: AppMeta): boolean {
 
 /** 今の案のアプリ（評価・既存テストの対象） */
 export const CURRENT_APPS: AppMeta[] = APPS.filter((a) => !isNewPlan(a))
+
+/** 今の案 id から、その隣に並ぶ新しい案を引く（今の案のヘッダーに「見比べる」リンクを出すため） */
+export function newPlansOf(currentId: string): AppMeta[] {
+  return APPS.filter((a) => isNewPlan(a) && a.pairWith === currentId)
+}

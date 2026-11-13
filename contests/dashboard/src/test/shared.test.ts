@@ -5,7 +5,7 @@ import { parseHashQuery, withHashQuery } from '@/components/shared/hashState'
 import { useLocalStorage } from '@/components/shared/useLocalStorage'
 import { useHashState } from '@/components/shared/useHashState'
 import { GSI_BASEMAPS, buildStyle, type BasemapId } from '@/components/shared/mapStyle'
-import { APPS, CARDS_ONLY, CURRENT_APPS, appsByContest, getApp, isNewPlan } from '@/apps/registry'
+import { APPS, CARDS_ONLY, CURRENT_APPS, appsByContest, getApp, isNewPlan, newPlansOf } from '@/apps/registry'
 
 describe('toCsv', () => {
   it('BOM付きで、カンマ・引用符・改行をエスケープする', () => {
@@ -73,6 +73,13 @@ describe('mapStyle / registry', () => {
     for (const c of CARDS_ONLY) {
       const pair = getApp(c.pairWith)
       expect(pair?.contest).toBe(c.contest)
+      expect(c.docs.length).toBeGreaterThan(0)
     }
+  })
+  it('今の案から新しい案を引ける（見比べるリンク用）。ODPT 定時性カルテの状態の文に数値を書かない', () => {
+    expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha'])
+    expect(newPlansOf('sat-a')).toEqual([])
+    expect(getApp('odpt-teiji')?.stateNote).toMatch(/まだ遅れの集計はありません/)
+    expect(getApp('odpt-teiji')?.stateNote).not.toMatch(/\d+\s*(便|件|%|％)/)
   })
 })

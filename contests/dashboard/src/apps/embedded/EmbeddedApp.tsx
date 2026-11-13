@@ -15,7 +15,8 @@ export function EmbeddedApp({ appId }: { appId: string }) {
   const pair = app.pairWith ? getApp(app.pairWith) : undefined
   const src = `${siteRoot()}embedded/${app.embed}/index.html`
   return (
-    <div className="flex flex-col gap-2" data-testid="embedded-app">
+    // 高さ = 画面の高さ − 固定ヘッダー − main の余白。iframe が残りを埋め、ページ全体の縦スクロールを出さない（iframe の末尾が必ず画面内に入る）
+    <div className="flex h-[calc(100dvh-8.5rem)] flex-col gap-2 md:h-[calc(100dvh-5.5rem)]" data-testid="embedded-app">
       <PageHeader
         appId={appId}
         compact
@@ -30,30 +31,44 @@ export function EmbeddedApp({ appId }: { appId: string }) {
           />
         }
       />
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-dashed border-slate-500 bg-slate-50 px-3 py-1.5 text-xs">
+      {/* 案の名前は上のヘッダー（スマホは名前、デスクトップは名前＋部門）に出す。帯は札とリンクと、比べるときの制約・今の状態だけ */}
+      <h1 className="sr-only">{app.name}</h1>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-dashed border-slate-500 bg-slate-50 px-3 py-1.5 text-xs">
         <span className="rounded bg-slate-800 px-1.5 py-0.5 font-bold text-white" data-testid="new-plan-badge">
           {NEW_PLAN_LABEL}
         </span>
-        <h1 className="text-sm font-bold">{app.name}</h1>
-        <span className="text-muted-foreground">{app.dataNote}</span>
-        <span className="ml-auto flex flex-wrap items-center gap-3">
-          {pair && (
-            <a href={appUrl(pair.id)} className="font-medium text-primary underline underline-offset-2">
-              今の案「{pair.name}」を開いて見比べる
-            </a>
-          )}
-          <a href={src} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2">
-            この案だけ別タブで開く
-            <ExternalLink className="size-3" aria-hidden />
-            <span className="sr-only">（新しいタブで開く）</span>
+        {pair && (
+          <a href={appUrl(pair.id)} className="font-medium text-primary underline underline-offset-2" data-testid="pair-link">
+            今の案「{pair.name}」と見比べる
           </a>
-        </span>
+        )}
+        <a
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2 max-sm:rounded-md max-sm:border max-sm:border-primary max-sm:px-2 max-sm:py-1"
+          data-testid="open-alone"
+        >
+          この案だけ別タブで開く
+          <ExternalLink className="size-3" aria-hidden />
+          <span className="sr-only">（新しいタブで開く）</span>
+        </a>
         {app.pairNote && <p className="basis-full font-medium">{app.pairNote}</p>}
+        {app.stateNote && (
+          <p className="basis-full font-medium" data-testid="band-state-note">
+            いまの状態: {app.stateNote}
+          </p>
+        )}
+        {app.demoTitle && (
+          <p className="basis-full text-muted-foreground" data-testid="band-demo-title">
+            画面内の見出しは「{app.demoTitle}」（デモの呼び名）。提出文の提案名称は「{app.name}」。
+          </p>
+        )}
       </div>
       <iframe
         title={`${app.name}（${NEW_PLAN_LABEL}）`}
         src={src}
-        className="h-[calc(100dvh-9.5rem)] min-h-[600px] w-full rounded-md border bg-white"
+        className="min-h-[420px] w-full flex-1 rounded-md border bg-white"
         data-testid="embedded-frame"
       />
     </div>

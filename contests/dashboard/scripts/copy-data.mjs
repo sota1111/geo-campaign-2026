@@ -105,3 +105,17 @@ for (const [id, def] of Object.entries(EMBEDS)) {
   }
 }
 console.log(`copy-data: ${embedCount} items -> public/embedded/<id>/（新しい案の静的版）`)
+
+// ---- 提出文のみの案（IN1）: ポータルのカードから読めるよう、提出文を .txt にして public/submission/<id>/ に置く ----
+const DOCS = { 'idea-in1': { src: 'ichibiz-2026/submission/idea-in1', files: ['title', 'problem', 'service', 'background'] } }
+let docCount = 0
+for (const [id, def] of Object.entries(DOCS)) {
+  const outDir = path.join(root, 'public', 'submission', id)
+  fs.rmSync(outDir, { recursive: true, force: true })
+  fs.mkdirSync(outDir, { recursive: true })
+  for (const f of def.files) {
+    fs.copyFileSync(path.join(contests, def.src, `${f}.md`), path.join(outDir, `${f}.txt`))
+    docCount++
+  }
+}
+console.log(`copy-data: ${docCount} files -> public/submission/<id>/（提出文）`)

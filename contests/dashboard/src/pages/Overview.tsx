@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
+import { siteRoot } from '@/lib/data'
 import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
 import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
 import { LATEST } from '@/apps/eval-results'
@@ -52,7 +53,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
           <NewPlanTag />
           <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">デモなし</span>
         </div>
-        <CardTitle className="text-base leading-tight">{c.name}</CardTitle>
+        <CardTitle className="text-base leading-tight" data-testid={`card-only-title-${c.id}`}>{c.name}</CardTitle>
         <CardDescription className="text-xs">
           {contest?.short}／{c.division}
         </CardDescription>
@@ -60,6 +61,22 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardContent className="flex-1 px-4 text-xs">
         <p data-testid={`card-only-note-${c.id}`}>{c.note}</p>
       </CardContent>
+      <CardFooter className="flex-wrap gap-x-4 gap-y-1 px-4 text-xs">
+        {c.docs.map((d) => (
+          <a
+            key={d.path}
+            href={`${siteRoot()}${d.path}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2"
+            data-testid={`card-only-doc-${c.id}`}
+          >
+            {d.label}
+            <ExternalLink className="size-3" aria-hidden />
+            <span className="sr-only">（新しいタブで開く）</span>
+          </a>
+        ))}
+      </CardFooter>
     </Card>
   )
 }
@@ -95,6 +112,11 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
         {isNew && a.pairNote && (
           <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`pair-note-${a.id}`}>
             {a.pairNote}
+          </p>
+        )}
+        {isNew && a.stateNote && (
+          <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`state-note-${a.id}`}>
+            いまの状態: {a.stateNote}
           </p>
         )}
         {isNew && (
@@ -166,11 +188,16 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
   const current = apps.filter((a) => !isNewPlan(a))
   const newCount = apps.length - current.length + CARDS_ONLY.filter((c) => c.contest === info.id).length
   // 今の案ごとに、その隣に新しい案を並べる（同じ大会・部門の中で比べる）
-  const groups = current.map((a) => ({
-    head: a,
-    news: apps.filter((x) => isNewPlan(x) && x.pairWith === a.id),
-    cards: CARDS_ONLY.filter((c) => c.contest === info.id && c.pairWith === a.id),
-  }))
+  // 組のある群を先に並べる（第一画面に、今の案と新しい案の組が入るように）
+  const groups = current
+    .map((a) => ({
+      head: a,
+      news: apps.filter((x) => isNewPlan(x) && x.pairWith === a.id),
+      cards: CARDS_ONLY.filter((c) => c.contest === info.id && c.pairWith === a.id),
+    }))
+    .sort((x, y) => Number(y.news.length + y.cards.length > 0) - Number(x.news.length + x.cards.length > 0))
+  // 新しい案があるコンペでは、今の案すべてに「今の案」の札を付ける
+  const hasNew = newCount > 0
   return (
     <div className="space-y-3">
       <div className="grid items-start gap-3 lg:grid-cols-[3fr_2fr] lg:grid-rows-[auto_1fr]">
@@ -239,13 +266,20 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
             </span>
           </h3>
           {groups.map((g) => (
-            <div key={g.head.id} className="grid gap-3 sm:grid-cols-2" data-testid={`group-${g.head.id}`}>
-              {[g.head, ...g.news].map((a) => (
-                <AppCard key={a.id} a={a} contestId={info.id} note={info.appNotes?.[a.id]} onOpenEval={onOpenEval} paired={g.news.length + g.cards.length > 0} />
-              ))}
-              {g.cards.map((c) => (
-                <CardOnlyCard key={c.id} c={c} />
-              ))}
+            <div key={g.head.id} className={hasNew && groups.length > 1 ? 'space-y-1 pt-2' : ''} data-testid={`group-${g.head.id}`}>
+              {hasNew && groups.length > 1 && (
+                <h4 className="text-xs font-bold text-muted-foreground" data-testid={`group-title-${g.head.id}`}>
+                  {g.head.division}
+                </h4>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[g.head, ...g.news].map((a) => (
+                  <AppCard key={a.id} a={a} contestId={info.id} note={info.appNotes?.[a.id]} onOpenEval={onOpenEval} paired={hasNew} />
+                ))}
+                {g.cards.map((c) => (
+                  <CardOnlyCard key={c.id} c={c} />
+                ))}
+              </div>
             </div>
           ))}
           {info.alsoApps?.map((x) => {
@@ -339,7 +373,13 @@ export default function Overview() {
                       {d === nd && <Remaining at={d.at} />}
                     </span>
                   ))}
-                  <span className="hidden text-muted-foreground lg:inline">アプリ{appsByContest(info.id).filter((a) => !isNewPlan(a)).length}件</span>
+                  <span className="hidden text-muted-foreground lg:inline" data-testid={`tab-count-${info.id}`}>
+                    アプリ{appsByContest(info.id).filter((a) => !isNewPlan(a)).length}件
+                    {(() => {
+                      const n = appsByContest(info.id).filter(isNewPlan).length + CARDS_ONLY.filter((c) => c.contest === info.id).length
+                      return n > 0 ? `＋新しい案${n}件` : ''
+                    })()}
+                  </span>
                 </span>
               </TabsTrigger>
             )
