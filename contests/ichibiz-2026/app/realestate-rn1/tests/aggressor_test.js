@@ -12,7 +12,7 @@ const path = require('node:path');
 
 const APP = path.resolve(process.env.RN1_APP || path.join(__dirname, '..'));
 const Lib = require(path.join(APP, 'web', 'lib.js'));
-const DATA_DIR = path.join(APP, 'web', 'data');
+const DATA_DIR = path.join(APP, 'web', 'data', 'tokushima');
 const rd = (f) => JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
 const load = (mut) => {
   const manifest = rd('manifest.json');

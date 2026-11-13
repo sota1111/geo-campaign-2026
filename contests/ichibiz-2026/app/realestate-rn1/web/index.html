@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>住む場所の先行き — 場所を指して、市の計画・推計人口・施設・災害の想定を1枚で見比べる</title>
+<title>住む場所の先行き — 場所を指して、市の計画・推計人口・施設・災害の想定を1枚で見比べる（徳島市・東京23区・大阪市）</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,12 +11,18 @@
 <header id="top">
   <h1>住む場所の先行き</h1>
   <p class="lead">家や土地を買う前に、その場所を地図で指すと、市の計画の区域・周りの将来人口（推計）・小学校区・直線800m以内の施設・災害の想定（洪水・津波・高潮・土砂・液状化）を1枚に並べます。結論は出さず、次に誰に何を聞くかを示します。</p>
-  <p class="warn"><strong>動く最小限のデモです。</strong>対象は徳島市のみ。将来人口は国の推計で、実際の人口ではありません。「住める・住めない」「価値が上がる・下がる」といった結論は出さず、市や不動産会社に聞くことを示します。国が作成・監修したものではありません。</p>
+  <p class="warn"><strong>動く最小限のデモです。</strong>対象は徳島市・東京23区・大阪市（下で地域を選びます）。将来人口は国の推計で、実際の人口ではありません。「住める・住めない」「価値が上がる・下がる」といった結論は出さず、市や不動産会社に聞くことを示します。国が作成・監修したものではありません。</p>
 </header>
 
 <main>
   <section id="step1" class="panel">
     <h2>1. 場所を指す</h2>
+    <fieldset id="regionPick" class="row regions">
+      <legend>対象地域（選んだ地域のデータだけ読み込みます）</legend>
+      <label><input type="radio" name="region" value="tokushima" checked> 徳島市</label>
+      <label><input type="radio" name="region" value="tokyo23"> 東京23区</label>
+      <label><input type="radio" name="region" value="osaka"> 大阪市</label>
+    </fieldset>
     <form id="search" class="row">
       <label class="sr" for="q">住所・目印を検索</label>
       <input id="q" type="search" placeholder="例: 徳島市役所、徳島市国府町府中" autocomplete="off">
@@ -24,13 +30,11 @@
     </form>
     <div class="row examples" role="group" aria-label="例の場所">
       <span class="hint">例の場所:</span>
-      <button type="button" class="secondary ex" data-lon="134.5513" data-lat="34.0745">徳島駅付近</button>
-      <button type="button" class="secondary ex" data-lon="134.4845" data-lat="34.0540">国府町（郊外）</button>
-      <button type="button" class="secondary ex" data-lon="134.5190" data-lat="34.0450">八万町（郊外）</button>
+      <span id="exButtons"></span>
     </div>
     <div class="row opts" role="group" aria-label="地図に重ねる範囲">
-      <label><input type="checkbox" id="tgResidential" checked> <span class="sw sw-res"></span>居住誘導区域</label>
-      <label><input type="checkbox" id="tgCity" checked> <span class="sw sw-city"></span>都市機能誘導区域</label>
+      <label id="lbRes"><input type="checkbox" id="tgResidential" checked> <span class="sw sw-res"></span>居住誘導区域</label>
+      <label id="lbCity"><input type="checkbox" id="tgCity" checked> <span class="sw sw-city"></span>都市機能誘導区域</label>
       <label><input type="checkbox" id="tgFlood"> <span class="sw sw-flood"></span>洪水浸水想定区域</label>
       <label><input type="checkbox" id="tgSediment"> <span class="sw sw-sed"></span>土砂災害警戒区域</label>
       <label><input type="checkbox" id="tgTsunami"> <span class="sw sw-tsunami"></span>津波浸水想定</label>
@@ -71,7 +75,8 @@
     <li><strong>クレジット</strong>: <span id="credit"></span>。</li>
     <li><strong>責任</strong>: <span id="resp"></span>。</li>
     <li><strong>将来人口</strong>: <span id="popnote"></span>。</li>
-    <li><strong>区域の位置</strong>: 市が公表する図が正です。ここでは国の整備データ（令和7年度の都市計画決定GISデータ）を表示しており、市の最新の公表と異なる場合があります。徳島市の立地適正化計画の公表ページ: <a href="https://www.city.tokushima.tokushima.jp/shisei/machi_keikaku/townplanning/loa_rat_plan/" rel="noopener">徳島市</a>。</li>
+    <li><strong>区域の位置</strong>: 市（区）が公表する図が正です。ここでは国の整備データ（令和7年度の都市計画決定GISデータ）を表示しており、市（区）の最新の公表と異なる場合があります。<span id="regionLink">徳島市の立地適正化計画の公表ページ: <a href="https://www.city.tokushima.tokushima.jp/shisei/machi_keikaku/townplanning/loa_rat_plan/" rel="noopener">徳島市</a>。</span></li>
+    <li><strong>地域ごとのデータ</strong>: <span id="regionNote"></span></li>
     <li><strong>地図</strong>: 国土地理院タイル（標準地図）。住所検索は国土地理院の住所検索API。</li>
     <li><strong>データの変換</strong>: 洪水浸水想定区域・津波浸水想定・高潮浸水想定区域・液状化の発生傾向は、原データの多角形が非常に多いため、約18mの格子（浸水深などの区分つき）に変換して同梱しています。境界付近は20m程度ずれることがあり、細い区域は欠けることがあります。境界から約20m以内の位置では、中か外かを言い切らず「境界付近」と出します。</li>
     <li><strong>プライバシー</strong>: 指した位置はこの端末内だけで扱い、保存・送信しません。地図画像と住所検索の要求は国土地理院に届きます。この画面から不動産情報ライブラリのAPIは呼びません（同梱データのみ）。</li>

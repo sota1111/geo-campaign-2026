@@ -95,6 +95,48 @@ async function run(tag, w, h, mobile) {
 await run('desktop', 1280, 900, false);
 await run('mobile', 390, 844, true);
 
+// 東京23区・大阪市: 画面の地域選択（ラジオボタンの実クリック）→ 例の場所ごとに5節・印刷A4・1ページ・横スクロールなし
+async function printPages() {
+  await send('Emulation.setEmulatedMedia', { media: 'print' });
+  await send('Emulation.setDeviceMetricsOverride', { width: 794, height: 1123, deviceScaleFactor: 1, mobile: false });
+  await sleep(500);
+  const pdf = await send('Page.printToPDF', { paperWidth: 8.27, paperHeight: 11.69, printBackground: true, preferCSSPageSize: true });
+  await send('Emulation.setEmulatedMedia', { media: 'screen' });
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  return pdf.result.data;
+}
+async function regionRun(rid, label) {
+  await open(1280, 900, false);
+  await ev(`document.querySelector('input[name=region][value=${rid}]').click(); true`);
+  for (let i = 0; i < 120; i++) { await sleep(300); if (await ev(`!!(App.ready && App.state.region.id === "${rid}" && App.state.data)`)) break; }
+  check(`${label}: 地域を選ぶとその地域のデータが読み込まれる`, await ev(`!!(App.ready && App.state.region.id === "${rid}" && App.state.data)`));
+  check(`${label}: 横スクロールなし`, await ev('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'));
+  const st = await ev('document.getElementById("dataStatus").innerText');
+  console.log(label, '取得データの状況:\n' + st);
+  await shot(`${rid}-1-top.png`);
+  const n = await ev('document.querySelectorAll("button.ex").length');
+  for (let k = 0; k < n; k++) {
+    const name = await ev(`document.querySelectorAll("button.ex")[${k}].textContent`);
+    await ev(`document.querySelectorAll("button.ex")[${k}].click(); true`);
+    await sleep(1500);
+    check(`${label}・${name}: 5節が出る`, (await ev('document.querySelectorAll("#sheet .sec").length')) === 5, `（${await ev('document.querySelectorAll("#sheet .sec").length')}節。${(await ev('document.querySelector("#sheet .oos")?.innerText || ""'))}）`);
+    await ev('document.getElementById("sheet").scrollIntoView(); true');
+    await sleep(300);
+    await shot(`${rid}-sheet-${k}.png`);
+    const pdf = await printPages();
+    fs.writeFileSync(path.join(outdir, `${rid}-sheet-${k}.pdf`), Buffer.from(pdf, 'base64'));
+    check(`${label}・${name}: 印刷がA4・1ページ`, pages(pdf) === 1, `（${pages(pdf)}ページ）`);
+  }
+  check(`${label}: 出典・クレジットがシートに入る`, await ev('document.querySelector("#sheet .fine").innerText.includes("このサービスは、国土交通省の不動産情報ライブラリ")'));
+  // スマホ幅
+  await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 800, deviceScaleFactor: 1, mobile: true });
+  await sleep(500);
+  check(`${label}: 幅320pxで横スクロールなし`, await ev('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'), `（scrollWidth=${await ev('document.documentElement.scrollWidth')}）`);
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+}
+await regionRun('tokyo23', '東京23区');
+await regionRun('osaka', '大阪市');
+
 // 未取得の表示: 洪水（hazards.json）を読み込めなくして開き直す
 await send('Network.setBlockedURLs', { urls: ['*hazards.json'] });
 await open(1280, 900, false);

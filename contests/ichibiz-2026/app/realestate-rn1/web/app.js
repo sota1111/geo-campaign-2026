@@ -4,7 +4,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const GSI = 'https://cyberjapandata.gsi.go.jp/xyz/';
-  const state = { data: null, view: { lon: 134.5548, lat: 34.0703, z: 14 }, pin: null, facts: null, show: { res: true, city: true, flood: false, sed: false, tsunami: false, surge: false, liq: false }, rimg: {}, pending: null };
+  const state = { region: Lib.REGIONS[Lib.DEFAULT_REGION], loaded: {}, data: null, view: Object.assign({}, Lib.REGIONS[Lib.DEFAULT_REGION].view), pin: null, facts: null, show: { res: true, city: true, flood: false, sed: false, tsunami: false, surge: false, liq: false }, rimg: {}, pending: null };
 
   // ---- 地図 ----
   const map = $('map'), tiles = $('tiles'), cv = $('over'), pinEl = $('pin');
@@ -78,7 +78,6 @@
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
     const d = state.data;
     if (d) {
-      const code = d.city.code;
       for (const [k, part] of [['flood', 'flood'], ['tsunami', 'tsunami'], ['surge', 'surge'], ['liq', 'liquefaction']]) {
         if (state.show[k] && d.hazard && d.hazard[part]) {
           const r = d.hazard[part], a = project(r.west, r.north), b = project(r.west + r.w * r.dx, r.north - r.h * r.dy);
@@ -90,7 +89,7 @@
       }
       if (d.plan) {
         for (const e of d.plan) {
-          if (e.cityCode !== code) continue;
+          if (!Lib.regionHas(d.region, e.cityCode)) continue;
           if (e.id === 31 && state.show.res) { g.beginPath(); tracePolys(g, e.polys, w, h); g.fillStyle = 'rgba(47,158,91,.38)'; g.fill('evenodd'); }
           if (e.id === 32 && state.show.city) { g.beginPath(); tracePolys(g, e.polys, w, h); g.strokeStyle = '#2b6fd6'; g.lineWidth = 2; g.stroke(); }
         }
@@ -110,7 +109,7 @@
     pinEl.hidden = false; pinEl.style.left = p.x + 'px'; pinEl.style.top = p.y + 'px';
   }
   function setZoom(z, anchor) {
-    z = Math.max(11, Math.min(17, z));
+    z = Math.max(state.region.zoomMin || 11, Math.min(17, z));
     if (z === state.view.z) return;
     if (anchor) { const a = unproject(anchor.x, anchor.y); state.view.z = z; const b = unproject(anchor.x, anchor.y); state.view.lon += a.lon - b.lon; state.view.lat += a.lat - b.lat; }
     else state.view.z = z;
@@ -184,14 +183,14 @@
   }
   function renderStatus() {
     const d = state.data;
-    $('dataStatus').innerHTML = Object.entries(Lib.APIS).map(([api, a]) => {
+    $('dataStatus').innerHTML = Object.entries(Lib.apisFor(state.region)).map(([api, a]) => {
       const s = d ? d.status[api] : { state: 'missing', reason: 'データを読み込めませんでした' };
-      return '<li><strong>' + esc(api) + '</strong> ' + esc(a.name) + '： ' + (s.state === 'ok' ? '<span class="st-ok">取得済み</span>（' + s.count + (['XKT026', 'XKT028', 'XKT027', 'XKT025'].includes(api) ? 'セル（約18m格子）' : '件') + '・' + esc(s.fetchedAt || '') + '）' : '<span class="st-ng">' + Lib.UNFETCHED + '</span>（' + esc(s.reason) + '）') + '</li>';
+      return '<li><strong>' + esc(api) + '</strong> ' + esc(a.name) + '： ' + (s.state === 'ok' ? '<span class="st-ok">取得済み</span>（' + s.count + (['XKT026', 'XKT028', 'XKT027', 'XKT025'].includes(api) ? 'セル（約18m格子）' : '件') + '・' + esc(s.fetchedAt || '') + '）' : '<span class="st-ng">' + (s.state === 'empty' ? Lib.NODATA : Lib.UNFETCHED) + '</span>（' + esc(s.reason) + '）') + '</li>';
     }).join('');
     $('fetchedAt').textContent = d && d.fetchedAt ? d.fetchedAt : '—';
   }
   function statusText(f) {
-    if (!f.inBBox) return 'この地点は同梱データの範囲（徳島市周辺）の外です。';
+    if (!f.inBBox) return 'この地点は同梱データの範囲（' + state.region.name + '周辺）の外です。';
     return '位置を指定しました。下の先行きシートを確認してください。';
   }
   function choose(lon, lat) {
@@ -218,21 +217,30 @@
       $('status').textContent = '「' + j[0].properties.title + '」付近に移動しました。土地の位置を地図でクリックしてください（地図にフォーカスして Enter でも、中心を指せます）。';
     } catch (err) { $('status').textContent = '検索に失敗しました。地図を直接クリックしてください。'; }
   });
-  document.querySelectorAll('button.ex').forEach((b) => b.addEventListener('click', () => {
-    const lon = Number(b.dataset.lon), lat = Number(b.dataset.lat);
-    state.view = { lon, lat, z: 15 }; choose(lon, lat);
-  }));
+  // 例の場所のボタンは、選んだ地域のものを作る
+  function renderExamples() {
+    const box = $('exButtons'); box.innerHTML = '';
+    for (const e of state.region.examples) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'secondary ex'; b.textContent = e.label; b.dataset.lon = e.lon; b.dataset.lat = e.lat;
+      b.addEventListener('click', () => { state.view = { lon: e.lon, lat: e.lat, z: 15 }; choose(e.lon, e.lat); });
+      box.appendChild(b);
+    }
+    $('q').placeholder = '例: ' + state.region.search;
+  }
   const toggles = { tgResidential: 'res', tgCity: 'city', tgFlood: 'flood', tgSediment: 'sed', tgTsunami: 'tsunami', tgSurge: 'surge', tgLiq: 'liq' };
   for (const [id, k] of Object.entries(toggles)) $(id).onchange = (e) => { state.show[k] = e.target.checked; drawOverlay(); };
   $('printBtn').onclick = () => window.print();
 
-  // ---- 起動 ----
-  async function load() {
-    const get = async (name) => { const r = await fetch('data/' + name); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
+  // ---- 起動・地域の切り替え ----
+  // 選んだ地域のデータ（data/<地域>/）だけを読み込む。読み込んだ地域はメモリに残し、切り替えを速くする
+  async function load(region) {
+    const base = 'data/' + region.dir + '/';
+    const get = async (name) => { const r = await fetch(base + name); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
     let manifest;
     try { manifest = await get('manifest.json'); } catch (e) { manifest = { layers: {} }; }
     const files = {};
-    const key = { 'plan.json': 'plan', 'population.json': 'population', 'districts.json': 'districts', 'facilities.json': 'facilities', 'hazards.json': 'hazards' };
+    const key = { 'plan.json': 'plan', 'population.json': 'population', 'districts.json': 'districts', 'facilities.json': 'facilities', 'hazards.json': 'hazards', 'zoning.json': 'zoning' };
     await Promise.all(Object.entries(key).map(async ([file, k]) => {
       const needed = Object.values(manifest.layers || {}).some((l) => l.file === file && l.status === 'ok');
       if (!needed) return;
@@ -240,12 +248,36 @@
         for (const l of Object.values(manifest.layers)) if (l.file === file && l.status === 'ok') { l.status = 'failed'; l.reason = 'データファイル（' + file + '）を読み込めませんでした'; }
       }
     }));
-    state.data = Lib.assemble(manifest, files);
+    return Lib.assemble(manifest, files, region);
   }
   function runPending() { if (state.pending && state.data) { const p = state.pending; state.pending = null; choose(p.lon, p.lat); } }
-  const App = window.App = { state, choose, render, last: null, ready: false };
-  load().then(() => { App.ready = true; renderStatus(); runPending(); $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('nlni').textContent = Lib.NLNI_SOURCE; $('orignote').textContent = Lib.ORIG_NOTES; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE; render(); })
-    .catch(() => { App.ready = true; $('status').textContent = 'データを読み込めませんでした。'; renderStatus(); });
-  $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.PROCESSED; $('nlni').textContent = Lib.NLNI_SOURCE; $('orignote').textContent = Lib.ORIG_NOTES; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE;
-  render();
+  const App = window.App = { state, choose, render, last: null, ready: false, setRegion: null };
+  function footerTexts() {
+    const r = state.region;
+    $('attribution').textContent = Lib.ATTRIBUTION; $('processed').textContent = Lib.processedFor(r); $('nlni').textContent = Lib.NLNI_SOURCE; $('orignote').textContent = Lib.ORIG_NOTES; $('credit').textContent = Lib.CREDIT; $('resp').textContent = Lib.RESPONSIBILITY; $('popnote').textContent = Lib.POP_NOTE;
+    const link = $('regionLink');
+    if (r.id === 'tokushima') link.innerHTML = '徳島市の立地適正化計画の公表ページ: <a href="' + Lib.PLAN_PAGE + '" rel="noopener">徳島市</a>。';
+    else link.textContent = r.name + 'の区域は、各区（市）の公表ページで確かめてください。';
+    $('regionNote').textContent = Lib.regionNote(r);
+    const hasPlan = !!(state.data && state.data.plan);
+    $('lbRes').hidden = $('lbCity').hidden = !hasPlan;
+  }
+  async function setRegion(id) {
+    const region = Lib.REGIONS[id];
+    if (!region) return;
+    state.region = region; state.data = null; state.pin = null; state.facts = null; state.pending = null; state.rimg = {};
+    state.view = Object.assign({}, region.view); App.ready = false; App.last = null;
+    document.querySelectorAll('input[name=region]').forEach((r) => { r.checked = r.value === id; });
+    renderExamples(); renderSheet(); footerTexts(); render();
+    $('status').textContent = region.name + 'のデータを読み込み中です（回線が遅いと十数秒かかります）。読み込みが終わるまで、指した位置は覚えておき、終わると自動でシートを出します。';
+    let data = state.loaded[id];
+    try { if (!data) data = state.loaded[id] = await load(region); } catch (e) { data = null; }
+    if (state.region !== region) return; // 読み込み中に別の地域が選ばれた
+    state.data = data; App.ready = true;
+    $('status').textContent = data ? '地図で場所を指すか、例の場所を選ぶと、ここに状況が出ます。' : 'データを読み込めませんでした。';
+    renderStatus(); footerTexts(); runPending(); render();
+  }
+  App.setRegion = setRegion;
+  document.querySelectorAll('input[name=region]').forEach((r) => r.addEventListener('change', (e) => { if (e.target.checked) setRegion(e.target.value); }));
+  setRegion(Lib.DEFAULT_REGION);
 })();
