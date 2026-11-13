@@ -454,7 +454,7 @@ export function altConditions(cell: Cell, o: { fi: number; day: Day; per: Period
 }
 
 /** 本アプリの開発者の連絡先（ガイドラインの通知③）。公開前に入れる（contests/odpt-2026/app/README.md の公開前チェックリスト）。静的版 lib.js の ODPT_CONTACT と同じ値にする */
-export const ODPT_CONTACT = ''
+export const ODPT_CONTACT = 'sota.moro@gmail.com'
 /** 公共交通オープンデータ開発者ガイドラインが一般ユーザへの通知を求める事項（出典・無保証・事業者へ問い合わせない・開発者の連絡先）。静的版 lib.js と同文 */
 export const ODPT_NOTICE =
   '本アプリが利用する公共交通データの一部は、公共交通オープンデータセンターにおいて提供されるものです。' +

@@ -1,0 +1,149 @@
+{
+ "layers": {
+  "XKT003": {
+   "label": "立地適正化計画",
+   "status": "ok",
+   "file": "plan.json",
+   "part": null,
+   "z": 13,
+   "tiles": 42,
+   "received": 67,
+   "count": 9,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT013": {
+   "label": "将来推計人口（250mメッシュ）",
+   "status": "ok",
+   "file": "population.json",
+   "part": null,
+   "z": 13,
+   "tiles": 42,
+   "received": 5039,
+   "count": 4524,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT004": {
+   "label": "小学校区",
+   "status": "ok",
+   "file": "districts.json",
+   "part": null,
+   "z": 13,
+   "tiles": 42,
+   "received": 220,
+   "count": 78,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT006": {
+   "label": "学校（小・中学校）",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "schools",
+   "z": 13,
+   "tiles": 42,
+   "received": 157,
+   "count": 110,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT007": {
+   "label": "保育園・幼稚園等",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "preschools",
+   "z": 13,
+   "tiles": 42,
+   "received": 289,
+   "count": 289,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT010": {
+   "label": "医療機関",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "medical",
+   "z": 13,
+   "tiles": 42,
+   "received": 778,
+   "count": 778,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT011": {
+   "label": "福祉施設（老人福祉施設）",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "elder",
+   "z": 13,
+   "tiles": 42,
+   "received": 2669,
+   "count": 287,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT029": {
+   "label": "土砂災害警戒区域",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "sediment",
+   "z": 13,
+   "tiles": 42,
+   "received": 6369,
+   "count": 6217,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT026": {
+   "label": "洪水浸水想定区域（想定最大規模）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "flood",
+   "z": 14,
+   "tiles": 144,
+   "received": 154264,
+   "count": 616597,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT028": {
+   "label": "津波浸水想定",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "tsunami",
+   "z": 14,
+   "tiles": 144,
+   "received": 41086,
+   "count": 376376,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT027": {
+   "label": "高潮浸水想定区域",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "surge",
+   "z": 13,
+   "tiles": 42,
+   "received": 34995,
+   "count": 356785,
+   "fetchedAt": "2026-11-12"
+  },
+  "XKT025": {
+   "label": "液状化の発生傾向（地形区分に基づく）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "liquefaction",
+   "z": 13,
+   "tiles": 42,
+   "received": 9046,
+   "count": 1304187,
+   "fetchedAt": "2026-11-12"
+  }
+ },
+ "generator": "fetch-reinfolib.mjs",
+ "source": "国土交通省 不動産情報ライブラリ",
+ "city": {
+  "code": "36201",
+  "name": "徳島市"
+ },
+ "bbox": [
+  134.42,
+  33.95,
+  134.66,
+  34.16
+ ],
+ "fetchedAt": "2026-11-12"
+}
