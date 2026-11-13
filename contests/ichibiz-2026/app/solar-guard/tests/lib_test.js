@@ -165,6 +165,9 @@ t('県警の5地区との比較: 市町村の対応・順位相関の計算', ()
   assert.equal(d.rows.length, 5);
   d.rows.forEach((r) => assert.ok(r.plants > 1000 && r.rate > 0 && r.rankScore >= 1 && r.rankScore <= 5));
   assert.ok(d.rho >= -1 && d.rho <= 1);
+  // 順位は高い方から1位（デザイン審査 M1）。被害率が最大の県南が被害率1位、最小の鹿行が5位。README の表と同じ
+  const rk = {}; d.rows.forEach((r) => { rk[r.area] = [r.rankRate, r.rankScore]; });
+  assert.deepEqual(rk, { 県西: [2, 5], 県南: [1, 4], 県央: [4, 3], 鹿行: [5, 2], 県北: [3, 1] });
   // README・画面に書いた値（初期の重みで −0.60、最初の版の重みで −0.90）と合う
   assert.equal(d.rho.toFixed(2), '-0.60');
   assert.equal(G.districtCompare(R, T, G.scoreMunis(munis.rows, { quiet: 1, kw: 1, small: 1 })).rho != null, true);

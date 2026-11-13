@@ -127,6 +127,15 @@ async function run(label, w, h, mobile) {
   await sleep(300);
   let res = await c.ev('document.getElementById("diag-result").innerText');
   if (!res.includes('周囲の目安') || !res.includes('人の少なさ')) problems.push(label + ': 診断の周囲の目安が出ない');
+  // 診断直後の受付欄に要約と「結果を見る」（デザイン審査 M2）。勝手にスクロールしない
+  const sm = await c.ev('({t: document.getElementById("pos-msg").innerText, y: window.scrollY, a: !!document.getElementById("go-result")})');
+  if (!sm.a || !sm.t.includes('結果を見る') || !/実施していない\d+件/.test(sm.t)) problems.push(label + ': 診断直後の受付欄に要約と「結果を見る」がない: ' + sm.t);
+  if (sm.y !== 0) problems.push(label + ': 診断直後に勝手にスクロールした y=' + sm.y);
+  // 出典・加工の明記が初期画面（地図タブ）からも見える（憲兵 L5）
+  await click(c, '#tab-map');
+  const cr = await c.ev('(function(){var r=document.getElementById("credit").getBoundingClientRect();return {t:document.getElementById("credit").innerText,top:r.top,h:window.innerHeight,bottom:r.bottom};})()');
+  if (!cr.t.includes('編集・加工して作成') || cr.top < 0 || cr.bottom > cr.h + 1) problems.push(label + ': 出典・加工の明記が見えない ' + JSON.stringify(cr));
+  await click(c, '#tab-diag');
   await click(c, '#ctl-class button:nth-child(1)'); // 低圧
   await click(c, '.cl-item .seg button[data-v="yes"]');
   await click(c, '.cl-group + .cl-item + .cl-item .seg button[data-v="no"]');
@@ -189,7 +198,7 @@ async function run(label, w, h, mobile) {
   await shot(c, `${label}-3-reality.png`, mobile);
   await click(c, '#tab-about');
   const ab = await c.ev('document.getElementById("about").innerText');
-  for (const wd of ['加工して作成', '悪用を防ぐ設計', '限界・要確認', '利用ルール', '3件未満', '未確認（事務局への確認待ち）', '一致していません', '推測', '送信も保存もしない', '地理院が受け取る']) if (!ab.includes(wd)) problems.push(label + ': 出典・限界に「' + wd + '」がない');
+  for (const wd of ['加工して作成', '悪用を防ぐ設計', '限界・要確認', '利用ルール', '3件未満', '資源エネルギー庁', '一致していません', '推測', '送信も保存もしない', '地理院が受け取る']) if (!ab.includes(wd)) problems.push(label + ': 出典・限界に「' + wd + '」がない');
   await shot(c, `${label}-4-about.png`, mobile);
   if (await c.ev('document.documentElement.scrollWidth > window.innerWidth + 2')) problems.push(label + ': 横スクロール（出典タブ）');
   // 出典表: スマホ幅ではカード（デザイン審査 M2）

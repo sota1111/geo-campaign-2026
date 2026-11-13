@@ -137,7 +137,8 @@
       for (var i = 0; i < n; i++) { c += (rr[i] - ma) * (rs[i] - mb); va += (rr[i] - ma) * (rr[i] - ma); vb += (rs[i] - mb) * (rs[i] - mb); }
       rho = va && vb ? c / Math.sqrt(va * vb) : null;
     }
-    ok.forEach(function (r, i) { r.rankRate = Math.round(rr[i] / 100 * (n - 1)) + 1; r.rankScore = Math.round(rs[i] / 100 * (n - 1)) + 1; }); // 1=最低 … n=最高
+    ok.forEach(function (r, i) { r.rankRate = Math.round(rr[i] / 100 * (n - 1)) + 1; r.rankScore = Math.round(rs[i] / 100 * (n - 1)) + 1; }); // 1=最低 … n=最高（計算用の昇順）
+    ok.forEach(function (r) { r.rankRate = n + 1 - r.rankRate; r.rankScore = n + 1 - r.rankScore; }); // 表示用に、高い方から1位へ向きをそろえる
     return { rows: rows, rho: rho };
   }
 
