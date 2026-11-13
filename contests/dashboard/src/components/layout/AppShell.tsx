@@ -1,4 +1,3 @@
-import { LayoutDashboard } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
@@ -10,6 +9,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { CONTESTS, isNewPlan, orderedAppsByContest } from '@/apps/registry'
 import { appUrl } from '@/lib/data'
+import { contestsByDeadline } from '@/apps/contests-info'
+import { asOf } from '@/pages/Progress'
 
 /** ポータル（統合ダッシュボード）の外枠。各アプリは独立ページなので、リンクは通常の <a>（同じタブ） */
 function PortalSidebar() {
@@ -22,21 +23,8 @@ function PortalSidebar() {
         </a>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive className="h-auto min-h-8">
-                  <a href="./index.html">
-                    <LayoutDashboard className="size-4" />
-                    概要
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        {CONTESTS.map((c) => (
+        {/* 本文の一覧と同じ、締切の近い順 */}
+        {contestsByDeadline().map((i) => CONTESTS.find((c) => c.id === i.id)!).map((c) => (
           <SidebarGroup key={c.id}>
             <SidebarGroupLabel className="h-auto whitespace-normal py-1 leading-tight">{c.name}</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -78,9 +66,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
             <SidebarTrigger aria-label="メニューを開閉" />
             <Separator orientation="vertical" className="h-5" />
-            <span className="text-sm font-medium">概要</span>
+            <span className="text-sm font-medium">統合ダッシュボード</span>
+            <span className="text-xs text-muted-foreground">{asOf} 時点</span>
           </header>
-          <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+          <main className="min-w-0 flex-1 p-3 md:p-6">{children}</main>
         </SidebarInset>
         <Toaster />
       </SidebarProvider>

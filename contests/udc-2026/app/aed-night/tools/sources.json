@@ -1,0 +1,84 @@
+{
+  "municipalities": [
+    {
+      "id": "machida",
+      "name": "町田市",
+      "pref": "東京都",
+      "code": "13209",
+      "mesh1": "5339",
+      "format": "standard",
+      "csv_url": "https://www.city.machida.tokyo.jp/shisei/opendata/shisetsu/aed.files/132098_aed.csv",
+      "encoding": "utf-8-sig",
+      "landing": "https://opendata.city.machida.tokyo.jp/en/dataset/shisetsu_aed",
+      "dataset": "町田市 AED設置箇所一覧",
+      "license": "CC BY 4.0（町田市オープンデータ）",
+      "credit": "町田市「AED設置箇所一覧」（CC BY）を加工して作成",
+      "boundaries": [
+        "13209A1968"
+      ],
+      "boundary_year": "20230101"
+    },
+    {
+      "id": "fukuoka",
+      "name": "福岡市",
+      "pref": "福岡県",
+      "code": "40130",
+      "mesh1": "5030",
+      "format": "fukuoka",
+      "csv_url": "https://data.bodik.jp/dataset/657e3c99-9c43-4480-a3f0-e1213644e641/resource/d988273f-400f-4e91-b5c2-c80f266715c1/download/aed_202512040821.csv",
+      "encoding": "cp932",
+      "landing": "https://odm.bodik.jp/dataset/401307_aed",
+      "dataset": "福岡市 AED（福岡市AED設置施設登録制度）",
+      "license": "CC BY（BODIK ODM の表示: Creative Commons Attribution）",
+      "credit": "福岡市「AED」（BODIK ODM、CC BY）を加工して作成",
+      "boundaries": [
+        "40131A1972",
+        "40132A1972",
+        "40133A1972",
+        "40134A1972",
+        "40135A1972",
+        "40136A1982",
+        "40137A1982"
+      ],
+      "boundary_year": "20230101"
+    },
+    {
+      "id": "ibara",
+      "name": "井原市",
+      "pref": "岡山県",
+      "code": "33207",
+      "mesh1": "5133",
+      "format": "standard",
+      "csv_url": "https://ibara.dataeye.jp/resource_download/17649",
+      "encoding": "utf-8-sig",
+      "landing": "https://odm.bodik.jp/dataset/332071_649_pdl",
+      "dataset": "井原市_AED_設置施設",
+      "license": "公共データ利用規約（第1.0版。PDL1.0。おかやまオープンデータカタログの規約。CC BY 4.0 と互換）",
+      "credit": "出典：おかやまオープンデータカタログ（https://www.okayama-opendata.jp/datasets/649）の井原市「AED設置施設」（元データの作成者: 一般社団法人データクレイドル。BODIK ODM の表示）を、配信元の dataeye（ibara.dataeye.jp）から取得し、本作品の作成者が加工して作成。県・市が作成したものではありません",
+      "boundaries": [
+        "33207A1968"
+      ],
+      "boundary_year": "20230101"
+    },
+    {
+      "id": "kurashiki",
+      "name": "倉敷市",
+      "pref": "岡山県",
+      "code": "33202",
+      "mesh1": "5133",
+      "format": "standard",
+      "csv_url": "https://kurashiki.dataeye.jp/resource_download/17585",
+      "encoding": "utf-8-sig",
+      "landing": "https://odm.bodik.jp/dataset/332020_496_pdl",
+      "dataset": "倉敷市_AED_設置施設",
+      "license": "公共データ利用規約（第1.0版。PDL1.0。おかやまオープンデータカタログの規約。CC BY 4.0 と互換）",
+      "credit": "出典：おかやまオープンデータカタログ（https://www.okayama-opendata.jp/datasets/496）の倉敷市「AED設置施設」を、配信元の dataeye（kurashiki.dataeye.jp）から取得し、本作品の作成者が加工して作成。県・市が作成したものではありません",
+      "boundaries": [
+        "33202A1968"
+      ],
+      "boundary_year": "20230101"
+    }
+  ],
+  "mesh_stats_id": "T001142",
+  "mesh_note": "令和2年国勢調査 地域メッシュ統計 250mメッシュ（世界測地系）。e-Stat 統計GIS"
+}

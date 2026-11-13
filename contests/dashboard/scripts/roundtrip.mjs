@@ -1,4 +1,4 @@
-// ポータル→各アプリ→「← 統合ダッシュボード」の往復と、URLハッシュの共有状態を確認する。
+// ポータル→各アプリ→「← 統合ダッシュボード」の往復を確認する。戻ったら全行が閉じた一覧（openRows=0、ハッシュなし）になること。
 // usage: node scripts/roundtrip.mjs <base_url>   （例: http://127.0.0.1:8840/）要 google-chrome, node 22+
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -8,7 +8,7 @@ import path from 'node:path'
 const base = process.argv[2]
 const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji']
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed']
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)
 const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'))
@@ -28,18 +28,18 @@ ws.onmessage = (m) => {
 }
 const send = (method, params = {}) => new Promise((r) => { const i = ++n; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
 const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnByValue: true, awaitPromise: true })).result?.result?.value
-await send('Runtime.enable'); await send('Page.enable'); await send('Log.enable')
+await send('Runtime.enable'); await send('Page.enable'); await send('Log.enable'); await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
 const out = []
 for (const id of ids) {
-  await send('Page.navigate', { url: base })
+  await send('Page.navigate', { url: base + '#open=satellite-2026,ichibiz-2026,udc-2026,odpt-2026' })
   await sleep(1500)
-  await ev(`document.querySelector('[data-app-card="${id}"] a').click()`)
+  await ev(`document.querySelector('[data-app-card="${id}"] a[href*="apps/${id}/"]').click()`)
   await sleep(2500)
   const url1 = await ev('location.pathname + location.hash')
   await ev(`document.querySelector('header a[href*="index.html"]').click()`)
   await sleep(1500)
-  const url2 = await ev('location.pathname + location.hash'); const tab = await ev("document.querySelector('[role=tab][data-state=active] span')?.textContent")
-  out.push({ id, opened: url1, back: url2, activeTab: tab, errs: errs.splice(0) })
+  const url2 = await ev('location.pathname + location.hash'); const openRows = await ev("document.querySelectorAll('[data-testid^=row-][aria-expanded=true]').length")
+  out.push({ id, opened: url1, back: url2, openRows, errs: errs.splice(0) })
 }
 console.log(JSON.stringify({ out, errs }, null, 2))
 ws.close(); chrome.kill()

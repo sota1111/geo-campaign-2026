@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "name": "chimei-kioku-map",
+  "properties": {
+    "note": "地名の記憶マップ（デモ）の書き出し。サンプル（架空）を含む場合は sample=true。危険度の判定は含まない。",
+    "exportedAt": "2026-11-13T11:19:11.050Z",
+    "scope": "publishable"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          132.495,
+          34.4785
+        ]
+      },
+      "properties": {
+        "id": "rec-20261113111826-1",
+        "placeName": "ぬま田（架空）",
+        "placeType": "旧地名",
+        "teller": "語り手A（架空・実在しない）",
+        "heardOn": "",
+        "story": "「大雨のあとは、このあたりに水が溜まって田が沼のようになった」と語られている、という設定のサンプル。【評価用の架空聞き取り】大雨のあとに水が溜まったという設定の話。実在の証言ではない。",
+        "basis": "（架空）語り手Aの話。文献の裏づけはない、という設定。",
+        "claimedKinds": [
+          "洪水"
+        ],
+        "certainty": "不明",
+        "visibility": "public",
+        "license": "CC BY 4.0",
+        "checked": [],
+        "verified": true,
+        "verifiedBy": "確認役（デモ）",
+        "sample": false,
+        "crossCheck": "保存時の突き合わせ: 半径1.0 km以内に、語られている種類（洪水）の伝承碑が1件（大禹謨(だいうぼ) 350 m）。手がかりの有無であり、話の正誤や危険度は示さない。"
+      }
+    }
+  ]
+}

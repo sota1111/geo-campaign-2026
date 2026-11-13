@@ -1,0 +1,1727 @@
+{
+ "out": [
+  {
+   "label": "1280",
+   "firstScreen": {
+    "viewportH": 765,
+    "first": {
+     "scrollY": 0,
+     "tops": [
+      98,
+      160,
+      230,
+      310
+     ],
+     "docH": 765,
+     "sw": 1265
+    },
+    "rowBottoms": [
+     156,
+     226,
+     306,
+     368
+    ],
+    "fit": true,
+    "pageFits": true,
+    "stagesPerRow": [
+     5,
+     5,
+     5,
+     5
+    ],
+    "pane": {
+     "top": 374,
+     "bottom": 757,
+     "left": 280,
+     "width": 961,
+     "height": 384
+    },
+    "preSelected": [
+     "satellite-2026"
+    ],
+    "sidebarOrder": [
+     "衛星データ活用ア",
+     "イチBizアワー",
+     "アーバンデータチ",
+     "公共交通オープン"
+    ],
+    "noSheet": true
+   }
+  },
+  {
+   "label": "1280",
+   "selectSequence": [
+    {
+     "id": "ichibiz-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 2852,
+      "boxTop": 426,
+      "boxBottom": 755,
+      "paneTop": 374,
+      "paneH": 384,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "イチBizの詳細"
+     },
+     "hash": "#open=ichibiz-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "udc-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 1517,
+      "boxTop": 426,
+      "boxBottom": 755,
+      "paneTop": 374,
+      "paneH": 384,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "UDCの詳細"
+     },
+     "hash": "#open=udc-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "odpt-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 1584,
+      "boxTop": 426,
+      "boxBottom": 755,
+      "paneTop": 374,
+      "paneH": 384,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "ODPTの詳細"
+     },
+     "hash": "#open=odpt-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "satellite-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 2072,
+      "boxTop": 426,
+      "boxBottom": 755,
+      "paneTop": 374,
+      "paneH": 384,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "衛星アワードの詳細"
+     },
+     "hash": "#open=satellite-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "odpt-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 1584,
+      "boxTop": 426,
+      "boxBottom": 755,
+      "paneTop": 374,
+      "paneH": 384,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "ODPTの詳細"
+     },
+     "hash": "#open=odpt-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "ichibiz-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       98,
+       160,
+       230,
+       310
+      ],
+      "docH": 765,
+      "sw": 1265
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 2852,
+      "boxTop": 426,
+      "boxBottom": 755,
+      "paneTop": 374,
+      "paneH": 384,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "イチBizの詳細"
+     },
+     "hash": "#open=ichibiz-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    }
+   ],
+   "allStable": true,
+   "allOne": true,
+   "allVisible": true,
+   "minPaneH": 384,
+   "deepAfter": {
+    "scrollY": 0,
+    "tops": [
+     98,
+     160,
+     230,
+     310
+    ],
+    "docH": 765,
+    "sw": 1265
+   },
+   "deep": {
+    "inner": 0,
+    "innerMax": 2852,
+    "boxTop": 426,
+    "boxBottom": 755,
+    "paneTop": 374,
+    "paneH": 384,
+    "paneHalf": true,
+    "visible": true,
+    "overlay": false,
+    "title": "イチBizの詳細"
+   }
+  },
+  {
+   "label": "1280",
+   "wheel": {
+    "mid": {
+     "inner": 600,
+     "y": 0
+    },
+    "end": {
+     "inner": 2852,
+     "y": 0
+    },
+    "pageSame": true
+   }
+  },
+  {
+   "label": "1280",
+   "jump": {
+    "inner": 2083,
+    "pageSame": true
+   }
+  },
+  {
+   "label": "1280",
+   "hashRestore": {
+    "pane": {
+     "inner": 0,
+     "innerMax": 1584,
+     "boxTop": 426,
+     "boxBottom": 755,
+     "paneTop": 374,
+     "paneH": 384,
+     "paneHalf": true,
+     "visible": true,
+     "overlay": false,
+     "title": "ODPTの詳細"
+    },
+    "pressed": true,
+    "snap": {
+     "scrollY": 0,
+     "tops": [
+      98,
+      160,
+      230,
+      310
+     ],
+     "docH": 765,
+     "sw": 1265
+    }
+   }
+  },
+  {
+   "label": "1280",
+   "keyboard": {
+    "f1": "row-ichibiz-2026",
+    "sel1": [
+     "satellite-2026"
+    ],
+    "afterEnter": {
+     "title": "イチBizの詳細",
+     "focus": "row-ichibiz-2026"
+    },
+    "afterSpace": {
+     "title": "UDCの詳細",
+     "focus": "row-udc-2026"
+    },
+    "up": "row-ichibiz-2026",
+    "outline": "solid",
+    "pageSame": true
+   }
+  },
+  {
+   "label": "390",
+   "firstScreen": {
+    "viewportH": 844,
+    "first": {
+     "scrollY": 0,
+     "tops": [
+      124,
+      271,
+      441,
+      612
+     ],
+     "docH": 844,
+     "sw": 390
+    },
+    "rowBottoms": [
+     267,
+     437,
+     608,
+     740
+    ],
+    "fit": true,
+    "pageFits": true,
+    "stagesPerRow": [
+     5,
+     5,
+     5,
+     5
+    ],
+    "pane": {
+     "top": 746,
+     "bottom": 832,
+     "left": 12,
+     "width": 366,
+     "height": 86
+    },
+    "preSelected": [],
+    "sidebarOrder": [],
+    "noSheet": true
+   }
+  },
+  {
+   "label": "390",
+   "selectSequence": [
+    {
+     "id": "ichibiz-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 5463,
+      "boxTop": 386,
+      "boxBottom": 830,
+      "paneTop": 310,
+      "paneH": 522,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "イチBizの詳細"
+     },
+     "hash": "#open=ichibiz-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "udc-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 2534,
+      "boxTop": 362,
+      "boxBottom": 830,
+      "paneTop": 310,
+      "paneH": 522,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "UDCの詳細"
+     },
+     "hash": "#open=udc-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "odpt-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 3051,
+      "boxTop": 386,
+      "boxBottom": 830,
+      "paneTop": 310,
+      "paneH": 522,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "ODPTの詳細"
+     },
+     "hash": "#open=odpt-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "satellite-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 3706,
+      "boxTop": 386,
+      "boxBottom": 830,
+      "paneTop": 310,
+      "paneH": 522,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "衛星アワードの詳細"
+     },
+     "hash": "#open=satellite-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "odpt-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 3051,
+      "boxTop": 386,
+      "boxBottom": 830,
+      "paneTop": 310,
+      "paneH": 522,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "ODPTの詳細"
+     },
+     "hash": "#open=odpt-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    },
+    {
+     "id": "ichibiz-2026",
+     "pre": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "post": {
+      "scrollY": 0,
+      "tops": [
+       124,
+       170,
+       216,
+       262
+      ],
+      "docH": 844,
+      "sw": 390
+     },
+     "pane": {
+      "inner": 0,
+      "innerMax": 5463,
+      "boxTop": 386,
+      "boxBottom": 830,
+      "paneTop": 310,
+      "paneH": 522,
+      "paneHalf": true,
+      "visible": true,
+      "overlay": false,
+      "title": "イチBizの詳細"
+     },
+     "hash": "#open=ichibiz-2026",
+     "pressedOk": true,
+     "onlyOne": true,
+     "innerAfterSwitch": 0,
+     "stable": true
+    }
+   ],
+   "allStable": true,
+   "allOne": true,
+   "allVisible": true,
+   "minPaneH": 522,
+   "deepAfter": {
+    "scrollY": 0,
+    "tops": [
+     124,
+     170,
+     216,
+     262
+    ],
+    "docH": 844,
+    "sw": 390
+   },
+   "deep": {
+    "inner": 0,
+    "innerMax": 5463,
+    "boxTop": 386,
+    "boxBottom": 830,
+    "paneTop": 310,
+    "paneH": 522,
+    "paneHalf": true,
+    "visible": true,
+    "overlay": false,
+    "title": "イチBizの詳細"
+   }
+  },
+  {
+   "label": "390",
+   "wheel": {
+    "mid": {
+     "inner": 600,
+     "y": 0
+    },
+    "end": {
+     "inner": 5463,
+     "y": 0
+    },
+    "pageSame": true
+   }
+  },
+  {
+   "label": "390",
+   "jump": {
+    "inner": 3765,
+    "pageSame": true
+   }
+  },
+  {
+   "label": "390",
+   "hashRestore": {
+    "pane": {
+     "inner": 0,
+     "innerMax": 3051,
+     "boxTop": 386,
+     "boxBottom": 830,
+     "paneTop": 310,
+     "paneH": 522,
+     "paneHalf": true,
+     "visible": true,
+     "overlay": false,
+     "title": "ODPTの詳細"
+    },
+    "pressed": true,
+    "snap": {
+     "scrollY": 0,
+     "tops": [
+      124,
+      170,
+      216,
+      262
+     ],
+     "docH": 844,
+     "sw": 390
+    }
+   }
+  },
+  {
+   "label": "390",
+   "keyboard": {
+    "f1": "row-ichibiz-2026",
+    "sel1": [],
+    "afterEnter": {
+     "title": "イチBizの詳細",
+     "focus": "row-ichibiz-2026"
+    },
+    "afterSpace": {
+     "title": "UDCの詳細",
+     "focus": "row-udc-2026"
+    },
+    "up": "row-ichibiz-2026",
+    "outline": "solid",
+    "pageSame": true
+   }
+  },
+  {
+   "label": "390",
+   "compactToggle": {
+    "full": {
+     "scrollY": 0,
+     "tops": [
+      124,
+      271,
+      441,
+      612
+     ],
+     "docH": 844,
+     "sw": 390
+    },
+    "compact": {
+     "scrollY": 0,
+     "tops": [
+      124,
+      170,
+      216,
+      262
+     ],
+     "docH": 844,
+     "sw": 390
+    },
+    "back": {
+     "scrollY": 0,
+     "tops": [
+      124,
+      271,
+      441,
+      612
+     ],
+     "docH": 844,
+     "sw": 390
+    },
+    "compactRowH": {
+     "top": 216,
+     "bottom": 256,
+     "left": 14,
+     "width": 362,
+     "height": 40
+    },
+    "restored": true,
+    "hash": "",
+    "emptyMsg": "上の一覧の行を選ぶと、そのコンペの詳細がここに出ます。出典: 各コンペの公式要項（取得日 2026-11-09）、進捗は reports/ops/status-20261113.md。今の案7件と、新しい案（比較用・未選定）5件のデモを、各コンペの詳細で隣どうしに並べています。"
+   }
+  },
+  {
+   "label": "1280x500",
+   "pre": {
+    "scrollY": 76,
+    "tops": [
+     22,
+     84,
+     154,
+     234
+    ],
+    "docH": 576,
+    "sw": 1265
+   },
+   "res": [
+    {
+     "scrollY": 76,
+     "tops": [
+      22,
+      84,
+      154,
+      234
+     ],
+     "docH": 576,
+     "sw": 1265
+    },
+    {
+     "scrollY": 76,
+     "tops": [
+      22,
+      84,
+      154,
+      234
+     ],
+     "docH": 576,
+     "sw": 1265
+    },
+    {
+     "scrollY": 76,
+     "tops": [
+      22,
+      84,
+      154,
+      234
+     ],
+     "docH": 576,
+     "sw": 1265
+    }
+   ],
+   "unchanged": true
+  },
+  {
+   "label": "1280",
+   "M7_jump": [
+    {
+     "id": "satellite-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 382,
+       "bottom": 418,
+       "left": 825.796875,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 78,
+       "bottom": 368,
+       "left": 280,
+       "width": 961,
+       "height": 290
+      },
+      "secTopBefore": 1121
+     },
+     "post": {
+      "scrollTop": 1325,
+      "secTopInBox": -204,
+      "svgTopInBox": 21,
+      "svgBottomInBox": -8,
+      "boxH": 330,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    },
+    {
+     "id": "ichibiz-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 382,
+       "bottom": 418,
+       "left": 825.796875,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 78,
+       "bottom": 368,
+       "left": 280,
+       "width": 961,
+       "height": 290
+      },
+      "secTopBefore": 1879
+     },
+     "post": {
+      "scrollTop": 2083,
+      "secTopInBox": -204,
+      "svgTopInBox": 21,
+      "svgBottomInBox": -8,
+      "boxH": 330,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    },
+    {
+     "id": "udc-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 382,
+       "bottom": 418,
+       "left": 825.796875,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 78,
+       "bottom": 368,
+       "left": 280,
+       "width": 961,
+       "height": 290
+      },
+      "secTopBefore": 717
+     },
+     "post": {
+      "scrollTop": 885,
+      "secTopInBox": -168,
+      "svgTopInBox": 21,
+      "svgBottomInBox": -8,
+      "boxH": 330,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    },
+    {
+     "id": "odpt-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 382,
+       "bottom": 418,
+       "left": 825.796875,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 78,
+       "bottom": 368,
+       "left": 280,
+       "width": 961,
+       "height": 290
+      },
+      "secTopBefore": 694
+     },
+     "post": {
+      "scrollTop": 862,
+      "secTopInBox": -168,
+      "svgTopInBox": 21,
+      "svgBottomInBox": -8,
+      "boxH": 330,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    }
+   ],
+   "allSvgFit": true,
+   "bgUnchanged": true,
+   "fromTop": true
+  },
+  {
+   "label": "1280",
+   "M8_six": {
+    "presetsTxt": [
+     "ビジネス部門の2案:true",
+     "アイデア部門の2案:false",
+     "不動産情報活用部門の2案:false",
+     "全6案:false"
+    ],
+    "six": {
+     "series": 12,
+     "boxRight": 1239,
+     "svgs": [
+      {
+       "left": 351,
+       "right": 703,
+       "inside": true
+      },
+      {
+       "left": 804,
+       "right": 1156,
+       "inside": true
+      }
+     ],
+     "legends": [
+      true,
+      true
+     ],
+     "frames": [
+      {
+       "sw": 728,
+       "cw": 435,
+       "within": true,
+       "hint": true
+      },
+      {
+       "sw": 728,
+       "cw": 435,
+       "within": true,
+       "hint": true
+      },
+      {
+       "sw": 890,
+       "cw": 890,
+       "within": true,
+       "hint": false
+      }
+     ],
+     "thMinWidths": [
+      103,
+      119,
+      93,
+      112,
+      95,
+      93,
+      113,
+      103,
+      119,
+      93,
+      112,
+      95,
+      93
+     ],
+     "docSw": 1265
+    },
+    "sixOver": {
+     "root": {
+      "sw": 942,
+      "cw": 942,
+      "equal": true
+     },
+     "scrollOver": [],
+     "rightOver": [],
+     "frames": [
+      {
+       "sw": 728,
+       "cw": 435
+      },
+      {
+       "sw": 728,
+       "cw": 435
+      },
+      {
+       "sw": 890,
+       "cw": 890
+      }
+     ]
+    },
+    "pair": {
+     "pressed": "true",
+     "n": 2
+    },
+    "bgSame": true,
+    "overAllContests": [
+     {
+      "id": "satellite-2026",
+      "over": {
+       "root": {
+        "sw": 942,
+        "cw": 942,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 890,
+         "cw": 890
+        }
+       ]
+      }
+     },
+     {
+      "id": "ichibiz-2026",
+      "over": {
+       "root": {
+        "sw": 942,
+        "cw": 942,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 890,
+         "cw": 890
+        }
+       ]
+      }
+     },
+     {
+      "id": "udc-2026",
+      "over": {
+       "root": {
+        "sw": 942,
+        "cw": 942,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 890,
+         "cw": 890
+        }
+       ]
+      }
+     },
+     {
+      "id": "odpt-2026",
+      "over": {
+       "root": {
+        "sw": 942,
+        "cw": 942,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 437,
+         "cw": 437
+        },
+        {
+         "sw": 890,
+         "cw": 890
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "label": "1280",
+   "M9_M10": {
+    "entry": {
+     "text": "AI評価を見るAI評価（模擬・第3回 11/13）を見る"
+    },
+    "dlg": {
+     "title": "AI評価（模擬）　最新は第3回（11/13）",
+     "headings": [
+      "AI評価（模擬） 最新は第3回（11/13）",
+      "第3回（11/13） GPT-6.1 sol low・評価者10名 最新",
+      "第1回（11/11）・第2回（11/12） Sonnet・評価者各4名 過去回"
+     ],
+     "desc": "すべて AI による模擬評価で、実際の審査結果ではありません。回によって評価した AI と人数が違います。第3回は GPT-6.1 sol low 10名、第1・2回は Sonnet 各4名で、下の区画で分けて示します。",
+     "round3First": true,
+     "sonnetOnlyInPast": true,
+     "pastHasSonnet": true,
+     "w": 1024
+    },
+    "dialogOverflowTop": {
+     "root": {
+      "sw": 1007,
+      "cw": 1007,
+      "equal": true
+     },
+     "scrollOver": [],
+     "rightOver": [],
+     "frames": [
+      {
+       "sw": 458,
+       "cw": 458
+      },
+      {
+       "sw": 542,
+       "cw": 542
+      },
+      {
+       "sw": 353,
+       "cw": 353
+      }
+     ]
+    },
+    "dialogOverflowAfterScroll": {
+     "root": {
+      "sw": 1007,
+      "cw": 1007,
+      "equal": true
+     },
+     "scrollOver": [],
+     "rightOver": [],
+     "frames": [
+      {
+       "sw": 458,
+       "cw": 458
+      },
+      {
+       "sw": 542,
+       "cw": 542
+      },
+      {
+       "sw": 353,
+       "cw": 353
+      }
+     ]
+    },
+    "bgSame": true
+   }
+  },
+  {
+   "label": "390",
+   "M7_jump": [
+    {
+     "id": "satellite-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 342,
+       "bottom": 378,
+       "left": 26,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 122,
+       "bottom": 304,
+       "left": 12,
+       "width": 366,
+       "height": 182
+      },
+      "secTopBefore": 1792
+     },
+     "post": {
+      "scrollTop": 1982,
+      "secTopInBox": -190,
+      "svgTopInBox": 171,
+      "svgBottomInBox": -8,
+      "boxH": 444,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    },
+    {
+     "id": "ichibiz-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 342,
+       "bottom": 378,
+       "left": 26,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 122,
+       "bottom": 304,
+       "left": 12,
+       "width": 366,
+       "height": 182
+      },
+      "secTopBefore": 3605
+     },
+     "post": {
+      "scrollTop": 3765,
+      "secTopInBox": -160,
+      "svgTopInBox": 171,
+      "svgBottomInBox": -8,
+      "boxH": 444,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    },
+    {
+     "id": "udc-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 318,
+       "bottom": 354,
+       "left": 109.859375,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 122,
+       "bottom": 304,
+       "left": 12,
+       "width": 366,
+       "height": 182
+      },
+      "secTopBefore": 1267
+     },
+     "post": {
+      "scrollTop": 1329,
+      "secTopInBox": -62,
+      "svgTopInBox": 195,
+      "svgBottomInBox": -8,
+      "boxH": 468,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    },
+    {
+     "id": "odpt-2026",
+     "pre": {
+      "top": 0,
+      "hasBtn": true,
+      "btn": {
+       "top": 342,
+       "bottom": 378,
+       "left": 26,
+       "width": 138.015625,
+       "height": 36
+      },
+      "header": {
+       "top": 122,
+       "bottom": 304,
+       "left": 12,
+       "width": 366,
+       "height": 182
+      },
+      "secTopBefore": 1385
+     },
+     "post": {
+      "scrollTop": 1505,
+      "secTopInBox": -120,
+      "svgTopInBox": 171,
+      "svgBottomInBox": -8,
+      "boxH": 444,
+      "svgFits": true,
+      "focus": "eval3-heading"
+     },
+     "bg": true
+    }
+   ],
+   "allSvgFit": true,
+   "bgUnchanged": true,
+   "fromTop": true
+  },
+  {
+   "label": "390",
+   "M8_six": {
+    "presetsTxt": [
+     "ビジネス部門の2案:true",
+     "アイデア部門の2案:false",
+     "不動産情報活用部門の2案:false",
+     "全6案:false"
+    ],
+    "six": {
+     "series": 12,
+     "boxRight": 376,
+     "svgs": [
+      {
+       "left": 40,
+       "right": 350,
+       "inside": true
+      },
+      {
+       "left": 40,
+       "right": 350,
+       "inside": true
+      }
+     ],
+     "legends": [
+      true,
+      true
+     ],
+     "frames": [
+      {
+       "sw": 728,
+       "cw": 308,
+       "within": true,
+       "hint": true
+      },
+      {
+       "sw": 728,
+       "cw": 308,
+       "within": true,
+       "hint": true
+      },
+      {
+       "sw": 720,
+       "cw": 308,
+       "within": true,
+       "hint": true
+      }
+     ],
+     "thMinWidths": [
+      103,
+      119,
+      93,
+      112,
+      95,
+      93,
+      113,
+      103,
+      119,
+      93,
+      112,
+      95,
+      93
+     ],
+     "docSw": 390
+    },
+    "sixOver": {
+     "root": {
+      "sw": 362,
+      "cw": 362,
+      "equal": true
+     },
+     "scrollOver": [],
+     "rightOver": [],
+     "frames": [
+      {
+       "sw": 728,
+       "cw": 308
+      },
+      {
+       "sw": 728,
+       "cw": 308
+      },
+      {
+       "sw": 720,
+       "cw": 308
+      }
+     ]
+    },
+    "pair": {
+     "pressed": "true",
+     "n": 2
+    },
+    "bgSame": true,
+    "overAllContests": [
+     {
+      "id": "satellite-2026",
+      "over": {
+       "root": {
+        "sw": 362,
+        "cw": 362,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 312,
+         "cw": 308
+        },
+        {
+         "sw": 312,
+         "cw": 308
+        },
+        {
+         "sw": 310,
+         "cw": 310
+        }
+       ]
+      }
+     },
+     {
+      "id": "ichibiz-2026",
+      "over": {
+       "root": {
+        "sw": 362,
+        "cw": 362,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 312,
+         "cw": 308
+        },
+        {
+         "sw": 312,
+         "cw": 308
+        },
+        {
+         "sw": 310,
+         "cw": 310
+        }
+       ]
+      }
+     },
+     {
+      "id": "udc-2026",
+      "over": {
+       "root": {
+        "sw": 362,
+        "cw": 362,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 310,
+         "cw": 310
+        },
+        {
+         "sw": 310,
+         "cw": 310
+        },
+        {
+         "sw": 310,
+         "cw": 310
+        }
+       ]
+      }
+     },
+     {
+      "id": "odpt-2026",
+      "over": {
+       "root": {
+        "sw": 362,
+        "cw": 362,
+        "equal": true
+       },
+       "scrollOver": [],
+       "rightOver": [],
+       "frames": [
+        {
+         "sw": 312,
+         "cw": 308
+        },
+        {
+         "sw": 312,
+         "cw": 308
+        },
+        {
+         "sw": 310,
+         "cw": 310
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "label": "390",
+   "M9_M10": {
+    "entry": {
+     "text": "AI評価を見るAI評価（模擬・第3回 11/13）を見る"
+    },
+    "dlg": {
+     "title": "AI評価（模擬）　最新は第3回（11/13）",
+     "headings": [
+      "AI評価（模擬） 最新は第3回（11/13）",
+      "第3回（11/13） GPT-6.1 sol low・評価者10名 最新",
+      "第1回（11/11）・第2回（11/12） Sonnet・評価者各4名 過去回"
+     ],
+     "desc": "すべて AI による模擬評価で、実際の審査結果ではありません。回によって評価した AI と人数が違います。第3回は GPT-6.1 sol low 10名、第1・2回は Sonnet 各4名で、下の区画で分けて示します。",
+     "round3First": true,
+     "sonnetOnlyInPast": true,
+     "pastHasSonnet": true,
+     "w": 358
+    },
+    "dialogOverflowTop": {
+     "root": {
+      "sw": 356,
+      "cw": 356,
+      "equal": true
+     },
+     "scrollOver": [],
+     "rightOver": [],
+     "frames": [
+      {
+       "sw": 296,
+       "cw": 296
+      },
+      {
+       "sw": 344,
+       "cw": 298
+      },
+      {
+       "sw": 298,
+       "cw": 298
+      }
+     ]
+    },
+    "dialogOverflowAfterScroll": {
+     "root": {
+      "sw": 356,
+      "cw": 356,
+      "equal": true
+     },
+     "scrollOver": [],
+     "rightOver": [],
+     "frames": [
+      {
+       "sw": 296,
+       "cw": 296
+      },
+      {
+       "sw": 344,
+       "cw": 298
+      },
+      {
+       "sw": 298,
+       "cw": 298
+      }
+     ]
+    },
+    "bgSame": true
+   }
+  },
+  {
+   "back": "sat-a",
+   "link": "../../index.html",
+   "url": "/index.html",
+   "openRows": 1,
+   "scrollY": 0
+  },
+  {
+   "back": "odpt",
+   "link": "../../index.html",
+   "url": "/index.html",
+   "openRows": 1,
+   "scrollY": 0
+  },
+  {
+   "legacyHash": "#satellite-2026",
+   "openRows": 1,
+   "scrollY": 0
+  }
+ ],
+ "errs": []
+}

@@ -2,7 +2,7 @@ import { ExternalLink } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SourceDialog } from '@/components/shared/SourceDialog'
 import { NEW_PLAN_LABEL, getApp } from '@/apps/registry'
-import { appUrl, siteRoot } from '@/lib/data'
+import { appUrl, fromContest, siteRoot } from '@/lib/data'
 
 /**
  * 新しい案（比較用・未選定）の独立ページ。元の静的版（public/embedded/<embed>/、copy-data が元からコピー）を
@@ -13,6 +13,8 @@ export function EmbeddedApp({ appId }: { appId: string }) {
   const app = getApp(appId)
   if (!app?.embed) return null
   const pair = app.pairWith ? getApp(app.pairWith) : undefined
+  const also = (app.alsoCompare ?? []).map((id) => getApp(id)).filter((a): a is NonNullable<typeof a> => !!a)
+  const from = fromContest()
   const src = `${siteRoot()}embedded/${app.embed}/index.html`
   return (
     // 高さ = 画面の高さ − 固定ヘッダー − main の余白。iframe が残りを埋め、ページ全体の縦スクロールを出さない（iframe の末尾が必ず画面内に入る）
@@ -53,6 +55,16 @@ export function EmbeddedApp({ appId }: { appId: string }) {
           <ExternalLink className="size-3" aria-hidden />
           <span className="sr-only">（新しいタブで開く）</span>
         </a>
+        {also.map((a) => (
+          <a key={a.id} href={appUrl(a.id)} className="font-medium text-primary underline underline-offset-2" data-testid={`also-link-${a.id}`}>
+            作品①「{a.name}」と見比べる
+          </a>
+        ))}
+        {from === 'ichibiz-2026' && (
+          <p className="basis-full text-muted-foreground" data-testid="band-from">
+            イチBiz アイデア部門 IN1 のデモとして表示中（戻るとイチBiz タブに着きます。IN1 のカードはその中ほどです）。
+          </p>
+        )}
         {app.pairNote && <p className="basis-full font-medium">{app.pairNote}</p>}
         {app.stateNote && (
           <p className="basis-full font-medium" data-testid="band-state-note">

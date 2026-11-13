@@ -1,38 +1,18 @@
 import { useState } from 'react'
+import { ContestEval3 } from '@/pages/Eval3Panels'
 import { AlertTriangle, ArrowRight, CalendarClock, CircleHelp, ExternalLink, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getSample } from '@/apps/_samples'
 import { normalUrl, sampleUrl } from '@/components/layout/SampleBar'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
-import { siteRoot } from '@/lib/data'
-import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
-import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
-import { LATEST } from '@/apps/eval-results'
+import { appUrl, siteRoot } from '@/lib/data'
+import { ContestProgress } from '@/pages/Progress'
+import { CONTEST_INFO, nextDeadline, type ContestInfo } from '@/apps/contests-info'
+import { AppScoreLine } from '@/pages/EvalPanels'
 
-/** 残り日数のバッジ。色だけに頼らず、文言と記号で緊急度を示す */
-function Remaining({ at }: { at: string }) {
-  const r = remainingText(at)
-  const cls = r.past
-    ? 'bg-muted text-muted-foreground'
-    : r.urgent
-      ? 'border border-amber-500 bg-amber-100 text-amber-950'
-      : 'border border-sky-300 bg-sky-50 text-sky-950'
-  return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-bold ${cls}`}>
-      {r.urgent && <span aria-hidden>▲&nbsp;</span>}
-      {r.text}
-    </span>
-  )
-}
-
-/** 最も近い、まだ過ぎていない締切（全部過ぎていれば最後の締切） */
-function nextDeadline(info: ContestInfo) {
-  const now = Date.now()
-  return info.deadlines.find((d) => new Date(d.at).getTime() > now) ?? info.deadlines[info.deadlines.length - 1]
-}
+export { nextDeadline }
 
 /** 新しい案（比較用・未選定）の目印。色だけに頼らず、黒地の文言と破線の枠で示す */
 function NewPlanTag() {
@@ -51,7 +31,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardHeader className="gap-1 px-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <NewPlanTag />
-          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">デモなし</span>
+          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">{c.demoAppId ? '提出文のみ（デモは AED マップ）' : 'デモなし'}</span>
         </div>
         <CardTitle className="text-base leading-tight" data-testid={`card-only-title-${c.id}`}>{c.name}</CardTitle>
         <CardDescription className="text-xs">
@@ -61,21 +41,36 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardContent className="flex-1 px-4 text-xs">
         <p data-testid={`card-only-note-${c.id}`}>{c.note}</p>
       </CardContent>
-      <CardFooter className="flex-wrap gap-x-4 gap-y-1 px-4 text-xs">
-        {c.docs.map((d) => (
-          <a
-            key={d.path}
-            href={`${siteRoot()}${d.path}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2"
-            data-testid={`card-only-doc-${c.id}`}
-          >
-            {d.label}
-            <ExternalLink className="size-3" aria-hidden />
-            <span className="sr-only">（新しいタブで開く）</span>
-          </a>
-        ))}
+      <CardFooter className="flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 text-xs">
+        {c.deadline && (
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <CalendarClock className="size-3.5 shrink-0" />
+            <span className="whitespace-nowrap">締切 {c.deadline}</span>
+          </span>
+        )}
+        <span className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-0.5">
+          {c.docs.map((d) => (
+            <a
+              key={d.path}
+              href={`${siteRoot()}${d.path}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-8 items-center gap-1 py-1.5 font-medium text-primary underline underline-offset-2"
+              data-testid={`card-only-doc-${c.id}`}
+            >
+              {d.label}
+              <ExternalLink className="size-3" aria-hidden />
+              <span className="sr-only">（新しいタブで開く）</span>
+            </a>
+          ))}
+          {c.demoAppId && (
+            <Button asChild size="sm" title={`「${getApp(c.demoAppId)?.name}」のデモを開きます`}>
+              <a href={`${appUrl(c.demoAppId)}?from=${c.contest}`} data-testid={`card-only-demo-${c.id}`}>
+                デモを開く <ArrowRight className="size-4" aria-hidden />
+              </a>
+            </Button>
+          )}
+        </span>
       </CardFooter>
     </Card>
   )
@@ -84,8 +79,8 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
 function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; contestId: ContestId; note?: string; onOpenEval: () => void; paired?: boolean }) {
   const isNew = isNewPlan(a)
   const contest = CONTESTS.find((c) => c.id === a.contest)
-  // 本応募の前に概要登録が要るコンペ（UDC）は、カードにも概要登録の締切を出す
-  const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.find((d) => d.label === '概要登録')
+  // 概要登録が要るコンペ（UDC）は、カードの締切が本応募の締切であることを示す（済んだ概要登録は出さない）
+  const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.some((d) => d.label === '概要登録')
   return (
     <Card data-app-card={a.id} className={`flex flex-col gap-2 py-3 ${isNew ? 'border-2 border-dashed border-slate-500 bg-slate-50' : ''}`}>
       <CardHeader className="gap-1 px-4">
@@ -114,6 +109,17 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
             {a.pairNote}
           </p>
         )}
+        {isNew && a.alsoCompare?.map((id) => {
+          const o = getApp(id)
+          return o ? (
+            <p key={id} className="mt-1.5">
+              <a href={appUrl(id)} className="inline-flex min-h-8 items-center gap-1 py-1.5 font-medium text-primary underline underline-offset-2" data-testid={`also-card-link-${a.id}`}>
+                作品①「{o.name}」と見比べる
+                <ArrowRight className="size-3" aria-hidden />
+              </a>
+            </p>
+          ) : null
+        })}
         {isNew && a.stateNote && (
           <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`state-note-${a.id}`}>
             いまの状態: {a.stateNote}
@@ -150,12 +156,6 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
             </a>
           </Button>
         </span>
-        {pre && (
-          <span className="flex basis-full flex-wrap items-center gap-1.5 text-xs font-medium" data-testid="card-prereg">
-            先に概要登録が必要: {pre.text}
-            <Remaining at={pre.at} />
-          </span>
-        )}
       </CardFooter>
     </Card>
   )
@@ -182,7 +182,7 @@ function FoldSection({ title, className = '', children }: { title: React.ReactNo
   )
 }
 
-function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () => void }) {
+export function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () => void }) {
   const contest = CONTESTS.find((c) => c.id === info.id)!
   const apps = appsByContest(info.id)
   const current = apps.filter((a) => !isNewPlan(a))
@@ -200,65 +200,9 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
   const hasNew = newCount > 0
   return (
     <div className="space-y-3">
-      <div className="grid items-start gap-3 lg:grid-cols-[3fr_2fr] lg:grid-rows-[auto_1fr]">
-        {/* 概要と締切 */}
-        <div className="rounded-lg border bg-card p-3 lg:col-start-1 lg:row-start-1">
-          <h2 className="text-base font-bold">{contest.name}</h2>
-          <p className="mt-1 text-sm">{info.summary}</p>
-          <dl className="mt-2 grid gap-x-3 gap-y-1 border-t pt-2 text-xs grid-cols-[auto_1fr]">
-            <dt className="font-bold">締切</dt>
-            <dd className="flex flex-wrap gap-x-4 gap-y-1">
-              {info.deadlines.map((d) => (
-                <span key={d.label} className="inline-flex items-center gap-1.5">
-                  {d.label} {d.text}
-                  <Remaining at={d.at} />
-                </span>
-              ))}
-            </dd>
-            <dt className="font-bold">実装</dt>
-            <dd>{info.implementation}</dd>
-            <dt className="font-bold">賞</dt>
-            <dd>{info.prize}</dd>
-            <dt className="font-bold">公式</dt>
-            <dd className="flex flex-wrap gap-x-3 gap-y-1">
-              {info.sources.map((s) => (
-                <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-800 underline underline-offset-2">
-                  {s.label}
-                  <ExternalLink className="size-3" aria-hidden />
-                  <span className="sr-only">（公式サイト。新しいタブで開く）</span>
-                </a>
-              ))}
-            </dd>
-          </dl>
-        </div>
-
-        {/* 注意点（デスクトップでは右列に上から並べ、初期画面に出す） */}
-        <Section title="注意点（要項で確認できた、失格・無効につながりうる条件）" className="border-amber-400 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <ul className="space-y-1 text-xs">
-            {info.cautions.map((s) => (
-              <li key={s} className="flex gap-1.5">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden />
-                <span>{s}</span>
-              </li>
-            ))}
-          </ul>
-          {info.afterAward && (
-            <div className="mt-2 border-t pt-1.5">
-              <h4 className="text-xs font-bold">失格条件ではない、通過・受賞後の条件</h4>
-              <ul className="mt-1 space-y-1 text-xs">
-                {info.afterAward.map((s) => (
-                  <li key={s} className="flex gap-1.5">
-                    <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-slate-700" aria-hidden />
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Section>
-
+      <ContestProgress contest={info.id} />
         {/* アプリ */}
-        <section aria-label={`${contest.short}向けのアプリ`} className="space-y-2 lg:col-start-1 lg:row-start-2">
+        <section aria-label={`${contest.short}向けのアプリ`} className="space-y-2">
           <h3 className="text-sm font-bold">
             このコンペ向けのアプリ（{current.length}件{newCount > 0 && `＋新しい案 ${newCount}件`}）
             <span className="ml-2 text-xs font-normal text-muted-foreground" data-testid="overview-sample-note">
@@ -300,8 +244,59 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
             )
           })}
         </section>
-      </div>
+      <ContestEval3 contest={info.id} />
+      <details className="rounded-lg border bg-muted/30 p-2" data-testid="contest-info">
+        <summary className="cursor-pointer text-sm font-bold">募集内容・審査基準・注意点（開いて見る）</summary>
+        <div className="mt-2 space-y-3">
+      <div className="grid items-start gap-3 lg:grid-cols-[3fr_2fr]">
+        {/* 概要と締切 */}
+        <div className="rounded-lg border bg-card p-3">
+          <h2 className="text-base font-bold">{contest.name}</h2>
+          <p className="mt-1 text-sm">{info.summary}</p>
+          <dl className="mt-2 grid gap-x-3 gap-y-1 border-t pt-2 text-xs grid-cols-[auto_1fr]">
+            <dt className="font-bold">実装</dt>
+            <dd>{info.implementation}</dd>
+            <dt className="font-bold">賞</dt>
+            <dd>{info.prize}</dd>
+            <dt className="font-bold">公式</dt>
+            <dd className="flex flex-wrap gap-x-3 gap-y-1">
+              {info.sources.map((s) => (
+                <a key={s.url} href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-800 underline underline-offset-2">
+                  {s.label}
+                  <ExternalLink className="size-3" aria-hidden />
+                  <span className="sr-only">（公式サイト。新しいタブで開く）</span>
+                </a>
+              ))}
+            </dd>
+          </dl>
+        </div>
 
+        {/* 注意点（デスクトップでは右列に上から並べ、初期画面に出す） */}
+        <Section title="注意点（要項で確認できた、失格・無効につながりうる条件）" className="border-amber-400">
+          <ul className="space-y-1 text-xs">
+            {info.cautions.map((s) => (
+              <li key={s} className="flex gap-1.5">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden />
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+          {info.afterAward && (
+            <div className="mt-2 border-t pt-1.5">
+              <h4 className="text-xs font-bold">失格条件ではない、通過・受賞後の条件</h4>
+              <ul className="mt-1 space-y-1 text-xs">
+                {info.afterAward.map((s) => (
+                  <li key={s} className="flex gap-1.5">
+                    <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-slate-700" aria-hidden />
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Section>
+
+      </div>
       <div className="grid items-start gap-3 lg:grid-cols-3">
         <Section title={info.criteriaTitle}>
           <ul className="space-y-1 text-xs">
@@ -333,74 +328,8 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
           </ul>
         </FoldSection>
       </div>
-    </div>
-  )
-}
-
-const EVAL_TAB = 'eval'
-
-const TAB_CLS =
-  'h-auto flex-col items-start gap-0.5 whitespace-normal text-foreground border-border px-3 py-1.5 text-left data-[state=active]:border-foreground'
-
-export default function Overview() {
-  const initial =
-    window.location.hash === `#${EVAL_TAB}` ? EVAL_TAB : (CONTEST_INFO.find((c) => `#${c.id}` === window.location.hash)?.id ?? CONTEST_INFO[0].id)
-  const [tab, setTab] = useState<string>(initial)
-  const openEval = () => {
-    setTab(EVAL_TAB)
-    window.scrollTo({ top: 0 })
-  }
-  return (
-    <div className="mx-auto max-w-6xl space-y-2">
-      <header>
-        <h1 className="text-xl font-bold">統合ダッシュボード（4つのコンペ・今の案7件＋新しい案）</h1>
-        <p className="hidden text-xs text-muted-foreground sm:block">
-          コンペを選ぶと、募集内容・締切・注意点・審査基準と、そのコンペ向けのアプリが見られます。バッジは実データ／架空データ／一部架空の区別です。
-        </p>
-      </header>
-
-      <Tabs value={tab} onValueChange={setTab} className="gap-2">
-        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-[repeat(4,1fr)_auto]">
-          {CONTEST_INFO.map((info) => {
-            const nd = nextDeadline(info)
-            return (
-              <TabsTrigger key={info.id} value={info.id} className={TAB_CLS}>
-                <span className="text-sm font-bold">{CONTESTS.find((c) => c.id === info.id)?.name.replace(/20.*$/, '')}</span>
-                <span className="flex flex-col gap-0.5 text-xs font-normal">
-                  {info.deadlines.map((d) => (
-                    <span key={d.label} className={`flex-wrap items-center gap-x-1.5 ${d === nd ? 'flex' : 'hidden lg:flex'}`}>
-                      {d.label} {d.text}
-                      {d === nd && <Remaining at={d.at} />}
-                    </span>
-                  ))}
-                  <span className="hidden text-muted-foreground lg:inline" data-testid={`tab-count-${info.id}`}>
-                    アプリ{appsByContest(info.id).filter((a) => !isNewPlan(a)).length}件
-                    {(() => {
-                      const n = appsByContest(info.id).filter(isNewPlan).length + CARDS_ONLY.filter((c) => c.contest === info.id).length
-                      return n > 0 ? `＋新しい案${n}件` : ''
-                    })()}
-                  </span>
-                </span>
-              </TabsTrigger>
-            )
-          })}
-          <TabsTrigger value={EVAL_TAB} className={`${TAB_CLS} col-span-2 justify-center lg:col-span-1`} title={`${MOCK_NOTICE}${ROUND_NOTICE}`}>
-            <span className="text-sm font-bold">AI評価</span>
-            <span className="text-xs font-normal text-muted-foreground">模擬・{LATEST.date.slice(5).replace('-', '/')}</span>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value={EVAL_TAB} forceMount className="data-[state=inactive]:hidden">
-          <EvalSummary />
-        </TabsContent>
-        {CONTEST_INFO.map((info) => (
-          <TabsContent key={info.id} value={info.id} forceMount className="data-[state=inactive]:hidden">
-            <ContestPanel info={info} onOpenEval={openEval} />
-          </TabsContent>
-        ))}
-      </Tabs>
-      <p className="text-xs text-muted-foreground">
-        出典: 各コンペの公式要項（取得日 2026-11-09）。今の案{APPS.filter((a) => !isNewPlan(a)).length}件と、新しい案（比較用・未選定）{APPS.filter(isNewPlan).length}件のデモを、各コンペのタブで隣どうしに並べています。
-      </p>
+        </div>
+      </details>
     </div>
   )
 }

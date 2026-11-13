@@ -1,0 +1,80 @@
+{
+  "out": [
+    {
+      "app": "sat-a",
+      "backText": "統合ダッシュボード"
+    },
+    {
+      "app": "sat-a",
+      "returned": {
+        "scrollY": 0,
+        "tops": [
+          124,
+          271,
+          441,
+          612
+        ],
+        "docH": 844,
+        "sw": 390
+      },
+      "selected": 0
+    },
+    {
+      "app": "odpt",
+      "backText": "統合ダッシュボード"
+    },
+    {
+      "app": "odpt",
+      "returned": {
+        "scrollY": 0,
+        "tops": [
+          124,
+          271,
+          441,
+          612
+        ],
+        "docH": 844,
+        "sw": 390
+      },
+      "selected": 0
+    },
+    {
+      "dialogTab": [
+        {
+          "text": "コンペ／アプリB 操作性・デザインC コンペの審査基準ODPT生活アクセス診断マップ26→29/35（+3）83%16→",
+          "inside": true
+        },
+        {
+          "text": "生活アクセス診断マップODPT・UDCB 29/35（前回26・+3）",
+          "inside": true
+        },
+        {
+          "text": "みんなの盛土ウォッチUDCB 28/35（前回29・−1）",
+          "inside": true
+        },
+        {
+          "text": "路面下リスクの二段階調査衛星アワードB 28/35（前回28・±0）",
+          "inside": true
+        },
+        {
+          "text": "盛土巡視台帳衛星アワードB 28/35（前回29・−1）",
+          "inside": true
+        },
+        {
+          "text": "バス路線見直し案の比較イチBizB 27/35（前回29・−2）",
+          "inside": true
+        },
+        {
+          "text": "地名の記憶マップイチBizB 27/35（前回29・−2）",
+          "inside": true
+        },
+        {
+          "text": "相談前の1枚シートイチBizB 27/35（前回25・+2）",
+          "inside": true
+        }
+      ],
+      "closedByEscape": true
+    }
+  ],
+  "errs": []
+}

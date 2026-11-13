@@ -34,6 +34,8 @@ export interface AppMeta {
   pairWith?: string
   /** 新しい案のカードに添える注記（同時提出不可など） */
   pairNote?: string
+  /** pairWith のほかに見比べたい案の id（別のコンペでもよい）。カード・帯・相手側のヘッダーに「見比べる」リンクを出す */
+  alsoCompare?: string[]
   /** 元の静的版を iframe で開くアプリの、同梱コピーのフォルダ（public/embedded/<embed>/）。省略時は React 版 */
   embed?: string
   /** 今の状態（データがまだ無い等）。新しい案のカードと帯に出す。数値は書かない */
@@ -49,8 +51,12 @@ export interface CardOnly {
   contest: ContestId
   division: string
   pairWith: string
+  /** 締切の表示（カードの下の行） */
+  deadline?: string
   /** カードの本文（何の案か・何がまだ無いか） */
   note: string
+  /** デモを開けるアプリの id（あれば「デモを開く」を出す） */
+  demoAppId?: string
   /** 提出文を読むリンク（サイトルートからの相対パス。copy-data が submission/ の md を .txt にして置く） */
   docs: { label: string; path: string }[]
 }
@@ -217,6 +223,25 @@ export const APPS: AppMeta[] = [
     originalPath: 'contests/ichibiz-2026/app/realestate-rn1/',
   },
   {
+    id: 'udc-aed',
+    plan: 'new',
+    pairWith: 'biz-idea',
+    embed: 'udc-aed',
+    audience: '住民・自治体の担当者向け',
+    name: '夜も使えるAED診断マップ',
+    contest: 'ichibiz-2026',
+    division: 'アイデア部門 IN1 のデモ（UDC には登録しない）',
+    pairNote:
+      'UDC には登録しないことが決まりました（11/13 総司令官）。このアプリはイチBiz アイデア部門 IN1「いま使えるAED地図」のデモとして使います。',
+    deadline: '2026/12/10 20:00',
+    deadlineAt: '2026-12-10T20:00:00+09:00',
+    purpose:
+      '自治体が公開したAEDの利用可能な曜日・時間から、選んだ曜日と時刻に徒歩圏で使えるAEDがない地区を地図で見て、24時間使えるAEDを1台置いた場合の変化を試算する。',
+    dataKind: 'real',
+    dataNote: '町田市・福岡市・井原市・倉敷市が公開したAED設置のオープンデータと、国勢調査の地域メッシュ人口。時間表記を読めないAEDは「不明」として数える',
+    originalPath: 'contests/udc-2026/app/aed-night/',
+  },
+  {
     id: 'odpt-teiji',
     plan: 'new',
     pairWith: 'odpt',
@@ -243,8 +268,10 @@ export const CARDS_ONLY: CardOnly[] = [
     name: '「いま使えるAED」地図　夜間・施錠で使えない場所を、時間帯別のカバー率にする',
     contest: 'ichibiz-2026',
     division: 'アイデア部門（新案IN1）',
+    deadline: '2026/12/10 20:00',
     pairWith: 'biz-idea',
-    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは14台（本案の簡易判定）。提出文のみで、デモは UDC の「夜間・休日に使えるAED地図」を使う予定（準備中）。',
+    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは11台（2か所。救急車内等4台を除く本案の判定）。提出文のみ（デモは「夜も使えるAED診断マップ」。UDC には登録しない）。',
+    demoAppId: 'udc-aed',
     docs: [
       { label: '課題の文を読む', path: 'submission/idea-in1/problem.txt' },
       { label: 'サービス内容の文を読む', path: 'submission/idea-in1/service.txt' },
@@ -280,6 +307,11 @@ export function isNewPlan(a: AppMeta): boolean {
 
 /** 今の案のアプリ（評価・既存テストの対象） */
 export const CURRENT_APPS: AppMeta[] = APPS.filter((a) => !isNewPlan(a))
+
+/** この案を「見比べる」相手として挙げている新しい案（相手側のヘッダーに逆向きのリンクを出す） */
+export function alsoComparedBy(id: string): AppMeta[] {
+  return APPS.filter((a) => a.alsoCompare?.includes(id))
+}
 
 /** 今の案 id から、その隣に並ぶ新しい案を引く（今の案のヘッダーに「見比べる」リンクを出すため） */
 export function newPlansOf(currentId: string): AppMeta[] {
