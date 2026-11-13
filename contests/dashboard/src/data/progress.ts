@@ -60,7 +60,7 @@ export interface Decision {
 /** 全体（正本の「全体」） */
 export const OVERALL: string[] = [
   '提出に必要な本人欄（氏名・所属・体制・本人の経験など）は、どの応募もまだ空。総司令官が書くまで、どの案も「提出可能」ではない。',
-  'main へのマージ待ち（締切なし）: PR #13（新案4件をダッシュボードに追加・ODPT 昼間の品質）、PR #14（AED マップ・ダッシュボード更新。#13 を含む）、PR #12（ODPT 応募フォーム各項目の下書き。別作業）。',
+  'マージ保留（総司令官補佐が SOP で止めた PR）: PR #18（太陽光発電所の盗難対策マップ。憲兵の失格級候補D1）、PR #19（子連れお出かけ診断。憲兵の監査なし・非商用条件が未解決）、PR #21（RN1 3地域版。本人欄が未記入）。reports/command/merge-20261114.md',
 ]
 
 const UDC = { deadlineAt: '2026-12-27T23:59:00+09:00', deadlineLabel: '本応募 12/27 23:59' }
@@ -172,10 +172,17 @@ export const PLANS: PlanProgress[] = [
     id: 'biz-realestate-rn1', short: '不動産 RN1', intent: '比較中', contest: 'ichibiz-2026', name: '不動産部門: RN1 住む場所の先行き', kind: '新しい案', ...BIZ_OTHER, appId: 'biz-realestate-rn1',
     done: ['提出文（作戦研究班 14→20）', 'デモ（徳島市の実データ12項目、テスト31＋14件）', '憲兵（指摘対応済み）'],
     todo: [
-      { text: '本人欄（失格級＝未記入）', owner: '総司令官' },
+      { text: '本人欄3か所（失格級＝未記入。PR #21 は記入と憲兵の再監査までマージ保留）', owner: '総司令官' },
       { text: 'XKT003・XKT025 の利用条件の問い合わせ', tag: '判断待ち', owner: '総司令官' },
       { text: '同梱データ約4.5MBの承認', tag: '判断待ち', owner: '総司令官' },
       { text: 'ライブラリ欄の字数上限（395/400、フォームで確認）' },
+    ],
+  },
+  {
+    id: 'biz-solar-guard', short: '太陽光 盗難対策', intent: '比較中', intentNote: '部門未定', contest: 'ichibiz-2026', name: '太陽光発電所の盗難対策マップ', kind: '新しい案・部門未定、PR #18', ...BIZ_BUSINESS,
+    done: ['デモ（茨城県、個別設備を出さない集計地図＋自己診断）', '憲兵の監査'],
+    todo: [
+      { text: '認定情報の利用ルールの確認先と、確認できない場合の扱い（憲兵の失格級候補D1。PR #18 は解消まで保留。reports/escalations/20261114-solar-guard-data-terms.md）', tag: '判断待ち', owner: '総司令官' },
     ],
   },
   {
