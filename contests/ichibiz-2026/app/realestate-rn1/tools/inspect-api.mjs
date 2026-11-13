@@ -29,3 +29,9 @@ console.log('形状', [...new Set(f.map((x) => x.geometry?.type))].join(','));
 console.log(JSON.stringify(f[0]?.properties), JSON.stringify(f[0]?.geometry)?.slice(0, 200));
 const n = Number(process.argv[6] || 0);
 for (const x of f.slice(0, n)) console.log(JSON.stringify(x.properties));
+// 第7引数: 値の度数を数える項目名（カンマ区切り）。例: SHICODE,P14_002
+for (const p of (process.argv[7] ?? '').split(',').filter(Boolean)) {
+  const c = {};
+  for (const x of f) { const v = x.properties?.[p]; c[v] = (c[v] || 0) + 1; }
+  console.log(`度数 ${p}:`, JSON.stringify(c).slice(0, 700));
+}

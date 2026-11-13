@@ -146,11 +146,14 @@ export function extractMedical(features) {
   return dedupe(rows);
 }
 /** XKT011 福祉施設 → 老人福祉施設（大分類コード 02）の点 */
-export function extractElderCare(features) {
+export function extractElderCare(features, codes = null) {
   const rows = [];
   for (const f of features) {
     const p = f?.properties, pt = pointOf(f);
     if (!p || !pt || str(p.P14_005) !== '02' || !str(p.P14_008_ja)) continue;
+    // codes があれば、自治体コード（P14_003）がその中のものだけ。市区町村が空・都道府県コードだけのものは、どの自治体か分からないので入れない
+    // （福祉施設は、大阪府の大阪市・八尾市以外など、自治体によって非商用の条件がある。対象地域の外の施設を同梱しないため）
+    if (codes && !inCodes(codes, p.P14_003)) continue;
     rows.push({ kind: str(p.P14_006_name_ja) || str(p.P14_005_name_ja), name: str(p.P14_008_ja), ...pt });
   }
   return dedupe(rows);
@@ -246,6 +249,7 @@ export function rasterizeLevels(items, bbox, labels, dx = 0.0002, dy = 0.00016) 
 export const FLOOD_RANKS = { 1: '0.5m未満', 2: '0.5〜3.0m未満', 3: '3.0〜5.0m未満', 4: '5.0〜10.0m未満', 5: '10.0〜20.0m未満', 6: '20.0m以上' };
 const cleanLabel = (v) => str(v).replace(/\s+/g, '').replace(/～/g, '〜');
 // 浸水深の下限。「0.3m未満」のように下限のないものは 0（「0.3m以上0.5m未満」より浅い）
+const labelCmp = (a, b) => leadNumber(a) - leadNumber(b) || (a < b ? -1 : a > b ? 1 : 0); // 区分名の順（浸水深の下限、同じなら文字列。番号の大きいほうが深い）
 const leadNumber = (t) => { if (/^[\d.]+m未満/.test(t)) return 0; const m = /([\d.]+)/.exec(t); return m ? Number(m[1]) : 0; };
 
 /** 多角形に区分をつけて返す。getLabel(properties) が文字列を返す項目（津波・高潮の浸水深など）。
@@ -284,6 +288,127 @@ export function extractLiquefaction(features, prec = 4) {
     for (const rings of polysOf(f.geometry, prec)) items.push({ rings, v });
   }
   return { items, labels };
+}
+
+// ---- 東京23区・大阪市で追加した整形（用途地域・区域区分、地域内への絞り込み、格子への逐次の書き込み） ----
+
+/** 地域の市区町村コードに入るか。codes は文字列の配列 */
+export const inCodes = (codes, code) => codes.includes(str(code));
+
+/** XKT002 用途地域 → 市区町村・用途地域・容積率・建蔽率ごとの多角形。codes があれば、その市区町村コードだけ残す。座標は小数 prec 桁 */
+export function extractZoning(features, codes = null, prec = 5) {
+  const m = new Map();
+  for (const f of features) {
+    const p = f?.properties;
+    if (!p || !str(p.use_area_ja)) continue;
+    if (codes && !inCodes(codes, p.city_code)) continue;
+    const polys = polysOf(f.geometry, prec);
+    if (!polys.length) continue;
+    const key = [str(p.city_code), num(p.youto_id), str(p.use_area_ja), str(p.u_floor_area_ratio_ja), str(p.u_building_coverage_ratio_ja)].join('|');
+    const e = m.get(key) ?? { cityCode: str(p.city_code), city: str(p.city_name), id: num(p.youto_id), name: str(p.use_area_ja), far: str(p.u_floor_area_ratio_ja), bcr: str(p.u_building_coverage_ratio_ja), polys: [] };
+    e.polys.push(...polys);
+    m.set(key, e);
+  }
+  return [...m.values()].sort((a, b) => a.cityCode.localeCompare(b.cityCode) || (a.id ?? 0) - (b.id ?? 0) || a.name.localeCompare(b.name, 'ja'));
+}
+/** XKT001 都市計画区域・区域区分 → 市区町村・区分（area_classification_ja）ごとの多角形 */
+export function extractAreaClass(features, codes = null, prec = 5) {
+  const m = new Map();
+  for (const f of features) {
+    const p = f?.properties;
+    if (!p || !str(p.area_classification_ja)) continue;
+    if (codes && !inCodes(codes, p.city_code)) continue;
+    const polys = polysOf(f.geometry, prec);
+    if (!polys.length) continue;
+    const key = [str(p.city_code), num(p.kubun_id), str(p.area_classification_ja)].join('|');
+    const e = m.get(key) ?? { cityCode: str(p.city_code), city: str(p.city_name), id: num(p.kubun_id), name: str(p.area_classification_ja), polys: [] };
+    e.polys.push(...polys);
+    m.set(key, e);
+  }
+  return [...m.values()].sort((a, b) => a.cityCode.localeCompare(b.cityCode) || (a.id ?? 0) - (b.id ?? 0));
+}
+/** 項目ごと・市区町村コードごとの件数（取得結果の記録用。XKT003 が何を返したかを残す） */
+export function countByCity(features) {
+  const c = {};
+  for (const f of features) {
+    const p = f?.properties;
+    if (!p) continue;
+    const k = `${str(p.city_code)} ${str(p.city_name)}`.trim();
+    c[k] = (c[k] || 0) + 1;
+  }
+  return c;
+}
+
+/** 地域の内側かを格子で引く（XKT001 の都市計画区域の多角形を、約18m格子に変換したもの）。隣の自治体のデータを同梱しないために使う */
+export function makeMask(polys, bbox, dx = 0.0002, dy = 0.00016) {
+  const g = gridOf(bbox, dx, dy);
+  const bits = new Uint8Array(Math.ceil((g.w * g.h) / 8));
+  for (const rings of polys) scanPoly(rings, g, dx, dy, (idx) => { bits[idx >> 3] |= 1 << (idx & 7); });
+  const idxOf = (lon, lat) => {
+    const col = Math.floor((lon - g.west) / dx), row = Math.floor((g.north - lat) / dy);
+    return col >= 0 && row >= 0 && col < g.w && row < g.h ? row * g.w + col : -1;
+  };
+  const has = (idx) => idx >= 0 && !!(bits[idx >> 3] & (1 << (idx & 7)));
+  /** 点が内側か（その点のセル、または隣のセルが内側なら true。境界の誤差で地域内の点を落とさないため） */
+  const near = (lon, lat) => {
+    for (const a of [0, -1, 1]) for (const b of [0, -1, 1]) if (has(idxOf(lon + a * dx, lat + b * dy))) return true;
+    return false;
+  };
+  return { grid: g, has: (lon, lat) => has(idxOf(lon, lat)), near, cells: bits.reduce((s, v) => { let n = v, c = 0; while (n) { c += n & 1; n >>= 1; } return s + c; }, 0) };
+}
+/** 点の配列（lon・lat つき）を、地域の内側のものだけにする */
+export const clipPoints = (rows, mask) => rows.filter((r) => mask.near(r.lon, r.lat));
+/** 多角形の配列（各多角形は外周＋穴）を、外周の最初の点が地域の内側のものだけにする（隣の自治体にまたがる細長い区域は、片側に寄ることがある） */
+export const clipPolys = (polys, mask) => polys.filter((rings) => rings[0].some((c) => mask.near(c[0], c[1])));
+
+/** 区分つき格子を、タイルごとに書き足していく（洪水・津波などはタイル数が多く、全部の多角形を一度にメモリに置けないため）。
+ * 区分の付け方は2通り。coded: 区分の番号が応答に入っている（洪水ランク・液状化）。labeled: 区分名の文字列（津波・高潮）。labeled は、浸水深の下限が大きいものを優先し、
+ * 最後に下限の小さい順に 1, 2, … と番号を振り直す（rasterizeLevels の出力と同じ形式） */
+export class LevelRaster {
+  constructor(bbox, dx = 0.0002, dy = 0.00016) {
+    this.g = gridOf(bbox, dx, dy); this.dx = dx; this.dy = dy;
+    this.lv = new Uint8Array(this.g.w * this.g.h);
+    this.labels = {}; // 区分番号 → 説明
+    this.byLabel = new Map(); // labeled: 説明 → 一時の番号
+    this.polys = 0;
+  }
+  /** items = [{ rings, v }]、labels = { v: 説明 }（coded）。重なる所は大きい番号 */
+  addCoded(items, labels = {}) {
+    Object.assign(this.labels, labels);
+    for (const { rings, v } of items) { this.polys++; scanPoly(rings, this.g, this.dx, this.dy, (idx) => { if (v > this.lv[idx]) this.lv[idx] = v; }); }
+  }
+  /** rows = [{ rings, label }]。重なる所は浸水深の下限が大きいほう（同じなら先に入った区分名の順） */
+  addLabeled(rows) {
+    for (const { rings, label } of rows) {
+      let c = this.byLabel.get(label);
+      if (!c) { c = this.byLabel.size + 1; if (c > 254) continue; this.byLabel.set(label, c); this.labels[c] = label; }
+      this.polys++;
+      scanPoly(rings, this.g, this.dx, this.dy, (idx) => {
+        const cur = this.lv[idx];
+        if (!cur || labelCmp(this.labels[cur], label) < 0) this.lv[idx] = c;
+      });
+    }
+  }
+  /** mask があれば、地域の外のセルを 0（区域外）にする。返り値は rasterizeLevels と同じ形式 */
+  finish(mask = null) {
+    const { g, lv } = this;
+    let labels = this.labels, remap = null;
+    if (this.byLabel.size) {
+      const order = [...this.byLabel.keys()].sort(labelCmp);
+      remap = new Uint8Array(256);
+      labels = {};
+      order.forEach((l, i) => { remap[this.byLabel.get(l)] = i + 1; labels[i + 1] = l; });
+    }
+    const counts = {};
+    let cells = 0;
+    for (let i = 0; i < lv.length; i++) {
+      if (!lv[i]) continue;
+      if (mask && !mask.has(g.west + ((i % g.w) + 0.5) * this.dx, g.north - (Math.floor(i / g.w) + 0.5) * this.dy)) { lv[i] = 0; continue; }
+      if (remap) lv[i] = remap[lv[i]];
+      counts[lv[i]] = (counts[lv[i]] || 0) + 1; cells++;
+    }
+    return { west: g.west, north: g.north, dx: this.dx, dy: this.dy, w: g.w, h: g.h, lv: rleEncode(lv), labels, counts, polys: this.polys, cells };
+  }
 }
 
 /** 「x,y」の組をタイルの範囲から作る（bbox = [西, 南, 東, 北]） */

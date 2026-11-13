@@ -1,0 +1,192 @@
+{
+ "layers": {
+  "XKT001": {
+   "label": "都市計画区域・区域区分",
+   "status": "ok",
+   "file": "zoning.json",
+   "part": "areas",
+   "z": 13,
+   "tiles": 100,
+   "received": 1027,
+   "count": 60,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT002": {
+   "label": "用途地域",
+   "status": "ok",
+   "file": "zoning.json",
+   "part": "use",
+   "z": 13,
+   "tiles": 100,
+   "received": 12464,
+   "count": 511,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT003": {
+   "label": "立地適正化計画",
+   "status": "empty",
+   "reason": "取得はできたが、東京23区の分は0件（取得範囲の全体で239件を受信。隣の自治体の分は同梱しない）",
+   "file": "plan.json",
+   "part": null,
+   "z": 13,
+   "tiles": 100,
+   "received": 239,
+   "count": 0,
+   "fetchedAt": "2026-11-13",
+   "byCity": {
+    "11208 所沢市": 2,
+    "11228 志木市": 10,
+    "11245 ふじみ野市": 2,
+    "11324 三芳町": 4,
+    "13229 西東京市": 13,
+    "13204 三鷹市": 13,
+    "13219 狛江市": 14,
+    "14130 川崎市": 45,
+    "11227 朝霞市": 26,
+    "11229 和光市": 10,
+    "11224 戸田市": 13,
+    "11223 蕨市": 11,
+    "11221 草加市": 17,
+    "12207 松戸市": 36,
+    "12220 流山市": 10,
+    "12217 柏市": 13
+   }
+  },
+  "XKT013": {
+   "label": "将来推計人口（250mメッシュ）",
+   "status": "ok",
+   "file": "population.json",
+   "part": null,
+   "z": 13,
+   "tiles": 100,
+   "received": 20470,
+   "count": 18028,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT004": {
+   "label": "小学校区",
+   "status": "ok",
+   "file": "districts.json",
+   "part": null,
+   "z": 13,
+   "tiles": 100,
+   "received": 2237,
+   "count": 756,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT006": {
+   "label": "学校（小・中学校）",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "schools",
+   "z": 13,
+   "tiles": 100,
+   "received": 3507,
+   "count": 1374,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT007": {
+   "label": "保育園・幼稚園等",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "preschools",
+   "z": 13,
+   "tiles": 100,
+   "received": 6046,
+   "count": 3760,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT010": {
+   "label": "医療機関",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "medical",
+   "z": 13,
+   "tiles": 100,
+   "received": 27808,
+   "count": 19621,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT011": {
+   "label": "福祉施設（老人福祉施設）",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "elder",
+   "z": 13,
+   "tiles": 100,
+   "received": 16135,
+   "count": 282,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT029": {
+   "label": "土砂災害警戒区域",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "sediment",
+   "z": 13,
+   "tiles": 100,
+   "received": 9949,
+   "count": 1760,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT026": {
+   "label": "洪水浸水想定区域（想定最大規模）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "flood",
+   "z": 14,
+   "tiles": 360,
+   "received": 359212,
+   "count": 963753,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT028": {
+   "label": "津波浸水想定",
+   "status": "empty",
+   "reason": "取得はできたが、東京23区の分は0件（内側に残ったのは1セルだけで、隣の自治体の区域が境界にかかった誤差とみなす）（取得範囲の全体で31585件を受信。隣の自治体の分は同梱しない）",
+   "file": "hazards.json",
+   "part": "tsunami",
+   "z": 14,
+   "tiles": 360,
+   "received": 31585,
+   "count": 0,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT027": {
+   "label": "高潮浸水想定区域",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "surge",
+   "z": 13,
+   "tiles": 100,
+   "received": 107773,
+   "count": 583943,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT025": {
+   "label": "液状化の発生傾向（地形区分に基づく）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "liquefaction",
+   "z": 13,
+   "tiles": 100,
+   "received": 23213,
+   "count": 1947098,
+   "fetchedAt": "2026-11-13"
+  }
+ },
+ "generator": "fetch-reinfolib.mjs",
+ "source": "国土交通省 不動産情報ライブラリ",
+ "region": "tokyo23",
+ "city": {
+  "code": "13101",
+  "name": "東京23区"
+ },
+ "bbox": [
+  139.55,
+  35.51,
+  139.93,
+  35.84
+ ],
+ "fetchedAt": "2026-11-13"
+}

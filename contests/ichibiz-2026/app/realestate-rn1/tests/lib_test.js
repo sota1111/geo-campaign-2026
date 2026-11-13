@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Lib = require('../web/lib.js');
 
-const DATA_DIR = path.join(__dirname, '../web/data');
+const DATA_DIR = path.join(__dirname, '../web/data/tokushima');
 const rd = (f) => JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
 const load = (mut) => {
   const manifest = rd('manifest.json');
