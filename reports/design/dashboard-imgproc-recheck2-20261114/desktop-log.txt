@@ -1,0 +1,27 @@
+CLICK ぬま田 [ 455, 262 ]
+STATE desktop-biz-entry {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":null,"compare":[256,140,382,963],"pcSwipe":[256,314,382,382],"pcSide":null,"figs":[],"correction":[256,704,205,30],"hill":null,"eraBtn":[408,239,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+CLICK 左右に並べる [ 395, 293 ]
+STATE desktop-biz-side-top {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":null,"compare":[256,124,382,786],"pcSwipe":null,"pcSide":[256,298,382,205],"figs":[[256,298,189,205],[449,298,189,205]],"correction":[256,511,205,30],"hill":null,"eraBtn":[408,223,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+STATE desktop-biz-side-second {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":null,"compare":[256,-50,382,786],"pcSwipe":null,"pcSide":[256,124,382,205],"figs":[[256,124,189,205],[449,124,189,205]],"correction":[256,337,205,30],"hill":null,"eraBtn":[408,49,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+CLICK 境界を動かす [ 303, 293 ]
+CLICK 上（右）の地図で原図を見る [ 502, 444 ]
+STATE desktop-biz-orig-controls {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":[678,73,120,32],"compare":[256,-398,382,1053],"pcSwipe":[256,-224,382,382],"pcSide":null,"figs":[],"correction":[256,166,205,30],"hill":null,"eraBtn":[408,-299,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+CLICK 地図の原図を見る [ 331, 444 ]
+STATE desktop-biz-to-map {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":[678,73,120,32],"compare":[256,-481,382,1053],"pcSwipe":[256,-307,382,382],"pcSide":null,"figs":[],"correction":[256,83,205,30],"hill":null,"eraBtn":[408,-382,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+CLICK 写真の比較へ戻る [ 738, 89 ]
+STATE desktop-biz-map-return {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":[678,73,120,32],"compare":[256,124,382,1053],"pcSwipe":[256,298,382,382],"pcSide":null,"figs":[],"correction":[256,688,205,30],"hill":null,"eraBtn":[408,223,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+CLICK 地図の原図を見る [ 331, 444 ]
+CLICK 写真の比較へ戻る [ 455, 444 ]
+STATE desktop-biz-panel-return {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":[670,65,595,700],"mapReturn":[678,73,120,32],"compare":[256,124,382,1053],"pcSwipe":[256,298,382,382],"pcSide":null,"figs":[],"correction":[256,688,205,30],"hill":null,"eraBtn":[408,223,87,30],"siteCompare":null,"ctrls":[[1226,75,29,58],[680,733,76,22]]}
+CLICK 地図の原図を見る [ 331, 444 ]
+KBD {
+  focused: true,
+  outline: 'none 3px',
+  boxShadow: 'rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0'
+}
+CLICK 熱海市0001 [ 455, 294 ]
+STATE desktop-udc-entry {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":null,"mapReturn":null,"compare":null,"pcSwipe":[256,360,382,382],"pcSide":null,"figs":[],"correction":[256,750,205,30],"hill":[256,786,190,30],"eraBtn":null,"siteCompare":[256,192,382,693],"ctrls":[[1225,76,29,58],[681,732,86,22]]}
+CLICK 左右に並べる [ 395, 339 ]
+STATE desktop-udc-side-top {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":null,"mapReturn":null,"compare":null,"pcSwipe":null,"pcSide":[256,292,382,205],"figs":[[256,292,189,205],[449,292,189,205]],"correction":[256,505,205,30],"hill":[256,541,190,30],"eraBtn":null,"siteCompare":[256,124,382,515],"ctrls":[[1225,76,29,58],[681,732,86,22]]}
+STATE desktop-udc-side-second {"scrollY":0,"sw":1265,"vw":1280,"headerBottom":40,"map":null,"mapReturn":null,"compare":null,"pcSwipe":null,"pcSide":[256,124,382,205],"figs":[[256,124,189,205],[449,124,189,205]],"correction":[256,337,205,30],"hill":[256,373,190,30],"eraBtn":null,"siteCompare":[256,-44,382,515],"ctrls":[[1225,76,29,58],[681,732,86,22]]}
+ERRORS []

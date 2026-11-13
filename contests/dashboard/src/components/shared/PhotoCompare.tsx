@@ -166,7 +166,7 @@ export function PhotoCompare({
           >⇔</div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-1" data-testid={`${testId}-side`}>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-1" data-testid={`${testId}-side`}>
           {[left, right].map((s) => (
             <figure key={s.label} className="m-0 space-y-0.5">
               <div className="relative aspect-square w-full overflow-hidden rounded-md border-2 border-black bg-neutral-200">{s.node}{overlay}</div>

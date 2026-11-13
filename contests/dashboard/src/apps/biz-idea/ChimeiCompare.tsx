@@ -87,7 +87,7 @@ export function ChimeiCompare({
   )
 
   return (
-    <div className="space-y-2" data-testid="chimei-compare">
+    <div className="scroll-mt-40 space-y-2 md:scroll-mt-0" data-testid="chimei-compare">
       <div className="space-y-0.5 rounded-md border-2 border-black bg-yellow-50 p-2 text-sm">
         {s1 ? (
           <>
