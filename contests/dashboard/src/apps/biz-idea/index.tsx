@@ -28,7 +28,8 @@ import {
   type LoreItem, type MemoryRecord, type SamplePlace,
 } from './logic'
 import { SAMPLE_OVERLAY_ID, SAMPLE_PLACE_NAME, SAMPLE_VISIBILITY } from './sample'
-import { applyOverlay, lorePopup, newPin, placePin, recordPin, recordPopup } from './mapHelpers'
+import { ChimeiCompare, type ChannelMode } from './ChimeiCompare'
+import { applyOldChannel, applyOverlay, lorePopup, newPin, placePin, recordPin, recordPopup } from './mapHelpers'
 import { markGeoJson } from '../_samples/mark'
 
 interface SamplesFile { notice: string; places: SamplePlace[] }
@@ -52,7 +53,7 @@ const DESCRIPTION = '地域の聞き取り担当として、地名にまつわ�
 const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   place: { title: '地名を選ぶ', hint: '地名と語りは架空のサンプル。地図のオレンジのピンでも選べます' },
   cross: { title: '伝承碑と突き合わせる', hint: '語られている災害と、近くの自然災害伝承碑（実データ）を比べる' },
-  overlay: { title: '昔の地図・写真と重ねる', hint: '地図に重ねて、目で見て気づいたことを選ぶ' },
+  overlay: { title: '昔の地図・写真と重ねる', hint: '昔と今の写真を見比べ、気づいたことを選ぶ' },
   record: { title: '聞き取りを記録する', hint: '保存すると必ず「未確認」から始まります' },
   confirm: { title: '確認して公開範囲を選ぶ', hint: 'このデモでは、あなたが確認役を兼ねます' },
   export: { title: '公開分を書き出す', hint: '確認済み・公開の記録だけを GeoJSON にします' },
@@ -171,8 +172,9 @@ export default function BizIdeaApp() {
   const [dlgLic, setDlgLic] = useState('CC BY 4.0')
   const popupRef = useRef<maplibregl.Popup | null>(null)
   const featureClickedRef = useRef(false)
-  const overlayRef = useRef({ id: overlayId, opacity })
-  overlayRef.current = { id: overlayId, opacity }
+  const [channel, setChannel] = useState<ChannelMode>('off')
+  const overlayRef = useRef({ id: overlayId, opacity, channel })
+  overlayRef.current = { id: overlayId, opacity, channel }
 
   /* 実行サンプル: 被験者が最後に到達した状態（地名を選び、語りを写して保存し、確認済み・公開にして書き出した）をデータから再現する。
      クリップボード・ダウンロードは行わない（書き出しは「済」の表示だけ） */
@@ -214,7 +216,10 @@ export default function BizIdeaApp() {
   const onMapReady = useCallback((m: maplibregl.Map) => {
     setMap(m)
     m.once('idle', () => setMapIdle(true))
-    const reapply = () => applyOverlay(m, overlayRef.current.id, overlayRef.current.opacity / 100)
+    const reapply = () => {
+      applyOverlay(m, overlayRef.current.id, overlayRef.current.opacity / 100)
+      applyOldChannel(m, overlayRef.current.channel === 'outline')
+    }
     m.on('load', reapply)
     m.on('style.load', reapply)
     m.on('zoomend', () => setZoom(Math.round(m.getZoom() * 10) / 10))
@@ -230,6 +235,17 @@ export default function BizIdeaApp() {
     if (!map) return
     applyOverlay(map, overlayId, opacity / 100)
   }, [map, overlayId, opacity])
+
+  useEffect(() => {
+    if (map) applyOldChannel(map, channel === 'outline')
+  }, [map, channel])
+
+  const changeChannel = (m: ChannelMode) => {
+    setChannel(m)
+    if (m === 'orig') chooseOverlay('lcmfc2')
+    else if (channel === 'orig' && overlayId === 'lcmfc2') setOverlayId('none')
+    if (m === 'outline' && map && map.getZoom() < 14.5) map.easeTo({ center: [132.495, 34.4785], zoom: 15, duration: 400 })
+  }
 
   const overlay = OVERLAYS.find((o) => o.id === overlayId) ?? OVERLAYS[0]
   const chooseOverlay = (id: string) => {
@@ -411,7 +427,7 @@ export default function BizIdeaApp() {
     [
       { id: 'place', title: '地名を選ぶ', hint: '地名と語りは架空のサンプル', done: !!focus },
       { id: 'cross', title: '伝承碑と突き合わせる', hint: '半径内の自然災害伝承碑（実データ）と比べる', done: done.cross },
-      { id: 'overlay', title: '昔の地図・写真と重ねる', hint: 'おすすめの重ね地図あり', action: '重ね地図を選ぶと完了', done: done.overlay },
+      { id: 'overlay', title: '昔の地図・写真と重ねる', hint: '昔と今の写真を見比べる', action: '見比べるか、重ね地図を選ぶと完了', done: done.overlay },
       { id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', action: '保存すると完了', done: touched.saved },
       {
         id: 'confirm', title: '確認して公開範囲を選ぶ', hint: 'デモでは自分が確認役を兼ねる',
@@ -529,8 +545,22 @@ export default function BizIdeaApp() {
     </div>
   )
 
+  const markOverlayDone = () => setDone((d) => (d.overlay ? d : { ...d, overlay: true }))
   const overlayPanel = (
     <div className="space-y-3">
+      {focus ? (
+        <ChimeiCompare
+          key={`${focus.lon},${focus.lat}`}
+          lon={focus.lon} lat={focus.lat} isSample={focus.place?.id === 's1'}
+          channel={channel} onChannel={changeChannel} onInteract={markOverlayDone}
+        />
+      ) : (
+        <Alert><MapPin className="size-4" /><AlertTitle>先に地名を選ぶと、昔と今の写真を見比べられます</AlertTitle>
+          <AlertDescription>手順「地名を選ぶ」で地名（サンプル）か地図上の位置を選ぶと、その場所の昔の写真と今の写真がここに並びます。</AlertDescription></Alert>
+      )}
+      <details className="rounded-md border p-2" open={!focus || undefined} data-testid="overlay-controls">
+        <summary className="cursor-pointer text-sm font-bold">地図の上に昔の地図・写真を重ねる（広く見たいとき）</summary>
+      <div className="mt-2 space-y-3">
       <div className="space-y-1.5 rounded-md border-2 border-black bg-yellow-50 p-2">
         <p className="text-sm font-bold">
           おすすめ{form.claimedKinds.length ? `（語られている災害: ${form.claimedKinds.join('・')}）` : ''}
@@ -574,6 +604,8 @@ export default function BizIdeaApp() {
         {overlay.minzoom != null && ` 表示される縮尺: ズーム${overlay.minzoom}〜${overlay.maxzoom}（現在ズーム${zoom}）。`}
         {overlay.minzoom != null && zoom < overlay.minzoom && ' ※ 現在の縮尺では表示されません。地図を拡大してください。'}</span>
       </Note>
+      </div>
+      </details>
       <fieldset className="space-y-2 border-t pt-3">
         <legend className="text-sm font-bold">見て気づいたこと（自分の目で見て選ぶ）</legend>
         {CHECKS.map((c, i) => (

@@ -31,6 +31,7 @@ import {
 } from './lib'
 import { KIND_HELP, NEAR_M, nearSummary, searchPlaces, type PlaceHit } from './search'
 import { markCsv, markGeoJson } from '../_samples/mark'
+import { KindExplain, SitePhotoCompare } from './SitePhotoCompare'
 
 const TILE = 'https://cyberjapandata.gsi.go.jp/xyz/'
 const KIND_COLOR: Record<string, string> = { 谷埋め型: '#D55E00', 腹付け型: '#56B4E9', 区分なし: '#999999' }
@@ -759,8 +760,25 @@ export default function App() {
           <KindBadge kind={selFillFeature.properties.kind} />
         </div>
       ) : (
-        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。地図の色付きの範囲をタップしても選べます。</p>
+        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。手順2の一覧か、地図の色付きの範囲をタップして選ぶと、その造成地の昔の写真と今を見比べられます。</p>
       )}
+      {selFillFeature && (
+        <>
+          <SitePhotoCompare key={selFillFeature.properties.id} fill={selFillFeature} onInteract={() => setDidCompare(true)} />
+          <KindExplain kind={selFillFeature.properties.kind} />
+        </>
+      )}
+      <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
+        <div className="font-semibold">見るポイント（見方の例）</div>
+        <ul className="list-disc space-y-0.5 pl-5">
+          <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
+          <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
+        </ul>
+        <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
+      </div>
+      <details className="rounded-md border p-2" data-testid="map-overlay-controls">
+        <summary className="cursor-pointer text-sm font-bold">地図の上に昔の写真を重ねて見る（広い範囲を見たいとき）</summary>
+      <div className="mt-2 space-y-3">
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">昔の写真</Label>
         <ToggleGroup type="single" variant="outline" value={old} aria-label="年代別の空中写真"
@@ -786,17 +804,11 @@ export default function App() {
         </ToggleGroup>
         <p className="text-xs text-muted-foreground">「航空写真(現在)」にすると、同じ場所の今の写真と昔の写真を見比べられます。</p>
       </div>
-      <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
-        <div className="font-semibold">見るポイント（見方の例）</div>
-        <ul className="list-disc space-y-0.5 pl-5">
-          <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
-          <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
-        </ul>
-        <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
-      </div>
       <p className="text-xs text-muted-foreground">
         昔の写真はズーム10〜17で表示され、撮影年・範囲により空白の場所があります。見比べは目視で、変化の自動判定はしません。
       </p>
+      </div>
+      </details>
     </div>
   )
 

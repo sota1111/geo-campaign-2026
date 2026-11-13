@@ -1,4 +1,5 @@
 import maplibregl from 'maplibre-gl'
+import { S1_OLD_CHANNEL } from './oldchannel'
 import { OVERLAYS, VISIBILITY, gsiLink, overlayTileUrl, type LoreItem, type MemoryRecord } from './logic'
 
 const ICHIRAN = 'https://maps.gsi.go.jp/development/ichiran.html'
@@ -28,6 +29,24 @@ export function applyOverlay(map: maplibregl.Map, selectedId: string, opacity: n
         map.setPaintProperty(lid, 'raster-opacity', opacity)
       }
     }
+  } catch {
+    /* スタイル読み込み中。style.load で再適用される */
+  }
+}
+
+/** 治水地形分類図の旧河道の輪郭（目安）を line 層で出す／消す。背景切替で style が作り直された後にも呼ぶ */
+export function applyOldChannel(map: maplibregl.Map, on: boolean) {
+  try {
+    const id = 'old-channel'
+    if (!on) {
+      for (const l of [`${id}-casing`, id]) if (map.getLayer(l)) map.removeLayer(l)
+      if (map.getSource(id)) map.removeSource(id)
+      return
+    }
+    if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: S1_OLD_CHANNEL })
+    const before = map.getStyle().layers.find((l) => l.type === 'circle' || l.type === 'symbol')?.id
+    if (!map.getLayer(`${id}-casing`)) map.addLayer({ id: `${id}-casing`, type: 'line', source: id, paint: { 'line-color': '#fff', 'line-width': 6 }, layout: { 'line-join': 'round' } }, before)
+    if (!map.getLayer(id)) map.addLayer({ id, type: 'line', source: id, paint: { 'line-color': '#0054c8', 'line-width': 3 }, layout: { 'line-join': 'round' } }, before)
   } catch {
     /* スタイル読み込み中。style.load で再適用される */
   }
