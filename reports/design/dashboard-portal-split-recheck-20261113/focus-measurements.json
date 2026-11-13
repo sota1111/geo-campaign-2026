@@ -1,0 +1,11 @@
+{
+  "afterEscape": {
+    "tag": "BODY",
+    "focus": "<body style=\"\">\n    <div id=\"root\"><div data-slot=\"sidebar-wrapper\" class=\"group/sidebar-wrapper flex min-h-svh w-full h"
+  },
+  "afterTab": {
+    "tag": "A",
+    "text": "統合ダッシュボード4つのコンペ・今の案7件＋新しい案",
+    "html": "<a href=\"./index.html\" class=\"px-2 py-1 text-sm font-bold leading-tight\">統合ダッシュボード<span class=\"block text-xs font-normal text-muted-foreground\">4つのコンペ・今の案7件＋新しい案</span></a>"
+  }
+}

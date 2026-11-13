@@ -1,0 +1,115 @@
+{
+  "out": [
+    {
+      "label": "1280",
+      "dialogTabs": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "afterEscape": {
+        "dialog": false,
+        "tag": "BODY"
+      }
+    },
+    {
+      "label": "1280",
+      "app": "sat-a",
+      "link": "統合ダッシュボード",
+      "snap": {
+        "scrollY": 0,
+        "tops": [
+          98,
+          156,
+          226,
+          306
+        ],
+        "docH": 765,
+        "sw": 1265
+      },
+      "selected": "row-satellite-2026"
+    },
+    {
+      "label": "1280",
+      "app": "odpt",
+      "link": "統合ダッシュボード",
+      "snap": {
+        "scrollY": 0,
+        "tops": [
+          98,
+          156,
+          226,
+          306
+        ],
+        "docH": 765,
+        "sw": 1265
+      },
+      "selected": "row-satellite-2026"
+    },
+    {
+      "label": "390",
+      "dialogTabs": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "afterEscape": {
+        "dialog": false,
+        "tag": "BODY"
+      }
+    },
+    {
+      "label": "390",
+      "app": "sat-a",
+      "link": "統合ダッシュボード",
+      "snap": {
+        "scrollY": 0,
+        "tops": [
+          124,
+          198,
+          272,
+          346
+        ],
+        "docH": 844,
+        "sw": 390
+      },
+      "selected": "row-satellite-2026"
+    },
+    {
+      "label": "390",
+      "app": "odpt",
+      "link": "統合ダッシュボード",
+      "snap": {
+        "scrollY": 0,
+        "tops": [
+          124,
+          198,
+          272,
+          346
+        ],
+        "docH": 844,
+        "sw": 390
+      },
+      "selected": "row-satellite-2026"
+    }
+  ],
+  "errs": []
+}
