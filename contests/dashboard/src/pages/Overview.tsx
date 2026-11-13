@@ -6,7 +6,8 @@ import { normalUrl, sampleUrl } from '@/components/layout/SampleBar'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { APPS, CONTESTS, appsByContest, getApp, type AppMeta, type ContestId } from '@/apps/registry'
+import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
+import { siteRoot } from '@/lib/data'
 import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
 import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
 import { LATEST } from '@/apps/eval-results'
@@ -33,14 +34,68 @@ function nextDeadline(info: ContestInfo) {
   return info.deadlines.find((d) => new Date(d.at).getTime() > now) ?? info.deadlines[info.deadlines.length - 1]
 }
 
-function AppCard({ a, contestId, note, onOpenEval }: { a: AppMeta; contestId: ContestId; note?: string; onOpenEval: () => void }) {
+/** 新しい案（比較用・未選定）の目印。色だけに頼らず、黒地の文言と破線の枠で示す */
+function NewPlanTag() {
+  return (
+    <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-bold text-white" data-testid="new-plan-tag">
+      {NEW_PLAN_LABEL}
+    </span>
+  )
+}
+
+/** デモを持たない案（提出文のみ）のカード。開くボタンは置かない */
+function CardOnlyCard({ c }: { c: CardOnly }) {
+  const contest = CONTESTS.find((x) => x.id === c.contest)
+  return (
+    <Card data-app-card={c.id} className="flex flex-col gap-2 border-2 border-dashed border-slate-500 bg-slate-50 py-3">
+      <CardHeader className="gap-1 px-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <NewPlanTag />
+          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">デモなし</span>
+        </div>
+        <CardTitle className="text-base leading-tight" data-testid={`card-only-title-${c.id}`}>{c.name}</CardTitle>
+        <CardDescription className="text-xs">
+          {contest?.short}／{c.division}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 px-4 text-xs">
+        <p data-testid={`card-only-note-${c.id}`}>{c.note}</p>
+      </CardContent>
+      <CardFooter className="flex-wrap gap-x-4 gap-y-1 px-4 text-xs">
+        {c.docs.map((d) => (
+          <a
+            key={d.path}
+            href={`${siteRoot()}${d.path}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2"
+            data-testid={`card-only-doc-${c.id}`}
+          >
+            {d.label}
+            <ExternalLink className="size-3" aria-hidden />
+            <span className="sr-only">（新しいタブで開く）</span>
+          </a>
+        ))}
+      </CardFooter>
+    </Card>
+  )
+}
+
+function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; contestId: ContestId; note?: string; onOpenEval: () => void; paired?: boolean }) {
+  const isNew = isNewPlan(a)
   const contest = CONTESTS.find((c) => c.id === a.contest)
   // 本応募の前に概要登録が要るコンペ（UDC）は、カードにも概要登録の締切を出す
   const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.find((d) => d.label === '概要登録')
   return (
-    <Card data-app-card={a.id} className="flex flex-col gap-2 py-3">
+    <Card data-app-card={a.id} className={`flex flex-col gap-2 py-3 ${isNew ? 'border-2 border-dashed border-slate-500 bg-slate-50' : ''}`}>
       <CardHeader className="gap-1 px-4">
         <div className="flex flex-wrap items-center gap-1.5">
+          {isNew && <NewPlanTag />}
+          {!isNew && paired && (
+            <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold" data-testid="current-plan-tag">
+              今の案
+            </span>
+          )}
           <DataBadge kind={a.dataKind} />
           <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium">
             <Users className="size-3" />
@@ -54,6 +109,19 @@ function AppCard({ a, contestId, note, onOpenEval }: { a: AppMeta; contestId: Co
       </CardHeader>
       <CardContent className="flex-1 px-4 text-xs">
         <p>{a.purpose}</p>
+        {isNew && a.pairNote && (
+          <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`pair-note-${a.id}`}>
+            {a.pairNote}
+          </p>
+        )}
+        {isNew && a.stateNote && (
+          <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`state-note-${a.id}`}>
+            いまの状態: {a.stateNote}
+          </p>
+        )}
+        {isNew && (
+          <p className="mt-1.5 text-muted-foreground">AI模擬評価はまだありません。元の静的版をそのまま表示します（実行サンプルなし）。</p>
+        )}
         {note && (
           <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`app-note-${a.id}`}>
             {note}
@@ -117,6 +185,19 @@ function FoldSection({ title, className = '', children }: { title: React.ReactNo
 function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () => void }) {
   const contest = CONTESTS.find((c) => c.id === info.id)!
   const apps = appsByContest(info.id)
+  const current = apps.filter((a) => !isNewPlan(a))
+  const newCount = apps.length - current.length + CARDS_ONLY.filter((c) => c.contest === info.id).length
+  // 今の案ごとに、その隣に新しい案を並べる（同じ大会・部門の中で比べる）
+  // 組のある群を先に並べる（第一画面に、今の案と新しい案の組が入るように）
+  const groups = current
+    .map((a) => ({
+      head: a,
+      news: apps.filter((x) => isNewPlan(x) && x.pairWith === a.id),
+      cards: CARDS_ONLY.filter((c) => c.contest === info.id && c.pairWith === a.id),
+    }))
+    .sort((x, y) => Number(y.news.length + y.cards.length > 0) - Number(x.news.length + x.cards.length > 0))
+  // 新しい案があるコンペでは、今の案すべてに「今の案」の札を付ける
+  const hasNew = newCount > 0
   return (
     <div className="space-y-3">
       <div className="grid items-start gap-3 lg:grid-cols-[3fr_2fr] lg:grid-rows-[auto_1fr]">
@@ -179,16 +260,28 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
         {/* アプリ */}
         <section aria-label={`${contest.short}向けのアプリ`} className="space-y-2 lg:col-start-1 lg:row-start-2">
           <h3 className="text-sm font-bold">
-            このコンペ向けのアプリ（{apps.length}件）
+            このコンペ向けのアプリ（{current.length}件{newCount > 0 && `＋新しい案 ${newCount}件`}）
             <span className="ml-2 text-xs font-normal text-muted-foreground" data-testid="overview-sample-note">
               「実行サンプル」は AI（Sonnet）の模擬利用の再現で、実在の利用実績ではありません。
             </span>
           </h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {apps.map((a) => (
-              <AppCard key={a.id} a={a} contestId={info.id} note={info.appNotes?.[a.id]} onOpenEval={onOpenEval} />
-            ))}
-          </div>
+          {groups.map((g) => (
+            <div key={g.head.id} className={hasNew && groups.length > 1 ? 'space-y-1 pt-2' : ''} data-testid={`group-${g.head.id}`}>
+              {hasNew && groups.length > 1 && (
+                <h4 className="text-xs font-bold text-muted-foreground" data-testid={`group-title-${g.head.id}`}>
+                  {g.head.division}
+                </h4>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[g.head, ...g.news].map((a) => (
+                  <AppCard key={a.id} a={a} contestId={info.id} note={info.appNotes?.[a.id]} onOpenEval={onOpenEval} paired={hasNew} />
+                ))}
+                {g.cards.map((c) => (
+                  <CardOnlyCard key={c.id} c={c} />
+                ))}
+              </div>
+            </div>
+          ))}
           {info.alsoApps?.map((x) => {
             const a = getApp(x.id)
             if (!a) return null
@@ -260,7 +353,7 @@ export default function Overview() {
   return (
     <div className="mx-auto max-w-6xl space-y-2">
       <header>
-        <h1 className="text-xl font-bold">統合ダッシュボード（4つのコンペ・7つのデモアプリ）</h1>
+        <h1 className="text-xl font-bold">統合ダッシュボード（4つのコンペ・今の案7件＋新しい案）</h1>
         <p className="hidden text-xs text-muted-foreground sm:block">
           コンペを選ぶと、募集内容・締切・注意点・審査基準と、そのコンペ向けのアプリが見られます。バッジは実データ／架空データ／一部架空の区別です。
         </p>
@@ -280,7 +373,13 @@ export default function Overview() {
                       {d === nd && <Remaining at={d.at} />}
                     </span>
                   ))}
-                  <span className="hidden text-muted-foreground lg:inline">アプリ{appsByContest(info.id).length}件</span>
+                  <span className="hidden text-muted-foreground lg:inline" data-testid={`tab-count-${info.id}`}>
+                    アプリ{appsByContest(info.id).filter((a) => !isNewPlan(a)).length}件
+                    {(() => {
+                      const n = appsByContest(info.id).filter(isNewPlan).length + CARDS_ONLY.filter((c) => c.contest === info.id).length
+                      return n > 0 ? `＋新しい案${n}件` : ''
+                    })()}
+                  </span>
                 </span>
               </TabsTrigger>
             )
@@ -300,7 +399,7 @@ export default function Overview() {
         ))}
       </Tabs>
       <p className="text-xs text-muted-foreground">
-        出典: 各コンペの公式要項（取得日 2026-11-09）。全{APPS.length}アプリはサイドバーからも開けます。
+        出典: 各コンペの公式要項（取得日 2026-11-09）。今の案{APPS.filter((a) => !isNewPlan(a)).length}件と、新しい案（比較用・未選定）{APPS.filter(isNewPlan).length}件のデモを、各コンペのタブで隣どうしに並べています。
       </p>
     </div>
   )

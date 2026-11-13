@@ -8,7 +8,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { CONTESTS, appsByContest } from '@/apps/registry'
+import { CONTESTS, isNewPlan, orderedAppsByContest } from '@/apps/registry'
 import { appUrl } from '@/lib/data'
 
 /** ポータル（統合ダッシュボード）の外枠。各アプリは独立ページなので、リンクは通常の <a>（同じタブ） */
@@ -18,7 +18,7 @@ function PortalSidebar() {
       <SidebarHeader className="border-b">
         <a href="./index.html" className="px-2 py-1 text-sm font-bold leading-tight">
           統合ダッシュボード
-          <span className="block text-xs font-normal text-muted-foreground">4つのコンペ・7つのデモアプリ</span>
+          <span className="block text-xs font-normal text-muted-foreground">4つのコンペ・今の案7件＋新しい案</span>
         </a>
       </SidebarHeader>
       <SidebarContent>
@@ -41,12 +41,15 @@ function PortalSidebar() {
             <SidebarGroupLabel className="h-auto whitespace-normal py-1 leading-tight">{c.name}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {appsByContest(c.id).map((a) => (
+                {orderedAppsByContest(c.id).map((a) => (
                   <SidebarMenuItem key={a.id}>
                     <SidebarMenuButton asChild className="h-auto min-h-8">
                       <a href={appUrl(a.id)} data-app-link={a.id}>
                         <span className="flex w-full flex-col items-start gap-0.5 py-0.5">
                           <span>{a.name}</span>
+                          {isNewPlan(a) && (
+                            <span className="rounded bg-slate-800 px-1.5 py-0 text-xs font-bold text-white">新しい案（比較用・未選定）</span>
+                          )}
                           <span className="flex flex-wrap items-center gap-1">
                             <DataBadge kind={a.dataKind} className="px-1.5 py-0 text-xs" />
                             <span className="text-xs text-muted-foreground">{a.audience}</span>

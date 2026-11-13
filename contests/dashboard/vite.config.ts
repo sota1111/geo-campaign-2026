@@ -3,7 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
 
-const APP_IDS = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate']
+const APP_IDS = [
+  'odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
+  // 新しい案（比較用・未選定。元の静的版を埋め込む）
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji',
+]
 const root = import.meta.dirname
 
 // マルチページ: ポータル index.html ＋ apps/<id>/index.html（別エントリ・別バンドル）

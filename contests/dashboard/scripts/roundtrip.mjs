@@ -6,7 +6,9 @@ import os from 'node:os'
 import path from 'node:path'
 
 const base = process.argv[2]
-const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate']
+const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
+  // 新しい案（比較用・未選定）
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji']
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)
 const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'))
@@ -37,7 +39,7 @@ for (const id of ids) {
   await ev(`document.querySelector('header a[href*="index.html"]').click()`)
   await sleep(1500)
   const url2 = await ev('location.pathname + location.hash'); const tab = await ev("document.querySelector('[role=tab][data-state=active] span')?.textContent")
-  out.push({ id, opened: url1, back: url2, activeTab: tab })
+  out.push({ id, opened: url1, back: url2, activeTab: tab, errs: errs.splice(0) })
 }
 console.log(JSON.stringify({ out, errs }, null, 2))
 ws.close(); chrome.kill()

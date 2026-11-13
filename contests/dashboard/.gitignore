@@ -1,4 +1,7 @@
 node_modules
 dist
 public/data/
+public/embedded/
+public/vendor/
+public/submission/
 tsconfig.tsbuildinfo
