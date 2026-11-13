@@ -6,19 +6,20 @@
 <title>子連れお出かけ診断｜休日、公共交通で公園・動物園・水族館・博物館へ行って夕方までに帰れるか（東京都区部）</title>
 <meta name="description" content="休日に子連れで、ベビーカーでも無理なく、公園・動物園・水族館・博物館などへ何分で行けて、夕方までに帰れるかを東京都区部の地図で診断します。公共交通オープンデータセンターのGTFS・国勢調査メッシュ・国土数値情報を使用。">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
-<link rel="stylesheet" href="style.css?v=20261114a">
+<link rel="stylesheet" href="style.css?v=20261114b">
 </head>
 <body>
 <div id="map" aria-label="子連れお出かけ診断の地図"></div>
 <div id="map-legend" aria-label="地図の色の意味"></div>
 
 <aside id="panel">
-  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">▼ 地図を広く見る</button>
   <div id="headline" aria-live="polite"></div>
   <div id="panel-body">
     <header>
       <h1>子連れお出かけ診断</h1>
-      <p class="lead">休日、ベビーカーでも無理なく、<b>公園・動物園・水族館・博物館へ何分で行けて、夕方までに帰れるか</b>を地区ごとに診断します。主な指標は「行き帰りとも行ける」です。</p>
+      <p class="lead" id="lead-tokyo">休日、ベビーカー連れの徒歩の仮定で、<b>公園・動物園・水族館・博物館へ何分で行けて、夕方までに帰れるか</b>を地区ごとに診断します（エレベーター・段差は未評価）。主な指標は「行き帰りとも行ける」です。</p>
+      <p class="lead" id="lead-osaka" hidden><b>大阪は時刻表のオープンデータが無いため未対応</b>です。行き先（公園・動物園・水族館・博物館など）の位置だけを地図に出しています。</p>
     </header>
 
     <section id="coverage" class="notice" aria-label="診断の範囲"></section>
@@ -35,10 +36,10 @@
       <div class="lbl-top" id="view-label">見方</div>
       <div id="ctl-view" class="seg" role="radiogroup" aria-labelledby="view-label"></div>
       <p id="view-help" class="note"></p>
-      <div class="row"><span class="lbl">行き出発</span><div id="ctl-o" class="seg" role="radiogroup" aria-label="行きの出発時刻"></div></div>
-      <div class="row"><span class="lbl">帰り出発</span><div id="ctl-r" class="seg" role="radiogroup" aria-label="帰りの出発時刻"></div></div>
+      <div class="row"><span class="lbl">行きの出発</span><div id="ctl-o" class="seg" role="radiogroup" aria-label="行きの出発時刻"></div></div>
+      <div class="row"><span class="lbl">帰りの出発</span><div id="ctl-r" class="seg" role="radiogroup" aria-label="帰りの出発時刻"></div></div>
       <div class="row"><span class="lbl">片道の許容</span><div id="ctl-w" class="seg" role="radiogroup" aria-label="片道の許容時間"></div></div>
-      <div class="row"><span class="lbl">徒歩1回の上限</span><div id="ctl-c" class="seg" role="radiogroup" aria-label="1回の徒歩の距離の上限"></div></div>
+      <div class="row"><span class="lbl">徒歩の上限<small>（1回）</small></span><div id="ctl-c" class="seg" role="radiogroup" aria-label="1回の徒歩の距離の上限"></div></div>
       <div class="row"><span class="lbl">乗換</span><div id="ctl-t" class="seg" role="radiogroup" aria-label="乗換回数の上限"></div></div>
       <p class="note" id="cond-note"></p>
     </section>
@@ -51,7 +52,7 @@
 
     <section id="pick" class="ctl" aria-label="地点・行き先の選択">
       <form id="search-form" role="search">
-        <label for="search-q" class="lbl-top">住所・駅名で探す（地区を選ぶ）</label>
+        <label for="search-q" class="lbl-top">住所・駅名で探す（地区を選ぶ。地図のかわりにも使えます）</label>
         <div class="search-row">
           <input id="search-q" type="search" placeholder="例: 上野駅、江東区亀戸" autocomplete="off" maxlength="80">
           <button id="search-btn" type="submit">探す</button>
@@ -98,7 +99,7 @@
 
 <noscript>このページの表示にはJavaScriptが必要です。</noscript>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
-<script src="lib.js?v=20261114a"></script>
-<script src="app.js?v=20261114a"></script>
+<script src="lib.js?v=20261114b"></script>
+<script src="app.js?v=20261114b"></script>
 </body>
 </html>

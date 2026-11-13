@@ -48,7 +48,7 @@ class TestComputeMatrices(unittest.TestCase):
 
     def run_mats(self, caps):
         return kb.compute_matrices(self.net, [self.cell], [self.dest1, self.dest2, self.dest_near], caps=caps,
-                                   out_hours=(9,), ret_hours=(16,), workers=1)
+                                   out_hours=(9,), ret_hours=(16,), workers=1, window_min=0)
 
     def test_outbound_duration_and_layers(self):
         mats = self.run_mats((300, 500))
@@ -76,7 +76,7 @@ class TestComputeMatrices(unittest.TestCase):
 
     def test_walk_cap_blocks_boarding(self):
         # 家から甲まで約200m: 上限150m（選択肢外だが探索は任意の上限で動く）では乗れない
-        mats = kb.compute_matrices(self.net, [self.cell], [self.dest1], caps=(150,), out_hours=(9,), ret_hours=(16,), workers=1)
+        mats = kb.compute_matrices(self.net, [self.cell], [self.dest1], caps=(150,), out_hours=(9,), ret_hours=(16,), workers=1, window_min=0)
         self.assertEqual(mats[("o", 9, 150, 3)][0][0], 0)
 
     def test_walk_only(self):
@@ -92,7 +92,7 @@ class TestComputeMatrices(unittest.TestCase):
     def test_parallel_equals_serial(self):
         a = self.run_mats((300, 500))
         b = kb.compute_matrices(self.net, [self.cell], [self.dest1, self.dest2, self.dest_near], caps=(300, 500),
-                                out_hours=(9,), ret_hours=(16,), workers=2)
+                                out_hours=(9,), ret_hours=(16,), workers=2, window_min=0)
         self.assertEqual(a, b)
 
     def test_larger_cap_never_slower(self):

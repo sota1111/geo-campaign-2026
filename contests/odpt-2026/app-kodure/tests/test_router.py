@@ -15,7 +15,7 @@ class FakeNet:
 
     def __init__(self, n, trips):
         self.n = n
-        self.nodes = [(35.0, 139.0 + i * 0.001, str(i)) for i in range(n)]
+        self.nodes = [(35.0, 139.0 + i * 0.01, str(i)) for i in range(n)]
         self.trips = trips
         rows = []
         for tno, seq in enumerate(trips):

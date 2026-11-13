@@ -138,9 +138,9 @@
     return rows;
   }
 
-  /* 分 -> 'H:MM'（出発時刻 hour 時 + 所要分） */
-  function clock(hour, minutes) {
-    var t = hour * 60 + minutes, h = Math.floor(t / 60), m = t % 60;
+  /* 分 -> 'H:MM'（出発時刻 hour 時 + 出発の遅れ offset 分 + 所要分） */
+  function clock(hour, minutes, offset) {
+    var t = hour * 60 + (offset || 0) + minutes, h = Math.floor(t / 60), m = t % 60;
     return h + ':' + (m < 10 ? '0' : '') + m;
   }
 

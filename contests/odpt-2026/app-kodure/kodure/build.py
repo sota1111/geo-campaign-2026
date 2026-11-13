@@ -26,6 +26,7 @@ from . import sources                                               # noqa: E402
 P13_URL = "https://nlftp.mlit.go.jp/ksj/gml/data/P13/P13-11/P13-11_{pref}_GML.zip"
 P27_URL = "https://nlftp.mlit.go.jp/ksj/gml/data/P27/P27-13/P27-13_{pref}.zip"
 OSAKA = {"id": "osaka", "name": "大阪市とその周辺", "pref": "27", "bbox": [135.35, 34.55, 135.65, 34.80]}
+NEAR_MAX_M = 2000             # 最寄りの停留所までの距離を調べる上限（これを超えたら NEAR_MAX_M と記録）
 DIAG_RADIUS_M = 2000          # 診断対象 = 収録停留所からこの距離以内の人口メッシュ
 RAIL_WALK_MIN = 15            # 鉄道駅まで徒歩この分数以内のメッシュを「鉄道駅が近い（未評価）」とする
 PUBLIC_END = lm_build.PUBLIC_END
@@ -70,38 +71,53 @@ def rle_decode(s, n):
 G = {}   # 子プロセスと共有する読み取り専用の作業データ（fork で引き継ぐ）
 
 
+def _window_codes(scan_src, collect_args, hour, window_min):
+    """出発時刻の幅（hour:00〜+window_min 分、5分おき）の各出発で前方探索し、所要時間の中央値の符号（層ごと）を返す。
+    scan_src(t0) -> 出発点のノード別の徒歩を終えた時刻 {node: 秒}。"""
+    router = G["router"]
+    starts = rt.window_starts(hour, window_min)
+    per = []      # 出発ごと: 層ごとの所要分リスト
+    for t0 in starts:
+        src = scan_src(t0)
+        if src:
+            _ready, alight = router.scan_full(src, t0)
+        else:
+            alight = ([rt.INF] * router.n,) * 3
+        per.append(rt.collect_minutes(alight, *collect_args(t0)))
+    nt = len(per[0][0])
+    out = []
+    for li in range(len(rt.LAYERS)):
+        codes = []
+        for tid in range(nt):
+            m = rt.median_minutes([p[li][tid] for p in per])
+            codes.append(rt.quant(m) if m <= rt.MAX_MIN else 0)
+        out.append(codes)
+    return out
+
+
 def _out_task(args):
     """行き: 家（メッシュ）→行き先。cells の chunk ごとに前方探索。戻り値 [(cap, hour, cell番号, [層ごとの[(dest番号,符号)]])]"""
-    cap, hour, idxs = args
-    t0 = hour * 3600
+    cap, hour, idxs, window_min = args
     res = []
     for ci in idxs:
-        lat, lon = G["cell_pts"][ci]
-        src = rt.source_map((lat, lon), G["node_grid"], cap, t0)
-        labels = G["router"].scan(src, t0) if src else (None, None, None)
+        pt = G["cell_pts"][ci]
         walk = G["walk_cd"][cap].get(ci, {})
-        if src:
-            layers = rt.collect(labels, G["inv_dest"][cap], t0, len(G["dest_pts"]), walk)
-        else:
-            layers = rt.collect([[rt.INF] * G["router"].n] * 3, {}, t0, len(G["dest_pts"]), walk)
+        layers = _window_codes(lambda t0: rt.source_map(pt, G["node_grid"], cap, t0),
+                               lambda t0: (G["inv_dest"][cap], t0, len(G["dest_pts"]), walk), hour, window_min)
         res.append((cap, hour, ci, [[(d, c) for d, c in enumerate(codes) if c] for codes in layers]))
     return res
 
 
 def _ret_task(args):
-    """帰り: 行き先→家。dests の chunk ごとに前方探索。戻り値 [(cap, hour, dest番号, [層ごとの[(cell番号,符号)]])]"""
-    cap, hour, idxs = args
-    t0 = hour * 3600
+    """帰り: 行き先→家。dests の chunk ごとに前方探索（出発点は行き先の入口の点のうち最も近いもの）。
+    戻り値 [(cap, hour, dest番号, [層ごとの[(cell番号,符号)]])]"""
+    cap, hour, idxs, window_min = args
     res = []
     for di in idxs:
-        lat, lon = G["dest_pts"][di]
-        src = rt.source_map((lat, lon), G["node_grid"], cap, t0)
+        pts = G["dest_access"][di]
         walk = G["walk_dc"][cap].get(di, {})
-        if src:
-            labels = G["router"].scan(src, t0)
-            layers = rt.collect(labels, G["inv_cell"][cap], t0, len(G["cell_pts"]), walk)
-        else:
-            layers = rt.collect([[rt.INF] * G["router"].n] * 3, {}, t0, len(G["cell_pts"]), walk)
+        layers = _window_codes(lambda t0: rt.source_map(pts, G["node_grid"], cap, t0),
+                               lambda t0: (G["inv_cell"][cap], t0, len(G["cell_pts"]), walk), hour, window_min)
         res.append((cap, hour, di, [[(c, k) for c, k in enumerate(codes) if k] for codes in layers]))
     return res
 
@@ -111,8 +127,11 @@ def chunks(n, size):
 
 
 def compute_matrices(network, cell_pts, dest_pts, caps=rt.CAPS_M, out_hours=rt.OUT_HOURS, ret_hours=rt.RET_HOURS,
-                     workers=1, progress=None):
+                     workers=1, progress=None, dest_access=None, window_min=rt.WINDOW_MIN):
     """行き・帰りの所要時間の行列を計算する。
+
+    dest_access: 行き先ごとの入口の点のリスト [[(lat, lon), ...], ...]（省略時は dest_pts の1点）。大きい公園は外周の点を渡す。
+    window_min: 出発時刻の幅（分）。hour:00 から window_min 分後まで5分おきに出発し、所要時間の中央値を使う（0 なら出発1点）。
 
     戻り値 {(dir, hour, cap, layer): [行き先ごとの bytearray(len(cell_pts))]}（dir は 'o'=行き, 'r'=帰り、符号は5分刻み）。
     """
@@ -120,12 +139,19 @@ def compute_matrices(network, cell_pts, dest_pts, caps=rt.CAPS_M, out_hours=rt.O
     node_grid = access.Grid([(la, lo) for la, lo, _ in network.nodes])
     nc, nd = len(cell_pts), len(dest_pts)
     G.clear()
-    G.update(router=router, node_grid=node_grid, cell_pts=cell_pts, dest_pts=dest_pts,
+    if dest_access is None:
+        dest_access = [[p] for p in dest_pts]
+    flat, owner = [], []
+    for di, pts in enumerate(dest_access):
+        for p in pts:
+            flat.append(p)
+            owner.append(di)
+    G.update(router=router, node_grid=node_grid, cell_pts=cell_pts, dest_pts=dest_pts, dest_access=dest_access,
              inv_dest={}, inv_cell={}, walk_cd={}, walk_dc={})
     for cap in caps:
-        G["inv_dest"][cap] = rt.invert(dest_pts, node_grid, cap)
+        G["inv_dest"][cap] = rt.invert(flat, node_grid, cap, owner)
         G["inv_cell"][cap] = rt.invert(cell_pts, node_grid, cap)
-        cd = rt.walk_pairs(cell_pts, dest_pts, cap, access.Grid)
+        cd = rt.walk_pairs(cell_pts, flat, cap, access.Grid, owner)
         dc = {}
         for ci, near in cd.items():
             for di, sec in near.items():
@@ -136,9 +162,9 @@ def compute_matrices(network, cell_pts, dest_pts, caps=rt.CAPS_M, out_hours=rt.O
     tasks = []
     for cap in caps:
         for h in out_hours:
-            tasks += [(_out_task, (cap, h, ix)) for ix in chunks(nc, 40)]
+            tasks += [(_out_task, (cap, h, ix, window_min)) for ix in chunks(nc, 20)]
         for h in ret_hours:
-            tasks += [(_ret_task, (cap, h, ix)) for ix in chunks(nd, 12)]
+            tasks += [(_ret_task, (cap, h, ix, window_min)) for ix in chunks(nd, 6)]
     if workers > 1:
         ctx = mp.get_context("fork")
         with ctx.Pool(workers) as pool:
@@ -261,8 +287,17 @@ def main(argv=None):
     print("cells", len(cells), "dests", len(dests))
     flags, stations, rail_m = rail_flags(reg, paths, cells)
 
+    access_pts = [dests_mod.access_points(d[0], d[1], d[3], d[4]) for d in dests]
+    node_grid = access.Grid([(la, lo) for la, lo, _ in net.nodes])
+    nearest = []     # 行き先ごとの、最寄りの収録停留所までの直線距離（m。入口の点のうち最も近いもの。NEAR_MAX_M 超は NEAR_MAX_M）
+    for pts in access_pts:
+        best = NEAR_MAX_M
+        for la, lo in pts:
+            for _n, dd in node_grid.within(la, lo, NEAR_MAX_M):
+                best = min(best, dd)
+        nearest.append(round(best))
     mats = compute_matrices(net, [(c[1], c[2]) for c in cells], [(d[1], d[0]) for d in dests], workers=args.workers,
-                            progress=lambda a, b: print(f"  {a}/{b}", flush=True))
+                            progress=lambda a, b: print(f"  {a}/{b}", flush=True), dest_access=access_pts)
     sizes = {}
     for (d, h, cap, ly), rows in mats.items():
         name = f"m_{d}{h}_c{cap}_t{ly}.json"
@@ -297,7 +332,8 @@ def main(argv=None):
             "caps_m": list(rt.CAPS_M), "out_hours": list(rt.OUT_HOURS), "ret_hours": list(rt.RET_HOURS),
             "layers": list(rt.LAYERS), "max_min": rt.MAX_MIN, "quant_min": rt.QUANT_MIN,
             "rail_walk_min": RAIL_WALK_MIN, "rail_walk_m": round(rail_m), "diag_radius_m": DIAG_RADIUS_M,
-            "park_min_m2": dests_mod.PARK_MIN_M2, "park_large_m2": dests_mod.PARK_LARGE_M2,
+            "window_min": rt.WINDOW_MIN, "window_step_min": rt.WINDOW_STEP_MIN, "walk_transfer_m": rt.WALK_TRANSFER_M,
+            "ring_points": dests_mod.RING_POINTS, "park_min_m2": dests_mod.PARK_MIN_M2, "park_large_m2": dests_mod.PARK_LARGE_M2,
         },
         "kinds": [[k, lbl] for k, lbl in dests_mod.KINDS],
         "coverage": {"feeds": len(feeds_out), "modes": sorted({m for f in feeds_out for m in f["modes"]}),
@@ -305,7 +341,7 @@ def main(argv=None):
         "feeds": feeds_out,
         "rail": [[r5(s[1]), r5(s[0]), s[2], s[3]] for s in stations],
         "cells": [[c[0], c[3], c[4], flags[i]] for i, c in enumerate(cells)],
-        "dests": [[r5(d[0]), r5(d[1]), d[2], d[3], d[5], round(d[4] / 10000, 1)] for d in dests],
+        "dests": [[r5(d[0]), r5(d[1]), d[2], d[3], d[5], round(d[4] / 10000, 1), nearest[i]] for i, d in enumerate(dests)],
         "files": sizes,
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

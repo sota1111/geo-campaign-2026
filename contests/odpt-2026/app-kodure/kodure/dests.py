@@ -8,6 +8,8 @@
   動植物園(03005)は施設名に「動物」を含むものを動物園、それ以外を植物園・生物園等に分ける（名称による推定）。
 どちらも一覧ページに「非商用」の使用許諾表示がある（README・画面の出典に条件を書く）。
 """
+import math
+
 from . import shp
 
 PARK_MIN_M2 = 10000        # この面積未満の公園は行き先にしない
@@ -71,21 +73,54 @@ def read_culture(zip_path, bbox):
     return out
 
 
+# P27（2013年度版）に残っている、現在は閉館している施設（確認できたものだけ。網羅ではない）
+CLOSED = {"逓信総合博物館"}   # 2013年8月に閉館（郵政博物館として移転）
+
+RING_POINTS = 8             # 公園の外周の入口候補の数
+RING_MAX_M = 700            # 等価半径の上限（極端に大きい面積での暴走を避ける）
+
+
 def dedupe(items, tol=0.0003):
-    """同名で約30m以内の重複を1つにまとめる（P27 に同じ施設が複数の分類で入っていることがある）。"""
+    """同名で約30m以内の重複を1つにまとめる（P27 に同じ施設が複数の分類で入っていることがある）。
+    座標の丸めの区切りをまたぐ重複も除く（隣り合う区画も調べる）。"""
     seen = {}
     out = []
     for it in items:
-        key = (it[2], round(it[0] / tol), round(it[1] / tol))
-        if key in seen:
+        gx, gy = round(it[0] / tol), round(it[1] / tol)
+        dup = False
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for (x, y) in seen.get((it[2], gx + dx, gy + dy), ()):
+                    if abs(x - it[0]) <= tol and abs(y - it[1]) <= tol:
+                        dup = True
+        if dup:
             continue
-        seen[key] = 1
+        seen.setdefault((it[2], gx, gy), []).append((it[0], it[1]))
         out.append(it)
     return out
 
 
+def equivalent_radius_m(area_m2):
+    """面積と同じ円の半径（m）。公園の形状（P13 は点データ）が無いため、円形と仮定した外周までの距離として使う。"""
+    return min(RING_MAX_M, math.sqrt(max(area_m2, 0) / math.pi))
+
+
+def access_points(lon, lat, kind, area_m2, n=RING_POINTS):
+    """行き先の入口の候補 [(lat, lon)]。公園（面積あり）は、中心点ではなく、中心から等価半径だけ離れた外周の n 点（円形と仮定した
+    入口の候補）と中心。人はその中の最も近い点から入る・出るものとして扱う。文化施設は施設の点だけ。"""
+    pts = [(lat, lon)]
+    if kind in ("park_l", "park_m") and area_m2 > 0:
+        r = equivalent_radius_m(area_m2)
+        kx = 111320.0 * math.cos(math.radians(lat))
+        for k in range(n):
+            th = 2 * math.pi * k / n
+            pts.append((lat + r * math.sin(th) / 110574.0, lon + r * math.cos(th) / kx))
+    return pts
+
+
 def read_destinations(p13_zip, p27_zip, bbox):
     items = read_parks(p13_zip, bbox) + read_culture(p27_zip, bbox)
+    items = [it for it in items if it[2] not in CLOSED]
     items = dedupe(items)
     items.sort(key=lambda x: (x[3], -x[4], x[2]))
     return items
