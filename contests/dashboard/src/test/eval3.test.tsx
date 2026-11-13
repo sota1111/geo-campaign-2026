@@ -123,3 +123,24 @@ describe('画面', () => {
     expect(r.querySelector('[data-cell="portal-goal-P-1"]')?.textContent).toBe('2/4名')
   })
 })
+
+describe('評価ダイアログの区画（M9）と表のスクロール枠（M8）', () => {
+  it('第3回の区画と第1・2回の区画を分け、Sonnet の説明は第1・2回の側だけ', async () => {
+    const { EvalSummary } = await import('@/pages/EvalPanels')
+    render(<EvalSummary />)
+    const r3 = screen.getByTestId('eval-round3')
+    const past = screen.getByTestId('eval-rounds-past')
+    expect(r3.textContent).toContain('第3回')
+    expect(r3.textContent).not.toContain('Sonnet')
+    expect(past.textContent).toContain('Sonnet 4名')
+    expect(r3.compareDocumentPosition(past) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  it('数値表は読める最小幅つきのスクロール枠に入る', () => {
+    render(<ContestEval3 contest="satellite-2026" data={aggregate(FIXTURE_FILES)} />)
+    const table = screen.getAllByTestId('radar-table')[0] as HTMLElement
+    const frame = table.closest('[data-scroll-frame]') as HTMLElement
+    expect(frame).toBeTruthy()
+    expect(frame.getAttribute('role')).toBe('region')
+    expect(table.style.minWidth).toMatch(/rem$/)
+  })
+})

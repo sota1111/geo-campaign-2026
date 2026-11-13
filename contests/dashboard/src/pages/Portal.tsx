@@ -1,15 +1,15 @@
 import { useRef, useState, useSyncExternalStore } from 'react'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, ChartRadar, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { APPS, CONTESTS, isNewPlan } from '@/apps/registry'
 import { CONTEST_INFO, contestsByDeadline, nextDeadline, type ContestInfo } from '@/apps/contests-info'
-import { LATEST } from '@/apps/eval-results'
+import { EVAL3 } from '@/apps/eval3'
 import { Remaining } from '@/components/shared/Remaining'
 import { CONTEST_STATUS, STAGES, STATUS_LABEL, STATUS_REASON, otherNextCount, type Stage } from '@/data/status'
 import { ContestPanel } from '@/pages/Overview'
-import { EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
+import { EvalSummary } from '@/pages/EvalPanels'
 import { Question, asOf } from '@/pages/Progress'
 
 const HASH_KEY = '#open='
@@ -141,6 +141,14 @@ export default function Portal() {
   if (sheetId) lastId.current = sheetId
   const sheetInfo = CONTEST_INFO.find((c) => c.id === sheetId)
   const sorted = contestsByDeadline()
+  // パネルの中だけを動かす（背景の一覧の scrollY・行 top は変えない）。押した人の操作に限る
+  const jumpToEval3 = () => {
+    const box = document.querySelector<HTMLElement>('[data-testid=detail-sheet] [data-testid^=detail-]')
+    const sec = box?.querySelector<HTMLElement>('[data-testid=eval3-contest]')
+    if (!box || !sec) return
+    box.scrollTop += sec.getBoundingClientRect().top - box.getBoundingClientRect().top - 8
+    sec.querySelector<HTMLElement>('[data-testid=eval3-heading]')?.focus({ preventScroll: true })
+  }
   return (
     <div className="mx-auto max-w-6xl space-y-2">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -192,11 +200,17 @@ export default function Portal() {
           data-testid="detail-sheet"
         >
           <div className="flex shrink-0 items-center justify-between gap-2 border-b-2 border-slate-600 px-3 py-2">
-            <SheetTitle className="text-base">{sheetInfo?.tabName}の詳細</SheetTitle>
-            <Button variant="outline" size="sm" className="min-h-9" onClick={() => write([])} data-testid="sheet-close">
-              <X className="size-4" aria-hidden />
-              閉じる
-            </Button>
+            <SheetTitle className="min-w-0 text-sm sm:text-base">{sheetInfo?.tabName}の詳細</SheetTitle>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button variant="outline" size="sm" className="min-h-9 border-2 border-slate-700 font-bold" onClick={jumpToEval3} data-testid="jump-eval3" title="この詳細の中の、第3回AI評価（今の案と新しい案の採点の形）の節へ移ります">
+                <ChartRadar className="size-4" aria-hidden />
+                第3回の比較へ
+              </Button>
+              <Button variant="outline" size="sm" className="min-h-9" onClick={() => write([])} data-testid="sheet-close">
+                <X className="size-4" aria-hidden />
+                閉じる
+              </Button>
+            </div>
           </div>
           <nav aria-label="別のコンペの詳細へ切り替え" className="grid shrink-0 grid-cols-4 gap-1 border-b border-slate-300 px-3 py-1.5" data-testid="sheet-switch">
             {sorted.map((c) => (
@@ -227,14 +241,16 @@ export default function Portal() {
 
       <Dialog open={evalOpen} onOpenChange={setEvalOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" title={`${MOCK_NOTICE}${ROUND_NOTICE}`}>
-            AI評価（模擬・{LATEST.date.slice(5).replace('-', '/')}）を見る
+          <Button variant="outline" size="sm" title="AI評価（模擬）。最新は第3回（GPT-6.1 sol low 10名）。第1・2回（Sonnet 4名）も同じ画面で見られます。" data-testid="open-eval">
+            AI評価（模擬・第3回 {EVAL3.date.slice(5).replace('-', '/')}）を見る
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
+        <DialogContent className="max-h-[85vh] grid-cols-[minmax(0,1fr)] overflow-y-auto p-4 sm:max-w-5xl sm:p-6 [&>*]:min-w-0" data-testid="eval-dialog">
           <DialogHeader>
-            <DialogTitle>AI評価（模擬）</DialogTitle>
-            <DialogDescription>{MOCK_NOTICE}</DialogDescription>
+            <DialogTitle className="pr-6">AI評価（模擬）　最新は第3回（{EVAL3.date.slice(5).replace('-', '/')}）</DialogTitle>
+            <DialogDescription className="text-xs">
+              すべて AI による模擬評価で、実際の審査結果ではありません。回によって評価した AI と人数が違います。第3回は {EVAL3.model} {EVAL3.evaluatorCount}名、第1・2回は Sonnet 各4名で、下の区画で分けて示します。
+            </DialogDescription>
           </DialogHeader>
           <EvalSummary />
         </DialogContent>

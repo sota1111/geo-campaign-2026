@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Bot } from 'lucide-react'
 import { B_ITEMS, A_ITEMS } from '@/apps/eval-results'
 import { C_LABELS, EVAL3, cKeysOf, compareGroups, goalText, statText, type Eval3Data, type Stat } from '@/apps/eval3'
@@ -124,7 +124,7 @@ export function Radar({ title, axisLabels, series, band, max = 5 }: {
 
 function Legend({ items }: { items: { key: string; label: string; style: Style }[] }) {
   return (
-    <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="凡例" data-testid="radar-legend">
+    <ul className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="凡例" data-testid="radar-legend">
       {items.map((s) => (
         <li key={s.key} className="flex items-center gap-1">
           <LegendMark style={s.style} />
@@ -137,6 +137,42 @@ function Legend({ items }: { items: { key: string; label: string; style: Style }
 
 const cell = 'px-1.5 py-1 align-top'
 
+/** 表だけを閉じ込める横スクロール枠。はみ出すときは「横にスクロール」の案内を出す（キーボードでも動かせる） */
+export function ScrollTable({ label, children }: { label: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [over, setOver] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => setOver(el.scrollWidth > el.clientWidth + 1)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <div className="min-w-0 max-w-full">
+      {over && (
+        <p className="mb-0.5 text-[11px] font-bold text-slate-700" data-testid="scroll-hint">
+          ← 表は横にスクロールできます →
+        </p>
+      )}
+      <div
+        ref={ref}
+        role="region"
+        aria-label={label}
+        tabIndex={0}
+        data-scroll-frame=""
+        className={`max-w-full overflow-x-auto rounded focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-800 ${over ? 'border border-slate-400' : ''}`}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 /** 同じ数値の表: 軸×系列、各セルは 平均（最小〜最大・評価者数） */
 function ValueTable({ caption, axes, series, stats }: {
   caption: string
@@ -145,8 +181,8 @@ function ValueTable({ caption, axes, series, stats }: {
   stats: Record<string, (Stat | null | undefined)[]>
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs" data-testid="radar-table">
+    <ScrollTable label={`${caption}（横にスクロールできる表）`}>
+      <table className="w-full text-xs" style={{ minWidth: `${6.5 + 6.5 * series.length}rem` }} data-testid="radar-table">
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b text-left">
@@ -164,7 +200,7 @@ function ValueTable({ caption, axes, series, stats }: {
         <tbody>
           {axes.map((a, i) => (
             <tr key={a} className="border-b last:border-0">
-              <th scope="row" className={`${cell} min-w-24 text-left font-medium`}>{a}</th>
+              <th scope="row" className={`${cell} min-w-[6.5rem] text-left font-medium`}>{a}</th>
               {series.map((s) => {
                 const t = statText(stats[s.key]?.[i])
                 return (
@@ -178,20 +214,20 @@ function ValueTable({ caption, axes, series, stats }: {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollTable>
   )
 }
 
 function Notice({ d, scope }: { d: Eval3Data; scope?: string }) {
   return (
-    <div className="rounded-lg border-2 border-slate-700 bg-slate-50 p-2 text-xs" role="note" data-testid="eval3-notice">
-      <p className="flex items-center gap-1.5 font-bold">
+    <div className="min-w-0 rounded-lg border-2 border-slate-700 bg-slate-50 p-2 text-[11px] leading-snug" role="note" data-testid="eval3-notice">
+      <p className="flex items-center gap-1.5 text-xs font-bold">
         <Bot className="size-4 shrink-0" aria-hidden />
         AI（{d.model}）{d.evaluatorCount || 10}名による模擬評価で、実際の審査結果ではありません。
       </p>
       <p className="mt-1">
         評価日 {d.date}。出典: <code className="break-all">{d.source}</code>
-        {scope && `（${scope}）`}。点は 0〜5 の整数で、図は評価者の平均です。評価者の人数は項目ごとに表の「名」で示します。
+        {scope && `（${scope}）`}。点は 0〜5 の整数、図は評価者の平均、人数は表の「名」。
       </p>
       {d.warnings.length > 0 && (
         <p className="mt-1 font-medium" data-testid="eval3-warnings">
@@ -233,44 +269,82 @@ export function ContestEval3({ contest, data = EVAL3 }: { contest: ContestId; da
     x.localeCompare(y, 'en', { numeric: true }),
   )
 
+  const setGroup = (ids: string[]) => setChecked(ids)
+  const sameSet = (ids: string[]) => ids.length === checked.filter((c) => data.apps[c]).length && ids.every((id) => checked.includes(id))
+  const evalIds = (g: AppMeta[]) => g.map((a) => a.id).filter((id) => data.apps[id])
+  const presets = [
+    ...groups.map((g) => ({
+      key: g[0].id,
+      ids: evalIds(g),
+      text: g.length > 1 ? `${g[0].division.replace(/（.*$/, '')}の${g.length}案` : `${g[0].division.replace(/（.*$/, '')}のみ`,
+    })),
+    ...(groups.length > 1 ? [{ key: 'all', ids: evalIds(all), text: `全${all.length}案` }] : []),
+  ].filter((p) => p.ids.length > 0)
+  const boxes = (
+    <div className="flex flex-col gap-y-0.5 sm:flex-row sm:flex-wrap sm:gap-x-4">
+      {all.map((a) => {
+        const has = !!data.apps[a.id]
+        const id = `${uid}-${a.id}`
+        return (
+          <label key={a.id} htmlFor={id} className="flex min-h-8 min-w-0 items-center gap-1.5 text-xs">
+            <input
+              id={id}
+              type="checkbox"
+              className="size-4 shrink-0"
+              disabled={!has}
+              checked={checked.includes(a.id) && has}
+              onChange={(e) => setChecked((c) => (e.target.checked ? [...c, a.id] : c.filter((x) => x !== a.id)))}
+            />
+            <LegendMark style={styleOf(a.id)} />
+            <span className="min-w-0">
+              {label(a)}
+              {has ? `（${data.apps[a.id].n}名）` : '（評価なし）'}
+            </span>
+          </label>
+        )
+      })}
+    </div>
+  )
+
   return (
-    <section aria-label="AI評価（第3回）" className="space-y-2 rounded-lg border-2 border-slate-600 bg-card p-3" data-testid="eval3-contest">
-      <h3 className="text-sm font-bold">AI評価（第3回・{data.date}）　今の案と新しい案の比較</h3>
-      <Notice d={data} scope="この節の数値はすべて集計スクリプトの出力" />
+    <section aria-label="AI評価（第3回）" className="min-w-0 space-y-2 rounded-lg border-2 border-slate-600 bg-card p-3" data-testid="eval3-contest">
+      <h3 className="text-sm font-bold" tabIndex={-1} data-testid="eval3-heading">AI評価（第3回・{data.date.slice(5).replace('-', '/')}）今の案と新しい案の比較</h3>
+      <Notice d={data} scope="数値は集計スクリプトの出力" />
       {!data.collected || evaluated.length === 0 ? (
         <Pending what="このコンペのアプリの比較" />
       ) : (
         <>
-          <fieldset className="space-y-1">
-            <legend className="text-xs font-bold">比べるアプリ（チェックで切り替え）</legend>
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {all.map((a) => {
-                const has = !!data.apps[a.id]
-                const id = `${uid}-${a.id}`
-                return (
-                  <label key={a.id} htmlFor={id} className="flex min-h-8 items-center gap-1.5 text-xs">
-                    <input
-                      id={id}
-                      type="checkbox"
-                      className="size-4"
-                      disabled={!has}
-                      checked={checked.includes(a.id) && has}
-                      onChange={(e) => setChecked((c) => (e.target.checked ? [...c, a.id] : c.filter((x) => x !== a.id)))}
-                    />
-                    <LegendMark style={styleOf(a.id)} />
-                    <span>
-                      {label(a)}
-                      {has ? `（${data.apps[a.id].n}名）` : '（評価なし）'}
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
+          <fieldset className="min-w-0 space-y-1">
+            <legend className="text-xs font-bold">比べるアプリ</legend>
+            {presets.length > 1 && (
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="部門ごとにまとめて選ぶ" data-testid="eval3-presets">
+                {presets.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    aria-pressed={sameSet(p.ids)}
+                    onClick={() => setGroup(p.ids)}
+                    data-testid={`eval3-preset-${p.key}`}
+                    className={`min-h-8 rounded border-2 px-2 text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-800 ${sameSet(p.ids) ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-500 bg-card hover:bg-muted'}`}
+                  >
+                    {p.text}
+                  </button>
+                ))}
+              </div>
+            )}
+            {all.length > 3 ? (
+              <details className="min-w-0" data-testid="eval3-individual">
+                <summary className="min-h-8 cursor-pointer py-1 text-xs font-medium underline underline-offset-2">個別に選ぶ（チェックで切り替え・{all.length}件）</summary>
+                {boxes}
+              </details>
+            ) : (
+              boxes
+            )}
           </fieldset>
           {shown.length === 0 ? (
             <p className="text-xs font-medium">比べるアプリを1つ以上選んでください。</p>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
               <div className="space-y-1.5">
                 <h4 className="text-xs font-bold">B 操作性・デザイン（B1〜B7、各5点）</h4>
                 <Radar title="B 操作性・デザインのレーダーチャート" axisLabels={B_ITEMS.map((b) => b.slice(0, 2))} series={bSeries} />
@@ -298,8 +372,8 @@ export function ContestEval3({ contest, data = EVAL3 }: { contest: ContestId; da
           {shown.length > 0 && goalIds.length > 0 && (
             <div className="space-y-1">
               <h4 className="text-xs font-bold">目標の達成数（画面から自力で答えを得た評価者の数／評価者数）</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs" data-testid="goal-table">
+              <ScrollTable label="目標の達成数（横にスクロールできる表）">
+                <table className="w-full text-xs" style={{ minWidth: `${6 + 6.5 * legend.length}rem` }} data-testid="goal-table">
                   <thead>
                     <tr className="border-b text-left">
                       <th className={`${cell} font-bold`} scope="col">目標</th>
@@ -326,7 +400,7 @@ export function ContestEval3({ contest, data = EVAL3 }: { contest: ContestId; da
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollTable>
               <p className="text-[11px] text-muted-foreground">目標の内容は reports/ops/dashboard-goals-20261111.md と 20261113.md。達成の判定は評価者の自己申告で、画面の事実との照合はこれから。</p>
             </div>
           )}
@@ -341,13 +415,13 @@ export function PortalEval3({ data = EVAL3 }: { data?: Eval3Data }) {
   const p = data.portal
   const style = SERIES_STYLES[0]
   return (
-    <section aria-label="ポータルのAI評価（第3回）" className="space-y-2 rounded-lg border-2 border-slate-600 bg-card p-3" data-testid="eval3-portal">
+    <section aria-label="ポータルのAI評価（第3回）" className="min-w-0 space-y-2 rounded-lg border-2 border-slate-600 bg-card p-3" data-testid="eval3-portal">
       <h3 className="text-sm font-bold">ポータル A1〜A5 のAI評価（第3回・{data.date}）</h3>
       <Notice d={data} scope="ポータルは全評価者が採点" />
       {!data.collected || !p ? (
         <Pending what="ポータルの評価" />
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-2 [&>*]:min-w-0">
           <div className="space-y-1.5">
             <Radar
               title="ポータル A1〜A5 のレーダーチャート（平均と最小〜最大の幅）"
@@ -355,7 +429,7 @@ export function PortalEval3({ data = EVAL3 }: { data?: Eval3Data }) {
               series={[{ key: 'portal', label: '平均', style, values: p.A.map((s) => s?.mean ?? null) }]}
               band={{ min: p.A.map((s) => s?.min ?? null), max: p.A.map((s) => s?.max ?? null) }}
             />
-            <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="凡例" data-testid="radar-legend">
+            <ul className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="凡例" data-testid="radar-legend">
               <li className="flex items-center gap-1">
                 <LegendMark style={style} />
                 <span className="font-medium">平均（実線・丸）</span>
