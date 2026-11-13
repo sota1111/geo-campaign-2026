@@ -31,6 +31,7 @@ import {
 } from './lib'
 import { KIND_HELP, NEAR_M, nearSummary, searchPlaces, type PlaceHit } from './search'
 import { markCsv, markGeoJson } from '../_samples/mark'
+import { KindExplain, SitePhotoCompare } from './SitePhotoCompare'
 
 const TILE = 'https://cyberjapandata.gsi.go.jp/xyz/'
 const KIND_COLOR: Record<string, string> = { 谷埋め型: '#D55E00', 腹付け型: '#56B4E9', 区分なし: '#999999' }
@@ -344,10 +345,8 @@ export default function App() {
   useEffect(() => {
     if (step !== 'compare' || selFill === null) return
     setDidCompare(true)
-    if (old === 'none') {
-      setOld('ort_old10')
-      setOp('50')
-    }
+    // 主役は新旧比較。大きな地図への半透明の重ね表示は、旧操作の折りたたみを開いたときだけ出す
+    if (!sample) setOld('none')
     const f = fills.find((x) => x.properties.id === selFill)
     if (f) mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -554,7 +553,7 @@ export default function App() {
   const STEP_META: Record<string, { title: string; hint: string }> = {
     place: { title: '自宅の場所を入れる', hint: '住所・駅名で検索します（熱海駅は例です）' },
     look: { title: '近くの盛土造成地を確かめる', hint: '一覧から選び、型（谷埋め／腹付け）を見ます' },
-    compare: { title: '昔の写真と見比べる', hint: '年代を選び、スライダーで今と昔を行き来します' },
+    compare: { title: '昔の写真と見比べる', hint: '写真の境界を動かして、同じ場所の昔と今を見比べます' },
     rec: { title: '台帳に記録を足す', hint: '地図をタップして位置を決め、気づいたことを1件ずつ台帳に足します' },
     prep: { title: '台帳にまとめて市に届ける', hint: '台帳をCSV／GeoJSONで書き出す。1件の通報文もコピーできます' },
     ref: { title: '参考（出典・注意）', hint: '任意。データの出典と使うときの注意です' },
@@ -759,8 +758,30 @@ export default function App() {
           <KindBadge kind={selFillFeature.properties.kind} />
         </div>
       ) : (
-        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。地図の色付きの範囲をタップしても選べます。</p>
+        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。手順2の一覧か、地図の色付きの範囲をタップして選ぶと、その造成地の昔の写真と今を見比べられます。</p>
       )}
+      {selFillFeature && (
+        <>
+          <SitePhotoCompare key={selFillFeature.properties.id} fill={selFillFeature} onInteract={() => setDidCompare(true)} />
+          <KindExplain kind={selFillFeature.properties.kind} />
+        </>
+      )}
+      <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
+        <div className="font-semibold">見るポイント（見方の例）</div>
+        <ul className="list-disc space-y-0.5 pl-5">
+          <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
+          <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
+        </ul>
+        <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
+      </div>
+      <details
+        className="rounded-md border p-2" data-testid="map-overlay-controls" open={sample || undefined}
+        onToggle={(e) => {
+          if (e.currentTarget.open) { if (old === 'none') setOld('ort_old10'); setOp('50') } else setOld('none')
+        }}
+      >
+        <summary className="cursor-pointer text-sm font-bold">地図の上に昔の写真を重ねて見る（広い範囲を見たいとき）</summary>
+      <div className="mt-2 space-y-3">
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">昔の写真</Label>
         <ToggleGroup type="single" variant="outline" value={old} aria-label="年代別の空中写真"
@@ -786,17 +807,11 @@ export default function App() {
         </ToggleGroup>
         <p className="text-xs text-muted-foreground">「航空写真(現在)」にすると、同じ場所の今の写真と昔の写真を見比べられます。</p>
       </div>
-      <div className="space-y-1 rounded-md border-2 border-dashed border-primary p-2 text-sm" data-testid="look-points">
-        <div className="font-semibold">見るポイント（見方の例）</div>
-        <ul className="list-disc space-y-0.5 pl-5">
-          <li>色付きの範囲（造成地）の中で、昔は谷・斜面・林や田畑だった所が、今は平らな宅地や道路になっていないか。</li>
-          <li>範囲の外の地形（尾根・斜面）と比べ、昔の谷筋が今は道路や建物の下に隠れていないか。</li>
-        </ul>
-        <p className="text-xs text-muted-foreground">これは一般的な見方の例です。写真から危険かどうかは判定しません。</p>
-      </div>
       <p className="text-xs text-muted-foreground">
         昔の写真はズーム10〜17で表示され、撮影年・範囲により空白の場所があります。見比べは目視で、変化の自動判定はしません。
       </p>
+      </div>
+      </details>
     </div>
   )
 
@@ -987,7 +1002,7 @@ export default function App() {
       <p className="shrink-0 border-b bg-accent/40 px-4 py-1 text-xs" data-testid="caution-line">
         対象は熱海市・伊東市のみ。表示は「安全性の確認が必要な盛土造成地」で、直ちに危険ではなく、危険かどうかの判定はしません。
       </p>
-      <StepLayout title={meta.title} hint={meta.hint} aside={mapAside}>
+      <StepLayout title={meta.title} hint={meta.hint} aside={mapAside} asideClassName={step === 'compare' ? 'max-md:!h-[16vh]' : undefined}>
         {panels[step]}
       </StepLayout>
 

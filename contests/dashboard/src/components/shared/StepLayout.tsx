@@ -17,8 +17,8 @@ import { SampleStepNote } from '@/components/layout/SampleBar'
  * aside に MapView を入れる時は className なしで構わない（高さは親に合わせて 100% になる）。
  */
 export function StepLayout({
-  title, hint, aside, notice, children,
-}: { title: string; hint?: string; aside?: ReactNode; notice?: ReactNode; children: ReactNode }) {
+  title, hint, aside, asideClassName, notice, children,
+}: { title: string; hint?: string; aside?: ReactNode; /** 地図側の追加クラス（例: スマホで小さくする） */ asideClassName?: string; notice?: ReactNode; children: ReactNode }) {
   useLayoutActiveFlag()
   const { steps, activeId } = useRegisteredSteps()
   const appId = useAppId()
@@ -56,7 +56,7 @@ export function StepLayout({
           </div>
         </section>
         {aside && (
-          <div className="order-first h-[38vh] shrink-0 md:order-none md:h-auto md:min-w-0 md:flex-1 [&>*]:!h-full [&>*]:!rounded-none [&>*]:!border-0">
+          <div className={`order-first h-[38vh] shrink-0 md:order-none md:h-auto md:min-w-0 md:flex-1 [&>*]:!h-full [&>*]:!rounded-none [&>*]:!border-0 ${asideClassName ?? ''}`}>
             {aside}
           </div>
         )}
