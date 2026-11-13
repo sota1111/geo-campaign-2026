@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>夜も使えるAED診断マップ｜曜日と時刻で、徒歩圏に使えるAEDがない地区を見る</title>
-<meta name="description" content="自治体のAEDオープンデータの利用可能曜日・時間から、選んだ曜日・時刻に徒歩圏で使えるAEDがない地区を地図に示し、設置先の候補を出す静的Webアプリ。町田市・福岡市・井原市・大網白里市。">
+<meta name="description" content="自治体のAEDオープンデータの利用可能曜日・時間から、選んだ曜日・時刻に徒歩圏で使えるAEDがない地区を地図に示し、設置先の候補を出す静的Webアプリ。町田市・福岡市・井原市・倉敷市。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M8 14S1 9.5 1 5.5A3.5 3.5 0 0 1 8 4a3.5 3.5 0 0 1 7 1.5C15 9.5 8 14 8 14z%27 fill=%27%23d55e00%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
 <link rel="stylesheet" href="style.css">
@@ -52,7 +52,7 @@
       <p class="note" id="area-head"></p>
       <label class="chk"><input type="checkbox" id="chk-edge"> 市の境界から800m以内の地区を除く（隣の自治体のAEDが入っていないため）</label>
       <ol id="area-list" class="arealist"></ol>
-      <p class="small">「地区」は250mメッシュの中心の住所（国土地理院の逆ジオコーダが返す町丁目名）で名付けた目安で、町丁目の境界とは一致しません。</p>
+      <p class="small">「地区」は500mメッシュの中心の住所（国土地理院の逆ジオコーダが返す町丁目名）で名付けた目安で、町丁目の境界とは一致しません。</p>
     </section>
 
     <section id="pane-out" role="tabpanel" aria-labelledby="tab-out" hidden>
