@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
-import { siteRoot } from '@/lib/data'
+import { appUrl, siteRoot } from '@/lib/data'
 import { CONTEST_INFO, remainingText, type ContestInfo } from '@/apps/contests-info'
 import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
 import { LATEST } from '@/apps/eval-results'
@@ -51,7 +51,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardHeader className="gap-1 px-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <NewPlanTag />
-          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">デモなし</span>
+          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">{c.demoAppId ? '提出文のみ' : 'デモなし'}</span>
         </div>
         <CardTitle className="text-base leading-tight" data-testid={`card-only-title-${c.id}`}>{c.name}</CardTitle>
         <CardDescription className="text-xs">
@@ -62,6 +62,16 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
         <p data-testid={`card-only-note-${c.id}`}>{c.note}</p>
       </CardContent>
       <CardFooter className="flex-wrap gap-x-4 gap-y-1 px-4 text-xs">
+        {c.demoAppId && (
+          <a
+            href={appUrl(c.demoAppId)}
+            className="inline-flex items-center gap-1 font-bold text-primary underline underline-offset-2"
+            data-testid={`card-only-demo-${c.id}`}
+          >
+            デモを開く（UDC「{getApp(c.demoAppId)?.name}」）
+            <ArrowRight className="size-3" aria-hidden />
+          </a>
+        )}
         {c.docs.map((d) => (
           <a
             key={d.path}

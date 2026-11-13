@@ -1,6 +1,6 @@
 # 統合ダッシュボード（contests/dashboard）
 
-4つのコンペ向けの7つのデモアプリ（今の案）と、比較用の新しい案4件を、1つの静的サイト（React + TypeScript + Tailwind CSS + shadcn/ui）にまとめた土台です。
+4つのコンペ向けの7つのデモアプリ（今の案）と、比較用の新しい案5件を、1つの静的サイト（React + TypeScript + Tailwind CSS + shadcn/ui）にまとめた土台です。
 サイドバーに「概要」とコンテスト別の7アプリがあり、スマホ幅ではサイドバーがシートになります。
 
 ## 起動
@@ -56,7 +56,7 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 3. `src/apps/udc-aed/index.tsx` を作る（`EmbeddedApp` を `appId="udc-aed"` で返すだけ。他の新しい案 `src/apps/sat-alpha/index.tsx` と同じ）。`src/standalone/udc-aed.tsx`（`mountStandalone('udc-aed', App)`）と `apps/udc-aed/index.html`（`apps/sat-alpha/index.html` の `sat-alpha` と題名を置き換え）を作る。
 4. `vite.config.ts` の `APP_IDS` に `'udc-aed'` を足す。`scripts/roundtrip.mjs` の `ids` にも足す。
 5. アイデア部門 IN1 のカード（`registry.ts` の `CARDS_ONLY`、`biz-idea-in1`。デモなしのカード）の `note` を、AED アプリ公開後に「デモは UDC の AED アプリ」へのリンク付きの文言に直す（必要なら `CardOnly` に `demoAppId` を足して `開く` を出す）。
-6. 確認: `npm run typecheck && npm test && npm run build`、`npm run preview` を起動して `node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots/newplans apps/udc-aed/ embedded/udc-aed/`（コンソールエラーなし）と `node scripts/roundtrip.mjs http://127.0.0.1:8840/`。テストの `src/test/shared.test.ts` の件数（新しい案4件）を更新する。
+6. 確認: `npm run typecheck && npm test && npm run build`、`npm run preview` を起動して `node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots/newplans apps/udc-aed/ embedded/udc-aed/index.html（embedded は index.html まで書く）`（コンソールエラーなし）と `node scripts/roundtrip.mjs http://127.0.0.1:8840/`。テストの `src/test/shared.test.ts` の件数（現在5件）を更新する。
 
 元の置き場がこのブランチに無い場合（別ブランチで作成中など）は、`CONTESTS_ROOT=<その checkout の contests/ の絶対パス> npm run build` で別 checkout から読めます。
 

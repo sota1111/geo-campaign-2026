@@ -73,6 +73,7 @@ const EMBEDS = {
   'sat-alpha': { src: 'satellite-2026/app/proposal-alpha', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'biz-business-nb': { src: 'ichibiz-2026/app/business-nb/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'biz-realestate-rn1': { src: 'ichibiz-2026/app/realestate-rn1/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-teiji': { src: 'odpt-2026/app-teiji/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
 }
 const vendorOut = path.join(root, 'public', 'vendor', 'maplibre-gl')

@@ -8,7 +8,7 @@ import path from 'node:path'
 const base = process.argv[2]
 const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji']
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed']
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)
 const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'))

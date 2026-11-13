@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 const APP_IDS = [
   'odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定。元の静的版を埋め込む）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji',
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed',
 ]
 const root = import.meta.dirname
 
