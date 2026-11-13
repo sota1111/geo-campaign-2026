@@ -4,8 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { AppStepsProvider, useRegisteredSteps } from '@/components/shared/AppSteps'
 import { HeaderSlotContext } from '@/components/shared/HeaderSlot'
-import { CONTESTS, getApp, newPlansOf } from '@/apps/registry'
-import { appUrl, portalUrl } from '@/lib/data'
+import { CONTESTS, alsoComparedBy, getApp, newPlansOf } from '@/apps/registry'
+import { appUrl, fromContest, portalUrl } from '@/lib/data'
 import { StepsSidebar, StepsTopbar } from './StepsPanel'
 import { SampleBar, sampleUrl } from './SampleBar'
 import { AppIdContext } from '@/components/shared/AppIdContext'
@@ -42,7 +42,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
         <div className="sticky top-0 z-30 bg-background md:shrink-0">
           <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-sm md:h-10 md:flex-nowrap md:overflow-hidden md:py-0">
             <a
-              href={portalUrl(app?.contest)}
+              href={portalUrl(fromContest() ?? app?.contest)}
               className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-primary hover:bg-accent"
             >
               <ArrowLeft className="size-4" />
@@ -71,6 +71,16 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
               >
                 新しい案「{n.name}」と見比べる
+              </a>
+            ))}
+            {alsoComparedBy(appId).map((n) => (
+              <a
+                key={n.id}
+                href={appUrl(n.id)}
+                data-testid="also-compared-link"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+              >
+                作品③（新案）「{n.name}」と見比べる
               </a>
             ))}
             <div ref={setSlot} className="flex min-w-0 flex-wrap items-center gap-2 max-md:basis-full md:ml-auto md:flex-nowrap" />

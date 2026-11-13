@@ -13,6 +13,13 @@ export function portalUrl(tab?: string): string {
   return `${siteRoot()}index.html${tab ? `#${tab}` : ''}`
 }
 
+/** ?from=<コンペ id> で開かれたとき、そのコンペ id（戻り先のタブ用）。知らない値は無視する */
+export function fromContest(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const v = new URLSearchParams(window.location.search).get('from')
+  return v && ['odpt-2026', 'udc-2026', 'satellite-2026', 'ichibiz-2026'].includes(v) ? v : undefined
+}
+
 /** 各アプリの独立ページの URL */
 export function appUrl(appId: string): string {
   return `${siteRoot()}apps/${appId}/index.html`

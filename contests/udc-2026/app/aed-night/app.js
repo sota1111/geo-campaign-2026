@@ -95,6 +95,7 @@
     var h = $("headline"); h.innerHTML = "";
     /* 見出しの数字は「市境から800m以内を除いた人口」。市境の近くは隣の市のAEDを読み込んでいないため、圏外が多めに出る */
     h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人: 約" + fmt(coreOk ? cv.popOutCore : cv.popOut) + "人（" + pct(share(cv)) + "）" }));
+    $("toggle-sum").textContent = "徒歩圏外 " + pct(share(cv)) + "（" + AN.whenLabel(v.d, v.t) + "）　";
     h.appendChild(el("div", { class: "sub", text: mu.name + "・" + AN.whenLabel(v.d, v.t) + "・徒歩圏 直線" + v.r + "m。対象は市の境界から800m以上内側の人口 " + fmt(coreOk ? cv.popCore : cv.popTotal) +
       "人。この時間に使えると確認できたAEDは " + strict.usable.length + "台（" + strict.sites + "か所）。登録 " + mu.with_xy + "台のうち、時間が不明 " + kn.unknown + "台、一般の人が使えない設置位置（救急車内・病室など）" + kn.nonpublic + "台は数えていません。" }));
     h.appendChild(el("div", { class: "rng", text: "確認できたAEDだけなら " + pct(share(strict)) + "、時間が不明のAEDを使えるとしても（夜間は施設の開館時間・条件付きなどを除く）" + pct(share(max)) + "。" }));
@@ -104,7 +105,9 @@
     }
     if (v.d <= 4) {
       var wr = AN.weekdayRange(S.cells, S.aeds, v.t, v.r, v.mode, coreOk);
-      h.appendChild(el("div", { class: "edge-note", text: "同じ時刻で月〜金を比べると " + pct(wr.min) + "（" + AN.DAYS[wr.minDay] + "曜）〜" + pct(wr.max) + "（" + AN.DAYS[wr.maxDay] + "曜）。祝日は反映していません。" }));
+      var same = pct(wr.min) === pct(wr.max);
+      h.appendChild(el("div", { class: "edge-note", text: same ? "同じ時刻で月〜金のどの曜日も " + pct(wr.min) + "。祝日は反映していません。" :
+        "同じ時刻で月〜金を比べると " + pct(wr.min) + "（" + AN.DAYS[wr.minDay] + "曜）〜" + pct(wr.max) + "（" + AN.DAYS[wr.maxDay] + "曜）。祝日は反映していません。" }));
     }
     renderLegend();
     renderAreas();
@@ -120,10 +123,11 @@
     function item(cls, style, text) { var s = el("span"); var sw = el("span", { class: "sw " + cls, style: style }); s.appendChild(sw); s.appendChild(document.createTextNode(text)); L.appendChild(s); }
     item("", "background:rgba(213,94,0,.55);border-color:#d55e00", "圏外（人口が多いほど濃い）");
     item("", "background:rgba(0,114,178,.18);border-color:#0072b2", "圏内");
-    item("dot", "background:#009E73;border-color:#fff;box-shadow:0 0 0 1px #006", "いま使えるAED");
-    item("dot", "background:#fff;border-color:#555", "いまは使えないAED");
-    item("dot", "background:#CC79A7;border-color:#fff;box-shadow:0 0 0 1px #6a2c52", "時間が不明のAED");
-    item("dot", "background:#8a8a8a;border-color:#fff;box-shadow:0 0 0 1px #333", "一般の人が使えない位置のAED（数えない）");
+    /* 点は色だけに頼らず、大きさ・形・明るさで区別する: 大きい濃い縁の丸＝使える／小さい白丸＝いまは使えない／明るい菱形＝不明／小さい灰色の四角＝数えない */
+    item("dot big", "background:#009E73;border-color:#00261b", "いま使えるAED（大きい丸）");
+    item("dot", "background:#fff;border-color:#555", "いまは使えないAED（小さい白丸）");
+    item("dia", "background:#f6d9e8;border-color:#6a2c52", "時間が不明のAED（菱形）");
+    item("sq", "background:#8a8a8a;border-color:#fff;box-shadow:0 0 0 1px #333", "一般の人が使えない位置のAED（小さい四角。数えない）");
     item("", "background:#fff;border:2px dashed #333", "境界付近（隣の市のAEDは未読込）");
   }
 
@@ -165,7 +169,7 @@
     if (!cands.length) ol.appendChild(el("li", { class: "note", text: "この条件では候補はありません（徒歩圏外の人口がありません）。" }));
   }
 
-  function showGain(lat, lon) {
+  function showGain(lat, lon, tapped) {
     S.pick = { lat: lat, lon: lon };
     var g = AN.gainAt(S.cells, S.cov.covered, lat, lon, S.view.r);
     var near = null;
@@ -174,6 +178,12 @@
     card.appendChild(el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏（直線" + S.view.r + "m）に入る人: 約" + fmt(g.pop) + "人" })]));
     card.appendChild(el("div", { class: "small", text: "いま（" + AN.whenLabel(S.view.d, S.view.t) + "）、この地点から最も近い使えるAEDまで" +
       (near === null ? "（使えるAEDが登録にありません）" : "直線 約" + fmt(near) + "m") + "。人口は250mメッシュの合計で、置ける場所かどうかは考慮していません。" }));
+    if (tapped && popup) {
+      /* スマホではパネルの結果カードが画面の外になりやすいので、タップした地点の上にも結果を出す */
+      var pb = el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏に入る人: 約" + fmt(g.pop) + "人" }),
+        el("div", { class: "small", text: near === null ? "いま使えるAEDは登録にありません。" : "いま最も近い使えるAEDまで直線 約" + fmt(near) + "m。" })]);
+      popup.setLngLat([lon, lat]).setDOMContent(pb).addTo(map);
+    }
     var m = map.getSource("pick");
     if (m) m.setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [lon, lat] } }] });
   }
@@ -251,6 +261,7 @@
   function setPanel(open) {
     $("panel").classList.toggle("closed", !open);
     $("sheet-toggle").setAttribute("aria-expanded", String(open));
+    $("toggle-act").textContent = open ? "パネルを閉じる ▼" : "パネルを開く ▲";
   }
   function selectTab(id) {
     ["map", "area", "out", "data"].forEach(function (k) {
@@ -300,6 +311,17 @@
     renderData();
   }
 
+  /* 地図に載せる点の絵（菱形・四角）。濃い縁取りで、背景が明るくても暗くても見える */
+  function addIcon(name, shape, fill, stroke, px) {
+    var c = document.createElement("canvas"), r = 2; c.width = c.height = px * r;
+    var g = c.getContext("2d"), m = c.width / 2, k = c.width * 0.36;
+    g.lineWidth = 2.5 * r; g.fillStyle = fill; g.strokeStyle = stroke; g.beginPath();
+    if (shape === "diamond") { g.moveTo(m, m - k); g.lineTo(m + k, m); g.lineTo(m, m + k); g.lineTo(m - k, m); g.closePath(); }
+    else { g.rect(m - k * 0.8, m - k * 0.8, k * 1.6, k * 1.6); }
+    g.fill(); g.stroke();
+    map.addImage(name, g.getImageData(0, 0, c.width, c.height), { pixelRatio: r });
+  }
+
   function initMap() {
     map = new maplibregl.Map({
       container: "map", center: [139.45, 35.55], zoom: 11, attributionControl: { compact: true },
@@ -317,15 +339,21 @@
         "fill-opacity": ["case", ["==", ["get", "g"], 1], ["interpolate", ["linear"], ["get", "pop"], 1, 0.3, 300, 0.6, 1500, 0.8], 0.14] } });
       map.addLayer({ id: "cells-edge", type: "line", source: "cells", filter: ["==", ["get", "edge"], 1], paint: { "line-color": "#333", "line-width": 1, "line-dasharray": [2, 2] } });
       map.addLayer({ id: "boundary", type: "line", source: "bound", filter: ["==", ["get", "id"], S.view.m], paint: { "line-color": "#111", "line-width": 2 } });
-      map.addLayer({ id: "aed", type: "circle", source: "aed", paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 7],
-        "circle-color": ["match", ["get", "s"], "on", "#009E73", "unk", "#CC79A7", "priv", "#8a8a8a", "#ffffff"],
-        "circle-stroke-color": ["match", ["get", "s"], "on", "#ffffff", "unk", "#ffffff", "priv", "#ffffff", "#555555"],
-        "circle-stroke-width": 1.5 } });
+      /* 点の見分け方（色覚の違いでも分かるように、明るさ・大きさ・形を変える）。丸は使える／使えない、菱形は不明、四角は一般の人が使えない位置 */
+      addIcon("aed-unk", "diamond", "#f6d9e8", "#6a2c52", 22);
+      addIcon("aed-priv", "square", "#8a8a8a", "#ffffff", 14);
+      map.addLayer({ id: "aed", type: "circle", source: "aed", filter: ["match", ["get", "s"], ["on", "off"], true, false], paint: {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "s"], "on", 5, 3], 15, ["match", ["get", "s"], "on", 11, 7]],
+        "circle-color": ["match", ["get", "s"], "on", "#009E73", "#ffffff"],
+        "circle-stroke-color": ["match", ["get", "s"], "on", "#00261b", "#555555"],
+        "circle-stroke-width": ["match", ["get", "s"], "on", 2.5, 1.5] } });
+      map.addLayer({ id: "aed-sym", type: "symbol", source: "aed", filter: ["match", ["get", "s"], ["unk", "priv"], true, false], layout: {
+        "icon-image": ["match", ["get", "s"], "unk", "aed-unk", "aed-priv"], "icon-allow-overlap": true, "icon-ignore-placement": true,
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "s"], "unk", 0.55, 0.5], 15, ["match", ["get", "s"], "unk", 1, 0.8]] } });
       map.addLayer({ id: "pick", type: "circle", source: "pick", paint: { "circle-radius": 9, "circle-color": "#7a003c", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
       popup = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" });
       map.on("click", function (e) {
-        var f = map.queryRenderedFeatures(e.point, { layers: ["aed"] })[0];
+        var f = map.queryRenderedFeatures(e.point, { layers: ["aed", "aed-sym"] })[0];
         if (f) {
           var a = S.aeds[f.properties.i], v = S.view;
           var now = a[5] === AN.KNONPUBLIC ? "一般の人は使えない位置（数えていません）" : a[5] === AN.KUNKNOWN || a[5] === AN.KASSUMED ? "時間が不明" : (AN.isUsable(a, v.d, v.t, "strict") ? "いま（" + AN.whenLabel(v.d, v.t) + "）使える" : "いま（" + AN.whenLabel(v.d, v.t) + "）は使えない");
@@ -334,10 +362,12 @@
           popup.setLngLat(f.geometry.coordinates).setDOMContent(box).addTo(map);
           return;
         }
-        showGain(e.lngLat.lat, e.lngLat.lng);
+        showGain(e.lngLat.lat, e.lngLat.lng, true);
       });
-      map.on("mouseenter", "aed", function () { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "aed", function () { map.getCanvas().style.cursor = ""; });
+      ["aed", "aed-sym"].forEach(function (l) {
+        map.on("mouseenter", l, function () { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", l, function () { map.getCanvas().style.cursor = ""; });
+      });
       setMuni(S.view.m, true);
       window.App.ready = true;
     });

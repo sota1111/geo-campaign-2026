@@ -13,7 +13,7 @@
 <div id="map" aria-label="AEDの徒歩圏の地図"></div>
 
 <aside id="panel">
-  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body"><span id="toggle-sum"></span><span id="toggle-act">パネルを閉じる ▼</span></button>
   <div id="panel-body">
     <header>
       <h1>夜も使えるAED診断マップ</h1>
@@ -32,6 +32,7 @@
     </nav>
 
     <section id="pane-map" role="tabpanel" aria-labelledby="tab-map">
+      <div id="headline" class="card headline" aria-live="polite"></div>
       <div class="row"><span class="lbl">自治体</span><div id="ctl-muni" class="seg" role="radiogroup" aria-label="自治体"></div></div>
       <div class="row"><span class="lbl">曜日</span><div id="ctl-day" class="seg days" role="radiogroup" aria-label="曜日"></div></div>
       <div class="row"><label class="lbl" for="tm">時刻</label>
@@ -40,8 +41,6 @@
       <div class="row"><span class="lbl">すぐ選ぶ</span><div id="presets" class="seg" aria-label="よく見る曜日と時刻"></div></div>
       <div class="row"><span class="lbl">徒歩圏</span><div id="ctl-r" class="seg" role="radiogroup" aria-label="徒歩圏の半径（直線距離）"></div></div>
       <div class="row"><span class="lbl">不明の扱い</span><div id="ctl-mode" class="seg" role="radiogroup" aria-label="利用時間が不明のAEDの扱い"></div></div>
-
-      <div id="headline" class="card headline" aria-live="polite"></div>
 
       <div id="legend" aria-label="凡例"></div>
       <div id="gain-card" class="card" aria-live="polite">地図の<b>空いているところをタップ</b>すると、「ここに24時間使えるAEDを1台置くと、徒歩圏に入る人が何人増えるか」を出します。</div>
@@ -87,8 +86,8 @@
       <ul id="credits"></ul>
       <ul>
         <li>人口: <a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener">政府統計の総合窓口（e-Stat）統計GIS</a>「令和2年国勢調査 地域メッシュ統計（250mメッシュ、世界測地系）」（総務省統計局）を加工。</li>
-        <li>市の境界: 国土交通省「国土数値情報（行政区域データ）」をもとに、CODH・NII（情報・システム研究機構）の <a href="https://geoshape.ex.nii.ac.jp/city/" target="_blank" rel="noopener">Geoshape</a> が加工したデータ（Geoshape は <a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）を、地図表示用に単純化して作成。</li>
-        <li>井原市・倉敷市のAED: 出典「<a href="https://www.okayama-opendata.jp/" target="_blank" rel="noopener">おかやまオープンデータカタログ</a>」（井原市 <a href="https://www.okayama-opendata.jp/datasets/649" target="_blank" rel="noopener">AED設置施設</a>、倉敷市 <a href="https://www.okayama-opendata.jp/datasets/496" target="_blank" rel="noopener">AED設置施設</a>）を、BODIK ODM 経由で取得して加工して作成（公共データ利用規約 第1.0版）。加工は本作品の作成者による。県・市が作成したものではありません。</li>
+        <li>市の境界: 出典：国土交通省 <a href="https://nlftp.mlit.go.jp/ksj/" target="_blank" rel="noopener">国土数値情報ダウンロードサイト</a>「行政区域データ」をもとに、CODH・NII（情報・システム研究機構）の <a href="https://geoshape.ex.nii.ac.jp/city/" target="_blank" rel="noopener">Geoshape</a> が加工したデータ（Geoshape は <a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）を、地図表示用に単純化して作成。</li>
+        <li>井原市・倉敷市のAED: 出典「<a href="https://www.okayama-opendata.jp/" target="_blank" rel="noopener">おかやまオープンデータカタログ</a>」（井原市 <a href="https://www.okayama-opendata.jp/datasets/649" target="_blank" rel="noopener">AED設置施設</a>、倉敷市 <a href="https://www.okayama-opendata.jp/datasets/496" target="_blank" rel="noopener">AED設置施設</a>）。データは配信元の dataeye（ibara.dataeye.jp、kurashiki.dataeye.jp）から取得し、本作品の作成者が加工して作成（公共データ利用規約 第1.0版）。井原市分の元データの作成者は一般社団法人データクレイドル（BODIK ODM の表示）。県・市が作成したものではありません。</li>
         <li>地区名: <a href="https://maps.gsi.go.jp/development/api.html" target="_blank" rel="noopener">国土地理院 逆ジオコーダ</a>の結果。</li>
         <li>背景: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院 地理院タイル（淡色地図）</a>。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従う。</li>
         <li>地図描画: MapLibre GL JS 4.7.1（BSD-3-Clause）。</li>

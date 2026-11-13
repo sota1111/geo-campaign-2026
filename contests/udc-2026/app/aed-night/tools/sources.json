@@ -54,7 +54,7 @@
       "landing": "https://odm.bodik.jp/dataset/332071_649_pdl",
       "dataset": "井原市_AED_設置施設",
       "license": "公共データ利用規約（第1.0版。PDL1.0。おかやまオープンデータカタログの規約。CC BY 4.0 と互換）",
-      "credit": "出典：おかやまオープンデータカタログ（https://www.okayama-opendata.jp/datasets/649）の井原市「AED設置施設」を、BODIK ODM 経由で取得し、本作品の作成者が加工して作成。県・市が作成したものではありません",
+      "credit": "出典：おかやまオープンデータカタログ（https://www.okayama-opendata.jp/datasets/649）の井原市「AED設置施設」（元データの作成者: 一般社団法人データクレイドル。BODIK ODM の表示）を、配信元の dataeye（ibara.dataeye.jp）から取得し、本作品の作成者が加工して作成。県・市が作成したものではありません",
       "boundaries": [
         "33207A1968"
       ],
@@ -72,7 +72,7 @@
       "landing": "https://odm.bodik.jp/dataset/332020_496_pdl",
       "dataset": "倉敷市_AED_設置施設",
       "license": "公共データ利用規約（第1.0版。PDL1.0。おかやまオープンデータカタログの規約。CC BY 4.0 と互換）",
-      "credit": "出典：おかやまオープンデータカタログ（https://www.okayama-opendata.jp/datasets/496）の倉敷市「AED設置施設」を、BODIK ODM 経由で取得し、本作品の作成者が加工して作成。県・市が作成したものではありません",
+      "credit": "出典：おかやまオープンデータカタログ（https://www.okayama-opendata.jp/datasets/496）の倉敷市「AED設置施設」を、配信元の dataeye（kurashiki.dataeye.jp）から取得し、本作品の作成者が加工して作成。県・市が作成したものではありません",
       "boundaries": [
         "33202A1968"
       ],

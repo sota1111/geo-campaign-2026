@@ -51,7 +51,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardHeader className="gap-1 px-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <NewPlanTag />
-          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">{c.demoAppId ? '提出文のみ' : 'デモなし'}</span>
+          <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">{c.demoAppId ? '提出文のみ（デモは UDC と共用）' : 'デモなし'}</span>
         </div>
         <CardTitle className="text-base leading-tight" data-testid={`card-only-title-${c.id}`}>{c.name}</CardTitle>
         <CardDescription className="text-xs">
@@ -61,31 +61,36 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
       <CardContent className="flex-1 px-4 text-xs">
         <p data-testid={`card-only-note-${c.id}`}>{c.note}</p>
       </CardContent>
-      <CardFooter className="flex-wrap gap-x-4 gap-y-1 px-4 text-xs">
-        {c.demoAppId && (
-          <a
-            href={appUrl(c.demoAppId)}
-            className="inline-flex items-center gap-1 font-bold text-primary underline underline-offset-2"
-            data-testid={`card-only-demo-${c.id}`}
-          >
-            デモを開く（UDC「{getApp(c.demoAppId)?.name}」）
-            <ArrowRight className="size-3" aria-hidden />
-          </a>
+      <CardFooter className="flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 text-xs">
+        {c.deadline && (
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <CalendarClock className="size-3.5 shrink-0" />
+            <span className="whitespace-nowrap">締切 {c.deadline}</span>
+          </span>
         )}
-        {c.docs.map((d) => (
-          <a
-            key={d.path}
-            href={`${siteRoot()}${d.path}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2"
-            data-testid={`card-only-doc-${c.id}`}
-          >
-            {d.label}
-            <ExternalLink className="size-3" aria-hidden />
-            <span className="sr-only">（新しいタブで開く）</span>
-          </a>
-        ))}
+        <span className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-0.5">
+          {c.docs.map((d) => (
+            <a
+              key={d.path}
+              href={`${siteRoot()}${d.path}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-8 items-center gap-1 py-1.5 font-medium text-primary underline underline-offset-2"
+              data-testid={`card-only-doc-${c.id}`}
+            >
+              {d.label}
+              <ExternalLink className="size-3" aria-hidden />
+              <span className="sr-only">（新しいタブで開く）</span>
+            </a>
+          ))}
+          {c.demoAppId && (
+            <Button asChild size="sm" title={`UDC「${getApp(c.demoAppId)?.name}」のデモを開きます`}>
+              <a href={`${appUrl(c.demoAppId)}?from=${c.contest}`} data-testid={`card-only-demo-${c.id}`}>
+                デモを開く（UDC「{getApp(c.demoAppId)?.name}」） <ArrowRight className="size-4" aria-hidden />
+              </a>
+            </Button>
+          )}
+        </span>
       </CardFooter>
     </Card>
   )
@@ -124,6 +129,17 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
             {a.pairNote}
           </p>
         )}
+        {isNew && a.alsoCompare?.map((id) => {
+          const o = getApp(id)
+          return o ? (
+            <p key={id} className="mt-1.5">
+              <a href={appUrl(id)} className="inline-flex min-h-8 items-center gap-1 py-1.5 font-medium text-primary underline underline-offset-2" data-testid={`also-card-link-${a.id}`}>
+                作品①「{o.name}」と見比べる
+                <ArrowRight className="size-3" aria-hidden />
+              </a>
+            </p>
+          ) : null
+        })}
         {isNew && a.stateNote && (
           <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium" data-testid={`state-note-${a.id}`}>
             いまの状態: {a.stateNote}

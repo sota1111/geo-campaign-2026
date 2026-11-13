@@ -52,7 +52,7 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 追加手順（例: `udc-aed` = 夜間・休日に使えるAED地図、元は `contests/udc-2026/app/aed-night/`）:
 
 1. `scripts/copy-data.mjs` の `EMBEDS` に1行足す: `'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', ..., 'data'] }`（実行に要るファイル・フォルダだけ。tests/・tools/・README は除く。元の置き場に `web/` があれば `.../web`）。データが `.js` で `<script>` から読まれる形ならそのままコピーでよい。
-2. `src/apps/registry.ts` の `APPS` に1件足す: `plan: 'new'`, `pairWith: 'udc-moritsuchi'`（隣に置く今の案の id）, `embed: 'udc-aed'`, `pairNote`（任意）, `name`・`purpose`・`dataKind`・`dataNote`・`deadline`（元の README・画面の文言から。数字を足さない）。
+2. `src/apps/registry.ts` の `APPS` に1件足す: `plan: 'new'`, `pairWith: 'udc-moritsuchi'`（隣に置く今の案の id）, `embed: 'udc-aed'`, `pairNote`（任意）, `alsoCompare`（任意。別のコンペの案など、pairWith のほかに見比べたい案の id。カード・帯・相手側ヘッダーに「見比べる」リンクが出る）, `name`・`purpose`・`dataKind`・`dataNote`・`deadline`（元の README・画面の文言から。数字を足さない）。
 3. `src/apps/udc-aed/index.tsx` を作る（`EmbeddedApp` を `appId="udc-aed"` で返すだけ。他の新しい案 `src/apps/sat-alpha/index.tsx` と同じ）。`src/standalone/udc-aed.tsx`（`mountStandalone('udc-aed', App)`）と `apps/udc-aed/index.html`（`apps/sat-alpha/index.html` の `sat-alpha` と題名を置き換え）を作る。
 4. `vite.config.ts` の `APP_IDS` に `'udc-aed'` を足す。`scripts/roundtrip.mjs` の `ids` にも足す。
 5. アイデア部門 IN1 のカード（`registry.ts` の `CARDS_ONLY`、`biz-idea-in1`。デモなしのカード）の `note` を、AED アプリ公開後に「デモは UDC の AED アプリ」へのリンク付きの文言に直す（必要なら `CardOnly` に `demoAppId` を足して `開く` を出す）。

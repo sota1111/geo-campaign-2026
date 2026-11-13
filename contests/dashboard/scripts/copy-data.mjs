@@ -115,7 +115,9 @@ for (const [id, def] of Object.entries(DOCS)) {
   fs.rmSync(outDir, { recursive: true, force: true })
   fs.mkdirSync(outDir, { recursive: true })
   for (const f of def.files) {
-    fs.copyFileSync(path.join(contests, def.src, `${f}.md`), path.join(outDir, `${f}.txt`))
+    // .txt は charset なしで配信されるので、先頭に UTF-8 の BOM を付けて文字化けを防ぐ
+    const text = fs.readFileSync(path.join(contests, def.src, `${f}.md`), 'utf8').replace(/^\uFEFF/, '')
+    fs.writeFileSync(path.join(outDir, `${f}.txt`), '\uFEFF' + text)
     docCount++
   }
 }

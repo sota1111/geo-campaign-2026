@@ -33,7 +33,7 @@ const out = []
 for (const id of ids) {
   await send('Page.navigate', { url: base })
   await sleep(1500)
-  await ev(`document.querySelector('[data-app-card="${id}"] a').click()`)
+  await ev(`document.querySelector('[data-app-card="${id}"] a[href*="apps/${id}/"]').click()`)
   await sleep(2500)
   const url1 = await ev('location.pathname + location.hash')
   await ev(`document.querySelector('header a[href*="index.html"]').click()`)

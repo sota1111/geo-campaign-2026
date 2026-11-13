@@ -1,0 +1,202 @@
+[
+  {
+    "name": "desktop 起動して4自治体のボタン",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 町田市・午前3時: 使えるAEDは11台・2か所（救急車内などは数えない）",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 見出しに設置か所数と、市境付近を除いた旨と全体の数字",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 圏外メッシュが描画されている",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 見出しに圏外の人数と割合",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 空白の意味（民間の24時間AEDは載らない）を常時表示",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 14時は3時より圏外が少ない",
+    "ok": true,
+    "detail": "3時=421762 14時=87973"
+  },
+  {
+    "name": "desktop プリセットがハッシュに反映",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 半径300mは500mより圏外が多い",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 不明も使える(最大見積)は圏外が増えない",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 圏外メッシュの座標取得",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 1台足すと の試算が出る",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 地区別一覧が出る",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 設置先候補が10件",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop データ一覧に4自治体と時間表記の割合",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 出典にライセンス表記",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 福岡市に切替",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop 福岡市のメッシュが描画",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop ハッシュから状態復元",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "desktop コンソールエラーなし",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 起動して4自治体のボタン",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 町田市・午前3時: 使えるAEDは11台・2か所（救急車内などは数えない）",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 見出しに設置か所数と、市境付近を除いた旨と全体の数字",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 圏外メッシュが描画されている",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 見出しに圏外の人数と割合",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 空白の意味（民間の24時間AEDは載らない）を常時表示",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 14時は3時より圏外が少ない",
+    "ok": true,
+    "detail": "3時=421762 14時=87973"
+  },
+  {
+    "name": "mobile プリセットがハッシュに反映",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 半径300mは500mより圏外が多い",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 不明も使える(最大見積)は圏外が増えない",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 圏外メッシュの座標取得",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 1台足すと の試算が出る",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 地区別一覧が出る",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 設置先候補が10件",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile データ一覧に4自治体と時間表記の割合",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 出典にライセンス表記",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 福岡市に切替",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile 福岡市のメッシュが描画",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile ハッシュから状態復元",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "mobile コンソールエラーなし",
+    "ok": true,
+    "detail": ""
+  }
+]

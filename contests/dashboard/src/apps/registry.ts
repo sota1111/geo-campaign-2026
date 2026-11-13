@@ -34,6 +34,8 @@ export interface AppMeta {
   pairWith?: string
   /** 新しい案のカードに添える注記（同時提出不可など） */
   pairNote?: string
+  /** pairWith のほかに見比べたい案の id（別のコンペでもよい）。カード・帯・相手側のヘッダーに「見比べる」リンクを出す */
+  alsoCompare?: string[]
   /** 元の静的版を iframe で開くアプリの、同梱コピーのフォルダ（public/embedded/<embed>/）。省略時は React 版 */
   embed?: string
   /** 今の状態（データがまだ無い等）。新しい案のカードと帯に出す。数値は書かない */
@@ -49,6 +51,8 @@ export interface CardOnly {
   contest: ContestId
   division: string
   pairWith: string
+  /** 締切の表示（カードの下の行） */
+  deadline?: string
   /** カードの本文（何の案か・何がまだ無いか） */
   note: string
   /** デモを開けるアプリの id（あれば「デモを開く」を出す） */
@@ -226,7 +230,10 @@ export const APPS: AppMeta[] = [
     audience: '住民・自治体の担当者向け',
     name: '夜も使えるAED診断マップ',
     contest: 'udc-2026',
-    division: '新案A',
+    division: '作品③（新案・①②に追加）',
+    pairNote:
+      '作品③として、作品①②に追加して出す案です（置き換えではなく併存）。作品①（生活アクセス診断マップ）と見せ方が近く、類似作品として無効と見なされるおそれがあります（基準は非公開。要確認）。',
+    alsoCompare: ['odpt'],
     deadline: '2026/12/27 23:59（概要登録は 11/15 23:59）',
     deadlineAt: '2026-12-27T23:59:00+09:00',
     purpose:
@@ -262,8 +269,9 @@ export const CARDS_ONLY: CardOnly[] = [
     name: '「いま使えるAED」地図　夜間・施錠で使えない場所を、時間帯別のカバー率にする',
     contest: 'ichibiz-2026',
     division: 'アイデア部門（新案IN1）',
+    deadline: '2026/12/10 20:00',
     pairWith: 'biz-idea',
-    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは11台（2か所。救急車内等4台を除く本案の判定）。提出文のみ。デモは UDC の「夜も使えるAED診断マップ」を使う予定で、下のリンクから開けます。',
+    note: 'AEDの地図は公開されていても、点は「いつ使えるか」を示さない。町田市の公開データでは、位置と利用時間が記入された288台のうち、平日午前3時に使えるのは11台（2か所。救急車内等4台を除く本案の判定）。提出文のみ（デモは UDC の「夜も使えるAED診断マップ」と共用の予定）。',
     demoAppId: 'udc-aed',
     docs: [
       { label: '課題の文を読む', path: 'submission/idea-in1/problem.txt' },
@@ -300,6 +308,11 @@ export function isNewPlan(a: AppMeta): boolean {
 
 /** 今の案のアプリ（評価・既存テストの対象） */
 export const CURRENT_APPS: AppMeta[] = APPS.filter((a) => !isNewPlan(a))
+
+/** この案を「見比べる」相手として挙げている新しい案（相手側のヘッダーに逆向きのリンクを出す） */
+export function alsoComparedBy(id: string): AppMeta[] {
+  return APPS.filter((a) => a.alsoCompare?.includes(id))
+}
 
 /** 今の案 id から、その隣に並ぶ新しい案を引く（今の案のヘッダーに「見比べる」リンクを出すため） */
 export function newPlansOf(currentId: string): AppMeta[] {

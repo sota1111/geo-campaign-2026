@@ -35,6 +35,9 @@ input[type=range] { flex: 1; min-height: 32px; }
 #legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; margin: 8px 0; }
 #legend .sw { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; border: 2px solid; }
 #legend .dot { border-radius: 50%; }
+#legend .big { width: 18px; height: 18px; vertical-align: -4px; border-width: 3px; }
+#legend .dia { transform: rotate(45deg) scale(.85); border-width: 2px; }
+#legend .sq { width: 10px; height: 10px; vertical-align: 0; }
 .arealist { margin: 8px 0; padding-left: 0; list-style: none; }
 .arealist li { border: 1px solid #ccc; border-radius: 6px; margin-bottom: 4px; }
 .arealist button { display: block; width: 100%; text-align: left; background: #fff; border: 0; padding: 8px 10px; font-size: 13px; line-height: 1.45; cursor: pointer; border-radius: 6px; min-height: 44px; }
@@ -55,6 +58,6 @@ footer a { color: #00558a; }
   #panel { top: auto; width: 100%; height: 55vh; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 10px rgba(0,0,0,.3); }
   #panel.closed { height: 44px; }
   #panel.closed #panel-body { display: none; }
-  #sheet-toggle { display: block; width: 100%; height: 44px; border: 0; background: #0072b2; color: #fff; font-size: 14px; border-radius: 14px 14px 0 0; flex: none; cursor: pointer; }
+  #sheet-toggle { display: block; width: 100%; height: 44px; font-weight: bold; border: 0; background: #0072b2; color: #fff; font-size: 14px; border-radius: 14px 14px 0 0; flex: none; cursor: pointer; }
   .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { bottom: 55vh; }
 }
