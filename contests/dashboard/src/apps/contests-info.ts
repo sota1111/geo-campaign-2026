@@ -9,6 +9,10 @@ export interface DeadlineInfo {
   at: string
   /** 表示用 */
   text: string
+  /** 済んでいれば、済んだ日（ISO の日付）。締切の表示を「✓ 済」にする */
+  doneAt?: string
+  /** 済の言い方（例: 登録済）。省けば「済」 */
+  doneLabel?: string
 }
 
 export interface CriterionInfo {
@@ -57,7 +61,7 @@ export const CONTEST_INFO: ContestInfo[] = [
     summary:
       '都市・地域のオープンデータを使ったアプリ・データ・アイデア・アクティビティの4タイプを募集。一般部門とビジネス・プロフェッショナル部門がある。',
     deadlines: [
-      { label: '概要登録', at: '2026-11-15T23:59:00+09:00', text: '11/15 23:59' },
+      { label: '概要登録', at: '2026-11-15T23:59:00+09:00', text: '11/15 23:59', doneAt: '2026-11-09', doneLabel: '登録済' },
       { label: '本応募', at: '2026-12-27T23:59:00+09:00', text: '12/27 23:59' },
     ],
     implementation: '実装は必須ではない（タイプにアイデアもある）。',

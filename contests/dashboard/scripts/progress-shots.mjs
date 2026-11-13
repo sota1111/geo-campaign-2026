@@ -1,4 +1,4 @@
-// 進捗表示の全面スクリーンショット（デスクトップ 1280・スマホ 390）と、横スクロール・コンソールエラーの確認。
+// 進捗表示の全面スクリーンショット（デスクトップ 1280×765・スマホ 390×844）と、各タブの「提出までの状況」の上端 y、横スクロール、コンソールエラーの確認。
 // usage: node scripts/progress-shots.mjs <base_url> <out_dir>   （要 preview 起動・google-chrome）
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -29,22 +29,40 @@ const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnB
 await send('Runtime.enable'); await send('Page.enable')
 
 const out = []
-for (const [label, w, mobile] of [['desktop', 1280, false], ['mobile', 390, true]]) {
-  await send('Emulation.setDeviceMetricsOverride', { width: w, height: 900, deviceScaleFactor: 1, mobile })
-  for (const tab of ['', 'udc-2026', 'satellite-2026', 'ichibiz-2026', 'odpt-2026']) {
+const tabs = ['udc-2026', 'satellite-2026', 'ichibiz-2026', 'odpt-2026']
+const save = (name, b64) => fs.writeFileSync(path.join(outDir, name), Buffer.from(b64, 'base64'))
+const visibleStatusTop = `Math.round([...document.querySelectorAll('[data-testid^=contest-status-]')].find((e) => e.offsetParent)?.getBoundingClientRect().top)`
+for (const [label, w, h0, mobile] of [['desktop', 1280, 765, false], ['mobile', 390, 844, true]]) {
+  await send('Emulation.setDeviceMetricsOverride', { width: w, height: h0, deviceScaleFactor: 1, mobile })
+  for (const tab of ['', ...tabs]) {
     await send('Page.navigate', { url: 'about:blank' })
     await sleep(200)
     await send('Page.navigate', { url: `${base}index.html${tab ? '#' + tab : ''}` })
     await sleep(2500)
-    // スマホでは「総司令官の作業」を開いた状態も撮る
-    if (mobile && tab === '') await ev(`document.querySelector('[data-testid=progress-tasks]').open = true`)
     const h = await ev('document.documentElement.scrollHeight')
     const sw = await ev('document.documentElement.scrollWidth')
+    save(`${label}-${tab || 'portal'}-first.png`, (await send('Page.captureScreenshot', { format: 'png' })).result.data)
+    const statusTop = tab ? await ev(`Math.round(document.getElementById('status-${tab}').getBoundingClientRect().top)`) : null
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: Math.min(h, 6000), scale: 1 } })
     const name = `${label}-${tab || 'portal'}-full.png`
-    fs.writeFileSync(path.join(outDir, name), Buffer.from(shot.result.data, 'base64'))
-    out.push({ name, scrollWidth: sw, innerWidth: w, overflowX: sw > w, height: h })
+    save(name, shot.result.data)
+    out.push({ name, viewportH: h0, statusTop, statusInFirstScreen: tab ? statusTop < h0 : null, scrollWidth: sw, innerWidth: w, overflowX: sw > w, height: h })
   }
+  // 操作後: ポータルの「状況を見る」と、タブ帯のクリックのあとの上端 y
+  await send('Page.navigate', { url: 'about:blank' })
+  await sleep(200)
+  await send('Page.navigate', { url: `${base}index.html` })
+  await sleep(2500)
+  await ev(`document.querySelector('[data-testid=progress-tasks] button').click()`)
+  await sleep(500)
+  const afterOpen = JSON.parse(await ev(`JSON.stringify({ tab: document.querySelector('[role=tab][data-state=active]')?.textContent?.slice(0, 14), top: ${visibleStatusTop}, focused: document.activeElement?.id })`))
+  save(`${label}-after-open-status.png`, (await send('Page.captureScreenshot', { format: 'png' })).result.data)
+  await ev('window.scrollTo(0, 0)')
+  await sleep(200)
+  await ev(`const t = [...document.querySelectorAll('[role=tab]')].find((e) => e.textContent.includes('イチBiz')); t.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))`)
+  await sleep(500)
+  const afterTab = JSON.parse(await ev(`JSON.stringify({ top: ${visibleStatusTop}, focused: document.activeElement?.id })`))
+  out.push({ name: `${label}-after-actions`, viewportH: h0, afterOpen, afterTabClick: afterTab })
 }
 console.log(JSON.stringify({ out, errs }, null, 1))
 ws.close(); chrome.kill()

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowRight, CalendarClock, CircleHelp, ExternalLink, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getSample } from '@/apps/_samples'
@@ -8,16 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
 import { appUrl, siteRoot } from '@/lib/data'
-import { Remaining } from '@/components/shared/Remaining'
-import { ContestProgress, PortalProgress } from '@/pages/Progress'
+import { DeadlineChip, Remaining } from '@/components/shared/Remaining'
+import { ContestProgress, PortalProgress, statusId } from '@/pages/Progress'
 import { CONTEST_INFO, type ContestInfo } from '@/apps/contests-info'
 import { AppScoreLine, EvalSummary, MOCK_NOTICE, ROUND_NOTICE } from '@/pages/EvalPanels'
 import { LATEST } from '@/apps/eval-results'
 
-/** 最も近い、まだ過ぎていない締切（全部過ぎていれば最後の締切） */
+/** 次に来る、まだ済んでいない締切（済んだ締切は除く。全部過ぎていれば最後の締切） */
 function nextDeadline(info: ContestInfo) {
   const now = Date.now()
-  return info.deadlines.find((d) => new Date(d.at).getTime() > now) ?? info.deadlines[info.deadlines.length - 1]
+  const open = info.deadlines.filter((d) => !d.doneAt)
+  return open.find((d) => new Date(d.at).getTime() > now) ?? open[open.length - 1] ?? info.deadlines[info.deadlines.length - 1]
 }
 
 /** 新しい案（比較用・未選定）の目印。色だけに頼らず、黒地の文言と破線の枠で示す */
@@ -85,8 +86,8 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
 function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; contestId: ContestId; note?: string; onOpenEval: () => void; paired?: boolean }) {
   const isNew = isNewPlan(a)
   const contest = CONTESTS.find((c) => c.id === a.contest)
-  // 本応募の前に概要登録が要るコンペ（UDC）は、カードにも概要登録の締切を出す
-  const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.find((d) => d.label === '概要登録')
+  // 概要登録が要るコンペ（UDC）は、カードの締切が本応募の締切であることを示す（済んだ概要登録は出さない）
+  const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.some((d) => d.label === '概要登録')
   return (
     <Card data-app-card={a.id} className={`flex flex-col gap-2 py-3 ${isNew ? 'border-2 border-dashed border-slate-500 bg-slate-50' : ''}`}>
       <CardHeader className="gap-1 px-4">
@@ -162,12 +163,6 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
             </a>
           </Button>
         </span>
-        {pre && (
-          <span className="flex basis-full flex-wrap items-center gap-1.5 text-xs font-medium" data-testid="card-prereg">
-            先に概要登録が必要: {pre.text}
-            <Remaining at={pre.at} />
-          </span>
-        )}
       </CardFooter>
     </Card>
   )
@@ -219,15 +214,6 @@ function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () 
           <h2 className="text-base font-bold">{contest.name}</h2>
           <p className="mt-1 text-sm">{info.summary}</p>
           <dl className="mt-2 grid gap-x-3 gap-y-1 border-t pt-2 text-xs grid-cols-[auto_1fr]">
-            <dt className="font-bold">締切</dt>
-            <dd className="flex flex-wrap gap-x-4 gap-y-1">
-              {info.deadlines.map((d) => (
-                <span key={d.label} className="inline-flex items-center gap-1.5">
-                  {d.label} {d.text}
-                  <Remaining at={d.at} />
-                </span>
-              ))}
-            </dd>
             <dt className="font-bold">実装</dt>
             <dd>{info.implementation}</dd>
             <dt className="font-bold">賞</dt>
@@ -359,6 +345,22 @@ export default function Overview() {
   const initial =
     window.location.hash === `#${EVAL_TAB}` ? EVAL_TAB : (CONTEST_INFO.find((c) => `#${c.id}` === window.location.hash)?.id ?? CONTEST_INFO[0].id)
   const [tab, setTab] = useState<string>(initial)
+  // 「状況を見る」・タブの切り替えのあと、そのタブの「提出までの状況」を最初の画面に入れる
+  const [toStatus, setToStatus] = useState<string | null>(null)
+  const openStatus = (id: string) => {
+    setTab(id)
+    setToStatus(id)
+  }
+  useEffect(() => {
+    if (!toStatus || toStatus !== tab) return
+    const el = document.getElementById(statusId(toStatus as ContestId))
+    setToStatus(null)
+    if (!el) return
+    const top = el.getBoundingClientRect().top
+    // すでに最初の画面の上半分に見えていれば動かさない
+    if (top < 56 || top > window.innerHeight * 0.5) el.scrollIntoView({ block: 'start' })
+    el.focus({ preventScroll: true })
+  }, [toStatus, tab])
   const openEval = () => {
     setTab(EVAL_TAB)
     window.scrollTo({ top: 0 })
@@ -366,28 +368,31 @@ export default function Overview() {
   return (
     <div className="mx-auto max-w-6xl space-y-2">
       <header>
-        <h1 className="text-xl font-bold">統合ダッシュボード（4つのコンペ・今の案7件＋新しい案）</h1>
+        <h1 className="text-lg font-bold lg:text-xl">統合ダッシュボード<span className="hidden sm:inline">（4つのコンペ・今の案7件＋新しい案）</span></h1>
         <p className="hidden text-xs text-muted-foreground sm:block">
           コンペを選ぶと、募集内容・締切・注意点・審査基準と、そのコンペ向けのアプリが見られます。バッジは実データ／架空データ／一部架空の区別です。
         </p>
       </header>
 
-      <PortalProgress onSelectContest={setTab} />
+      <PortalProgress onOpenStatus={openStatus} />
 
-      <Tabs value={tab} onValueChange={setTab} className="gap-2">
-        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-2 gap-1 lg:grid-cols-[repeat(4,1fr)_auto]">
+      <Tabs value={tab} onValueChange={(v) => (v === EVAL_TAB ? setTab(v) : openStatus(v))} className="gap-2">
+        <TabsList aria-label="コンペの選択" className="grid h-auto w-full group-data-[orientation=horizontal]/tabs:h-auto grid-cols-3 gap-1 lg:grid-cols-[repeat(4,1fr)_auto]">
           {CONTEST_INFO.map((info) => {
             const nd = nextDeadline(info)
             return (
               <TabsTrigger key={info.id} value={info.id} className={TAB_CLS}>
-                <span className="text-sm font-bold">{CONTESTS.find((c) => c.id === info.id)?.name.replace(/20.*$/, '')}</span>
+                <span className="text-sm font-bold lg:hidden">{info.tabName}</span>
+                <span className="hidden text-sm font-bold lg:inline">{CONTESTS.find((c) => c.id === info.id)?.name.replace(/20.*$/, "")}</span>
                 <span className="flex flex-col gap-0.5 text-xs font-normal">
                   {info.deadlines.map((d) => (
-                    <span key={d.label} className={`flex-wrap items-center gap-x-1.5 ${d === nd ? 'flex' : 'hidden lg:flex'}`}>
-                      {d.label} {d.text}
-                      {d === nd && <Remaining at={d.at} />}
+                    <span key={d.label} className="hidden lg:flex">
+                      <DeadlineChip d={d} />
                     </span>
                   ))}
+                  <span className="lg:hidden">
+                    <Remaining at={nd.at} />
+                  </span>
                   <span className="hidden text-muted-foreground lg:inline" data-testid={`tab-count-${info.id}`}>
                     アプリ{appsByContest(info.id).filter((a) => !isNewPlan(a)).length}件
                     {(() => {
@@ -399,7 +404,7 @@ export default function Overview() {
               </TabsTrigger>
             )
           })}
-          <TabsTrigger value={EVAL_TAB} className={`${TAB_CLS} col-span-2 justify-center lg:col-span-1`} title={`${MOCK_NOTICE}${ROUND_NOTICE}`}>
+          <TabsTrigger value={EVAL_TAB} className={`${TAB_CLS} justify-center`} title={`${MOCK_NOTICE}${ROUND_NOTICE}`}>
             <span className="text-sm font-bold">AI評価</span>
             <span className="text-xs font-normal text-muted-foreground">模擬・{LATEST.date.slice(5).replace('-', '/')}</span>
           </TabsTrigger>
