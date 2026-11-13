@@ -6,6 +6,16 @@ import { haversine, inPolygon, type Poly } from './lib.ts'
 
 export const REINFOLIB_URL = 'https://www.reinfolib.mlit.go.jp/'
 export const GENERATOR = 'fetch-reinfolib.ts'
+
+// ---- 利用規約が求める表示（https://www.reinfolib.mlit.go.jp/help/termsOfUse/ 、2026-11-12 閲覧） ----
+/** API利用規約 第7条のクレジット（文言は規約のまま。変えない） */
+export const REINFOLIB_CREDIT = 'このサービスは、国土交通省の不動産情報ライブラリのAPI機能を使用していますが、提供情報の最新性、正確性、完全性等が保証されたものではありません'
+/** 利用規約「コンテンツの利用に係るPDL1.0に関する重要情報」(1) の出典記載例どおり */
+export const REINFOLIB_ATTRIBUTION = '出典：国土交通省　不動産情報ライブラリ（' + REINFOLIB_URL + '）'
+/** 同 (1) 編集・加工した場合の追加記載（利用したコンテンツの名称と、加工した旨） */
+export const REINFOLIB_PROCESSED = '「不動産価格（取引価格）情報」「地価公示・地価調査」「都市計画決定GISデータ（区域区分）」（国土交通省）をもとに作成者が集計・照合して作成'
+/** API利用規約 第8条(1)：アプリの責任の所在と、作成者・利用者の責任範囲 */
+export const REINFOLIB_RESPONSIBILITY = 'このアプリは作成者が開発・運営し、表示内容の責任は作成者が負います（国が作成・監修したものではありません）。表示は参考情報で、判断は利用者が行ってください（重要事項説明などの手続きには使えません）'
 /** 町名ごとの取引集計は、この件数以上の時だけ出す（少数だと個別の取引が推測できるため） */
 export const MIN_TRADES = 3
 /** 地価公示の標準地を「近く」とみなす距離（m） */
@@ -151,6 +161,8 @@ export interface LibFacts {
   division?: { classes: string[]; main: string }
   landPrice?: { point: LandPoint; dist: number; year: number }
   trade?: { stat: TradeStat; scope: 'district' | 'city'; period: string }
+  /** 取引価格のデータは取得済みだが、この地点には当てなかった理由（町名が取れない等）。区域区分か標準地が当たった地点（＝取得範囲内）でだけ付ける */
+  tradeUnmatched?: string
 }
 
 /** 「徳島県徳島市寺島本町東三丁目付近」のような住所から、丁目を除いた町名（寺島本町東）を取り出す */
@@ -188,6 +200,9 @@ export function lookupLibrary(d: ReinfolibData | null, lon: number, lat: number,
     const dist = town ? d.trade.districts.find((s) => s.name === town) : undefined
     if (dist) out.trade = { stat: dist, scope: 'district', period: d.trade.period }
     else if (town && d.trade.city) out.trade = { stat: d.trade.city, scope: 'city', period: d.trade.period }
+    else if (out.division || out.landPrice) {
+      out.tradeUnmatched = !address ? '町名が分からず照合できなかった' : !town ? d.city.name + '内の住所と確認できず照合していない' : '町名の集計がなく照合できなかった'
+    }
   }
   return out.division || out.landPrice || out.trade ? out : null
 }

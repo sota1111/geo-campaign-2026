@@ -54,7 +54,7 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 800, false], ['mobile', 3
     await send('Page.navigate', { url: `${base}${route}` })
     await sleep(4000)
     const shot = await send('Page.captureScreenshot', { format: 'png' })
-    const name = `${label}-${route === '' ? 'portal' : route.replace(/^apps\//, '').replace(/\/$/, '')}.png`
+    const name = `${label}-${route === '' ? 'portal' : route.replace(/^#/, 'portal-').replace(/^apps\//, '').replace(/\/$/, '').replace(/\//g, '-')}.png`
     fs.writeFileSync(path.join(outDir, name), Buffer.from(shot.result.data, 'base64'))
     const title = (await send('Runtime.evaluate', { expression: 'document.querySelector("h1")?.textContent', returnByValue: true })).result?.result?.value
     const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnByValue: true })).result?.result?.value

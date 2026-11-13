@@ -11,7 +11,7 @@ from lifemap.network import Network
 
 DATA = APP / "web" / "data"
 MAX_BYTES = 3 * 1024 * 1024
-KNOWN_LICENSES = {"CC BY 4.0", "CC0 1.0", "CC BY 2.1 JP", "CC-BY"}
+KNOWN_LICENSES = {"CC BY 4.0", "CC0 1.0", "CC BY 2.1 JP", "CC-BY", "公共交通オープンデータ基本ライセンス"}
 
 
 @unittest.skipUnless((DATA / "index.json").exists(), "web/data が未生成（python3 build.py を実行）")
@@ -29,8 +29,12 @@ class TestGeneratedData(unittest.TestCase):
         odpt = [(rid, f) for rid, d in self.regions.items() for f in d["feeds"] if f["source"] == "odpt"]
         self.assertGreaterEqual(len(odpt), 1)
         for rid, f in odpt:
-            self.assertIn("公共交通オープンデータ協議会", f["credit"])
-            self.assertTrue(f["license_url"].startswith("https://creativecommons.org/licenses/"))
+            # CC BY は「…・公共交通オープンデータ協議会」、基本ライセンスはガイドラインに従い「公共交通オープンデータセンター」を明記
+            self.assertTrue("公共交通オープンデータ協議会" in f["credit"] or "公共交通オープンデータセンター" in f["credit"], f["id"])
+            if f["license"] == "公共交通オープンデータ基本ライセンス":
+                self.assertEqual(f["license_url"], "https://developer.odpt.org/terms/data_basic_license.html")
+            else:
+                self.assertTrue(f["license_url"].startswith("https://creativecommons.org/licenses/"))
             self.assertTrue(f["url"].startswith("https://ckan.odpt.org/"))
         self.assertIn("公共交通オープンデータセンター", self.regions["tokyo"]["coverage"]["sources"])
 

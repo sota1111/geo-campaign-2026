@@ -1,0 +1,6 @@
+import fs from 'node:fs/promises';
+let ts=await(await fetch('http://127.0.0.1:9308/json')).json(), ws=new WebSocket(ts.find(t=>t.type==='page').webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r);let i=0,p=new Map();ws.onmessage=e=>{let m=JSON.parse(e.data);if(m.id){p.get(m.id)(m);p.delete(m.id)}};
+let c= (method,params={})=>new Promise(r=>{let id=++i;p.set(id,r);ws.send(JSON.stringify({id,method,params}))});
+let ev=async(expression)=>(await c('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true})).result?.result?.value;
+let shot=async(n)=>{let r=await c('Page.captureScreenshot',{format:'png'});await fs.writeFile('reports/ops/dashboard-eval-20261113/eval-08/'+n+'.png',Buffer.from(r.result.data,'base64'))};
+let click=async(t)=>ev("Array.from(document.querySelectorAll('button,a')).find(e=>e.innerText.includes("+JSON.stringify(t)+"))?.click()");let dump=async()=>console.log(await ev('document.body.innerText'));let wait=async()=>new Promise(r=>setTimeout(r,500));let fe=async(s)=>ev("(()=>{let document=window.document.querySelector('iframe').contentDocument;"+s+"})()");let fc=async(t)=>fe("Array.from(document.querySelectorAll('button,a,tr')).find(e=>e.innerText.includes("+JSON.stringify(t)+"))?.click()");let fd=async()=>console.log(await fe("return document.body.innerText"));await eval('(async()=>{'+process.argv[2]+'})()');ws.close();

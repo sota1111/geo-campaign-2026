@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>夜も使えるAED診断マップ｜曜日と時刻で、徒歩圏に使えるAEDがない地区を見る</title>
+<meta name="description" content="自治体のAEDオープンデータの利用可能曜日・時間から、選んだ曜日・時刻に徒歩圏で使えるAEDがない地区を地図に示し、設置先の候補を出す静的Webアプリ。町田市・福岡市・井原市・倉敷市。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M8 14S1 9.5 1 5.5A3.5 3.5 0 0 1 8 4a3.5 3.5 0 0 1 7 1.5C15 9.5 8 14 8 14z%27 fill=%27%23d55e00%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="AEDの徒歩圏の地図"></div>
+
+<aside id="panel">
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body"><span id="toggle-sum"></span><span id="toggle-act">パネルを閉じる ▼</span></button>
+  <div id="panel-body">
+    <header>
+      <h1>夜も使えるAED診断マップ</h1>
+      <p class="lead">曜日と時刻を選ぶと、<b>その時間に徒歩で取りに行けるAEDがない地区</b>が地図に出ます。</p>
+    </header>
+
+    <section class="notice warn" aria-label="空白の意味">
+      <b>「圏外」は公開データ上の話です。</b>ここにあるのは自治体が公開したAEDの登録だけで、<b>コンビニなど民間の24時間AEDは載っていないことがあります</b>。圏外＝AEDが無い、ではありません。いざという時は119番に連絡し、指示に従ってください。
+    </section>
+
+    <nav class="tabs" role="tablist" aria-label="機能">
+      <button role="tab" id="tab-map" aria-selected="true" aria-controls="pane-map">1 診断</button>
+      <button role="tab" id="tab-area" aria-selected="false" aria-controls="pane-area">2 地区別</button>
+      <button role="tab" id="tab-out" aria-selected="false" aria-controls="pane-out">3 候補・出力</button>
+      <button role="tab" id="tab-data" aria-selected="false" aria-controls="pane-data">4 データ</button>
+    </nav>
+
+    <section id="pane-map" role="tabpanel" aria-labelledby="tab-map">
+      <div id="headline" class="card headline" aria-live="polite"></div>
+      <div class="row"><span class="lbl">自治体</span><div id="ctl-muni" class="seg" role="radiogroup" aria-label="自治体"></div></div>
+      <div class="row"><span class="lbl">曜日</span><div id="ctl-day" class="seg days" role="radiogroup" aria-label="曜日"></div></div>
+      <div class="row"><label class="lbl" for="tm">時刻</label>
+        <input id="tm" type="range" min="0" max="1425" step="15" value="180" aria-label="時刻">
+        <output id="tm-out" for="tm" class="tm-out">03:00</output></div>
+      <div class="row"><span class="lbl">すぐ選ぶ</span><div id="presets" class="seg" aria-label="よく見る曜日と時刻"></div></div>
+      <div class="row"><span class="lbl">徒歩圏</span><div id="ctl-r" class="seg" role="radiogroup" aria-label="徒歩圏の半径（直線距離）"></div></div>
+      <div class="row"><span class="lbl">不明の扱い</span><div id="ctl-mode" class="seg" role="radiogroup" aria-label="利用時間が不明のAEDの扱い"></div></div>
+
+      <div id="legend" aria-label="凡例"></div>
+      <div id="gain-card" class="card" aria-live="polite">地図の<b>空いているところをタップ</b>すると、「ここに24時間使えるAEDを1台置くと、徒歩圏に入る人が何人増えるか」を出します。</div>
+      <p class="small"><button type="button" id="copy-link" class="btn">いまの表示のURLをコピー</button> <span id="copy-msg" class="small" role="status"></span></p>
+    </section>
+
+    <section id="pane-area" role="tabpanel" aria-labelledby="tab-area" hidden>
+      <p class="note" id="area-head"></p>
+      <label class="chk"><input type="checkbox" id="chk-edge"> 市の境界から800m以内の地区を除く（隣の自治体のAEDが入っていないため）</label>
+      <ol id="area-list" class="arealist"></ol>
+      <p class="small">「地区」は500mメッシュの中心の住所（国土地理院の逆ジオコーダが返す町丁目名）で名付けた目安で、町丁目の境界とは一致しません。</p>
+    </section>
+
+    <section id="pane-out" role="tabpanel" aria-labelledby="tab-out" hidden>
+      <p class="note">いま選んでいる<b id="out-when"></b>・徒歩圏<b id="out-r"></b>mで、<b>新たに徒歩圏に入る人が多い順</b>に、24時間使えるAEDを置く場所の候補を出します（1台置くごとに、その圏内を埋めて次を選ぶ）。これは設置先を検討するための材料で、設置の可否（敷地・管理者・電源・見守り）は含みません。</p>
+      <ol id="cand-list" class="arealist"></ol>
+      <div class="row wrap">
+        <button type="button" id="btn-csv-cand" class="btn">設置先候補をCSVで書き出す</button>
+        <button type="button" id="btn-csv-area" class="btn">地区別一覧をCSVで書き出す</button>
+        <button type="button" id="btn-csv-all" class="btn">全時間帯の表をCSVで書き出す</button>
+      </div>
+      <p id="io-msg" class="small" role="status"></p>
+      <p class="small">CSV は端末内で作り、外部へ送信しません。「全時間帯の表」は自治体ごとに、曜日×3時間おきの使えるAEDの数と圏外人口を並べます。</p>
+    </section>
+
+    <section id="pane-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+      <p class="note">自治体標準オープンデータセット「AED設置箇所一覧」（利用可能曜日・開始/終了時間・緯度経度）と、自由記述の福岡市の表記を、同じ形式にそろえています。解釈できない表記は<b>「不明」</b>として数え、推測で埋めません。</p>
+      <div id="data-table"></div>
+      <h2>見方の注意</h2>
+      <ul class="small">
+        <li><b>圏内・圏外の判定</b>は、250mメッシュの中心から使えるAEDまでの<b>直線距離</b>です（道路網ではありません。実際の道のりは直線より長くなり、川・線路・坂は考慮していません）。徒歩1分＝80mで換算すると直線500mは約6分ですが、AEDを取って現場に戻る往復は含みません。</li>
+        <li><b>祝日・年末年始</b>は反映していません。町田市の「利用可能日時特記事項」は、「土曜日、日曜日の利用可能時間は8:00～21:00」「日曜日は終日利用不可」のように曜日と時間が書かれたものだけ反映し、「第2日曜は休み」「8月は…」など週や季節で変わるものと、「貸出がある場合のみ」など条件付きのもの（条件付きは不明に回しています）は反映していません。</li>
+        <li><b>一般の人が使えない設置位置</b>（救急車の中、病室・診察室・医務室など）のAEDは、登録されていても台数に数えず、地図に灰色で示します。病院や施設のロビー・玄関などは数えますが、夜間に建物へ入れるかは確認できません。</li>
+        <li><b>人口</b>は令和2年国勢調査（常住人口）の250mメッシュで、深夜にその地区に住んでいる人数に近い数字です。昼間の人の動き（通勤・通学）は含まないので、14時などの昼は実際の人の分布とずれます。少人数のメッシュは秘匿（*）で含まれず、実際より少なく出ます。</li>
+        <li><b>「境界付近」</b>（市の境界から800m以内）は、隣の自治体のAEDを読み込んでいないため圏外が多めに出ます。そのため、見出しの数字は市境から800m以上内側の人口だけで数え、市境付近を含む全体の数字は上限として別に書いています。</li>
+        <li><b>「平日」</b>は月曜だけで代表させていません。プリセットは水曜で、見出しに月〜金の幅を出します（祝日は反映していません）。</li>
+        <li>データは取得時点のものです。AEDの撤去・移設、データの更新は反映されません。</li>
+      </ul>
+    </section>
+
+    <footer class="small">
+      <b>出典</b>
+      <ul id="credits"></ul>
+      <ul>
+        <li>人口: <a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener">政府統計の総合窓口（e-Stat）統計GIS</a>「令和2年国勢調査 地域メッシュ統計（250mメッシュ、世界測地系）」（総務省統計局）を加工。</li>
+        <li>市の境界: 出典：国土交通省 <a href="https://nlftp.mlit.go.jp/ksj/" target="_blank" rel="noopener">国土数値情報ダウンロードサイト</a>「行政区域データ」をもとに、CODH・NII（情報・システム研究機構）の <a href="https://geoshape.ex.nii.ac.jp/city/" target="_blank" rel="noopener">Geoshape</a> が加工したデータ（Geoshape は <a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）を、地図表示用に単純化して作成。</li>
+        <li>井原市・倉敷市のAED: 出典「<a href="https://www.okayama-opendata.jp/" target="_blank" rel="noopener">おかやまオープンデータカタログ</a>」（井原市 <a href="https://www.okayama-opendata.jp/datasets/649" target="_blank" rel="noopener">AED設置施設</a>、倉敷市 <a href="https://www.okayama-opendata.jp/datasets/496" target="_blank" rel="noopener">AED設置施設</a>）。データは配信元の dataeye（ibara.dataeye.jp、kurashiki.dataeye.jp）から取得し、本作品の作成者が加工して作成（公共データ利用規約 第1.0版）。井原市分の元データの作成者は一般社団法人データクレイドル（BODIK ODM の表示）。県・市が作成したものではありません。</li>
+        <li>地区名: <a href="https://maps.gsi.go.jp/development/api.html" target="_blank" rel="noopener">国土地理院 逆ジオコーダ</a>の結果。</li>
+        <li>背景: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院 地理院タイル（淡色地図）</a>。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従う。</li>
+        <li>地図描画: MapLibre GL JS 4.7.1（BSD-3-Clause）。</li>
+        <li>この画面は救急対応の判断を代替しません。</li>
+      </ul>
+    </footer>
+  </div>
+</aside>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

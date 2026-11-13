@@ -1,0 +1,404 @@
+{
+ "out": [
+  {
+   "label": "1280",
+   "firstScreen": {
+    "viewportH": 765,
+    "bottoms": [
+     254,
+     350,
+     446,
+     549
+    ],
+    "heights": [
+     82,
+     90,
+     90,
+     97
+    ],
+    "fit": true,
+    "scrollWidth": 1265,
+    "scrollHeight": 765,
+    "sidebarOrder": [
+     "衛星データ活用ア",
+     "イチBizアワー",
+     "アーバンデータチ",
+     "公共交通オープン"
+    ]
+   }
+  },
+  {
+   "label": "1280",
+   "id": "satellite-2026",
+   "before": {
+    "top": 174,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 174,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": false,
+    "detail": true,
+    "hash": "#open=satellite-2026",
+    "bodyOverflow": "visible"
+   },
+   "closed": {
+    "top": 174,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   }
+  },
+  {
+   "label": "1280",
+   "id": "ichibiz-2026",
+   "before": {
+    "top": 262,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 262,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": false,
+    "detail": true,
+    "hash": "#open=ichibiz-2026",
+    "bodyOverflow": "visible"
+   },
+   "closed": {
+    "top": 262,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   }
+  },
+  {
+   "label": "1280",
+   "id": "udc-2026",
+   "before": {
+    "top": 358,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 358,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": false,
+    "detail": true,
+    "hash": "#open=udc-2026",
+    "bodyOverflow": "visible"
+   },
+   "closed": {
+    "top": 358,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   }
+  },
+  {
+   "label": "1280",
+   "id": "odpt-2026",
+   "before": {
+    "top": 454,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   },
+   "opened": {
+    "top": 454,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 1265
+   },
+   "sheet": {
+    "sheet": false,
+    "detail": true,
+    "hash": "#open=odpt-2026",
+    "bodyOverflow": "visible"
+   },
+   "closed": {
+    "top": 454,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 1265
+   }
+  },
+  {
+   "label": "1280",
+   "stickyCheck": {
+    "stuck": {
+     "rowTop": 48,
+     "scrollY": 900
+    },
+    "bottomClose": {
+     "pre": {
+      "scrollY": 1606,
+      "udcTop": 727,
+      "closeBtn": {
+       "top": 673,
+       "bottom": 705,
+       "left": 1139,
+       "width": 88,
+       "height": 32
+      },
+      "docH": 2628
+     },
+     "post": {
+      "scrollY": 0,
+      "udcTop": 358,
+      "ichiTop": 262,
+      "docH": 765,
+      "expanded": "false",
+      "focus": "row-ichibiz-2026"
+     }
+    }
+   }
+  },
+  {
+   "label": "1280",
+   "scrolledToggle": {
+    "before": {
+     "top": 470,
+     "scrollY": 1079,
+     "expanded": "false",
+     "sw": 1265
+    },
+    "open": {
+     "top": 470,
+     "scrollY": 1079,
+     "expanded": "true",
+     "sw": 1265
+    },
+    "closed": {
+     "top": 470,
+     "scrollY": 1079,
+     "expanded": "false",
+     "sw": 1265
+    }
+   }
+  },
+  {
+   "label": "390",
+   "firstScreen": {
+    "viewportH": 844,
+    "bottoms": [
+     273,
+     450,
+     627,
+     766
+    ],
+    "heights": [
+     147,
+     171,
+     171,
+     133
+    ],
+    "fit": true,
+    "scrollWidth": 390,
+    "scrollHeight": 890,
+    "sidebarOrder": []
+   }
+  },
+  {
+   "label": "390",
+   "id": "satellite-2026",
+   "before": {
+    "top": 128,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 128,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=satellite-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 1810,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 128,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "id": "ichibiz-2026",
+   "before": {
+    "top": 281,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 281,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=ichibiz-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 3555,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 281,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "id": "udc-2026",
+   "before": {
+    "top": 458,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 458,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=udc-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 1239,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 458,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "id": "odpt-2026",
+   "before": {
+    "top": 635,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "opened": {
+    "top": 635,
+    "scrollY": 0,
+    "expanded": "true",
+    "sw": 390
+   },
+   "sheet": {
+    "sheet": true,
+    "detail": true,
+    "hash": "#open=odpt-2026",
+    "bodyOverflow": "hidden"
+   },
+   "sheetInfo": {
+    "sheetTop": 101,
+    "sheetBottom": 844,
+    "bodyClient": 688,
+    "bodyScroll": 1395,
+    "closeBtn": true
+   },
+   "afterWheel": {
+    "inner": 400,
+    "pageY": 0
+   },
+   "closed": {
+    "top": 635,
+    "scrollY": 0,
+    "expanded": "false",
+    "sw": 390
+   },
+   "sheetGone": true
+  },
+  {
+   "label": "390",
+   "sheetHtmlOverflowX": 390,
+   "sheetScrollY": 0
+  },
+  {
+   "back": "sat-a",
+   "link": "../../index.html",
+   "url": "/index.html",
+   "openRows": 0,
+   "scrollY": 0
+  },
+  {
+   "back": "odpt",
+   "link": "../../index.html",
+   "url": "/index.html",
+   "openRows": 0,
+   "scrollY": 0
+  },
+  {
+   "legacyHash": "#satellite-2026",
+   "openRows": 0,
+   "scrollY": 0
+  }
+ ],
+ "errs": []
+}

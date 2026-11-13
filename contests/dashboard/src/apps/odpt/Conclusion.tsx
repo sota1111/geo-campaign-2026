@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { TIPS, Term } from './Term'
 import {
-  DAY_FULL, DAY_LABEL, PERIOD_LABEL, fmtMin, type Alternatives, type Day, type Last, type RegionData, type Status, type Verdict,
+  coverageScope, DAY_FULL, DAY_LABEL, PERIOD_LABEL, fmtMin, type Alternatives, type Day, type Last, type RegionData, type Status, type Verdict,
 } from './lib'
 
 export interface CondState { fi: number; day: Day; per: 'm' | 'd' | 'e'; w: number }
@@ -35,6 +35,8 @@ export interface DiagView {
   dataLine: string
   /** 共有リンクから開いた直後か */
   fromLink: boolean
+  /** 有効期間が切れた時刻表がある時の注意（lib の expiredNote。なければ ''） */
+  expiredNote?: string
 }
 
 export const condText = (data: RegionData, c: CondState) =>
@@ -85,7 +87,7 @@ function NextSteps({ d, fl }: { d: DiagView; fl: string }) {
   )
 }
 
-/** 手順3: 結論 */
+/** 結論（手順「行けるか結論を見る」） */
 export function VerdictPanel({ d }: { d: DiagView }) {
   const { data, cond, verdict: v } = d
   const fl = data.facility_labels[data.facility_order[cond.fi]]
@@ -107,10 +109,15 @@ export function VerdictPanel({ d }: { d: DiagView }) {
           共有リンクから開きました。送り主が選んだ地点・条件の結論です。条件はサイドバーの「条件を確認する」で変えて確かめ直せます。
         </p>
       )}
+      {d.expiredNote && (
+        <p className="rounded-md border border-amber-500 bg-amber-50 p-2 text-xs text-amber-950" role="note" data-testid="expired-note">
+          <b>データの期限:</b> {d.expiredNote}（家族に送る文面にも入ります）
+        </p>
+      )}
       <section aria-label="家族に送る1枚" data-testid="family-sheet" className="overflow-hidden rounded-md border-2 border-foreground/70 bg-white">
         <div className="flex items-center justify-between gap-2 bg-foreground px-3 py-1 text-xs font-bold text-background">
-          <span>家族に送る1枚</span>
-          <span className="font-normal">手順6で、この内容をコピーして送れます</span>
+          <span className="shrink-0 whitespace-nowrap">家族に送る1枚</span>
+          <span className="min-w-0 text-right font-normal">「1枚をコピーして家族に送る」でコピーできます</span>
         </div>
         <div className="space-y-2 p-3">
           <p className="text-xs text-muted-foreground" data-testid="sheet-cond">{d.placeLabel || '選んだ地点'}から ／ {condText(data, cond)}</p>
@@ -146,7 +153,7 @@ export function VerdictPanel({ d }: { d: DiagView }) {
           </p>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">時刻表データによる推計で、実際の運行を保証するものではありません。収録した事業者のバスのみが対象で、鉄道・予約制の便・病院の診療時間は評価していません。</p>
+      <p className="text-xs text-muted-foreground">時刻表データによる推計で、実際の運行を保証するものではありません。{coverageScope(data.coverage.modes)}だけが対象で、予約制の便・病院の診療時間は評価していません。</p>
     </div>
   )
 }
@@ -230,7 +237,7 @@ export function CopyPanel({
       <p className="font-medium text-blue-800" role="status" data-testid="copy-done">
         {copied ? 'コピーしました。LINEやメールに貼り付けて送れます。' : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
       </p>
-      <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">家族に送る文面（手順3の「1枚」と同じ内容。自動でコピーできない時は、ここを選んでコピー）</label>
+      <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">家族に送る文面（「行けるか結論を見る」の1枚と同じ内容。自動でコピーできない時は、ここを選んでコピー）</label>
       <Textarea id="odpt-copy-preview" readOnly rows={7} value={copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
       {isLocal && <p className="text-xs text-muted-foreground">※いまは手元の確認用アドレスです。公開後のアドレスで共有すると、相手も開けます。</p>}
       <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">

@@ -4,7 +4,7 @@
   var L = window.Lib;
   /* 色覚に配慮: 赤と緑の対比を避け、青（行ける）とオレンジ（行けない）の明暗差で区別する（Okabe-Ito配色を基にした） */
   var COLORS = { walk: '#56B4E9', transit: '#0072B2', none: '#D55E00', rail: '#8c8c8c', lost: '#CC79A7' };
-  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, popup: null, lost: null, req: 0, pt: null, pendingPt: null, pendingRoute: null, compare: null };
+  var STATE = { index: null, data: null, cellIdx: null, fi: 0, day: 'wd', per: 'm', w: 20, marker: null, popup: null, lost: null, req: 0, pt: null, pendingPt: null, pendingRoute: null, compare: null, searchReq: 0 };
   var map;
 
   function $(id) { return document.getElementById(id); }
@@ -365,7 +365,7 @@
     var c = d.coverage || {};
     var railModes = (c.modes || []).filter(function (m) { return m !== 'バス'; });
     var t = '収録しているのは' + esc((c.sources || []).join('・')) + 'のGTFS ' + c.feeds + '件（' + esc((c.modes || []).join('・')) + '）のみ。';
-    t += railModes.length ? '鉄道は' + esc(railModes.join('・')) + 'のみ収録し、JR等そのほかの鉄道は未収録です。'
+    t += railModes.length ? '鉄道系で収録しているのは' + esc(railModes.join('・')) + 'の一部の事業者だけで、JR・大手私鉄などは未収録です。'
       : '鉄道（JR等）は未収録です。';
     t += 'デマンド交通・予約制の便も未収録です。';
     if (c.rail_checked) {
@@ -388,7 +388,8 @@
         (expiredNow.length > 3 ? ' ほか' : '') + '）。ダイヤが変わっている可能性があり、この診断は現在の運行を示しません。';
     } else if (soon.length) {
       var first = soon.map(function (f) { return f.valid[1]; }).sort()[0];
-      msg += soon.length + '件のデータは' + first + 'から順に有効期間が終わります。切れた後は最新のGTFSで作り直す必要があります。';
+      var firstOrg = soon.filter(function (f) { return f.valid[1] === first; })[0].org;
+      msg += first + '以降、一部の事業者（' + esc(firstOrg) + (soon.length > 1 ? 'ほか' + (soon.length - 1) + '件' : '') + '）は古いダイヤでの計算になります（公開期間中に最新の時刻表で作り直す予定です）。';
     }
     var el = $('data-warn');
     el.hidden = !msg;
@@ -524,45 +525,83 @@
   }
 
   /* ---------- 住所・駅名検索（国土地理院 地名検索API。キー不要・GETのみ） ---------- */
+  var SEARCH_TIMEOUT_MS = 8000;
   function doSearch(q) {
     q = String(q || '').trim();
     var out = $('search-result');
     if (!q) { out.textContent = '住所や駅名を入力してください。'; return; }
     out.textContent = '検索中…';
-    fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q))
-      .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); })
-      .then(function (j) {
-        var cur = STATE.data && STATE.data.id;
-        var rs = L.parseGsi(j);
-        rs.forEach(function (r) { r.rid = L.regionForPoint(STATE.index.regions, r.lon, r.lat); });
-        rs = rs.map(function (r, i) { return { r: r, k: (r.rid === cur ? 0 : r.rid ? 1 : 2) * 10000 + i }; })
-          .sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; }).slice(0, 5);
-        if (!rs.length) { out.textContent = '「' + q + '」に該当する場所が見つかりませんでした。'; return; }
-        out.innerHTML = '';
-        var first = null;
-        rs.forEach(function (r, i) { if (first == null && r.rid) first = i; });
-        if (first == null) {
-          out.innerHTML = '見つかった場所（' + esc(rs[0].title) + '）は、収録している5地域（' +
-            esc(STATE.index.regions.map(function (x) { return L.shortName(x.name); }).join('・')) + '）の範囲外です。';
-          return;
-        }
-        goToResult(rs[first]);
-        if (rs.length > 1) {
-          var p = document.createElement('div');
-          p.innerHTML = '他の候補:';
-          out.appendChild(p);
-          rs.forEach(function (r, i) {
-            if (i === first) return;
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.textContent = r.title + (r.rid ? '' : '（収録範囲外）');
-            b.disabled = !r.rid;
-            b.addEventListener('click', function () { goToResult(r); });
-            out.appendChild(b);
-          });
-        }
-      })
-      .catch(function () { out.textContent = '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認してください。'; });
+    // 地名検索が応答しない時に「検索中…」のまま止めない（8秒で打ち切り、停留所名から探す・地図をタップする案内に切り替える）
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timedOut = false;
+    var timer = setTimeout(function () { timedOut = true; if (ctl) ctl.abort(); }, SEARCH_TIMEOUT_MS);
+    var req = ++STATE.searchReq;
+    var guard = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, SEARCH_TIMEOUT_MS + 50); });
+    Promise.race([
+      fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q), ctl ? { signal: ctl.signal } : {})
+        .then(function (r) { if (!r.ok) throw new Error('status ' + r.status); return r.json(); }),
+      guard
+    ])
+      .then(function (j) { clearTimeout(timer); if (req === STATE.searchReq) showSearch(q, L.parseGsi(j), false); })
+      .catch(function () { clearTimeout(timer); if (req === STATE.searchReq) showSearch(q, [], timedOut ? 'timeout' : 'error'); });
+  }
+
+  function showSearch(q, rs, failed) {
+    var out = $('search-result');
+    var d = STATE.data, cur = d && d.id;
+    rs.forEach(function (r) {
+      r.rid = L.regionForPoint(STATE.index.regions, r.lon, r.lat);
+      r.inCell = r.rid === cur && STATE.cellIdx[L.meshCodeAt(r.lon, r.lat)] != null;
+    });
+    rs = rs.map(function (r, i) { return { r: r, k: (r.rid === cur ? (r.inCell ? 0 : 1) : r.rid ? 2 : 3) * 10000 + i }; })
+      .sort(function (a, b) { return a.k - b.k; }).map(function (x) { return x.r; }).slice(0, 5);
+    // 地名検索で見つからない／接続できないときは、表示中の地域の停留所名から探す。住所らしい入力では並べない
+    var viaStops = false;
+    if (!rs.some(function (r) { return r.rid; }) && d && !L.looksLikeAddress(q)) {
+      var stops = L.searchStops(d.nodes, q.replace(/^.*[都道府県市区町村]/, '') || q).map(function (s) {
+        var n = d.nodes[s.i];
+        return { title: s.name + '（停留所）', name: s.name, lon: n[0], lat: n[1], rid: d.id, inCell: STATE.cellIdx[L.meshCodeAt(n[0], n[1])] != null };
+      });
+      stops = stops.filter(function (s) { return s.inCell; }).concat(stops.filter(function (s) { return !s.inCell; }));
+      if (stops.length) { viaStops = true; rs = rs.concat(stops); }
+    }
+    var first = null;
+    rs.forEach(function (r, i) { if (first == null && r.rid) first = i; });
+    if (first == null) {
+      if (failed === 'timeout') out.textContent = '住所検索が応答しません（国土地理院の地名検索）。地図をタップして場所を選んでください。';
+      else if (failed) out.textContent = '検索できませんでした（国土地理院の地名検索に接続できません）。ネットワークを確認するか、地図をタップして場所を選んでください。';
+      else if (rs.length) out.innerHTML = '見つかった場所（' + esc(rs[0].title) + '）は、収録している5地域（' +
+        esc(STATE.index.regions.map(function (x) { return L.shortName(x.name); }).join('・')) + '）の範囲外です。';
+      else out.textContent = '「' + q + '」に該当する場所が見つかりませんでした。地図をタップして場所を選ぶこともできます。';
+      return;
+    }
+    out.innerHTML = '';
+    var f = rs[first];
+    goToResult(f);
+    var others = rs.filter(function (r, i) { return i !== first; });
+    var note = '';
+    if (viaStops) {
+      var why = failed ? '住所検索が応答しないため' : '住所検索で見つからなかったため';
+      note = f.inCell
+        ? why + '、停留所名から探しました（「' + f.name + '」を選びました）。違う場合は' + (others.length ? '下の候補から選ぶか、' : '') + '地図をタップしてください。'
+        : why + '、停留所名から探しましたが、「' + f.name + '」は診断範囲外でした。地図をタップして場所を選んでください。';
+    } else if (f.rid === cur && !f.inCell) {
+      note = '「' + f.title + '」は診断範囲外でした。別の地域の「' + q + '」かもしれません。' + (others.length ? '下の候補から選んでください。' : '');
+    }
+    if (note) { var m = document.createElement('p'); m.className = 'note'; m.textContent = note; out.appendChild(m); }
+    if (others.length) {
+      var p = document.createElement('div');
+      p.innerHTML = '他の候補:';
+      out.appendChild(p);
+      others.forEach(function (r) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = r.title + (!r.rid ? '（収録範囲外）' : r.rid === cur && !r.inCell ? '（診断範囲外）' : '');
+        b.disabled = !r.rid;
+        b.addEventListener('click', function () { goToResult(r); });
+        out.appendChild(b);
+      });
+    }
   }
 
   function goToResult(r) {
@@ -618,7 +657,7 @@
       var ir = STATE.index.regions.filter(function (x) { return x.id === c.id; })[0];
       return esc(L.shortName(c.name)) + '＝' + esc((ir.operators || []).join('・')) + '（' + esc(c.coverage.modes.join('・')) + '）';
     }).join('、') + '。';
-    h += 'たとえば東京は都営（東京都交通局）のみ、飯田・下伊那は南信州地域のバスのみで、民営バスやJR等は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。割合・人数は、各地域の診断範囲（収録停留所から' + d.params.diag_radius_m + 'm以内）の人口が分母です。</p>';
+    h += 'どの地域も、ここに挙げていない事業者（JR・大手私鉄など）は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。割合・人数は、各地域の診断範囲（収録停留所から' + d.params.diag_radius_m + 'm以内）の人口が分母です。</p>';
     $('compare-result').innerHTML = h;
   }
 
@@ -654,8 +693,12 @@
       h += '<h2>この地域（' + esc(d.name) + '）に収録したGTFSデータ</h2>';
       h += '<p>出典: ' + (d.coverage.sources.indexOf('GTFSデータリポジトリ') >= 0 ? '<a href="https://www.gtfs-data.jp/" target="_blank" rel="noopener">GTFSデータリポジトリ</a>' : '') +
         (d.coverage.sources.length > 1 ? '、' : '') +
-        (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0 ? '<a href="https://www.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（公開API https://api-public.odpt.org/api/v4/ 、キー不要）' : '') +
+        (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0 ? '<a href="https://www.odpt.org/" target="_blank" rel="noopener">公共交通オープンデータセンター</a>（' + (d.feeds.some(function (f) { return f.license === '公共交通オープンデータ基本ライセンス'; }) ? '公開API（キー不要）と、開発者登録が必要なAPI' : '公開API https://api-public.odpt.org/api/v4/ 、キー不要') + '）' : '') +
         '。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。</p>';
+      // ガイドラインの一般ユーザーへの通知は、事業者の一覧より前に置く
+      if (d.coverage.sources.indexOf('公共交通オープンデータセンター') >= 0) {
+        h += '<p class="note" id="odpt-notice">' + esc(L.ODPT_NOTICE) + '</p>';
+      }
       h += '<table><tr><th>事業者</th><th>データ名</th><th>取得元</th><th>ライセンス・クレジット</th><th>更新日</th><th>データ有効期間</th><th>診断の基準日（平日/休日）</th></tr>';
       d.feeds.forEach(function (f) {
         var warn = f.expired ? ' <b class="warn">期限切れ</b>' : (f.ends_before_public_end ? ' <b class="warn">公開期間（〜' + esc(d.public_until) + '）の途中で終了</b><br><span class="note">この日以降は時刻表が変わっている可能性があります。資料に使うときは基準日を明記してください。</span>' : '');
@@ -666,7 +709,8 @@
           '</td><td>' + esc(f.updated) + '</td><td>' + esc((f.valid[0] || '?') + '〜' + (f.valid[1] || '?')) + warn + '</td><td>' +
           esc(f.ref.wd + ' / ' + f.ref.hol) + '</td></tr>';
       });
-      h += '</table><p class="note">データ生成日: ' + esc(d.built) + '。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>';
+      h += '</table>';
+      h += '<p class="note">データ生成日: ' + esc(d.built) + '。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>';
     }
     h += '<h2>その他のデータ</h2><ul>' +
       '<li>鉄道駅: 国土数値情報「鉄道データ」N02-22（国土交通省、令和4年12月31日時点）を加工して作成。GTFSに収録していない鉄道の駅の位置を地図に示し、駅から徒歩' + (d ? d.params.rail_walk_min : 15) + '分圏の地区を「鉄道駅が近い（未評価）」とするためだけに使っています（時刻表・運行は使っていません）。新設駅・廃止駅は反映されていない場合があります。</li>' +

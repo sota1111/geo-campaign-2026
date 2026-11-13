@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { StepLayout } from '@/components/shared/StepLayout'
 import { useAppSteps } from '@/components/shared/AppSteps'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
-import { SourceDialog } from '@/components/shared/SourceDialog'
+import { SourceDialog, type SourceItem } from '@/components/shared/SourceDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,10 +20,12 @@ import { isSampleMode } from '@/lib/sample'
 import { cn } from '@/lib/utils'
 import { analyze, HAZ, OVERLAYS, reverseGeocode, searchAddress, type SearchHit } from './collect'
 import {
-  buildDigest, buildSheet, GLOSSARY, glossaryFor, pickSearchHit, SAMPLE_ANSWERS, sheetToText, summarize,
+  buildDigest, buildSheet, GLOSSARY, glossaryFor, libPrintLine, pickSearchHit, splitForPrint, SAMPLE_ANSWERS, sheetToText, summarize,
   type Answers, type AreaData, type Exit, type Facts, type Tone, type Zone,
 } from './lib'
-import { isReinfolibData, lookupLibrary, REINFOLIB_URL, type ReinfolibData } from './reinfolib'
+import {
+  isReinfolibData, lookupLibrary, REINFOLIB_ATTRIBUTION, REINFOLIB_CREDIT, REINFOLIB_PROCESSED, REINFOLIB_RESPONSIBILITY, REINFOLIB_URL, type ReinfolibData,
+} from './reinfolib'
 
 const LIB_URL = REINFOLIB_URL
 const CENTER: [number, number] = [134.5548, 34.0703]
@@ -42,8 +44,8 @@ function buildSources(lib: ReinfolibData | null) {
   return [
     ...BASE_SOURCES.slice(0, -1),
     lib
-      ? { name: '不動産情報ライブラリ（事前に取得した同梱データ）', provider: '国土交通省「不動産情報ライブラリ」のAPI（' + got.join('・') + '）。取得日 ' + lib.fetchedAt, url: LIB_URL, license: '同ライブラリの利用約款に従う（出典の表記・加工の明記・免責）', note: '画面の「ライブラリ由来」の印の付いた行が、このデータによる。ビルド前に手元でAPIから取得して同梱したもので、ブラウザからAPIは呼んでいない。国土交通省が作成したデータを、このアプリが加工（地点との照合・集計）した。取引価格は町名ごとの中央値で、個別の物件の価格ではない。地価公示・地価調査は標準地の価格で、この土地の価格ではない。' }
-      : { name: '不動産情報ライブラリ（この画面では未取得）', provider: '国土交通省「不動産情報ライブラリ」', url: LIB_URL, note: 'この画面の数値・判定は、ライブラリのAPIからは取得していない（APIキーの承認待ちで、取得データをまだ同梱していない）。ライブラリで確認できる項目（取引価格・地価公示・将来人口・医療機関・小学校区・区域区分、用途地域や洪水浸水想定区域の最新情報）は、この画面の手順3と1枚シートに「ライブラリで確認する項目」として示すだけ。' },
+      ? { name: '不動産情報ライブラリ（事前に取得した同梱データ）', provider: '国土交通省「不動産情報ライブラリ」のAPI（' + got.join('・') + '）。取得日 ' + lib.fetchedAt, url: LIB_URL, license: '不動産情報ライブラリ利用規約・API利用規約（公共データ利用規約 第1.0版）。' + REINFOLIB_ATTRIBUTION, note: '画面の「ライブラリ由来」の印の付いた行が、このデータによる。ビルド前に手元でAPIから取得して同梱したもので、ブラウザからAPIは呼んでいない。' + REINFOLIB_PROCESSED + '。取引価格は町名ごとの中央値で、個別の物件の価格ではない。地価公示・地価調査は標準地の価格で、この土地の価格ではない。' + REINFOLIB_CREDIT + '。' + REINFOLIB_RESPONSIBILITY + '。' }
+      : { name: '不動産情報ライブラリ（この画面では未取得）', provider: '国土交通省「不動産情報ライブラリ」', url: LIB_URL, note: 'この画面の数値・判定は、ライブラリのAPIからは取得していない（取得データ reinfolib.json が同梱されていない、または読み込めなかった）。ライブラリで確認できる項目（取引価格・地価公示・将来人口・医療機関・小学校区・区域区分、用途地域や洪水浸水想定区域の最新情報）は、この画面の手順3と1枚シートに「ライブラリで確認する項目」として示すだけ。' },
     BASE_SOURCES[BASE_SOURCES.length - 1],
   ]
 }
@@ -59,7 +61,7 @@ const QUESTIONS: { key: keyof Answers; legend: string; short: string; options: [
   { key: 'registered', legend: '相続登記は済んでいますか', short: '相続登記', options: [['不明', '分からない'], ['済', '済んでいる'], ['未', 'まだ']] },
 ]
 // この画面の項目と不動産情報ライブラリ（国土交通省）の対応。ライブラリのAPI名は提出文書（reinfolib.md・2026-11-09 公式API仕様で確認）による。
-// 「この画面はライブラリから取得していない」ことを明示する（ライブラリ由来とは書かない）。
+// ここに並ぶ項目は、ライブラリ以外のデータで出している（ライブラリ由来とは書かない）。ライブラリから取得した項目は「ライブラリ由来」の行で別に出す。
 const LIB_SCREEN: { item: string; from: string; lib: string }[] = [
   { item: '用途地域・建ぺい率・容積率', from: '国土数値情報（令和元年度版・徳島県）を同梱', lib: 'ライブラリにも「用途地域」（XKT002）がある。最新はそちらで確認' },
   { item: '洪水浸水想定区域', from: 'ハザードマップポータル（国土地理院）のタイル', lib: 'ライブラリにも「洪水浸水想定区域（想定最大規模）」（XKT026）がある' },
@@ -307,7 +309,11 @@ export default function App() {
   const digest = useMemo(() => (facts && sheet ? buildDigest(facts, sheet) : []), [facts, sheet])
   const coord = facts && !facts.example && pin ? `（北緯${pin.lat.toFixed(4)}度 東経${pin.lon.toFixed(4)}度）` : ''
   const addrText = address === 'loading' ? '住所を取得中…' : address ? address : '住所を取得できなかった'
-  const where = facts && pin ? `${facts.example ? '例の位置' : '指定した位置'}: ${addrText}付近${coord}` : ''
+  const exampleName = facts?.place.match(/（(.+)）$/)?.[1] ?? EXAMPLE_PLACE
+  const where = !facts || !pin ? ''
+    : facts.example && !address ? `例の位置: ${exampleName}付近（町名は取得できませんでした）`
+    : `${facts.example ? '例の位置' : '指定した位置'}: ${addrText}付近${coord}`
+  const printLib = useMemo(() => (facts ? libPrintLine(facts) : null), [facts])
   const glossary = useMemo(() => {
     if (!sheet) return []
     const t = JSON.stringify(sheet.exits) + sheet.missing.join('') + digest.join('') + rows.map((r) => r.value).join('')
@@ -339,8 +345,8 @@ export default function App() {
 
   // ---- 1枚シート（画面の「手順5」プレビューと印刷で同じものを使う） ----
   const sheetEl = sheet && facts && (
-    <Card className="print-sheet print:rounded-none print:border-0 print:p-0 print:shadow-none" id="rs-sheet" data-testid="sheet">
-      <CardHeader className="print:p-0 print:pb-1">
+    <Card className="print-sheet print:gap-1 print:rounded-none print:border-0 print:p-0 print:shadow-none" id="rs-sheet" data-testid="sheet">
+      <CardHeader className="print:gap-0.5 print:p-0 print:pb-0">
         <CardTitle className="text-lg print:text-[13pt]">{sheet.title}</CardTitle>
         <p className="text-xs text-muted-foreground print:text-[8pt] print:text-black">
           {sheet.example && <Badge variant="outline" className="mr-1 border-orange-600 text-orange-800">例（回答は架空）</Badge>}
@@ -356,8 +362,8 @@ export default function App() {
           </section>
         )}
         <section aria-label="あなたの回答" data-testid="answers" className="rounded-md border p-2 text-sm print:p-1 print:text-[7.5pt]">
-          <h3 className="text-sm font-bold print:text-[9pt]">{sheet.example ? 'あなたの回答（例・架空）' : 'あなたの回答'}</h3>
-          <ul className="flex flex-wrap gap-x-4 gap-y-0.5">
+          <h3 className="text-sm font-bold print:mr-2 print:inline print:text-[8pt]">{sheet.example ? 'あなたの回答（例・架空）' : 'あなたの回答'}</h3>
+          <ul className="flex flex-wrap gap-x-4 gap-y-0.5 print:inline-flex print:gap-x-3">
             {QUESTIONS.map((q) => {
               const v = answers[q.key] ?? '不明'
               const label = q.options.find((o) => o[0] === v)?.[1] ?? '分からない'
@@ -367,15 +373,15 @@ export default function App() {
         </section>
         <MobileFold enabled={!desktop} title="記号の見かた">
         <section aria-label="記号の見かた" data-testid="legend" className="rounded-md border bg-muted/30 p-2 text-xs print:p-1 print:text-[6.5pt]">
-          <p className="mb-0.5 font-bold">記号の見かた</p>
-          <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:flex print:flex-wrap print:gap-x-3 print:gap-y-0">
-            <li className="flex items-center gap-1"><CheckCircle2 className="size-3.5 shrink-0 text-sky-700" aria-hidden />＝ 公開データを取得でき、特に注意点がない（「区域に入らない」を含む）</li>
-            <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden />＝ 注意が必要（想定区域に入る）</li>
-            <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden />＝ 分からない（データにない・範囲外・取得できなかった）</li>
-            <li><span className="mr-1 inline-block rounded border px-1">データ</span>＝ 公開データから分かったこと</li>
-            {lib && <li><span className="mr-1 inline-block rounded border-2 border-sky-700 bg-sky-50 px-1 font-bold">ライブラリ由来</span>＝ 不動産情報ライブラリのAPIから取得したデータ</li>}
-            <li><span className="mr-1 inline-block rounded border-2 border-orange-700 px-1 font-bold">あなたの回答による</span>＝ 選んだ回答が反映された項目</li>
-            <li><span className="mr-1 inline-block rounded border px-1">データなし</span>＝ 該当データがなく、一般的な確認のみ</li>
+          <p className="mb-0.5 font-bold print:mb-0 print:mr-2 print:inline">記号の見かた</p>
+          <ul className="grid gap-x-4 gap-y-0.5 sm:grid-cols-2 print:inline-flex print:flex-wrap print:gap-x-2 print:gap-y-0">
+            <li className="flex items-center gap-1"><CheckCircle2 className="size-3.5 shrink-0 text-sky-700" aria-hidden /><span className="print:hidden">＝ 公開データを取得でき、特に注意点がない（「区域に入らない」を含む）</span><span className="hidden print:inline">＝特に注意点なし</span></li>
+            <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden /><span className="print:hidden">＝ 注意が必要（想定区域に入る）</span><span className="hidden print:inline">＝注意が必要</span></li>
+            <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden /><span className="print:hidden">＝ 分からない（データにない・範囲外・取得できなかった）</span><span className="hidden print:inline">＝分からない</span></li>
+            <li><span className="mr-1 inline-block rounded border px-1">データ</span><span className="print:hidden">＝ 公開データから分かったこと</span><span className="hidden print:inline">＝公開データ</span></li>
+            {lib && <li><span className="mr-1 inline-block rounded border-2 border-sky-700 bg-sky-50 px-1 font-bold">ライブラリ由来</span><span className="print:hidden">＝ 不動産情報ライブラリのAPIから取得したデータ</span><span className="hidden print:inline">＝ライブラリのAPIから取得</span></li>}
+            <li><span className="mr-1 inline-block rounded border-2 border-orange-700 px-1 font-bold">あなたの回答による</span><span className="print:hidden">＝ 選んだ回答が反映された項目</span><span className="hidden print:inline">＝回答が反映</span></li>
+            <li><span className="mr-1 inline-block rounded border px-1">データなし</span><span className="print:hidden">＝ 該当データがなく、一般的な確認のみ</span><span className="hidden print:inline">＝一般的な確認</span></li>
           </ul>
         </section>
         </MobileFold>
@@ -386,42 +392,61 @@ export default function App() {
             {rows.map((r) => {
               const T = TONE[r.tone]
               return (
-                <div key={r.key} className={cn('flex gap-1.5 border-b py-1 print:py-0', r.key.startsWith('lib-') && r.key !== 'lib-division' && 'sm:col-span-2')}>
+                <div key={r.key} className={cn('flex gap-1.5 border-b py-1 print:py-0', r.key.startsWith('lib-') && r.key !== 'lib-division' && 'sm:col-span-2', r.key.startsWith('lib-') && printLib && 'print:hidden')}>
                   <T.icon className={cn('mt-0.5 size-4 shrink-0 print:size-3', T.cls)} aria-hidden />
                   <span className="sr-only">{T.sr}：</span>
-                  <dt className="w-24 shrink-0 font-medium sm:w-32 print:w-20">{r.label}</dt>
+                  <dt className="w-24 shrink-0 font-medium sm:w-32 print:w-auto print:min-w-20 print:whitespace-nowrap">{r.label}</dt>
                   <dd className="min-w-0 flex-1">{r.lib && <LibBadge />}<Annotated text={r.value} /></dd>
                 </div>
               )
             })}
+            {printLib && (
+              // 印刷だけ: ライブラリに関する行を1行にまとめる（A4・1ページに収めるため。画面は上の行のまま）
+              <div className="hidden gap-1.5 border-b print:col-span-2 print:flex print:py-0" data-testid="lib-print-row">
+                <CheckCircle2 className="mt-0.5 size-3 shrink-0 text-sky-700" aria-hidden />
+                <dt className="w-20 shrink-0 font-medium">区域・価格の参考</dt>
+                <dd className="min-w-0 flex-1"><LibBadge />{printLib}</dd>
+              </div>
+            )}
           </dl>
         </section>
         </MobileFold>
         <section aria-label="4つの出口ごとの聞くこと">
           <h3 className="mb-1 text-sm font-bold print:mb-0.5 print:text-[9pt]">4つの出口ごとに、専門家に聞くこと</h3>
           {!desktop && <ExitPicker sheet={sheet} value={exitKey} onChange={setExitKey} />}
-          <div className="grid gap-3 md:grid-cols-2 print:block print:columns-2 print:gap-1.5">
+          <div className="grid gap-3 md:grid-cols-2 print:hidden">
             {sheet.exits.map((e) => <ExitBlock key={e.key} e={e} hiddenOnScreen={!desktop && e.key !== exitKey} />)}
+          </div>
+          {/* 印刷: 出口の順を保ったまま左右の高さをそろえて2段に分ける。途中で分かれた出口は右の段に「（続き）」の見出しを出す */}
+          <div className="hidden print:grid print:grid-cols-2 print:items-start print:gap-1.5" data-testid="print-exits">
+            {splitForPrint(sheet.exits).map((col, ci) => (
+              <div key={ci}>
+                {col.map((b) => <ExitBlock key={b.key + (b.cont ? '-cont' : '')} e={{ key: b.key, label: b.cont ? b.label + '（続き）' : b.label, items: b.items }} note={!b.cont} />)}
+              </div>
+            ))}
           </div>
         </section>
         <MobileFold enabled={!desktop} title="データにない項目・用語の説明・出典">
-        <div className="grid gap-3 md:grid-cols-2 print:grid-cols-2 print:gap-1.5">
+        {/* 「データにない項目」と「ライブラリで確認する項目」は1つの枠にまとめる。印刷では各1〜2行に詰める（A4・1ページに余白を残すため。デザイン再審査 r2 中C） */}
+        <section aria-label="データにない項目・ライブラリで確認する項目" data-testid="check-items" className="grid gap-3 md:grid-cols-2 print:block print:space-y-0">
           <MissingList sheet={sheet} part="missing" lib={!!lib} />
           <MissingList sheet={sheet} part="other" lib={!!lib} />
-        </div>
+        </section>
         {glossary.length > 0 && (
           <section aria-label="用語の説明" data-testid="glossary">
-            <h3 className="text-sm font-bold print:text-[9pt]">用語の説明</h3>
-            <ul className="text-xs print:text-[6.5pt]">{glossary.map((g) => <li key={g.term} className="print:mr-2 print:inline"><b>{g.term}</b>＝{g.text}</li>)}</ul>
+            <h3 className="text-sm font-bold print:mr-2 print:inline print:text-[8pt]">用語の説明</h3>
+            <ul className="text-xs print:inline print:text-[6.5pt]">{glossary.map((g) => <li key={g.term} className={cn('print:mr-2 print:inline', g.re.test('国庫帰属') && 'print:hidden')}><b>{g.term}</b>＝{g.text}</li>)}</ul>
           </section>
         )}
-        <p className="mt-3 text-xs text-muted-foreground print:mt-0 print:text-[6.5pt] print:text-black">
-          出典: 国土地理院タイル・住所検索・逆ジオコーダ（町名の表示）、ハザードマップポータルサイト（国土地理院）、国土数値情報 用途地域データ（国土交通省・令和元年度版・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
-          {lib
-            ? <>「ライブラリ由来」の項目は、国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/ 、{lib.fetchedAt}取得）のデータを加工して作成。他の項目はAPIから取得していません。将来人口・医療機関・小学校区などはライブラリで確認してください。</>
-            : <>この画面は国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）のAPIから取得していません。上の「ライブラリで確認する項目」はそちらで確認してください。</>}
-          国のデータを加工した参考情報であり、法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
-        </p>
+        <div className="mt-3 space-y-1 text-xs text-muted-foreground print:mt-0 print:space-y-0 print:text-[6.5pt] print:leading-tight print:text-black">
+          <p>
+            出典: 国土地理院（地図・住所検索・逆ジオコーダ・ハザードマップポータルサイト）、国土数値情報 用途地域（国土交通省・令和元年度・徳島県）を加工して作成、GTFSデータリポジトリ（CC BY 4.0）。
+            {!lib && <>この画面は国土交通省「不動産情報ライブラリ」（https://www.reinfolib.mlit.go.jp/）のAPIから取得していません。上の「ライブラリで確認する項目」はそちらで確認してください。国のデータを加工した参考情報であり、</>}
+            法的・税務的な判断や査定ではありません。区域境界付近や古いデータでは実際と異なります。必ず相談先で確認してください。
+          </p>
+          {/* 利用規約が求める表示（出典・加工の旨・第7条のクレジット・第8条の責任明示）。印刷でページをまたがない */}
+          {lib && <p data-testid="lib-credit" className="break-inside-avoid">「ライブラリ由来」の項目は、{REINFOLIB_ATTRIBUTION}（{lib.fetchedAt}取得）。{REINFOLIB_PROCESSED}。{REINFOLIB_CREDIT}。{REINFOLIB_RESPONSIBILITY}。</p>}
+        </div>
         </MobileFold>
       </CardContent>
     </Card>
@@ -558,7 +583,7 @@ export default function App() {
               <li className="flex items-center gap-1"><AlertTriangle className="size-3.5 shrink-0 text-orange-700" aria-hidden />注意が必要（想定区域に入る）</li>
               <li className="flex items-center gap-1"><HelpCircle className="size-3.5 shrink-0 text-neutral-600" aria-hidden />分からない（データにない・範囲外・取得できなかった）</li>
             </ul>
-            <LibraryBox lib={lib} />
+            <LibraryBox lib={lib} sources={sources} />
             <NextHint step="conditions" ready />
           </div>
         )
@@ -683,15 +708,23 @@ function LibBadge() {
   return <span className="mr-1 inline-block rounded border-2 border-sky-700 bg-sky-50 px-1 text-[11px] font-bold text-sky-900 print:border print:bg-white print:text-[6.5pt] print:text-black" data-testid="lib-badge">ライブラリ由来</span>
 }
 
-function LibraryBox({ lib }: { lib: ReinfolibData | null }) {
+function LibraryBox({ lib, sources }: { lib: ReinfolibData | null; sources: SourceItem[] }) {
   const got = libSectionNames(lib)
   return (
     <section className="space-y-1.5 rounded-md border-2 border-sky-700 p-2 text-xs" aria-label="不動産情報ライブラリとの関係" data-testid="lib-box">
       <h3 className="text-sm font-bold">不動産情報ライブラリ（国土交通省）との関係</h3>
       {lib ? (
-        <p data-testid="lib-status">「ライブラリ由来」の印の付いた行は、ライブラリのAPIから事前に取得した同梱データ（{got.join('・')}、取得日 {lib.fetchedAt}）。印のない行は、ライブラリのAPIから取得したものではありません。この地点に該当するデータがない項目は、行が出ません。</p>
+        <>
+          <p data-testid="lib-status">「ライブラリ由来」の印の付いた行は、ライブラリのAPIから事前に取得した徳島市のデータ（{got.join('・')}、取得日 {lib.fetchedAt}）をこの地点に照らしたもの。印のない行は、ライブラリから取得したものではありません。</p>
+          {/* 規約の文（クレジット・責任の所在・加工の旨）は「出典・ライセンス」と1枚シートの下部に集める。ここは短い出典と導線だけ */}
+          <p data-testid="lib-source-short">
+            出典：国土交通省 不動産情報ライブラリ。利用規約のクレジットと責任の所在は
+            <SourceDialog sources={sources} trigger={<button type="button" className="mx-0.5 inline min-h-6 font-bold text-primary underline underline-offset-2" data-testid="lib-terms-link">出典・ライセンス</button>} />
+            と1枚シートの下部にあります。
+          </p>
+        </>
       ) : (
-        <p data-testid="lib-status"><b>この画面の数値・判定は、ライブラリのAPIから取得したものではありません。</b>（APIキーの承認待ちで、取得データをまだ同梱していません。）</p>
+        <p data-testid="lib-status"><b>この画面の数値・判定は、ライブラリのAPIから取得したものではありません。</b>（ライブラリの取得データを読み込めませんでした。）</p>
       )}
       <details>
         <summary className="min-h-8 cursor-pointer py-1 font-bold">項目ごとの対応（ライブラリにもある項目・ライブラリで確認する項目）</summary>
@@ -700,9 +733,9 @@ function LibraryBox({ lib }: { lib: ReinfolibData | null }) {
             <li key={r.item} className="rounded border p-1.5"><b>{r.item}</b>：{r.from}。<span className="text-sky-900">{r.lib}。</span></li>
           ))}
         </ul>
-        <p className="mt-1.5 font-bold">ライブラリで確認する項目{lib ? '（取得していないもの）' : '（この画面では取得していません）'}</p>
+        <p className="mt-1.5 font-bold">ライブラリで確認する項目{lib ? '（この画面では取得していないもの）' : '（この画面では取得していません）'}</p>
         <ul className="list-disc pl-5">{LIB_ONLY.filter((m) => !(m.key && lib?.[m.key])).map((m) => <li key={m.text}>{m.text}</li>)}</ul>
-        <p className="mt-1">ライブラリ：<a className="text-primary underline" href={LIB_URL} target="_blank" rel="noreferrer">{LIB_URL}</a>（括弧内はライブラリのAPI名）</p>
+        <p className="mt-1">不動産情報ライブラリ（国土交通省）へのリンク：<a className="text-primary underline" href={LIB_URL} target="_blank" rel="noreferrer">{LIB_URL}</a>（括弧内はライブラリのAPI名）</p>
       </details>
     </section>
   )
@@ -713,7 +746,7 @@ function SustainCard({ lib }: { lib: ReinfolibData | null }) {
   const rows: [string, string][] = [
     ['想定する使い手', '相続した土地の持ち主（無料）。自治体の空き家相談窓口（職員と相談者が同じシートを見る窓口版。有償）'],
     ['料金', '相続人は無料。窓口版の金額は未定'],
-    ['データの更新', lib ? `不動産情報ライブラリのAPIから事前に取得して同梱（取得日 ${lib.fetchedAt}）。更新するには、手元でもう一度取得してから公開し直す` : '用途地域などは同梱データ（令和元年度版）。ライブラリのAPIから事前に取得する仕組みは用意済みだが、APIキーの承認待ちで、取得データはまだ無い'],
+    ['データの更新', lib ? `不動産情報ライブラリのAPIから事前に取得して同梱（取得日 ${lib.fetchedAt}）。更新するには、手元でもう一度取得してから公開し直す` : '用途地域などは同梱データ（令和元年度版）。ライブラリの取得データは、この画面では読み込めていない'],
     ['更新・運用する担い手', '未定'],
     ['位置の扱い', '検索にだけ使い、記録しない'],
   ]
@@ -757,16 +790,16 @@ function useIsDesktop() {
   return v
 }
 
-function ExitBlock({ e, hiddenOnScreen = false }: { e: import('./lib').Exit; hiddenOnScreen?: boolean }) {
+function ExitBlock({ e, hiddenOnScreen = false, note = true }: { e: import('./lib').Exit; hiddenOnScreen?: boolean; note?: boolean }) {
   return (
     <div className={cn('rounded-md border p-3 print:mb-1.5 print:p-1.5', hiddenOnScreen && 'hidden print:block')} data-testid={`exit-${e.key}`}>
       <h4 className="mb-1 text-base font-bold print:mb-0.5 print:text-[9pt]">{e.label}</h4>
-      {e.key === 'release' && (
+      {e.key === 'release' && note && (
         <p className="mb-1 text-xs text-muted-foreground print:text-[6.5pt] print:text-black">相続土地国庫帰属制度（国庫帰属）＝相続した土地を、一定の条件で国に引き取ってもらう制度。</p>
       )}
       <ul className="space-y-2 print:space-y-0.5">
         {e.items.map((it, i) => (
-          <li key={i} className="text-sm print:break-inside-avoid print:text-[7pt]">
+          <li key={i} className={cn('text-sm print:break-inside-avoid print:text-[7pt]', it.media === 'screen' && 'print:hidden', it.media === 'print' && 'hidden print:list-item')} data-media={it.media}>
             <span className="block print:inline">
               <span className={cn('mr-1 inline-block rounded border px-1 text-[11px] print:text-[6.5pt]', it.basis === 'answer' && 'border-2 border-orange-700 bg-orange-50 font-bold print:bg-white', it.basis === 'library' && 'border-2 border-sky-700 bg-sky-50 font-bold text-sky-900 print:bg-white print:text-black')}>{BASIS[it.basis]}</span>
               <Annotated text={it.fact} />
@@ -781,10 +814,11 @@ function ExitBlock({ e, hiddenOnScreen = false }: { e: import('./lib').Exit; hid
 
 function MissingList({ sheet, part, lib }: { sheet: import('./lib').Sheet; part: 'missing' | 'other'; lib: boolean }) {
   const items = part === 'missing' ? sheet.missing : sheet.otherItems
+  // 画面は箇条書き。印刷は見出しに続けて「／」区切りで1段に並べる
   return (
-    <section>
-      <h3 className="text-sm font-bold print:text-[8pt] print:leading-tight">{part === 'missing' ? 'データにない項目（相談先で確かめる）' : (lib ? '不動産情報ライブラリ（国土交通省）で確認する項目（取得していないもの）' : '不動産情報ライブラリ（国土交通省）で確認する項目（この画面では取得していません）')}</h3>
-      <ul className="list-disc pl-5 text-sm print:pl-4 print:text-[7pt] print:leading-tight">{items.map((m) => <li key={m}><Annotated text={m} /></li>)}</ul>
-    </section>
+    <div data-testid={`check-${part}`} className="print:leading-tight">
+      <h3 className="text-sm font-bold print:mr-1 print:inline print:text-[8pt]">{part === 'missing' ? 'データにない項目（相談先で確かめる）' : (lib ? '不動産情報ライブラリ（国土交通省）で確認する項目（この地点で出ていないもの）' : '不動産情報ライブラリ（国土交通省）で確認する項目（この画面では取得していません）')}<span className="hidden print:inline">：</span></h3>
+      <ul className="list-disc pl-5 text-sm print:inline print:list-none print:p-0 print:text-[7pt]">{items.map((m) => <li key={m} className="print:inline print:after:content-['／'] print:last:after:content-none"><Annotated text={m} /></li>)}</ul>
+    </div>
   )
 }

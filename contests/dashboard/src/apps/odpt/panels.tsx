@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  DAYS, DAY_FULL, DAY_LABEL, PERIODS, PERIOD_LABEL, citationText, compareRow, condIndex, fmtMin, levelLabel, lostPopulation,
+  DAYS, ODPT_NOTICE, DAY_FULL, DAY_LABEL, PERIODS, PERIOD_LABEL, citationText, compareRow, condIndex, fmtMin, levelLabel, lostPopulation,
   needLevel, nodeFacts, pct, shortName, summarize, type Cell, type Lost, type Near, type RegionData, type RegionIndex,
 } from './lib'
 import type { CondState } from './Conclusion'
@@ -333,7 +333,7 @@ export function ComparePanel({
           const ir = index.regions.find((x) => x.id === c.id)
           return `${shortName(c.name)}＝${(ir?.operators ?? []).join('・')}（${c.coverage.modes.join('・')}）`
         }).join('、')}。
-        たとえば東京は都営（東京都交通局）のみ、飯田・下伊那は南信州地域のバスのみで、民営バスやJR等は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。
+        どの地域も、ここに挙げていない事業者（JR・大手私鉄など）は含みません。数字は地域の優劣ではなく「収録した範囲での診断」の違いです。
         割合・人数は、各地域の診断範囲（収録停留所から{data.params.diag_radius_m}m以内）の人口が分母です。
       </p>
     </div>
@@ -347,6 +347,8 @@ export function AboutPanel({
   const cite = citationText(data, { url, date })
   const rw = data.params.rail_walk_min
   const has = (s: string) => data.coverage.sources.includes(s)
+  const srcLabel = (src?: string) => (src === 'odpt' ? '公共交通オープンデータセンター' : 'GTFSデータリポジトリ')
+  const mixedSrc = new Set(data.feeds.map((f) => srcLabel(f.source))).size > 1
   const A = ({ href, children }: { href: string; children: ReactNode }) => (
     <a className="text-primary underline" href={href} target="_blank" rel="noreferrer">{children}</a>
   )
@@ -358,39 +360,28 @@ export function AboutPanel({
         <p>
           出典: {has('GTFSデータリポジトリ') && <A href="https://www.gtfs-data.jp/">GTFSデータリポジトリ</A>}
           {data.coverage.sources.length > 1 && '、'}
-          {has('公共交通オープンデータセンター') && <><A href="https://www.odpt.org/">公共交通オープンデータセンター</A>（公開API https://api-public.odpt.org/api/v4/ 、キー不要）</>}
+          {has('公共交通オープンデータセンター') && <><A href="https://www.odpt.org/">公共交通オープンデータセンター</A>（{data.feeds.some((f) => f.license === '公共交通オープンデータ基本ライセンス') ? '公開API（キー不要）と、開発者登録が必要なAPI' : '公開API https://api-public.odpt.org/api/v4/ 、キー不要'}）</>}
           。各データは事業者がそれぞれのライセンスで公開しており、本アプリでは停留所の集約・本数集計・到達時間の計算という加工を行っています。
         </p>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>事業者</TableHead><TableHead>データ名</TableHead><TableHead>取得元</TableHead><TableHead>ライセンス・クレジット</TableHead>
-                <TableHead>更新日</TableHead><TableHead>データ有効期間</TableHead><TableHead>診断の基準日（平日/休日）</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.feeds.map((f) => (
-                <TableRow key={f.id}>
-                  <TableCell className="whitespace-normal"><A href={f.url}>{f.org}</A></TableCell>
-                  <TableCell className="whitespace-normal">{f.name}</TableCell>
-                  <TableCell className="whitespace-normal">{f.source === 'odpt' ? '公共交通オープンデータセンター' : 'GTFSデータリポジトリ'}</TableCell>
-                  <TableCell className="whitespace-normal">
-                    {f.license_url ? <A href={f.license_url}>{f.license}</A> : f.license}
-                    {f.credit && <div>クレジット: {f.credit}</div>}
-                  </TableCell>
-                  <TableCell>{f.updated}</TableCell>
-                  <TableCell className="whitespace-normal">
-                    {(f.valid[0] || '?') + '〜' + (f.valid[1] || '?')}
-                    {f.expired && <b className="block text-orange-700">期限切れ</b>}
-                    {!f.expired && f.ends_before_public_end && <b className="block text-orange-700">公開期間（〜{data.public_until}）の途中で終了</b>}
-                  </TableCell>
-                  <TableCell>{f.ref.wd} / {f.ref.hol}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        {/* ガイドラインの一般ユーザーへの通知は、事業者の一覧より前に置く（長い一覧の下に埋もれさせない） */}
+        {has('公共交通オープンデータセンター') && <p className="rounded-md border bg-muted/40 p-2 text-xs" data-testid="odpt-notice">{ODPT_NOTICE}</p>}
+        {/* 事業者ごとのカード（狭い枠で7列の表にすると、有効期間と期限の警告が横スクロールの先に隠れるため） */}
+        {/* 取得元: 全事業者が同じなら一覧の上に1回だけ書く（カードごとに繰り返さない）。混在する地域だけカードに書く */}
+        {mixedSrc ? null : <p className="text-xs text-muted-foreground" data-testid="feed-source">取得元: {srcLabel(data.feeds[0]?.source)}（全{data.feeds.length}件）</p>}
+        <ul className="space-y-2" data-testid="feed-cards">
+          {data.feeds.map((f) => (
+            <li key={f.id} className="rounded-md border p-2 text-xs">
+              <p className="text-sm"><A href={f.url}><b>{f.org}</b></A>　{f.name.replace(/[（(]公共交通オープンデータセンター[）)]$/, '')}{mixedSrc && <span className="text-muted-foreground">（{srcLabel(f.source)}）</span>}</p>
+              <p className="mt-0.5">ライセンス: {f.license_url ? <A href={f.license_url}>{f.license}</A> : f.license}{f.credit && <>　クレジット: {f.credit}</>}</p>
+              <p className="mt-0.5">
+                有効期間 {(f.valid[0] || '?') + '〜' + (f.valid[1] || '?')}
+                {f.expired && <b className="ml-1 text-orange-700">期限切れ</b>}
+                {!f.expired && f.ends_before_public_end && <b className="ml-1 text-orange-700">公開期間（〜{data.public_until}）の途中で終了</b>}
+                <span className="text-muted-foreground">　更新日 {f.updated}・診断の基準日 平日 {f.ref.wd}／休日 {f.ref.hol}</span>
+              </p>
+            </li>
+          ))}
+        </ul>
         <p className="text-xs text-muted-foreground">データ生成日: {data.built}。基準日は水曜（平日）・日曜（休日）のうち、各データの有効期間内で生成日以降の最初の日です。祝日・臨時ダイヤは反映していません。</p>
       </section>
       <section>

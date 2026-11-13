@@ -1,0 +1,213 @@
+{
+  "evaluator": 8,
+  "model": "gpt-6.1-sol low",
+  "portal": {
+    "A": [
+      4,
+      5,
+      4,
+      5,
+      4
+    ],
+    "goals": {
+      "P-1": {
+        "achieved": true,
+        "value": "衛星2026/11/30 12:00、イチBiz2026/11/30 20:00（ビジネス。アイデア・不動産12/10 20:00）、UDC2026/12/27 23:59、ODPT2027/1/11 23:59。表示残日数16/16/44/59日。",
+        "where": "01-portal.png"
+      },
+      "P-2": {
+        "achieved": true,
+        "value": "衛星:提案書・デモ済、B/α選定・FAQ・本人/体制・提出残。イチBiz:提出文・デモ済、部門別選定・本人/背景・PPT・登録残。UDC:11/9概要登録・説明/デモ下書き済、作品②形式・公開URL・本応募残。ODPT:アプリ済、提出文下書き・N2収集判断・公開/監査・提出残。",
+        "where": "01-portal.png,02-satellite-detail.png"
+      },
+      "P-3": {
+        "achieved": true,
+        "value": "衛星詳細を開く→募集内容を展開→詳細内を下へスクロール→閉じる。一覧各行の上端は174/262/358/454pxで元の位置を維持。",
+        "where": "01-portal.png,02-satellite-detail.png,03-satellite-criteria.png"
+      },
+      "P-4": {
+        "achieved": true,
+        "value": "左メニューから4アプリへ移動し、各上部「統合ダッシュボード」でトップへ復帰。",
+        "where": "06-power.png,09-earth.png,12-aed.png,15-memory.png"
+      }
+    }
+  },
+  "apps": [
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図（内部見出し: 配電線 樹木リスク台帳）",
+      "B": [
+        4,
+        4,
+        3,
+        3,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-SAT1": 5,
+        "C-SAT2": 3,
+        "C-SAT3": 3,
+        "C-SAT4": 4,
+        "C-SAT5": 4
+      },
+      "goals": {
+        "G8-1": {
+          "achieved": true,
+          "value": "初期最高はF1-03、136点（衛星・公開85／事業者51）。",
+          "where": "06-power.png"
+        },
+        "G8-2": {
+          "achieved": true,
+          "value": "②で上位4区間を選択。F1-03、F2-03、F3-04、F2-05。巡回順はF1-03→F2-05→F2-03→F3-04、約2.8kmを高精度測定・現地確認へ。③記録へ進んだ。",
+          "where": "07-power-plan.png"
+        },
+        "G8-3": {
+          "achieved": true,
+          "value": "F1-03に2026/11/13・評価08・問題なしを記録。④で倒木/裸地化疑いの確認1件・要伐採0件を確認し、その区分の重み25→0を手動変更。①で136→111点、F2-03は92→67点・2→6位。自動学習ではない。",
+          "where": "20-power-review.png,08-power-updated.png"
+        },
+        "G8-4": {
+          "achieved": true,
+          "value": "①〜④の配電線・区間・点数・停電戸数・確認は架空。⑤のMeta/WRI樹高マップ（青梅周辺）と地理院背景は実データ、利用者の線は仮。樹高元画像2020/2/9、重みは仮置き。",
+          "where": "06-power.png,20-power-review.png"
+        }
+      }
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "B": [
+        5,
+        4,
+        4,
+        4,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-SAT1": 5,
+        "C-SAT2": 2,
+        "C-SAT3": 3,
+        "C-SAT4": 4,
+        "C-SAT5": 4
+      },
+      "goals": {
+        "G4-1": {
+          "achieved": true,
+          "value": "横須賀市716か所の実データを確認。上位5件は本庁0005(80)、田浦0047(80)、久里浜0012(80)、逸見0047(80)、本庁0051(77)。巡回は本庁→田浦→逸見→久里浜→本庁、直線周回約16.3km。5件で計画確定。",
+          "where": "09-earth.png,10-earth-plan.png"
+        },
+        "G4-2": {
+          "achieved": true,
+          "value": "手順5でpatrol-plan.csv・5行・UTF-8 BOMのプレビューを確認し、CSV書き出しボタンを実行。手順が完了表示へ変化。",
+          "where": "11-earth-record.png"
+        },
+        "G4-3": {
+          "achieved": true,
+          "value": "本庁0005へ2026/11/13・評価08・問題なしを保存。手順7で計画5件中記録済1・未記録4、台帳最新の巡視に同結果。",
+          "where": "11-earth-record.png"
+        },
+        "G4-4": {
+          "achieved": true,
+          "value": "衛星由来変化量は未接続・点数に含まれない。現点数は型・区域・面積・標高差・傾斜のみ。手順3は別の架空12地点。",
+          "where": "09-earth.png"
+        }
+      }
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "B": [
+        5,
+        4,
+        3,
+        4,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 4,
+        "C-BIZ4": 2
+      },
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市、月曜03:00で11台（2か所）。水曜午前3時ボタンも操作。月〜金同じ96%との表示。登録288台、時間不明5台、一般利用できない位置4台は除外。",
+          "where": "12-aed.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "直線500m、市境から800m以上内側の人口175,218人に対し約167,400人・96%が圏外。市全体430,913人では約421,800人・98%（上限）。",
+          "where": "12-aed.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "水曜03:00・500mで24時間AED1台の第1候補・原町田二丁目付近を選択。新たに約12,700人が圏内（境界付近の注記あり）。",
+          "where": "13-aed-candidate.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "設置先候補CSVボタンを実行し「設置先候補10件を書き出しました」を確認。",
+          "where": "13-aed-candidate.png（画面下へのスクロールで通知）"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "自治体登録のみで民間AEDが欠けうる。時間不明5台、市外AED未読込のため市全体値は上限。直線500mで道路経路ではない。祝日未反映。",
+          "where": "12-aed.png"
+        }
+      }
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        4,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 3,
+        "C-BIZ4": 2
+      },
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）・洪水を選択。半径1km内に同種の伝承碑1件、大禹謨（1972年・洪水）350m。全4碑。因果関係や危険度は示さない。",
+          "where": "16-memory-match.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "空中写真1945〜50年を濃さ70%で重ね、現在の地図と古い写真が重なることを視認。",
+          "where": "17-memory-overlay.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "サンプル語り・出典・語り手を入力欄へ写し1件保存。「未確認の記録として保存」、地図に？ぬま田。初期公開範囲は未定、端末内保存。",
+          "where": "18-memory-record.png"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "デモの確認役として公開範囲「公開」・確認済へ変更し、公開1件をGeoJSON出力。「1件をGeoJSONで書き出しました(chimeinoki-public.geojson)」を確認。外部掲載なし。",
+          "where": "19-memory-export.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "オレンジの地名・語りは架空、青い自然災害伝承碑は国土地理院実データ。語り手Aも架空と表示。",
+          "where": "15-memory.png,18-memory-record.png"
+        }
+      }
+    }
+  ]
+}

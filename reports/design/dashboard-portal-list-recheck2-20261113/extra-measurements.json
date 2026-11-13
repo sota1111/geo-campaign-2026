@@ -1,0 +1,225 @@
+{
+  "out": [
+    {
+      "label": "1280",
+      "rowFocus": {
+        "id": "row-ichibiz-2026",
+        "text": "イチBizアワード▲ 提出不可: 判断・記入待ち締切次の締切 11/30 20:00（ビジネス部門）あと16日本人欄・背景欄が未記入、部門ご",
+        "inside": false,
+        "outline": "oklch(0.38 0.17 262) solid 3px"
+      },
+      "openFocus": {
+        "id": "sheet-close",
+        "text": "閉じる",
+        "inside": true,
+        "outline": "oklch(0.38 0.17 262) solid 3px"
+      },
+      "tabCount": 45,
+      "escapedFocus": [],
+      "closeFocus": {
+        "id": "row-ichibiz-2026",
+        "text": "イチBizアワード▲ 提出不可: 判断・記入待ち締切次の締切 11/30 20:00（ビジネス部門）あと16日本人欄・背景欄が未記入、部門ご",
+        "inside": false,
+        "outline": "oklch(0.38 0.17 262) solid 3px"
+      },
+      "pre": {
+        "top": 358,
+        "scrollY": 0,
+        "expanded": "false",
+        "sw": 1265
+      },
+      "hit": "sheet-overlay",
+      "switchAttempt": {
+        "sheet": false,
+        "expanded": [],
+        "focus": "row-ichibiz-2026"
+      },
+      "switched": {
+        "top": 358,
+        "scrollY": 0,
+        "expanded": "true",
+        "sw": 1265
+      },
+      "overlay": {
+        "background": "oklab(0 0 0 / 0.5)",
+        "rowClass": "grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-lg bg-card px-3 py-1.5 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 lg:gap-y-0.5 lg:py-2 lg:grid-cols-[13rem_minmax(0,0.9fr)_minmax(0,1.3fr)_minmax(0,1fr)_1.5rem] bg-muted ring-2 ring-inset ring-slate-800",
+        "sheet": {
+          "top": 0,
+          "bottom": 765,
+          "left": 561,
+          "width": 704,
+          "height": 765
+        },
+        "focus": "sheet-close"
+      }
+    },
+    {
+      "label": "390",
+      "rowFocus": {
+        "id": "row-ichibiz-2026",
+        "text": "イチBizアワード▲ 提出不可: 判断・記入待ち締切次の締切 11/30 20:00（ビジネス部門）あと16日本人欄・背景欄が未記入、部門ご",
+        "inside": false,
+        "outline": "oklch(0.38 0.17 262) solid 3px"
+      },
+      "openFocus": {
+        "id": "sheet-close",
+        "text": "閉じる",
+        "inside": true,
+        "outline": "oklch(0.38 0.17 262) solid 3px"
+      },
+      "tabCount": 45,
+      "escapedFocus": [],
+      "closeFocus": {
+        "id": "row-ichibiz-2026",
+        "text": "イチBizアワード▲ 提出不可: 判断・記入待ち締切次の締切 11/30 20:00（ビジネス部門）あと16日本人欄・背景欄が未記入、部門ご",
+        "inside": false,
+        "outline": "oklch(0.38 0.17 262) solid 3px"
+      },
+      "pre": {
+        "top": 458,
+        "scrollY": 0,
+        "expanded": "false",
+        "sw": 390
+      },
+      "hit": null,
+      "switchAttempt": {
+        "sheet": true,
+        "expanded": [
+          "row-ichibiz-2026"
+        ],
+        "focus": "detail-sheet"
+      },
+      "switched": {
+        "top": 458,
+        "scrollY": 0,
+        "expanded": "false",
+        "sw": 390
+      },
+      "overlay": {
+        "background": "oklab(0 0 0 / 0.5)",
+        "rowClass": "grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-lg bg-card px-3 py-1.5 text-left hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 lg:gap-y-0.5 lg:py-2 lg:grid-cols-[13rem_minmax(0,0.9fr)_minmax(0,1.3fr)_minmax(0,1fr)_1.5rem] ",
+        "sheet": {
+          "top": 101,
+          "bottom": 844,
+          "left": 0,
+          "width": 390,
+          "height": 743
+        },
+        "focus": "detail-sheet"
+      }
+    },
+    {
+      "app": "sat-a",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "sat-b",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "sat-alpha",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "biz-business",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "biz-idea",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "biz-realestate",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "udc-moritsuchi",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "udc-aed",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "biz-business-nb",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "biz-idea-in1",
+      "links": []
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "odpt",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    },
+    {
+      "app": "odpt-teiji",
+      "links": [
+        {
+          "text": "統合ダッシュボード",
+          "href": "../../index.html"
+        }
+      ]
+    }
+  ],
+  "errs": []
+}
