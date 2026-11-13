@@ -1,0 +1,30 @@
+CLICK ぬま田 [ 195, 508 ]
+STATE mobile-biz-entry {"scrollY":228,"sw":390,"vw":390,"headerBottom":146,"map":[0,-25,390,321],"mapReturn":null,"compare":[16,370,358,970],"pcSwipe":[16,544,358,358],"pcSide":null,"figs":[],"correction":[16,910,205,30],"hill":null,"eraBtn":[168,469,87,30],"siteCompare":null,"ctrls":[[351,-15,29,58],[10,263,76,22]]}
+CLICK 左右に並べる [ 155, 422 ]
+STATE mobile-biz-side-top {"scrollY":438,"sw":390,"vw":390,"headerBottom":146,"map":[0,-235,390,321],"mapReturn":null,"compare":[16,160,358,1368],"pcSwipe":null,"pcSide":[16,334,358,756],"figs":[[16,334,358,374],[16,716,358,374]],"correction":[16,1098,205,30],"hill":null,"eraBtn":[168,259,87,30],"siteCompare":null,"ctrls":[[351,-225,29,58],[10,53,76,22]]}
+STATE mobile-biz-side-second {"scrollY":1154,"sw":390,"vw":390,"headerBottom":146,"map":[0,-951,390,321],"mapReturn":null,"compare":[16,-556,358,1368],"pcSwipe":null,"pcSide":[16,-382,358,756],"figs":[[16,-382,358,374],[16,0,358,374]],"correction":[16,382,205,30],"hill":null,"eraBtn":[168,-457,87,30],"siteCompare":null,"ctrls":[[351,-941,29,58],[10,-663,76,22]]}
+CLICK コントラスト補正 [ 118, 422 ]
+STATE mobile-biz-side-after {"scrollY":1129,"sw":390,"vw":390,"headerBottom":146,"map":[0,-926,390,321],"mapReturn":null,"compare":[16,-531,358,1370],"pcSwipe":null,"pcSide":[16,-357,358,756],"figs":[[16,-357,358,374],[16,25,358,374]],"correction":[16,407,243,32],"hill":null,"eraBtn":[168,-432,87,30],"siteCompare":null,"ctrls":[[351,-916,29,58],[10,-638,76,22]]}
+CLICK コントラスト補正 [ 137, 422 ]
+CLICK 境界を動かす [ 63, 422 ]
+CLICK 上（右）の地図で原図を見る [ 262, 422 ]
+STATE mobile-biz-orig-controls {"scrollY":1011,"sw":390,"vw":390,"headerBottom":146,"map":[0,-808,390,321],"mapReturn":[8,-800,120,32],"compare":[16,-413,358,1096],"pcSwipe":[16,-239,358,358],"pcSide":null,"figs":[],"correction":[16,127,205,30],"hill":null,"eraBtn":[168,-314,87,30],"siteCompare":null,"ctrls":[[351,-798,29,58],[10,-520,76,22]]}
+CLICK 地図の原図を見る [ 91, 422 ]
+STATE mobile-biz-to-map {"scrollY":43,"sw":390,"vw":390,"headerBottom":146,"map":[0,160,390,321],"mapReturn":[8,168,120,32],"compare":[16,555,358,1096],"pcSwipe":[16,729,358,358],"pcSide":null,"figs":[],"correction":[16,1095,205,30],"hill":null,"eraBtn":[168,654,87,30],"siteCompare":null,"ctrls":[[351,170,29,58],[10,448,76,22]]}
+CLICK 写真の比較へ戻る [ 68, 184 ]
+STATE mobile-biz-map-return {"scrollY":438,"sw":390,"vw":390,"headerBottom":146,"map":[0,-235,390,321],"mapReturn":[8,-227,120,32],"compare":[16,160,358,1096],"pcSwipe":[16,334,358,358],"pcSide":null,"figs":[],"correction":[16,700,205,30],"hill":null,"eraBtn":[168,259,87,30],"siteCompare":null,"ctrls":[[351,-225,29,58],[10,53,76,22]]}
+CLICK 地図の原図を見る [ 91, 422 ]
+CLICK 写真の比較へ戻る [ 215, 422 ]
+STATE mobile-biz-panel-return {"scrollY":438,"sw":390,"vw":390,"headerBottom":146,"map":[0,-235,390,321],"mapReturn":[8,-227,120,32],"compare":[16,160,358,1096],"pcSwipe":[16,334,358,358],"pcSide":null,"figs":[],"correction":[16,700,205,30],"hill":null,"eraBtn":[168,259,87,30],"siteCompare":null,"ctrls":[[351,-225,29,58],[10,53,76,22]]}
+CLICK 地図の原図を見る [ 91, 422 ]
+KBD {
+  focused: true,
+  outline: 'none 3px',
+  boxShadow: 'rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0'
+}
+CLICK 熱海市0001 [ 195, 464 ]
+STATE mobile-udc-entry {"scrollY":95,"sw":390,"vw":390,"headerBottom":122,"map":null,"mapReturn":null,"compare":null,"pcSwipe":[16,530,358,358],"pcSide":null,"figs":[],"correction":[16,896,205,30],"hill":[16,932,190,30],"eraBtn":null,"siteCompare":[16,346,358,685],"ctrls":[[350,95,29,58],[11,186,55,22]]}
+CLICK 左右に並べる [ 155, 422 ]
+STATE mobile-udc-side-top {"scrollY":441,"sw":390,"vw":390,"headerBottom":122,"map":null,"mapReturn":null,"compare":null,"pcSwipe":null,"pcSide":[16,184,358,756],"figs":[[16,184,358,374],[16,565,358,374]],"correction":[16,947,205,30],"hill":[16,983,190,30],"eraBtn":null,"siteCompare":[16,0,358,1082],"ctrls":[[350,-251,29,58],[11,-160,55,22]]}
+STATE mobile-udc-side-second {"scrollY":1006,"sw":390,"vw":390,"headerBottom":122,"map":null,"mapReturn":null,"compare":null,"pcSwipe":null,"pcSide":[16,-381,358,756],"figs":[[16,-381,358,374],[16,0,358,374]],"correction":[16,382,205,30],"hill":[16,418,190,30],"eraBtn":null,"siteCompare":[16,-565,358,1082],"ctrls":[[350,-816,29,58],[11,-725,55,22]]}
+ERRORS []

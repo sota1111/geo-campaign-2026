@@ -1,0 +1,9 @@
+CLICK ぬま田 [ 195, 508 ]
+BEFORE {"sw":[8,211,124,32],"pts":["淡色:reachable","標準:reachable","写真:reachable"]}
+CLICK 上（右）の地図で原図を見る [ 262, 422 ]
+CLICK 地図の原図を見る [ 91, 422 ]
+ORIG {"sw":[8,168,124,32],"pts":["淡色:covered by map-return","標準:covered by map-return","写真:covered by map-return"]}
+STATE mobile-orig-map-topleft {"scrollY":43,"sw":390,"vw":390,"headerBottom":146,"map":[0,160,390,321],"mapReturn":[8,168,120,32],"compare":[16,555,358,1096],"pcSwipe":[16,729,358,358],"pcSide":null,"figs":[],"correction":[16,1095,205,30],"hill":null,"eraBtn":[168,654,87,30],"siteCompare":null,"ctrls":[[351,170,29,58],[10,448,76,22]]}
+TABFOUND true true outline=solid 3px oklch(0.38 0.17 262) shadow=rgb(255, 255, 255) 0px 0px 0px 2px
+STATE mobile-map-return-focus {"scrollY":0,"sw":390,"vw":390,"headerBottom":146,"map":[0,203,390,321],"mapReturn":[8,211,120,32],"compare":[16,598,358,1096],"pcSwipe":[16,772,358,358],"pcSide":null,"figs":[],"correction":[16,1138,205,30],"hill":null,"eraBtn":[168,697,87,30],"siteCompare":null,"ctrls":[[351,213,29,58],[10,491,76,22]]}
+ERRORS []

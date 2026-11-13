@@ -786,7 +786,7 @@ export default function BizIdeaApp() {
       {channel === 'orig' && (
         <button
           type="button" data-testid="map-return"
-          className="absolute left-2 top-2 z-10 rounded-md border-2 border-black bg-white px-2.5 py-1.5 text-xs font-bold shadow hover:bg-accent"
+          className="absolute bottom-8 left-2 z-10 rounded-md border-2 md:hidden border-black bg-white px-2.5 py-1.5 text-xs font-bold shadow hover:bg-accent"
           onClick={() => document.querySelector('[data-testid=chimei-compare]')?.scrollIntoView({ block: 'start' })}
         >写真の比較へ戻る</button>
       )}
