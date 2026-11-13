@@ -194,7 +194,8 @@ test('データ無し: 項目が「データ無し」（取得できたが0件�
   const s = Lib.buildSheet(d, f), hz = s.sections.find((x) => x.id === 'hazard');
   assert.ok(hz.missing.some((x) => x.includes('XKT028') && x.includes('データ無し') && x.includes('0件')), text(hz.missing));
   assert.ok(!hz.lines.some((l) => l.tag === 'XKT028'), '津波の行は出さない');
-  assert.ok(hz.lines.some((l) => l.text.includes('津波浸水想定は、この地域ではデータ無し（取得できたが0件）') && l.text.includes('安全である、という意味ではない')));
+  // 2026-11-14: 行が重複していたため、注意は「データ無し」の項目そのものに入れた（印刷の文字を大きくするため）。意味は同じ
+  assert.ok(hz.missing.some((x) => x.includes('XKT028') && x.includes('データ無し（取得できたが0件') && x.includes('安全という意味ではない')), text(hz.missing));
   assert.ok(!text(s).includes('津波浸水想定: 想定区域の外'));
   assert.ok(!text(hz).includes('該当なし'));
   // 未取得（失敗）は従来どおり「未取得」
@@ -247,4 +248,17 @@ test('施設・災害の区域が、地域の内側だけ（隣の自治体を�
       for (const [lon, lat] of [[b[0] + 0.002, b[1] + 0.002], [b[2] - 0.002, b[3] - 0.002]]) assert.strictEqual(Lib.levelAt(r, lon, lat), 0, rid + ' ' + part);
     }
   }
+});
+
+test('範囲外（2026-11-14）: 隣の市は市名で知らせる。シートの題に地域名・区名が入る。東京23区の老人福祉施設の「収録なし」は施設が無い意味ではないと書く', () => {
+  const k = Lib.buildSheet(D.tokyo23, Lib.collect(D.tokyo23, 139.666, 35.586)); // 川崎市中原区
+  assert.ok(k.outOfScope.includes('川崎市中原区') && k.outOfScope.includes('印刷はできません'), k.outOfScope);
+  const a = Lib.buildSheet(D.osaka, Lib.collect(D.osaka, 135.432, 34.714)); // 尼崎市
+  assert.ok(a.outOfScope.includes('尼崎市'), a.outOfScope);
+  const s = Lib.buildSheet(D.tokyo23, Lib.collect(D.tokyo23, 139.8723, 35.6637));
+  assert.ok(s.title.includes('東京23区') && s.title.includes('江戸川区'), s.title);
+  const o = Lib.buildSheet(D.osaka, Lib.collect(D.osaka, 135.476, 34.607));
+  assert.ok(o.title.includes('大阪市') && o.title.includes('住之江区'), o.title);
+  const t = JSON.stringify(Lib.buildSheet(D.tokyo23, Lib.collect(D.tokyo23, 139.67, 35.6)).sections.find((x) => x.id === 'fac'));
+  assert.ok(!/老人福祉施設: 直線800m以内に該当なし/.test(t), t);
 });
