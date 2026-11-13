@@ -96,7 +96,8 @@ t('診断: 位置→メッシュ→周囲の目安、未実施・不明の分類
   assert.equal(r0.total, items.length);
   assert.equal(r0.done, 0); assert.equal(r0.notDone.length, 0); assert.equal(r0.unknown.length, items.length);
   assert.ok(r0.quietPos >= 0 && r0.quietPos <= 100);
-  assert.ok(r0.cellPopulation >= 0 && r0.localPop3km >= 0);
+  assert.ok(r0.cellPopulation >= 0);
+  assert.equal(r0.localPop3km, undefined, '診断は約5kmメッシュの人口だけを使う');
   const ans = {}; items.forEach((it, i) => { ans[it.id] = i % 3 === 0 ? 'yes' : i % 3 === 1 ? 'no' : 'unknown'; });
   const r1 = G.diagnose({ ...base, answers: ans }, ctx);
   assert.equal(r1.done + r1.notDone.length + r1.unknown.length, r1.total);
@@ -113,6 +114,64 @@ t('診断: 人口の少ない地点ほど「人の少なさ」の位置が高い
   const rural = G.diagnose({ lon: 140.35, lat: 36.75, cls: 'low', answers: {} }, ctx);
   assert.ok(rural.cellDensity < urban.cellDensity);
   assert.ok(rural.quietPos > urban.quietPos);
+});
+
+t('座標の入力: 全角を受け付け、カンマ・文字混じり・空は拒否', () => {
+  assert.equal(G.parseCoord('36.34'), 36.34);
+  assert.equal(G.parseCoord(' ３６．３４ '), 36.34);
+  assert.equal(G.parseCoord('140'), 140);
+  assert.equal(G.parseCoord('-1.5'), -1.5);
+  ['36,34', '36.34abc', '', 'abc', '36.', '.5', '1e3', null, undefined, '36.3 4'].forEach((x) => assert.equal(G.parseCoord(x), null, String(x)));
+});
+
+t('県内判定: 県の陸域・湖沼の1kmメッシュ。海上・千葉・栃木・福島は外', () => {
+  const land = G.landSet(J('land.json').rows);
+  const at = (lat, lon) => { const m = G.toMesh(lon, lat); return land(m.ix, m.iy); };
+  [[36.3418, 140.4468], [36.2913, 140.1517], [36.75, 140.35], [36.08, 140.1], [36.0, 140.3]].forEach(([a, o]) => assert.ok(at(a, o), a + ',' + o));
+  [[36.0, 140.85], [35.75, 140.0], [36.95, 139.7], [37.1, 140.5], [34.0, 135.0], [36.3, 141.0]].forEach(([a, o]) => assert.ok(!at(a, o), a + ',' + o));
+});
+
+t('診断: 同じ約5kmメッシュの2点で結果が同じ。人口0（海）でも位置は0〜100', () => {
+  const ctx = { cells: cells.rows, pops: grid, items: ck.items, weights: W };
+  const m = G.toMesh(140.4468, 36.3418), b = G.cellBounds(m.cx, m.cy);
+  const a = G.diagnose({ lon: b[0] + 0.004, lat: b[1] + 0.004, cls: 'unknown', answers: {} }, ctx), z = G.diagnose({ lon: b[2] - 0.004, lat: b[3] - 0.004, cls: 'unknown', answers: {} }, ctx);
+  assert.equal(a.code, z.code); assert.equal(a.cellPopulation, z.cellPopulation); assert.equal(a.quietPos, z.quietPos);
+  assert.equal(a.code, G.meshCode(m.cx * G.CELL, m.cy * G.CELL));
+  const sea = G.diagnose({ lon: 140.85, lat: 36.0, cls: 'unknown', answers: {} }, ctx);
+  assert.ok(sea.quietPos >= 0 && sea.quietPos <= 100 && sea.quietBand === 4);
+});
+
+t('bands: 同値だけなら真ん中の帯（全部「高」にしない）', () => {
+  assert.deepEqual(G.bands([5, 5, 5, 5, 5]), [2, 2, 2, 2, 2]);
+  assert.deepEqual(G.bands([null, 3]), [null, 2]);
+});
+
+t('指標の初期値: 人の少なさは0、残りは1。出力は設備数の言い換えでない', () => {
+  assert.deepEqual(G.defaultWeights(), { kw: 1, small: 1, quiet: 0 });
+  const sc = G.scoreCells(cells.rows, G.defaultWeights());
+  const a = sc.map((c) => c.parts.kw), b = G.percentRank(sc.map((c) => c.n));
+  const mean = (v) => v.reduce((x, y) => x + y) / v.length, ma = mean(a), mb = mean(b);
+  let c = 0, va = 0, vb = 0;
+  a.forEach((x, i) => { c += (x - ma) * (b[i] - mb); va += (x - ma) ** 2; vb += (b[i] - mb) ** 2; });
+  assert.ok(c / Math.sqrt(va * vb) < 0.5, '出力の位置が設備数の位置とほぼ同じ');
+});
+
+t('県警の5地区との比較: 市町村の対応・順位相関の計算', () => {
+  const R = J('districts.json').regions, T = J('reality.json').areas.rows;
+  const names = Object.values(R).flat();
+  assert.equal(names.length, 44); assert.equal(new Set(names).size, 44);
+  assert.deepEqual(names.slice().sort(), munis.rows.map((m) => m.name).sort());
+  const d = G.districtCompare(R, T, G.scoreMunis(munis.rows, G.defaultWeights()));
+  assert.equal(d.rows.length, 5);
+  d.rows.forEach((r) => assert.ok(r.plants > 1000 && r.rate > 0 && r.rankScore >= 1 && r.rankScore <= 5));
+  assert.ok(d.rho >= -1 && d.rho <= 1);
+  // README・画面に書いた値（初期の重みで −0.60、最初の版の重みで −0.90）と合う
+  assert.equal(d.rho.toFixed(2), '-0.60');
+  assert.equal(G.districtCompare(R, T, G.scoreMunis(munis.rows, { quiet: 1, kw: 1, small: 1 })).rho != null, true);
+  // 同じ並びなら +1
+  const fake = [{ name: 'a', n: 100, hidden: false, score: 10 }, { name: 'b', n: 100, hidden: false, score: 20 }, { name: 'c', n: 100, hidden: false, score: 30 }];
+  const f = G.districtCompare({ A: ['a'], B: ['b'], C: ['c'] }, [{ area: 'A', n: 1 }, { area: 'B', n: 2 }, { area: 'C', n: 3 }], fake);
+  assert.ok(Math.abs(f.rho - 1) < 1e-9);
 });
 
 console.log('lib_test OK', n);

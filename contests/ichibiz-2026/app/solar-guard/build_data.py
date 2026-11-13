@@ -13,12 +13,14 @@ usage:
 公開する集計: 約5km メッシュ（5倍地域メッシュ）と市町村。設備が K_MIN 件未満のメッシュ・市町村は件数・容量を出力しない。
 出力に入れない項目: 事業者名・代表者名・事業者住所・電話番号・設備ID・個別設備の位置（読み込み後に集計して捨てる）。
 """
+import bisect
 import collections
 import json
 import re
 import struct
 import sys
 import unicodedata
+import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -29,6 +31,8 @@ RAW = HERE / "raw"
 OUT = HERE / "web" / "data"
 CELL = 5                      # 公開する集計メッシュの一辺（1kmメッシュ×5＝5倍地域メッシュ。約5km、東西約5.6km×南北約4.6km）
 K_MIN = 3                     # これ未満の設備数のメッシュ・市町村は隠す（根拠は README「秘匿のしきい値」）
+DOM_N = 10                    # 設備が DOM_N 件未満のメッシュは、50kW以上の設備が1件以下なら隠す（件数・出力計・50kW未満の件数から、その1件の出力が割り出せるため。README「秘匿のしきい値」）
+KW_ROUND = 10                 # メッシュの出力計は10kW単位に丸めて公開する
 SMALL_KW = 50                 # 低圧（JPEA・REASP の区分: 10〜50kW未満）
 AS_OF = "2026-10-31"
 PREF = "茨城県"
@@ -104,6 +108,58 @@ def load_areas():
         muni_area[r["CITY_NAME"]] += area
     return by, muni_pop, muni_area
 
+
+def load_land():
+    """茨城県の区域（e-Stat 小地域の境界ポリゴン。水面 8154 を含む）に重なる1kmメッシュ。メッシュ内の3×3の標本点のどれかが区域内なら含める。
+    返す値: {iy: [(ix0, ix1), ...]}（連続するixの区間）。診断の入力が茨城県の陸域・湖沼の外（海上・他県）なら拒否するために使う。"""
+    d = zipfile.ZipFile(RAW / "estat_boundary_r2ka08.zip").read("r2ka08.shp")
+    land = collections.defaultdict(set)
+    o = 100
+    while o < len(d):
+        ln = struct.unpack(">i", d[o + 4:o + 8])[0]
+        c = o + 8
+        o = c + ln * 2
+        if struct.unpack("<i", d[c:c + 4])[0] != 5:
+            continue
+        x0, y0, x1, y1 = struct.unpack("<4d", d[c + 4:c + 36])
+        nparts, npts = struct.unpack("<ii", d[c + 36:c + 44])
+        parts = list(struct.unpack("<%di" % nparts, d[c + 44:c + 44 + 4 * nparts])) + [npts]
+        pts = struct.unpack("<%dd" % (2 * npts), d[c + 44 + 4 * nparts:c + 44 + 4 * nparts + 16 * npts])
+        edges = []
+        for a, b in zip(parts, parts[1:]):
+            for i in range(a, b - 1):
+                edges.append((pts[2 * i], pts[2 * i + 1], pts[2 * i + 2], pts[2 * i + 3]))
+        ixa, ixb = int((x0 - 100) * 80) - 1, int((x1 - 100) * 80) + 1
+        iya, iyb = int(y0 * 120) - 1, int(y1 * 120) + 1
+        lons = [100 + (ix + (2 * m + 1) / 6) / 80 for ix in range(ixa, ixb + 1) for m in range(3)]
+        for iy in range(iya, iyb + 1):
+            for k in range(3):
+                lat = (iy + (2 * k + 1) / 6) / 120
+                xs = sorted(ax + (lat - ay) / (by - ay) * (bx - ax) for ax, ay, bx, by in edges if (ay <= lat < by) or (by <= lat < ay))
+                if not xs:
+                    continue
+                for j, lon in enumerate(lons):
+                    if bisect.bisect_left(xs, lon) % 2 == 1:
+                        land[iy].add(ixa + j // 3)
+    out = {}
+    for iy, xs in land.items():
+        xs = sorted(xs)
+        runs, st = [], xs[0]
+        for a, b in zip(xs, xs[1:] + [None]):
+            if b != a + 1:
+                runs.append((st, a))
+                st = b
+        out[iy] = runs
+    return out
+
+
+REGIONS = {  # 茨城県の地域区分（県の「県北・県央・鹿行・県南・県西」）。県警 Metal News の5地区が同じ区分という記載は誌面にない（推測）。
+    "県北": "日立市 常陸太田市 高萩市 北茨城市 常陸大宮市 大子町",
+    "県央": "水戸市 笠間市 ひたちなか市 那珂市 小美玉市 茨城町 大洗町 城里町 東海村",
+    "鹿行": "鹿嶋市 潮来市 神栖市 行方市 鉾田市",
+    "県南": "土浦市 石岡市 龍ケ崎市 取手市 牛久市 つくば市 守谷市 稲敷市 かすみがうら市 つくばみらい市 美浦村 阿見町 河内町 利根町",
+    "県西": "古河市 結城市 下妻市 常総市 筑西市 坂東市 桜川市 八千代町 五霞町 境町",
+}
 
 ADDR_FIELDS = {"kind": "発電設備区分", "kw": "発電出力", "addr": "発電設備の所在地", "pv": "太陽電池の合計出力", "start": "運転開始報告年月"}
 
@@ -218,11 +274,17 @@ def main():
     stat["counted"] = sum(m["n"] for m in munis.values())
     stat["placed"] = stat["placed_exact"] + stat["placed_ohaza"]
 
-    visible = sorted((k, v) for k, v in cells.items() if v[0] >= K_MIN)
+    def shown(v):
+        """メッシュを公開してよいか。K_MIN 件未満は隠す。DOM_N 件未満では、50kW以上が1件以下（大きい設備が1件だけ）のメッシュも隠す"""
+        return v[0] >= K_MIN and not (v[0] < DOM_N and v[0] - v[2] <= 1)
+
+    visible = sorted((k, v) for k, v in cells.items() if shown(v))
     stat["cells_all"] = len(cells)
     stat["cells_visible"] = len(visible)
     stat["cells_hidden"] = len(cells) - len(visible)
-    stat["plants_in_hidden_cells"] = sum(v[0] for v in cells.values() if v[0] < K_MIN)
+    stat["cells_hidden_small_n"] = sum(1 for v in cells.values() if v[0] < K_MIN)
+    stat["cells_hidden_dominant"] = stat["cells_hidden"] - stat["cells_hidden_small_n"]
+    stat["plants_in_hidden_cells"] = sum(v[0] for v in cells.values() if not shown(v))
 
     pops = load_pops()
     pop_rows = sorted([ix, iy, p] for (ix, iy), p in pops.items() if p > 0)
@@ -235,7 +297,7 @@ def main():
                       "pop": muni_pop[name], "area_km2": round(muni_area[name] / 1e6, 1)})
 
     meta = {
-        "prefecture": PREF, "as_of": AS_OF, "k_min": K_MIN, "small_kw": SMALL_KW,
+        "prefecture": PREF, "as_of": AS_OF, "k_min": K_MIN, "dom_n": DOM_N, "kw_round": KW_ROUND, "small_kw": SMALL_KW,
         "plants_source": "資源エネルギー庁 再生可能エネルギー電子申請サイト 事業計画認定情報 公表用ウェブサイト（茨城県ファイル）",
         "plants_url": "https://www.fit-portal.go.jp/PublicInfo", "terms_url": "https://www.fit-portal.go.jp/Terms",
         "retrieved": "2026-11-13",
@@ -247,9 +309,13 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     dump = lambda name, obj: (OUT / name).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     dump("cells.json", {"meta": meta, "cell": CELL, "cols": ["cx", "cy", "n", "kw", "small", "pop"],
-                         "rows": [[k[0], k[1], v[0], round(v[1], 1), v[2], cell_pop(pops, k)] for k, v in visible]})
+                         "rows": [[k[0], k[1], v[0], int(round(v[1] / KW_ROUND)) * KW_ROUND, v[2], cell_pop(pops, k)] for k, v in visible]})
     dump("pops.json", {"meta": {"source": meta["mesh_source"], "note": "人口0または秘匿('*')のメッシュは含めない。秘匿は近隣メッシュに合算されている（e-Stat）"}, "cols": ["ix", "iy", "pop"], "rows": pop_rows})
     dump("munis.json", {"k_min": K_MIN, "rows": mrows})
+    land = load_land()
+    dump("land.json", {"note": "茨城県の区域（e-Stat 小地域境界。水面を含む）に重なる1kmメッシュ。iy ごとの ix の区間 [iy, ix0, ix1, ix0, ix1, ...]。診断の入力が県の外（海上・他県）かの判定にだけ使う",
+                       "rows": [[iy] + [x for r in runs for x in r] for iy, runs in sorted(land.items())]})
+    dump("districts.json", {"note": "茨城県の地域区分（県北・県央・鹿行・県南・県西）の市町村。県警 Metal News の5地区が同じ区分かは誌面に記載がなく、推測。", "regions": {k: v.split() for k, v in REGIONS.items()}})
     print("stats:", json.dumps(stat, ensure_ascii=False))
     print("cells visible:", len(visible), "munis:", len(mrows), "pop cells:", len(pop_rows))
     print("wrote", OUT)

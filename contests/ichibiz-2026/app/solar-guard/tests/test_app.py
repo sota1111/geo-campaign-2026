@@ -110,6 +110,33 @@ class TestData(unittest.TestCase):
         self.assertIn("v[0] >= K_MIN", src)
         self.assertIn("ok = m[\"n\"] >= K_MIN", src)
 
+    def test_dominant_cells_hidden_and_kw_rounded(self):
+        """少数メッシュで、50kW以上が1件だけなら、その出力が割り出せる（件数・出力計・50kW未満の件数から）。隠すこと。出力計は丸める"""
+        dom, rnd = self.meta["dom_n"], self.meta["kw_round"]
+        self.assertGreaterEqual(dom, 10)
+        for r in self.cells["rows"]:
+            self.assertFalse(r[2] < dom and r[2] - r[4] <= 1, f"大きな設備1件の出力が割り出せるメッシュが出力にある {r}")
+            self.assertEqual(r[3] % rnd, 0, "出力計が丸められていない")
+        src = (HERE / "build_data.py").read_text(encoding="utf-8")
+        self.assertIn("v[0] < DOM_N and v[0] - v[2] <= 1", src)
+        self.assertGreater(self.st["cells_hidden_dominant"], 0)
+        self.assertEqual(self.st["cells_hidden"], self.st["cells_hidden_small_n"] + self.st["cells_hidden_dominant"])
+
+    def test_land_mask_for_ibaraki(self):
+        land = J("land.json")["rows"]
+        meshes = {(x, row[0]) for row in land for i in range(1, len(row), 2) for x in range(row[i], row[i + 1] + 1)}
+        self.assertTrue(5000 < len(meshes) < 7500, len(meshes))  # 茨城県の面積（約6,100km2）に近い
+        def has(lat, lon):
+            return (int((lon - 100) * 80 + 1e-9), int(lat * 120 + 1e-9)) in meshes
+        for p in [(36.3418, 140.4468), (36.2913, 140.1517), (36.75, 140.35), (36.0, 140.3)]:
+            self.assertTrue(has(*p), p)
+        for p in [(36.0, 140.85), (35.75, 140.0), (36.95, 139.7), (34.0, 135.0)]:
+            self.assertFalse(has(*p), p)
+        # 公開済みの集計メッシュはすべて県内
+        for r in self.cells["rows"]:
+            ok = any((r[0] * 5 + dx, r[1] * 5 + dy) in meshes for dx in range(5) for dy in range(5))
+            self.assertTrue(ok, r)
+
     def test_totals_consistent(self):
         st = self.st
         in_cells = sum(r[2] for r in self.cells["rows"])
@@ -201,6 +228,21 @@ class TestUiCode(unittest.TestCase):
         for w in ["被害の予測ではなく", "個別の設備の順位・一覧", "色を付けずに隠します", "送信も保存もしません", "公開の集計地図", "自分の設備を診断", "盗難の実態", "出典・前提・限界"]:
             self.assertIn(w, h, w)
         self.assertNotIn("地理院の住所検索", h)
+
+    def test_no_continuous_score_or_position_in_ui(self):
+        """「順位は出さない」: 連続のスコア・各指標の位置（0〜100）を、画面・CSV・公開 JSON に出さない"""
+        for w in ["目安スコア", "指標の位置（0〜100）", "人の少なさの位置", "容量の位置", "低圧割合の位置"]:
+            self.assertNotIn(w, self.js + self.html, w)
+        self.assertIn("delete c.score; delete c.parts;", self.js)
+        for f in DATA.glob("*.json"):
+            self.assertNotIn("score", f.read_text(encoding="utf-8").lower().replace("scored", ""), f.name)
+
+    def test_diagnosis_input_and_map_privacy(self):
+        self.assertNotIn("flyTo", self.js)
+        self.assertNotIn("fitBounds", self.js)
+        self.assertIn("maxZoom: MAX_ZOOM", self.js)
+        self.assertIn("見ている範囲は地理院に伝わります", self.html)
+        self.assertNotIn("parseFloat($(", self.js)
 
     def test_no_individual_ranking_ui(self):
         # 設備単位・メッシュ単位の順位表・上位一覧を作る処理が無い（表は市町村のみ）

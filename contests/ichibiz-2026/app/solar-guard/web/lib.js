@@ -4,11 +4,13 @@
   'use strict';
   var CELL = 5;            // 集計メッシュ＝1kmメッシュ×5（build_data.py の CELL と同じ）
   var KM2_PER_MESH = 1.04; // 1kmメッシュの面積の目安（緯度36度付近: 東西約1.13km×南北約0.93km）
+  /* 指標。初期の重み def: 人の少なさは0（参考）。理由は README「指標の見直し」: 県警の5地区別の被害と対応せず、常住人口は人目の代理として弱い */
   var IND = [
-    { id: 'quiet', label: '周囲の人の少なさ', hint: '集計メッシュの人口密度（人/km²）が低いほど高い' },
-    { id: 'kw', label: '設備容量のまとまり', hint: 'メッシュ内の認定設備の出力合計（kW）が大きいほど高い' },
-    { id: 'small', label: '低圧（50kW未満）の割合', hint: 'メッシュ内の設備のうち出力50kW未満の割合が高いほど高い' }
+    { id: 'kw', label: '設備1件あたりの出力', def: 1, hint: 'メッシュ内の出力合計÷設備数（kW/件）が大きいほど高い（1件あたりの被害額の大きさの目安）' },
+    { id: 'small', label: '低圧（50kW未満）の割合', def: 1, hint: 'メッシュ内の設備のうち出力50kW未満の割合が高いほど高い' },
+    { id: 'quiet', label: '周囲の人の少なさ（参考）', def: 0, hint: '集計メッシュの常住人口密度（人/km²）が低いほど高い。初期値は0（目安に使わない）' }
   ];
+  function defaultWeights() { var w = {}; IND.forEach(function (d) { w[d.id] = d.def; }); return w; }
 
   /* 経緯度 → 1kmメッシュの格子番号（lat = iy/120, lon = 100 + ix/80 が南西角）と、集計メッシュの番号 */
   function toMesh(lon, lat) {
@@ -63,13 +65,13 @@
     return tw > 0 ? s / tw : null;
   }
 
-  /* 集計メッシュ: cells.json の rows（[cx,cy,n,kw,small,pop]）→ 各指標の位置（0〜100）と目安スコア */
+  /* 集計メッシュ: cells.json の rows（[cx,cy,n,kw,small,pop]）→ 内部計算用の指標の位置と score。画面・CSV・公開データには出さない（app.js が帯だけ残して捨てる） */
   function scoreCells(rows, w) {
     var base = rows.map(function (r) {
       return { cx: r[0], cy: r[1], n: r[2], kw: r[3], small: r[4], pop: r[5], dens: density(r[5]), share: r[2] ? r[4] / r[2] : 0 };
     });
     var q = percentRank(base.map(function (c) { return -c.dens; }));
-    var k = percentRank(base.map(function (c) { return c.kw; }));
+    var k = percentRank(base.map(function (c) { return c.n ? c.kw / c.n : 0; }));
     var s = percentRank(base.map(function (c) { return c.share; }));
     base.forEach(function (c, i) {
       c.parts = { quiet: q[i], kw: k[i], small: s[i] };
@@ -83,27 +85,60 @@
     var out = rows.map(function (m) {
       var hide = m.n == null;
       return { name: m.name, n: m.n, kw: m.kw, small: m.small, pop: m.pop, area: m.area_km2, hidden: hide,
-        dens: m.area_km2 ? m.pop / m.area_km2 : 0, kwKm2: !hide && m.area_km2 ? m.kw / m.area_km2 : 0, share: !hide && m.n ? m.small / m.n : 0 };
+        dens: m.area_km2 ? m.pop / m.area_km2 : 0, kwEach: !hide && m.n ? m.kw / m.n : 0, share: !hide && m.n ? m.small / m.n : 0 };
     });
     var vis = out.filter(function (m) { return !m.hidden; });
     var q = percentRank(vis.map(function (m) { return -m.dens; }));
-    var k = percentRank(vis.map(function (m) { return m.kwKm2; }));
+    var k = percentRank(vis.map(function (m) { return m.kwEach; }));
     var s = percentRank(vis.map(function (m) { return m.share; }));
     vis.forEach(function (m, i) { m.parts = { quiet: q[i], kw: k[i], small: s[i] }; m.score = weightedScore(m.parts, w); });
     out.forEach(function (m) { if (m.hidden) { m.parts = null; m.score = null; } });
     return out;
   }
 
-  /* 5段階の帯（0=低 … 4=高）。スコアの五分位で分ける（順位そのものは出さない） */
+  /* 5段階の帯（0=低 … 4=高）。スコアの順位（同値は平均順位）を5等分する。同値が多いと同じ帯に入る（順位は出さない）。 */
   function bands(scores) {
-    var v = scores.filter(function (x) { return x != null; }).sort(function (a, b) { return a - b; });
-    var cut = [1, 2, 3, 4].map(function (i) { return v.length ? v[Math.min(v.length - 1, Math.floor(v.length * i / 5))] : 0; });
-    return scores.map(function (x) {
-      if (x == null) return null;
-      var b = 0;
-      cut.forEach(function (c) { if (x >= c) b++; });
-      return Math.min(4, b);
+    var idx = [], vals = [];
+    scores.forEach(function (x, i) { if (x != null) { idx.push(i); vals.push(x); } });
+    var pr = percentRank(vals), out = scores.map(function () { return null; });
+    pr.forEach(function (p, j) { out[idx[j]] = Math.min(4, Math.floor(p / 20)); });
+    return out;
+  }
+
+  /* 座標の入力 → 数値。全角を半角にし、符号付きの10進数だけを受け付ける（「36,34」「36.34abc」は null） */
+  function parseCoord(s) {
+    var t = String(s == null ? '' : s).normalize('NFKC').trim();
+    return /^-?\d+(\.\d+)?$/.test(t) ? parseFloat(t) : null;
+  }
+
+  /* 茨城県の区域に重なる1kmメッシュ（land.json の rows: [iy, ix0, ix1, ...]）→ 判定関数 */
+  function landSet(rows) {
+    var m = new Map();
+    rows.forEach(function (r) { var runs = []; for (var i = 1; i < r.length; i += 2) runs.push([r[i], r[i + 1]]); m.set(r[0], runs); });
+    return function (ix, iy) { var runs = m.get(iy) || []; for (var i = 0; i < runs.length; i++) if (ix >= runs[i][0] && ix <= runs[i][1]) return true; return false; };
+  }
+
+  /* 県内5地区: 市町村の目安（連続値）の地区平均と、県警の被害の設備1,000件あたりを並べ、順位と順位相関を返す。
+     regions: {地区: [市町村]}、theft: [{area, n}]、scored: scoreMunis の結果。5点だけの比較で、重みを実績に合わせるために使ってはいけない。 */
+  function districtCompare(regions, theft, scored) {
+    var by = {}; scored.forEach(function (m) { by[m.name] = m; });
+    var rows = theft.map(function (t) {
+      var ms = (regions[t.area] || []).map(function (n) { return by[n]; }).filter(function (m) { return m && !m.hidden; });
+      var plants = ms.reduce(function (a, m) { return a + m.n; }, 0);
+      var sc = ms.filter(function (m) { return m.score != null; });
+      return { area: t.area, theft: t.n, plants: plants, rate: plants ? t.n / plants * 1000 : null, munis: ms.length,
+        score: sc.length ? sc.reduce(function (a, m) { return a + m.score; }, 0) / sc.length : null };
     });
+    var ok = rows.filter(function (r) { return r.score != null && r.rate != null; });
+    var rr = percentRank(ok.map(function (r) { return r.rate; })), rs = percentRank(ok.map(function (r) { return r.score; }));
+    var n = ok.length, rho = null;
+    if (n > 2) {
+      var ma = rr.reduce(function (a, b) { return a + b; }, 0) / n, mb = rs.reduce(function (a, b) { return a + b; }, 0) / n, c = 0, va = 0, vb = 0;
+      for (var i = 0; i < n; i++) { c += (rr[i] - ma) * (rs[i] - mb); va += (rr[i] - ma) * (rr[i] - ma); vb += (rs[i] - mb) * (rs[i] - mb); }
+      rho = va && vb ? c / Math.sqrt(va * vb) : null;
+    }
+    ok.forEach(function (r, i) { r.rankRate = Math.round(rr[i] / 100 * (n - 1)) + 1; r.rankScore = Math.round(rs[i] / 100 * (n - 1)) + 1; }); // 1=最低 … n=最高
+    return { rows: rows, rho: rho };
   }
 
   /* 事業者の自己診断。
@@ -113,13 +148,11 @@
   function diagnose(input, ctx) {
     var m = toMesh(input.lon, input.lat);
     var cellRow = ctx.cells.filter(function (r) { return r[0] === m.cx && r[1] === m.cy; })[0] || null;
-    var cellPopulation = cellPop(ctx.pops, m.cx, m.cy);
-    var scored = scoreCells(ctx.cells, ctx.weights);
-    var allDens = scored.map(function (c) { return -c.dens; });
+    var cellPopulation = cellPop(ctx.pops, m.cx, m.cy);   // 約5kmメッシュの人口だけを使う（入力点の1kmメッシュの人口は使わない）
+    var allDens = scoreCells(ctx.cells, ctx.weights).map(function (c) { return -c.dens; });
     var mine = -density(cellPopulation);
     var below = allDens.filter(function (x) { return x < mine; }).length, eq = allDens.filter(function (x) { return x === mine; }).length;
-    var quiet = allDens.length ? ((below + (eq ? (eq - 1) / 2 : 0)) / Math.max(1, allDens.length - 1)) * 100 : null;
-    var local = localPop(ctx.pops, m.ix, m.iy, 1);
+    var quiet = allDens.length ? (below + eq / 2) / allDens.length * 100 : null; // 0〜100（同値は平均順位）
     var items = ctx.items.filter(function (it) { return input.cls === 'unknown' || it.cls.indexOf('all') >= 0 || it.cls.indexOf(input.cls) >= 0; });
     var done = 0, no = [], unk = [];
     items.forEach(function (it) {
@@ -127,9 +160,8 @@
       if (a === 'yes') done++; else if (a === 'no') no.push(it); else unk.push(it);
     });
     return {
-      mesh: m, code: meshCode(m.ix, m.iy), cellDensity: density(cellPopulation), cellPopulation: cellPopulation,
-      localPop3km: local, localDensity3km: local / (9 * KM2_PER_MESH),
-      quietPos: quiet, cellVisible: !!cellRow,
+      mesh: m, code: meshCode(m.cx * CELL, m.cy * CELL), cellDensity: density(cellPopulation), cellPopulation: cellPopulation,
+      quietPos: quiet, quietBand: quiet == null ? null : Math.min(4, Math.floor(quiet / 20)), cellVisible: !!cellRow,
       cell: cellRow ? { n: cellRow[2], kw: cellRow[3], small: cellRow[4] } : null,
       total: items.length, done: done, notDone: no, unknown: unk
     };
@@ -142,7 +174,7 @@
   }
   function toCsv(rows) { return rows.map(function (r) { return r.map(csvEscape).join(','); }).join('\r\n'); }
 
-  var api = { CELL: CELL, KM2_PER_MESH: KM2_PER_MESH, IND: IND, toMesh: toMesh, cellBounds: cellBounds, meshCode: meshCode, popGrid: popGrid, popAt: popAt, localPop: localPop,
+  var api = { CELL: CELL, KM2_PER_MESH: KM2_PER_MESH, IND: IND, defaultWeights: defaultWeights, parseCoord: parseCoord, landSet: landSet, districtCompare: districtCompare, toMesh: toMesh, cellBounds: cellBounds, meshCode: meshCode, popGrid: popGrid, popAt: popAt, localPop: localPop,
     cellPop: cellPop, density: density, percentRank: percentRank, weightedScore: weightedScore, scoreCells: scoreCells, scoreMunis: scoreMunis, bands: bands,
     diagnose: diagnose, csvEscape: csvEscape, toCsv: toCsv };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Sg = api;
