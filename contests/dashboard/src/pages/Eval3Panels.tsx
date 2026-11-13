@@ -58,16 +58,18 @@ const CY = 145
 const R = 100
 
 /** レーダー本体。axisLabels は軸の短い名前（B1 など）。band は最小〜最大の幅（ポータル A 用） */
-export function Radar({ title, axisLabels, series, band, max = 5 }: {
+export function Radar({ title, axisLabels, series, band, max = 5, compact = false }: {
   title: string
   axisLabels: string[]
   series: Series[]
   band?: { min: (number | null)[]; max: (number | null)[] }
   max?: number
+  /** 詳細欄の中で凡例と同じ視野に収めるため、高さを抑える */
+  compact?: boolean
 }) {
   const n = axisLabels.length
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} className="mx-auto h-auto w-full max-w-[22rem]" data-testid="radar">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} className={`mx-auto h-auto w-full max-w-[22rem] ${compact ? 'max-h-[14rem]' : ''}`} data-testid="radar">
       <title>{title}</title>
       {Array.from({ length: max }, (_, k) => k + 1).map((lv) => (
         <polygon key={lv} points={ringPoints(n, lv, max, CX, CY, R)} fill="none" stroke="#cbd5e1" strokeWidth={lv === max ? 1.4 : 0.8} />
@@ -345,10 +347,11 @@ export function ContestEval3({ contest, data = EVAL3 }: { contest: ContestId; da
             <p className="text-xs font-medium">比べるアプリを1つ以上選んでください。</p>
           ) : (
             <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-bold">B 操作性・デザイン（B1〜B7、各5点）</h4>
-                <Radar title="B 操作性・デザインのレーダーチャート" axisLabels={B_ITEMS.map((b) => b.slice(0, 2))} series={bSeries} />
+              <div className="space-y-1.5" data-testid="eval3-figure">
+                <h4 className="text-xs font-bold" tabIndex={-1} data-testid="eval3-figure-heading">第3回AI評価（今の案と新しい案）　B 操作性・デザイン（B1〜B7、各5点）</h4>
                 <Legend items={legend} />
+                <Radar compact title="B 操作性・デザインのレーダーチャート" axisLabels={B_ITEMS.map((b) => b.slice(0, 2))} series={bSeries} />
+                <p className="text-[11px] font-bold text-slate-700">↓ 下の表で、項目ごとの平均・最小〜最大・人数が読めます</p>
                 <ValueTable
                   caption="B 操作性・デザイン 平均（最小〜最大・評価者数）"
                   axes={B_ITEMS}
@@ -357,9 +360,10 @@ export function ContestEval3({ contest, data = EVAL3 }: { contest: ContestId; da
                 />
               </div>
               <div className="space-y-1.5">
-                <h4 className="text-xs font-bold">C コンペの審査基準（{cKeys.length}項目、各5点）</h4>
-                <Radar title="C コンペの審査基準のレーダーチャート" axisLabels={cKeys.map((k) => k.replace('C-', ''))} series={cSeries} />
+                <h4 className="text-xs font-bold">第3回AI評価　C コンペの審査基準（{cKeys.length}項目、各5点）</h4>
                 <Legend items={legend} />
+                <Radar compact title="C コンペの審査基準のレーダーチャート" axisLabels={cKeys.map((k) => k.replace('C-', ''))} series={cSeries} />
+                <p className="text-[11px] font-bold text-slate-700">↓ 下の表で、項目ごとの平均・最小〜最大・人数が読めます</p>
                 <ValueTable
                   caption="C コンペの審査基準 平均（最小〜最大・評価者数）"
                   axes={cKeys.map((k) => `${k.replace('C-', '')} ${C_LABELS[k]}`)}

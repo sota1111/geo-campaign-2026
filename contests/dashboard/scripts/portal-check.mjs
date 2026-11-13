@@ -69,6 +69,12 @@ for (const [label, w, h0, mobile] of [['1280', 1280, 765, false], ['390', 390, 8
   out.push({ label, firstScreen: { viewportH: h0, first, rowBottoms: bottoms, fit: bottoms.every((b) => b <= h0), pageFits: first.docH <= h0, stagesPerRow: await J(`${JSON.stringify(ids)}.map((id) => document.querySelectorAll('[data-testid=row-' + id + '] [data-testid=row-stage]').length)`), pane: await J(rect('[data-testid=detail-pane]')), preSelected: await J(`${JSON.stringify(ids)}.filter((id) => document.querySelector('[data-testid=row-' + id + ']').getAttribute('aria-pressed') === 'true')`), sidebarOrder: await J(`[...document.querySelectorAll('[data-sidebar=group-label]')].map((e) => e.textContent.slice(0, 8))`), noSheet: !(await ev(`!!document.querySelector('[data-testid=detail-sheet]')`)) } })
   await save(`${label}-01-first.png`)
 
+  // 中4: 状況の理由文。行内で省略されない（全文が折り返して見える）。詳細欄の先頭にも全文がある（PCのみ行内に理由を出す）
+  {
+    const reasons = await J(`${JSON.stringify(ids)}.map((id) => { const r = document.querySelector('[data-testid=row-' + id + '] [data-testid=row-reason]'); if (!r) return null; const cs = getComputedStyle(r); return { text: r.textContent, shown: cs.display !== 'none', clipped: r.scrollHeight > r.clientHeight + 1 || r.scrollWidth > r.clientWidth + 1, lineClamp: cs.webkitLineClamp, overflow: cs.overflow, w: Math.round(r.getBoundingClientRect().width) } })`)
+    const detailReason = await J(`document.querySelector('[data-testid=detail-reason]')?.textContent ?? null`)
+    out.push({ label, reasonFull: { reasons, detailReason, noEllipsis: mobile ? true : reasons.every((r) => r && r.shown && !r.clipped && (r.lineClamp === 'none' || !r.lineClamp) && r.overflow === 'visible'), detailHasReason: !!detailReason && detailReason.includes('提出不可') } })
+  }
   // 全行を順に選ぶ（1回ずつ）。詳細欄の深部までスクロールした状態から別の行へ切り替えても、scrollY・行 top・scrollHeight は不変
   await load()
   await pick('satellite-2026')
@@ -133,16 +139,23 @@ for (const [label, w, h0, mobile] of [['1280', 1280, 765, false], ['390', 390, 8
   await save(`${label}-04-keyboard.png`)
 }
 if (true) {
-  // スマホ: 選んだ行をもう一度押すと一覧が元の大きさに戻る
+  // スマホ（2026-11-13 中1・中2）: 選択・同じ行の再押下（解除はしない）・切り替えの前後で、行の top が不変（許容差1px）。
+  // 一覧は縮めない。各行に 状況・次の締切・判断待ちの段階名・次の一手 が読める（切れていない）。詳細欄は画面の4割以上
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
   await load()
-  const full = await snapAll()
-  await clickSel(row('udc-2026'))
-  const compact = await snapAll()
-  const compactRowH = await J(rect(row('udc-2026')))
-  await clickSel(row('udc-2026'))
-  const back = await snapAll()
-  out.push({ label: '390', compactToggle: { full, compact, back, compactRowH, restored: JSON.stringify(full) === JSON.stringify(back), hash: await ev('location.hash'), emptyMsg: await ev(`document.querySelector('[data-testid=detail-empty]')?.textContent`) } })
+  const tops = async () => (await snapAll())
+  const t0 = await tops()
+  const steps = []
+  for (const id of ['udc-2026', 'udc-2026', 'odpt-2026', 'satellite-2026', 'ichibiz-2026', 'ichibiz-2026']) {
+    await clickSel(row(id))
+    const t = await tops()
+    steps.push({ id, pressed: await pressed(id), maxDiff: Math.max(...t.tops.map((v, i) => Math.abs(v - t0.tops[i]))), scrollY: t.scrollY, docH: t.docH })
+  }
+  const rowH = await J(`${JSON.stringify(ids)}.map((id) => Math.round(document.querySelector('[data-testid=row-' + id + ']').getBoundingClientRect().height))`)
+  const rowText = await J(`${JSON.stringify(ids)}.map((id) => { const r = document.querySelector('[data-testid=row-' + id + ']'); const q = (t) => r.querySelector('[data-testid=row-' + t + ']'); const cut = (e) => e.scrollWidth > e.clientWidth + 1; return { status: q('status').textContent, deadline: q('deadline').textContent, pendingStage: [...r.querySelectorAll('[data-testid=row-stage][data-mark=？]')].map((e) => e.textContent), next: q('next').textContent.slice(0, 30), statusCut: cut(q('status')), nextCut: cut(q('next')), stagesCut: cut(q('progress')), rowOverflowX: r.scrollWidth > r.clientWidth + 1 } })`)
+  const paneH = (await J(rect('[data-testid=detail-pane]'))).height
+  out.push({ label: '390', mobileRows: { t0, steps, rowH, rowText, paneH, paneShare: Math.round((paneH / 844) * 100) / 100, noShift: steps.every((s) => s.maxDiff <= 1 && s.scrollY === 0 && s.docH === t0.docH), alwaysSelected: steps.every((s) => s.pressed), paneOk: paneH >= 844 * 0.4, textOk: rowText.every((r) => r.pendingStage.length === 1 && !r.statusCut && !r.nextCut && !r.stagesCut && !r.rowOverflowX) } })
+  await save('390-05-rows.png')
 }
 // 1280×500（背景が縦にスクロールできる高さ）: 詳細欄の深部から切り替えても scrollY・行 top・scrollHeight は不変
 await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 500, deviceScaleFactor: 1, mobile: false })
@@ -185,11 +198,11 @@ for (const [label, w, h0, mobile] of [['1280', 1280, 765, false], ['390', 390, 8
     const pre = await J(`({ top: ${box(id)}.scrollTop, hasBtn: !!document.querySelector('[data-testid=jump-eval3]'), btn: ${rect('[data-testid=jump-eval3]')}, header: ${rect('[data-testid=contest-list]')}, secTopBefore: ${box(id)}.querySelector('[data-testid=eval3-contest]').offsetTop })`)
     await clickSel('[data-testid=jump-eval3]')
     await sleep(200)
-    const post = await J(`(() => { const b = ${box(id)}; const br = b.getBoundingClientRect(); const s = b.querySelector('[data-testid=eval3-contest]').getBoundingClientRect(); const svg = b.querySelector('[data-testid=eval3-contest] svg[data-testid=radar]').getBoundingClientRect(); return { scrollTop: Math.round(b.scrollTop), secTopInBox: Math.round(s.top - br.top), svgTopInBox: Math.round(svg.top - br.top), svgBottomInBox: Math.round(svg.bottom - br.bottom), boxH: Math.round(br.height), svgFits: svg.top >= br.top && svg.bottom <= br.bottom, focus: document.activeElement?.dataset?.testid ?? null } })()`)
+    const post = await J(`(() => { const b = ${box(id)}; const br = b.getBoundingClientRect(); const s = b.querySelector('[data-testid=eval3-contest]').getBoundingClientRect(); const svg = b.querySelector('[data-testid=eval3-contest] svg[data-testid=radar]').getBoundingClientRect(); return { scrollTop: Math.round(b.scrollTop), secTopInBox: Math.round(s.top - br.top), svgTopInBox: Math.round(svg.top - br.top), svgBottomInBox: Math.round(svg.bottom - br.bottom), boxH: Math.round(br.height), svgFits: svg.top >= br.top && svg.bottom <= br.bottom, legendAndFigureTogether: (() => { const lg = b.querySelector('[data-testid=eval3-figure] [data-testid=radar-legend]').getBoundingClientRect(); const hd = b.querySelector('[data-testid=eval3-figure-heading]').getBoundingClientRect(); const hint = b.querySelector('[data-testid=eval3-figure] p').getBoundingClientRect(); return { headingIn: hd.top >= br.top && hd.bottom <= br.bottom, legendIn: lg.top >= br.top && lg.bottom <= br.bottom, svgIn: svg.top >= br.top && svg.bottom <= br.bottom, hintIn: hint.bottom <= br.bottom + 1 } })(), focus: document.activeElement?.dataset?.testid ?? null } })()`)
     await save(`${label}-m7-jump-${id}.png`)
     m7.push({ id, pre, post, bg: JSON.stringify(await bg()) === JSON.stringify(bg0) })
   }
-  out.push({ label, M7_jump: m7, allSvgFit: m7.every((x) => x.post.svgFits), bgUnchanged: m7.every((x) => x.bg), fromTop: m7.every((x) => x.pre.top === 0) })
+  out.push({ label, M7_jump: m7, allTogether: m7.every((x) => Object.values(x.post.legendAndFigureTogether).every(Boolean)), allSvgFit: m7.every((x) => x.post.svgFits), bgUnchanged: m7.every((x) => x.bg), fromTop: m7.every((x) => x.pre.top === 0) })
   // M8: イチBiz 全6系列（「全6案」ボタン）。図の右端・表のスクロール枠・パネル内の横溢れ
   await pick('ichibiz-2026')
   await clickSel('[data-testid=jump-eval3]')

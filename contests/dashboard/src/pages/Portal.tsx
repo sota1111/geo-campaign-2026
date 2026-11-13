@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { ChartRadar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -36,7 +36,7 @@ function useNarrow(): boolean {
   )
 }
 
-const COLS = 'lg:grid-cols-[14rem_minmax(0,0.85fr)_minmax(0,1.6fr)_minmax(0,1fr)]'
+const COLS = 'lg:grid-cols-[13rem_minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)]'
 
 const STAGE_WORD: Record<Stage['mark'], string> = { '✓': '済', '？': '判断待ち', '□': 'これから' }
 const STAGE_CLS: Record<Stage['mark'], string> = {
@@ -67,8 +67,14 @@ function Stages({ contest }: { contest: ContestInfo['id'] }) {
 
 type RowProps = { info: ContestInfo; selected: boolean; onSelect: () => void; onKey: (e: React.KeyboardEvent) => void }
 
-/** 縮めた1行（スマホで詳細を選んだあと）。コンペ名・状況・段階の印だけ。1行 40px 前後で、4行とも常に見えて押せる */
-function CompactRow({ info, selected, onSelect, onKey }: RowProps) {
+/**
+ * スマホの1行（固定の高さ 4.25rem）。選んでも解除しても大きさも位置も変わらない（一覧は縮めない）。
+ * 1段目: コンペ名・状況・次の締切、2段目: 段階の印（判断待ちの段階だけ名前つき）、3段目: 最優先の次の一手1行。
+ * 優先順位: 状況＞判断待ちの段階名＞次の一手＞締切
+ */
+function MobileRow({ info, selected, onSelect, onKey }: RowProps) {
+  const nd = nextDeadline(info)
+  const next = CONTEST_STATUS[info.id].next[0]
   return (
     <button
       type="button"
@@ -77,24 +83,47 @@ function CompactRow({ info, selected, onSelect, onKey }: RowProps) {
       aria-pressed={selected}
       aria-controls={`detail-${info.id}`}
       data-testid={`row-${info.id}`}
-      data-compact
-      className={`flex min-h-10 w-full items-center gap-x-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 ${selected ? 'bg-muted ring-2 ring-inset ring-slate-800' : 'bg-card'}`}
+      data-mobile-row
+      className={`grid h-[4.25rem] w-full grid-cols-[0.75rem_minmax(0,1fr)] content-center gap-x-1 gap-y-0.5 overflow-hidden rounded-lg px-1.5 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-slate-800 ${selected ? 'bg-muted ring-2 ring-inset ring-slate-800' : 'bg-card'}`}
     >
-      <span aria-hidden className="w-3 shrink-0">{selected ? '▶' : ''}</span>
-      <span className="shrink-0 text-sm font-bold">{info.tabName}</span>
-      <span className="min-w-0 flex-1 truncate font-bold" data-testid="row-status">
-        <span aria-hidden>▲ </span>
-        <span className="sr-only">提出不可: </span>
-        {STATUS_LABEL[info.id]}
+      <span aria-hidden className="row-span-3 self-center text-[0.625rem]">{selected ? '▶' : ''}</span>
+      <span className="flex min-w-0 items-baseline gap-x-1.5 leading-tight">
+        <span className="shrink-0 text-sm font-bold">{info.tabName}</span>
+        <span className="min-w-0 flex-1 truncate font-bold" data-testid="row-status">
+          <span aria-hidden>▲ </span>
+          <span className="sr-only">提出不可: </span>
+          {STATUS_LABEL[info.id]}
+        </span>
+        <span className="shrink-0 whitespace-nowrap" data-testid="row-deadline">
+          締切 <span className="font-bold">{nd.text}</span>
+        </span>
       </span>
-      <ol className="flex shrink-0 gap-0.5" aria-label="提出までの段階" data-testid="row-progress">
+      <ol className="flex min-w-0 gap-0.5 leading-snug" aria-label="提出までの段階" data-testid="row-progress">
         {STAGES[info.id].map((st) => (
-          <li key={st.label} className={`rounded border px-1 text-xs font-bold ${STAGE_CLS[st.mark]}`} data-testid="row-stage" data-mark={st.mark}>
-            <span aria-hidden>{st.mark}</span>
-            <span className="sr-only">{st.label}（{STAGE_WORD[st.mark]}）</span>
+          <li
+            key={st.label}
+            className={`whitespace-nowrap rounded border px-1 font-bold ${STAGE_CLS[st.mark]}`}
+            data-testid="row-stage"
+            data-mark={st.mark}
+          >
+            {st.mark === '？' ? (
+              <>
+                {st.label} <span aria-hidden>{st.mark}</span>
+                <span className="sr-only">（{STAGE_WORD[st.mark]}）</span>
+              </>
+            ) : (
+              <>
+                <span aria-hidden>{st.mark}</span>
+                <span className="sr-only">{st.label}（{STAGE_WORD[st.mark]}）</span>
+              </>
+            )}
           </li>
         ))}
       </ol>
+      <span className="flex min-w-0 items-center gap-1 leading-tight">
+        {next.decision && <span className="shrink-0 rounded bg-amber-100 px-0.5 font-bold text-amber-950">判断</span>}
+        <span className="min-w-0 flex-1 truncate font-medium" data-testid="row-next">{next.text}</span>
+      </span>
     </button>
   )
 }
@@ -137,7 +166,7 @@ function ContestRow({ info, selected, onSelect, onKey }: RowProps) {
           </span>
           <Remaining at={nd.at} />
         </span>
-        <span className="hidden lg:col-start-2 lg:row-start-2 lg:line-clamp-2" data-testid="row-reason" title={STATUS_REASON[info.id]}>{STATUS_REASON[info.id]}</span>
+        <span className="hidden lg:col-start-2 lg:row-start-2 lg:block lg:leading-snug" data-testid="row-reason" title={STATUS_REASON[info.id]}>{STATUS_REASON[info.id]}</span>
       </span>
       <span className="lg:col-start-3 lg:row-span-2 lg:row-start-1">
         <Stages contest={info.id} />
@@ -166,25 +195,12 @@ export default function Portal() {
     // ハッシュは replaceState で書き換える（スクロールもフォーカス移動も起きない）
     window.history.replaceState(null, '', next.length ? `${HASH_KEY}${next.join(',')}` : window.location.pathname + window.location.search)
   }
-  // 何も選んでいないとき: デスクトップは最初のコンペを開いておく（詳細欄を空にしない）。
-  // スマホは4コンペの状況・進捗の一覧を第一画面に全部見せるため、選ぶまで詳細欄は案内のみ
-  const picked = open[0]
-  const selectedId = picked ?? (narrow ? undefined : sorted[0].id)
+  // 何も選んでいないとき: デスクトップもスマホも最初のコンペを開いておく（詳細欄を空にせず、行の高さも位置も選択で変えない）。
+  // 選んでいる行をもう一度押しても解除しない。別の行を1回押せば切り替わる
+  const selectedId = open[0] ?? sorted[0].id
   const info = CONTEST_INFO.find((c) => c.id === selectedId)
-  // スマホで選んだあとは、一覧を1行ずつに縮めて詳細欄の高さを確保する
-  const compact = narrow && !!picked
-  // 押した行にフォーカスを残す（スマホで行の種類が入れ替わると、要素が作り直されてフォーカスが外れるため）
-  const refocus = useRef<string | undefined>(undefined)
-  useLayoutEffect(() => {
-    if (!refocus.current) return
-    document.querySelector<HTMLElement>(`[data-testid=row-${refocus.current}]`)?.focus({ preventScroll: true })
-    refocus.current = undefined
-  })
-  const select = (id: string) => {
-    // スマホでは、選んでいる行をもう一度押すと一覧が元の大きさに戻る。デスクトップは常にどれかが選ばれている
-    refocus.current = id
-    write(narrow && picked === id ? [] : [id])
-  }
+  const Row = narrow ? MobileRow : ContestRow
+  const select = (id: string) => write([id])
   const onRowKey = (e: React.KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
     e.preventDefault()
@@ -192,24 +208,20 @@ export default function Portal() {
     const i = rows.indexOf(e.currentTarget as HTMLElement)
     rows[(i + (e.key === 'ArrowDown' ? 1 : rows.length - 1)) % rows.length]?.focus({ preventScroll: true })
   }
-  // 詳細欄の中だけを動かす（一覧の scrollY・行 top は変えない）。押した人の操作に限る
+  // 詳細欄の中だけを動かす（一覧の scrollY・行 top は変えない）。押した人の操作に限る。
+  // 図のまとまり（見出し・凡例・図）の先頭を詳細欄の上端に合わせ、同じ視野に入れる
   const jumpToEval3 = () => {
     const box = document.getElementById(`detail-${selectedId}`)
-    const sec = box?.querySelector<HTMLElement>('[data-testid=eval3-contest]')
-    if (!box || !sec) return
-    const b = box.getBoundingClientRect()
-    const toSection = sec.getBoundingClientRect().top - b.top - 8
-    // 詳細欄が低くて、節の先頭に合わせると図が見切れるときは、図の全体が見える位置までにする（見出しは上に外れてよい）
-    const svg = sec.querySelector('svg[data-testid=radar]')?.getBoundingClientRect()
-    const toSvg = svg ? Math.min(svg.bottom - b.bottom + 8, svg.top - b.top - 4) : toSection
-    box.scrollTop += Math.max(toSection, toSvg)
-    sec.querySelector<HTMLElement>('[data-testid=eval3-heading]')?.focus({ preventScroll: true })
+    const target = box?.querySelector<HTMLElement>('[data-testid=eval3-figure]') ?? box?.querySelector<HTMLElement>('[data-testid=eval3-contest]')
+    if (!box || !target) return
+    box.scrollTop += target.getBoundingClientRect().top - box.getBoundingClientRect().top - 6
+    target.querySelector<HTMLElement>('[data-testid=eval3-figure-heading]')?.focus({ preventScroll: true })
   }
   return (
     // ページ全体を画面の高さに収める（上部バー 3rem と main の余白を引く）。詳細欄が残りを使い、中だけスクロールする
     <div className="mx-auto flex h-[calc(100dvh-3rem-1.5rem)] min-h-[32rem] max-w-6xl flex-col gap-1.5 md:-my-4 md:h-[calc(100dvh-3rem-1rem)]">
       <h1 className="sr-only">統合ダッシュボード</h1>
-      <header className="flex shrink-0flex-wrap items-baseline justify-between gap-x-3 lg:hidden">
+      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-3 lg:hidden">
         <span className="text-xs text-muted-foreground">
           {asOf} 時点・締切順<span className="hidden sm:inline">。行を押すと下の欄に詳細が出ます</span>　<span aria-hidden>✓</span> 済　<span aria-hidden>？</span> 判断待ち{' '}
           <span aria-hidden>□</span> これから
@@ -227,21 +239,15 @@ export default function Portal() {
       </ul>
 
       <section aria-label="コンペ一覧" data-testid="contest-list" className="shrink-0 space-y-0.5">
-        {!compact && (
-          <div className={`hidden gap-x-3 px-3 text-xs font-bold text-muted-foreground lg:grid ${COLS}`} aria-hidden>
-            <span>コンペ・締切順</span>
-            <span>状況</span>
-            <span>提出までの段階　✓ 済　？ 判断待ち　□ これから</span>
-            <span>総司令官の次の一手（判断が先）</span>
-          </div>
-        )}
+        <div className={`hidden gap-x-3 px-3 text-xs font-bold text-muted-foreground lg:grid ${COLS}`} aria-hidden>
+          <span>コンペ・締切順</span>
+          <span>状況</span>
+          <span>提出までの段階　✓ 済　？ 判断待ち　□ これから</span>
+          <span>総司令官の次の一手（判断が先）</span>
+        </div>
         {sorted.map((c) => (
           <div key={c.id} className="rounded-lg border-2 border-slate-600 bg-card" data-testid={`contest-${c.id}`}>
-            {compact ? (
-              <CompactRow info={c} selected={c.id === selectedId} onSelect={() => select(c.id)} onKey={onRowKey} />
-            ) : (
-              <ContestRow info={c} selected={c.id === selectedId} onSelect={() => select(c.id)} onKey={onRowKey} />
-            )}
+            <Row info={c} selected={c.id === selectedId} onSelect={() => select(c.id)} onKey={onRowKey} />
           </div>
         ))}
       </section>
@@ -276,6 +282,12 @@ export default function Portal() {
           aria-label={info ? `${info.tabName}の詳細` : '詳細'}
           tabIndex={0}
         >
+          {info && (
+            <p className="mb-2 text-xs" data-testid="detail-reason">
+              <span className="font-bold"><span aria-hidden>▲ </span>提出不可（{STATUS_LABEL[info.id]}）: </span>
+              {STATUS_REASON[info.id]}
+            </p>
+          )}
           {info ? (
             <ContestPanel info={info} onOpenEval={() => setEvalOpen(true)} />
           ) : (
