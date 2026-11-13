@@ -162,5 +162,34 @@ class AgentDefinitions(unittest.TestCase):
             self.assertIn("reports/escalations/", fm, f.name)
 
 
+class GuardSecrets(unittest.TestCase):
+    def r(self, path, tool="Read"):
+        return run("guard_secrets.py", {"tool_name": tool, "tool_input": {"file_path": path}})[0]
+
+    def b(self, cmd):
+        return run("guard_secrets.py", {"tool_name": "Bash", "tool_input": {"command": cmd}})[0]
+
+    def test_blocks_env_files(self):
+        for p in [".env", "/repo/.env", ".env.local", ".env.production", "sub/.env.bak", ".env.anything", "secrets/key.txt"]:
+            self.assertEqual(self.r(p), 2, p)
+        self.assertEqual(self.r(".env", "Edit"), 2)
+        self.assertEqual(run("guard_secrets.py", {"tool_name": "Grep", "tool_input": {"path": ".env.local"}})[0], 2)
+
+    def test_allows_example_and_others(self):
+        for p in [".env.example", "/repo/sub/.env.example", "README.md", "src/env.ts", "doc/secrets.md"]:
+            self.assertEqual(self.r(p), 0, p)
+
+    def test_bash(self):
+        for c in ["cat .env", "cat ./.env.local", "grep KEY .env", "source .env", "ls .env*", "cat secrets/x", "head -1 /repo/.env.production"]:
+            self.assertEqual(self.b(c), 2, c)
+        for c in ["cat .env.example", "cp .env.example /tmp/x.example", "grep -n process.env.FOO src", "npm run dev", "git status"]:
+            self.assertEqual(self.b(c), 0, c)
+
+    def test_registered_in_settings(self):
+        s = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
+        cmds = [h["command"] for e in s["hooks"]["PreToolUse"] if "Read" in e["matcher"] for h in e["hooks"]]
+        self.assertTrue(any("guard_secrets.py" in c for c in cmds))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -10,7 +10,7 @@
 | registry.json の変更は承認制 | CI `guard.yml` の registry-approval ジョブ（ラベル `registry-approved` が必要） |
 | 役割ごとの書き込み範囲 | 各エージェント frontmatter の PreToolUse hook → `guard_paths.py` |
 | 読み取り専用役割のBash制限（整備隊・憲兵） | frontmatter の PreToolUse hook → `guard_bash.py`（連結・リダイレクトも禁止） |
-| 秘密情報を読まない | permissions.deny の Read ルール |
+| 秘密情報を読まない（.env・.env.*・secrets/。.env.example だけは読める） | permissions.deny の Read ルール＋ hook（guard_secrets.py。Read/Edit/Write/Grep/Bash を検査） |
 | 並列作業の衝突防止 | `isolation: worktree`（工兵・偵察隊・陣地転換隊・作戦研究班） |
 | 暴走・予算超過の防止 | `maxTurns` |
 | 根拠のない数値を書かない、registry を勝手に変えない | 本文の規定（強制なし）→ 憲兵が監査 |

@@ -66,6 +66,6 @@
 
 ## 交戦規定（全部隊共通。詳細は doctrine/roe.md）
 - main への push・強制 push・ブランチ削除・マージ・応募送信・公開・デプロイ・外部へのPOSTは禁止（hookで強制）。push は `claude/` ブランチへの通常 push のみ。例外は総司令官補佐（commander-aide）で、総司令官と同じ権限を持つ（再帰削除・強制 push の禁止は残る）
-- 秘密情報（.env, secrets/）を読まない・書かない
+- 秘密情報（.env, .env.*, secrets/）を読まない・書かない（.env.example は読んでよい。hook で強制）
 - 根拠のない数値や効果を書かない。事実には出典を付ける
 - registry.json の変更は総司令官の承認後のみ
