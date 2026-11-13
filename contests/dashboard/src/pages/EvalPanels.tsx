@@ -1,4 +1,5 @@
 import { Bot, Bug, CircleHelp, Flag } from 'lucide-react'
+import { PortalEval3 } from '@/pages/Eval3Panels'
 import { APPS, CONTESTS, type ContestId } from '@/apps/registry'
 import {
   A_ITEMS,
@@ -233,6 +234,8 @@ export function EvalSummary() {
           評価者は各回 Sonnet 4名。ポータルから出発し、画面を操作して採点しました（基準: {RUBRIC_PATH}）。A はポータル（{A_MAX}点）、B は各アプリの操作性・デザイン（{B_MAX}点）、C は各コンペの審査基準に照らした採点です。審査員の採点や順位を予測するものではありません。表の「前→今」は第{PREVIOUS.round}回→第{LATEST.round}回、（　）は差です。
         </p>
       </div>
+
+      <PortalEval3 />
 
       <div className="grid gap-3 lg:grid-cols-[3fr_2fr]">
         <section className="rounded-lg border bg-card p-3" aria-label="全アプリの点数一覧">

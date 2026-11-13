@@ -198,8 +198,24 @@ export default function Portal() {
               閉じる
             </Button>
           </div>
+          <nav aria-label="別のコンペの詳細へ切り替え" className="grid shrink-0 grid-cols-4 gap-1 border-b border-slate-300 px-3 py-1.5" data-testid="sheet-switch">
+            {sorted.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => write([c.id])}
+                aria-pressed={c.id === sheetId}
+                data-testid={`switch-${c.id}`}
+                className={`min-h-9 rounded border-2 px-1 text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-800 ${c.id === sheetId ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-500 bg-card hover:bg-muted'}`}
+              >
+                {c.id === sheetId && <span aria-hidden>● </span>}
+                {c.tabName}
+              </button>
+            ))}
+          </nav>
           <SheetDescription className="sr-only">コンペの詳細。閉じると一覧に戻ります。</SheetDescription>
           <div
+            key={sheetId}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
             id={sheetInfo ? `detail-${sheetInfo.id}` : undefined}
             data-testid={sheetInfo ? `detail-${sheetInfo.id}` : undefined}

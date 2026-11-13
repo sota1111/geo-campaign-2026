@@ -82,6 +82,23 @@ for (const [label, w, h0, mobile] of [['1280', 1280, 765, false], ['390', 390, 8
       out.push({ label, id, before, opened, sheet, sheetInfo: sh, afterWheel: after, closed, sheetGone: await ev(`!document.querySelector('[data-testid=detail-sheet]')`) })
     }
   }
+  {
+    // M6: 詳細を開いたまま、ヘッダーの切り替えで別コンペの詳細へ移る。一覧の scrollY・行 top・scrollHeight は不変、ハッシュも更新、閉じたら最後の行へフォーカス
+    await load()
+    const snap = () => J(`({ scrollY: Math.round(scrollY), tops: ${JSON.stringify(ids)}.map((id) => Math.round(document.querySelector('[data-testid=row-' + id + ']').getBoundingClientRect().top)), docH: document.documentElement.scrollHeight, sw: document.documentElement.scrollWidth })`)
+    const pre = await snap()
+    await clickSel(row('ichibiz-2026'))
+    const steps = []
+    for (const id of ['udc-2026', 'satellite-2026', 'odpt-2026']) {
+      await ev(`document.querySelector('[data-testid=detail-sheet] [data-testid^=detail-]').scrollTop = 200`)
+      await clickSel(`[data-testid=switch-${id}]`)
+      steps.push({ to: id, shown: await ev(`!!document.querySelector('[data-testid=detail-${id}]')`), hash: await ev('location.hash'), pressed: await ev(`document.querySelector('[data-testid=switch-${id}]').getAttribute('aria-pressed')`), innerTop: await ev(`document.querySelector('[data-testid=detail-${id}]').scrollTop`), snap: await snap(), switchRect: await J(rect('[data-testid=sheet-switch]')) })
+    }
+    if (mobile === false) await save(`${label}-08-switched.png`)
+    await clickSel('[data-testid=sheet-close]')
+    const post = await snap()
+    out.push({ label, switchCheck: steps, closedFocus: await ev('document.activeElement?.dataset?.testid'), unchanged: steps.every((s) => JSON.stringify(s.snap) === JSON.stringify(pre)) && JSON.stringify(post) === JSON.stringify(pre), allShown: steps.every((s) => s.shown && s.pressed === 'true') })
+  }
   if (!mobile) {
     // 深部から閉じる: イチBizを開き、パネル内を最下部までスクロールして閉じる。背景の scrollY・行 top・scrollHeight が変わらないこと
     for (const how of ['button', 'esc', 'backdrop']) {

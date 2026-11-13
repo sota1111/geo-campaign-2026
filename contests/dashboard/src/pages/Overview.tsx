@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ContestEval3 } from '@/pages/Eval3Panels'
 import { AlertTriangle, ArrowRight, CalendarClock, CircleHelp, ExternalLink, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getSample } from '@/apps/_samples'
@@ -243,6 +244,7 @@ export function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEv
             )
           })}
         </section>
+      <ContestEval3 contest={info.id} />
       <details className="rounded-lg border bg-muted/30 p-2" data-testid="contest-info">
         <summary className="cursor-pointer text-sm font-bold">募集内容・審査基準・注意点（開いて見る）</summary>
         <div className="mt-2 space-y-3">
