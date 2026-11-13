@@ -117,6 +117,23 @@ class BlockDangerous(unittest.TestCase):
         rc, _ = run("block_dangerous.py", self.b("git push origin bot/x"), env_extra={"CONTEST_PUSH_PREFIX": "bot/"})
         self.assertEqual(rc, 0)
 
+    def aide(self, cmd, agent_type="commander-aide"):
+        return dict(self.b(cmd), agent_id="a1", agent_type=agent_type)
+
+    def test_aide_has_commander_powers(self):
+        for cmd in ["gh pr merge 3 --merge", "git push origin main", "git push origin HEAD:main",
+                    "gh repo view", "gh release create v1", "git push --delete origin claude/x"]:
+            self.assertEqual(run("block_dangerous.py", self.aide(cmd))[0], 0, cmd)
+
+    def test_aide_keeps_safety_rules(self):
+        for cmd in ["rm -rf build", "git push -f origin main", "git push --force origin main",
+                    "git push origin +main", "git push --force-with-lease origin claude/x"]:
+            self.assertEqual(run("block_dangerous.py", self.aide(cmd))[0], 2, cmd)
+
+    def test_other_agents_not_exempt(self):
+        for at in ["engineer", "commander-aide-x", "", None]:
+            self.assertEqual(run("block_dangerous.py", self.aide("gh pr merge 3", at))[0], 2, at)
+
     def test_ignores_non_bash(self):
         self.assertEqual(run("block_dangerous.py", {"tool_name": "Write", "tool_input": {}})[0], 0)
 

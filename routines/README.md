@@ -8,7 +8,7 @@ Routines はリサーチプレビューのため、画面や仕様が変わる�
 1. 各部隊は reports/ や contests/ にファイルを書く（従来どおり）
 2. 参謀長（メインセッション）が `claude/<部隊>-<contest-id>-<YYYYMMDD>` ブランチにコミットして push
 3. `gh pr create` で PR を作成し、本文は `.github/pull_request_template.md` の書式で報告する
-4. **マージは総司令官だけ**（hook と CI で強制）
+4. **マージは総司令官と総司令官補佐（commander-aide）だけ**（hook で強制）。ページを削除する PR は総司令官の許可が必要
 
 `block_dangerous.py` は `claude/` で始まるブランチへの通常 push のみ許可する。クラウド環境の作業ブランチ名が別の接頭辞になる場合は、環境変数 `CONTEST_PUSH_PREFIX` で合わせる。
 

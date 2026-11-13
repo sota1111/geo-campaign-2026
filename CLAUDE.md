@@ -5,7 +5,7 @@
 ## 総司令官の意図
 - 目的: 締切に間に合う、要項に適合した、審査基準で高く評価される応募を出すこと。
 - 優先順位: **失格しないこと ＞ 締切に間に合うこと ＞ 評価を上げること**。
-- 応募フォームへの送信・公開・**main へのマージ**は総司令官だけが行う。部隊は「提出可能な状態」まで仕上げ、PR で報告して止まる。
+- 応募フォームへの送信・公開・**main へのマージ**は総司令官（マージは総司令官補佐も可）だけが行う。部隊は「提出可能な状態」まで仕上げ、PR で報告して止まる。
 
 ## 戦域（詳細は contests/registry.json と contests/<id>/brief.md）
 | id | 大会 | 最初の締切 | 実装 |
@@ -29,6 +29,7 @@
 | 憲兵 | military-police | 要項適合の監査 | reports/audit/ |
 | デザイン審査班 | design-reviewer | 画面デザインの審査（導線・視覚階層・一貫性・アクセシビリティ・スクロール） | reports/design/ |
 | 整備隊 | maintainer | 締切・要項変更の巡回 | reports/maintenance/ |
+| 総司令官補佐 | commander-aide | 総司令官の代理で PR をマージ（権限は総司令官と同じ。ページ削除は総司令官の許可が必要） | reports/command/ |
 
 標準の流れ（1戦域あたり）:
 ```
@@ -59,12 +60,12 @@
 1. `claude/<部隊>-<contest-id>-<YYYYMMDD>` ブランチを作ってコミット（例: `claude/intel-udc-2026-20261110`）
 2. `git push -u origin HEAD`
 3. `gh pr create` で PR を作成し、本文は `.github/pull_request_template.md` の書式で報告する
-4. マージはしない。総司令官のレビューを待つ
+4. 参謀長は自分ではマージしない。PR を作ったら commander-aide に委任する（総司令官の指示は不要。補佐が CI・憲兵・デザイン審査・registry 承認を確かめ、満たさなければマージしない）。**ページを削除する PR は総司令官の許可が必要**で、補佐は許可待ちとして止める
 
 クラウド（Claude Code on the web / Routines）の設定は routines/README.md を参照。
 
 ## 交戦規定（全部隊共通。詳細は doctrine/roe.md）
-- main への push・強制 push・ブランチ削除・マージ・応募送信・公開・デプロイ・外部へのPOSTは禁止（hookで強制）。push は `claude/` ブランチへの通常 push のみ
+- main への push・強制 push・ブランチ削除・マージ・応募送信・公開・デプロイ・外部へのPOSTは禁止（hookで強制）。push は `claude/` ブランチへの通常 push のみ。例外は総司令官補佐（commander-aide）で、総司令官と同じ権限を持つ（再帰削除・強制 push の禁止は残る）
 - 秘密情報（.env, secrets/）を読まない・書かない
 - 根拠のない数値や効果を書かない。事実には出典を付ける
 - registry.json の変更は総司令官の承認後のみ
