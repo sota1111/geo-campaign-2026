@@ -11,7 +11,7 @@ import {
   diffOf,
   sum,
 } from '@/apps/eval-results'
-import { APPS } from '@/apps/registry'
+import { CURRENT_APPS } from '@/apps/registry'
 
 // 評価報告書の小計と、データの項目点の合計が一致することを確かめる（点の転記ミス防止）
 describe('eval-results 第1回（2026-11-11）', () => {
@@ -24,7 +24,7 @@ describe('eval-results 第1回（2026-11-11）', () => {
       expect(sum(ev.b)).toBe(ev.bReported)
       for (const c of ev.c) expect(sum(c.items.map((i) => i.score))).toBe(c.reported)
     }
-    expect(APP_EVALS_R1.map((e) => e.appId).sort()).toEqual(APPS.map((a) => a.id).sort())
+    expect(APP_EVALS_R1.map((e) => e.appId).sort()).toEqual(CURRENT_APPS.map((a) => a.id).sort())
   })
   it('C の満点（ODPT 20・UDC 15・衛星 25・イチBiz 20）', () => {
     const max = (id: string, k: number) => cMax(APP_EVALS_R1.find((e) => e.appId === id)!.c[k])
@@ -42,7 +42,7 @@ describe('eval-results 第2回（2026-11-12）', () => {
       expect(sum(ev.b)).toBe(ev.bReported)
       for (const c of ev.c) expect(cTotal(c)).toBe(c.reported)
     }
-    expect(APP_EVALS_R2.map((e) => e.appId).sort()).toEqual(APPS.map((a) => a.id).sort())
+    expect(APP_EVALS_R2.map((e) => e.appId).sort()).toEqual(CURRENT_APPS.map((a) => a.id).sort())
   })
   it('B の小計が報告書の値（29・28・28・28・27・27・27）', () => {
     expect(APP_EVALS_R2.map((e) => [e.appId, bTotal(e)])).toEqual([

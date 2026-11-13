@@ -1,6 +1,6 @@
 # 統合ダッシュボード（contests/dashboard）
 
-4つのコンペ向けの7つのデモアプリを、1つの静的サイト（React + TypeScript + Tailwind CSS + shadcn/ui）にまとめた土台です。
+4つのコンペ向けの7つのデモアプリ（今の案）と、比較用の新しい案4件を、1つの静的サイト（React + TypeScript + Tailwind CSS + shadcn/ui）にまとめた土台です。
 サイドバーに「概要」とコンテスト別の7アプリがあり、スマホ幅ではサイドバーがシートになります。
 
 ## 起動
@@ -34,8 +34,29 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 | `apps/biz-business/` | バス路線見直し案の比較 |
 | `apps/biz-idea/` | 地名の記憶マップ |
 | `apps/biz-realestate/` | 相談前の1枚シート |
+| `apps/sat-alpha/` | 配電線沿いの優先伐採地図（**新しい案・比較用・未選定**。sat-b の隣） |
+| `apps/biz-business-nb/` | 使用済み太陽光パネルの回収圏計画（新しい案。biz-business の隣） |
+| `apps/biz-realestate-rn1/` | 住む場所の先行き（新しい案。biz-realestate の隣） |
+| `apps/odpt-teiji/` | バス定時性カルテ（新しい案。odpt の隣） |
 
 仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
+
+## 新しい案（比較用・未選定）の足し方
+
+総司令官が「今の案」と「新しい案」を見比べて選ぶため、新しい案は今の案と同じコンペ・部門の隣に並べます（ポータルのコンペタブ内で、今の案の右に破線の枠の「新しい案（比較用・未選定）」カード。サイドバーにも同じ表示）。今の案のアプリは変更しません。
+
+新しい案は React に書き直さず、**元の静的版をそのまま `public/embedded/<id>/` にコピーし、独立ページ `apps/<id>/` の iframe で開きます**（数値・注意書き・出典は元のまま）。ページ上部の帯に「新しい案（比較用・未選定）」・今の案へのリンク・「この案だけ別タブで開く」が出ます。コピーは `npm run copy-data` が行い、`public/embedded/`・`public/vendor/` は生成物（git 管理外）です。元の静的版が unpkg から読む MapLibre は、コピー時に `node_modules/maplibre-gl` の同梱版へ差し替えます（SRI 属性も外す。元のファイルは変更しない）。
+
+追加手順（例: `udc-aed` = 夜間・休日に使えるAED地図、元は `contests/udc-2026/app/aed-night/`）:
+
+1. `scripts/copy-data.mjs` の `EMBEDS` に1行足す: `'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', ..., 'data'] }`（実行に要るファイル・フォルダだけ。tests/・tools/・README は除く。元の置き場に `web/` があれば `.../web`）。データが `.js` で `<script>` から読まれる形ならそのままコピーでよい。
+2. `src/apps/registry.ts` の `APPS` に1件足す: `plan: 'new'`, `pairWith: 'udc-moritsuchi'`（隣に置く今の案の id）, `embed: 'udc-aed'`, `pairNote`（任意）, `name`・`purpose`・`dataKind`・`dataNote`・`deadline`（元の README・画面の文言から。数字を足さない）。
+3. `src/apps/udc-aed/index.tsx` を作る（`EmbeddedApp` を `appId="udc-aed"` で返すだけ。他の新しい案 `src/apps/sat-alpha/index.tsx` と同じ）。`src/standalone/udc-aed.tsx`（`mountStandalone('udc-aed', App)`）と `apps/udc-aed/index.html`（`apps/sat-alpha/index.html` の `sat-alpha` と題名を置き換え）を作る。
+4. `vite.config.ts` の `APP_IDS` に `'udc-aed'` を足す。`scripts/roundtrip.mjs` の `ids` にも足す。
+5. アイデア部門 IN1 のカード（`registry.ts` の `CARDS_ONLY`、`biz-idea-in1`。デモなしのカード）の `note` を、AED アプリ公開後に「デモは UDC の AED アプリ」へのリンク付きの文言に直す（必要なら `CardOnly` に `demoAppId` を足して `開く` を出す）。
+6. 確認: `npm run typecheck && npm test && npm run build`、`npm run preview` を起動して `node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots/newplans apps/udc-aed/ embedded/udc-aed/`（コンソールエラーなし）と `node scripts/roundtrip.mjs http://127.0.0.1:8840/`。テストの `src/test/shared.test.ts` の件数（新しい案4件）を更新する。
+
+元の置き場がこのブランチに無い場合（別ブランチで作成中など）は、`CONTESTS_ROOT=<その checkout の contests/ の絶対パス> npm run build` で別 checkout から読めます。
 
 ## 構成と、工兵が触ってよい範囲
 

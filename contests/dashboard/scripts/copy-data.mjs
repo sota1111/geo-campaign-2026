@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(here, '..') // contests/dashboard
-const contests = path.resolve(root, '..') // contests
+// 元アプリの置き場（contests/）。新しい案のソースがまだこのブランチに無い時は CONTESTS_ROOT で別の checkout の contests/ を指す
+const contests = process.env.CONTESTS_ROOT ? path.resolve(process.env.CONTESTS_ROOT) : path.resolve(root, '..')
 
 /** id -> { src: 元アプリのデータフォルダ, files: [...] }
  *  files の要素: 'name.json' | 'name.geojson'（そのままコピー）
@@ -63,3 +64,44 @@ for (const [id, def] of Object.entries(SOURCES)) {
   }
 }
 console.log(`copy-data: ${count} files -> public/data/<id>/`)
+
+// ---- 新しい案（比較用・未選定）: 元の静的版を public/embedded/<id>/ にそのままコピーし、独立ページの iframe で開く ----
+// 元の静的版は変更しない（コピーするだけ）。index.html だけ、unpkg の MapLibre（SRI付き）を同梱コピー
+// （public/vendor/maplibre-gl/、node_modules の maplibre-gl）に差し替える。ネットに依存せず、バージョンも揃う。
+/** id -> { src: 元アプリのフォルダ, files: ファイル／フォルダ（実行に要るものだけ。tests/・tools/・README は含めない） } */
+const EMBEDS = {
+  'sat-alpha': { src: 'satellite-2026/app/proposal-alpha', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'biz-business-nb': { src: 'ichibiz-2026/app/business-nb/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'biz-realestate-rn1': { src: 'ichibiz-2026/app/realestate-rn1/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'odpt-teiji': { src: 'odpt-2026/app-teiji/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+}
+const vendorOut = path.join(root, 'public', 'vendor', 'maplibre-gl')
+fs.mkdirSync(vendorOut, { recursive: true })
+for (const f of ['maplibre-gl.js', 'maplibre-gl.css']) {
+  fs.copyFileSync(path.join(root, 'node_modules', 'maplibre-gl', 'dist', f), path.join(vendorOut, f))
+}
+let embedCount = 0
+for (const [id, def] of Object.entries(EMBEDS)) {
+  const srcDir = path.join(contests, def.src)
+  if (!fs.existsSync(srcDir)) throw new Error(`新しい案の元アプリが見つかりません: ${srcDir}（別 checkout にある場合は CONTESTS_ROOT=<その contests/> を指定）`)
+  const outDir = path.join(root, 'public', 'embedded', id)
+  fs.rmSync(outDir, { recursive: true, force: true })
+  fs.mkdirSync(outDir, { recursive: true })
+  for (const f of def.files) {
+    const from = path.join(srcDir, f)
+    const to = path.join(outDir, f)
+    if (f === 'index.html') {
+      let html = fs.readFileSync(from, 'utf8')
+      html = html
+        .replace(/<link rel="stylesheet" href="https:\/\/unpkg\.com\/maplibre-gl@[^"]*maplibre-gl\.css"[^>]*>/, '<link rel="stylesheet" href="../../vendor/maplibre-gl/maplibre-gl.css">')
+        .replace(/<script src="https:\/\/unpkg\.com\/maplibre-gl@[^"]*maplibre-gl\.js"[^>]*><\/script>/, '<script src="../../vendor/maplibre-gl/maplibre-gl.js"></script>')
+      // favicon の指定がない元ページは、favicon.ico の 404 が出るので空のアイコンを足す
+      if (!/rel="icon"/.test(html)) html = html.replace('<head>', '<head>\n<link rel="icon" href="data:,">')
+      fs.writeFileSync(to, html)
+    } else {
+      fs.cpSync(from, to, { recursive: true })
+    }
+    embedCount++
+  }
+}
+console.log(`copy-data: ${embedCount} items -> public/embedded/<id>/（新しい案の静的版）`)
