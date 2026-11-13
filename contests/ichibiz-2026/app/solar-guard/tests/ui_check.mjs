@@ -143,6 +143,17 @@ async function run(label, w, h, mobile) {
   res = await c.ev('document.getElementById("diag-result").innerText');
   if (!/実施している\s*1/.test(res) || !/実施していない\s*1/.test(res)) problems.push(label + ': 回答が結果に反映されない: ' + res.slice(0, 200));
   if (!res.includes('出典')) problems.push(label + ': 未実施の対策に出典がない');
+  // 区分・回答の変更後も、受付欄の要約が結果欄の件数と一致する（デザイン再審査 M1）
+  const sumNums = async () => c.ev('(function(){var t=document.getElementById("pos-msg").innerText,r=document.getElementById("diag-result").innerText;var a=/対象(\\d+)項目のうち、実施していない(\\d+)件・わからない(\\d+)件/.exec(t),b=/対象(\\d+)項目[\\s\\S]*?実施していない\\s*(\\d+)\\s*／\\s*わからない\\s*(\\d+)/.exec(r);return {a:a&&a.slice(1).join(","),b:b&&b.slice(1).join(","),link:!!document.getElementById("go-result"),y:window.scrollY};})()');
+  let sn = await sumNums();
+  if (!sn.a || sn.a !== sn.b || !sn.link) problems.push(label + ': 回答変更後に要約と結果の件数が一致しない ' + JSON.stringify(sn));
+  await click(c, '#ctl-class button:nth-child(2)');
+  await click(c, '.cl-item .seg button[data-v="no"]');
+  await sleep(200);
+  sn = await sumNums();
+  if (!sn.a || sn.a !== sn.b || !sn.link) problems.push(label + ': 区分・回答変更後に要約と結果の件数が一致しない ' + JSON.stringify(sn));
+  if (sn.y !== 0) problems.push(label + ': 要約の更新で勝手にスクロールした y=' + sn.y);
+  await click(c, '#ctl-class button:nth-child(1)');
   await c.ev('window.scrollTo(0,0)');
   await shot(c, `${label}-2-diag.png`, false);  // 入力が正常な状態（警告表示中でない）で、最初の画面を撮る
   // 範囲外・不正入力
