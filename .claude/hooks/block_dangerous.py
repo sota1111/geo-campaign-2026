@@ -5,6 +5,9 @@
 そのため push は「作業ブランチ（既定 claude/）への通常 push」だけを許可し、
 main への push・強制 push・ブランチ削除・マージ・公開・デプロイ・外部 POST はブロックする。
 作業ブランチの接頭辞は環境変数 CONTEST_PUSH_PREFIX で変更できる。
+
+総司令官補佐（hook 入力の agent_type == "commander-aide"）は総司令官と同じ権限を持つため、
+「総司令官のみ」の制限は外し、全員共通の安全規定（再帰削除・強制 push）だけを適用する。
 """
 import json
 import os
@@ -15,6 +18,12 @@ import sys
 
 PREFIX = os.environ.get("CONTEST_PUSH_PREFIX", "claude/")
 PROTECTED = {"main", "master"}
+AIDE = "commander-aide"
+
+# 総司令官補佐にも適用する、全員共通の安全規定
+AIDE_BLOCK = [
+    (r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f|\brm\s+-[a-zA-Z]*f[a-zA-Z]*r", "再帰削除は禁止"),
+]
 
 ALWAYS_BLOCK = [
     (r"\bgh\s+pr\s+merge\b", "PRのマージは総司令官のみ"),
@@ -40,6 +49,22 @@ def current_branch(cwd: str) -> str | None:
         return name if out.returncode == 0 and name else None
     except Exception:
         return None
+
+
+def check_push_force(segment: str) -> str | None:
+    """強制 push だけを検査する（総司令官補佐用）。"""
+    try:
+        toks = shlex.split(segment)
+    except ValueError:
+        return "git push を解釈できません"
+    args = toks[toks.index("push") + 1:]
+    for a in args:
+        if a in ("-f", "--mirror") or a.startswith("--force") \
+                or (a.startswith("-") and not a.startswith("--") and "f" in a[1:] and a != "-u"):
+            return f"git push の {a} は禁止"
+        if not a.startswith("-") and a.startswith("+"):
+            return "強制 push（+refspec）は禁止"
+    return None
 
 
 def check_push(segment: str, cwd: str) -> str | None:
@@ -83,6 +108,16 @@ def main() -> int:
         return 0
     cmd = (data.get("tool_input") or {}).get("command", "")
     cwd = data.get("cwd") or os.getcwd()
+    if data.get("agent_type") == AIDE:
+        for pat, why in AIDE_BLOCK:
+            if re.search(pat, cmd):
+                return block(f"{why}。コマンド: {cmd}")
+        for seg in re.split(r"&&|\|\||;|\n|\|", cmd):
+            if re.search(r"\bgit\b.*\bpush\b", seg):
+                why = check_push_force(seg.strip())
+                if why:
+                    return block(f"{why}。コマンド: {cmd}")
+        return 0
     for pat, why in ALWAYS_BLOCK:
         if re.search(pat, cmd):
             return block(f"{why}。コマンド: {cmd}")
