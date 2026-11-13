@@ -73,9 +73,11 @@
       <h2>見方の注意</h2>
       <ul class="small">
         <li><b>圏内・圏外の判定</b>は、250mメッシュの中心から使えるAEDまでの<b>直線距離</b>です（道路網ではありません。実際の道のりは直線より長くなり、川・線路・坂は考慮していません）。徒歩1分＝80mで換算すると直線500mは約6分ですが、AEDを取って現場に戻る往復は含みません。</li>
-        <li><b>祝日・年末年始・特記事項</b>（「第2日曜は休み」など）は反映していません。利用可能曜日と時間だけを見ています。</li>
-        <li><b>人口</b>は令和2年国勢調査の250mメッシュ。少人数のメッシュは秘匿（*）で含まれず、実際より少なく出ます。昼間人口や、夜間にその場にいる人数ではありません。</li>
-        <li><b>「境界付近」</b>（市の境界から800m以内）は、隣の自治体のAEDを読み込んでいないため圏外が多めに出ます。</li>
+        <li><b>祝日・年末年始</b>は反映していません。町田市の「利用可能日時特記事項」は、「土曜日、日曜日の利用可能時間は8:00～21:00」「日曜日は終日利用不可」のように曜日と時間が書かれたものだけ反映し、「第2日曜は休み」「8月は…」など週や季節で変わるものと、「貸出がある場合のみ」など条件付きのもの（条件付きは不明に回しています）は反映していません。</li>
+        <li><b>一般の人が使えない設置位置</b>（救急車の中、病室・診察室・医務室など）のAEDは、登録されていても台数に数えず、地図に灰色で示します。病院や施設のロビー・玄関などは数えますが、夜間に建物へ入れるかは確認できません。</li>
+        <li><b>人口</b>は令和2年国勢調査（常住人口）の250mメッシュで、深夜にその地区に住んでいる人数に近い数字です。昼間の人の動き（通勤・通学）は含まないので、14時などの昼は実際の人の分布とずれます。少人数のメッシュは秘匿（*）で含まれず、実際より少なく出ます。</li>
+        <li><b>「境界付近」</b>（市の境界から800m以内）は、隣の自治体のAEDを読み込んでいないため圏外が多めに出ます。そのため、見出しの数字は市境から800m以上内側の人口だけで数え、市境付近を含む全体の数字は上限として別に書いています。</li>
+        <li><b>「平日」</b>は月曜だけで代表させていません。プリセットは水曜で、見出しに月〜金の幅を出します（祝日は反映していません）。</li>
         <li>データは取得時点のものです。AEDの撤去・移設、データの更新は反映されません。</li>
       </ul>
     </section>
@@ -85,7 +87,8 @@
       <ul id="credits"></ul>
       <ul>
         <li>人口: <a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener">政府統計の総合窓口（e-Stat）統計GIS</a>「令和2年国勢調査 地域メッシュ統計（250mメッシュ、世界測地系）」（総務省統計局）を加工。</li>
-        <li>市の境界: 国土交通省「国土数値情報（行政区域データ）」をもとに NII（情報・システム研究機構）が加工した <a href="https://geoshape.ex.nii.ac.jp/city/" target="_blank" rel="noopener">Geoshape リポジトリ</a>（CC BY-SA 4.0）。地図表示用に単純化。</li>
+        <li>市の境界: 国土交通省「国土数値情報（行政区域データ）」をもとに、CODH・NII（情報・システム研究機構）の <a href="https://geoshape.ex.nii.ac.jp/city/" target="_blank" rel="noopener">Geoshape</a> が加工したデータ（Geoshape は <a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）を、地図表示用に単純化して作成。</li>
+        <li>井原市・倉敷市のAED: 出典「<a href="https://www.okayama-opendata.jp/" target="_blank" rel="noopener">おかやまオープンデータカタログ</a>」（井原市 <a href="https://www.okayama-opendata.jp/datasets/649" target="_blank" rel="noopener">AED設置施設</a>、倉敷市 <a href="https://www.okayama-opendata.jp/datasets/496" target="_blank" rel="noopener">AED設置施設</a>）を、BODIK ODM 経由で取得して加工して作成（公共データ利用規約 第1.0版）。加工は本作品の作成者による。県・市が作成したものではありません。</li>
         <li>地区名: <a href="https://maps.gsi.go.jp/development/api.html" target="_blank" rel="noopener">国土地理院 逆ジオコーダ</a>の結果。</li>
         <li>背景: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院 地理院タイル（淡色地図）</a>。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従う。</li>
         <li>地図描画: MapLibre GL JS 4.7.1（BSD-3-Clause）。</li>

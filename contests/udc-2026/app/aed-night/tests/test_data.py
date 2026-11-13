@@ -30,16 +30,43 @@ class TestData(unittest.TestCase):
             self.assertEqual(n, m["with_xy"], m["id"])
             self.assertEqual(sum(m["kinds"].values()), n, m["id"])
             self.assertLessEqual(m["with_xy"], m["rows"])
+            self.assertEqual(sum(1 for a in self.d["aed"] if a[0] == i and a[5] == 4), m["kinds"]["nonpublic"], m["id"])
             self.assertEqual(sum(m["unknown_reasons"].values()), m["kinds"]["unknown"], m["id"])
             pop = sum(c[4] for c in self.d["cells"] if c[0] == i)
             self.assertEqual(pop, m["pop"], m["id"])
 
-    def test_machida_matches_recon_measurement(self):
-        # 偵察隊の実測（2026-11-09取得、簡易判定）: 町田市337台、緯度経度と曜日・時間の記入あり288台
+    def test_machida_registered_count_excludes_blank_rows(self):
+        # 町田市の元CSVは337行だが、うち49行は名称・座標・時間とも空の行。登録は288台で、全部に座標がある
         m = next(x for x in self.d["munis"] if x["id"] == "machida")
-        self.assertGreaterEqual(m["rows"], 330)
-        self.assertEqual(m["with_xy"], 288)
+        self.assertEqual((m["rows"], m["blank_rows"], m["with_xy"]), (288, 49, 288))
+        self.assertEqual(m["rows"] + m["blank_rows"], 337)
         self.assertEqual(m["out_of_range"], 1)  # 高ヶ坂学童保育クラブ（座標が市外）
+
+    def test_machida_24h_is_two_sites_and_ambulance_is_not_counted(self):
+        # 町田市の24時間AEDは、町田市民病院（同一座標）と薬師池公園警備室の2か所。救急車内・病棟内廊下・外来は数えない
+        mi = [m["id"] for m in self.d["munis"]].index("machida")
+        m24 = [a for a in self.d["aed"] if a[0] == mi and a[5] == 0 and not a[8]]
+        self.assertEqual((len(m24), len({(a[1], a[2]) for a in m24})), (11, 2))
+        self.assertFalse(any("救急車" in a[3] + a[4] for a in m24))
+        priv = [a[4] for a in self.d["aed"] if a[0] == mi and a[5] == 4]
+        self.assertTrue(any("救急車" in x for x in priv), priv)
+
+    def test_machida_special_notes_are_reflected(self):
+        # 学校など52台は、特記事項で土日祝の利用可能時間が8:00～21:00と書かれている。日曜の午前中に使える
+        mi = [m["id"] for m in self.d["munis"]].index("machida")
+        m = self.d["munis"][mi]
+        self.assertGreaterEqual(m["notes"]["applied"], 52)
+        sunday_morning = [a for a in self.d["aed"] if a[0] == mi and a[5] == 1 and a[7] == 2
+                          and any((w[0] >> 6) & 1 and w[1] <= 600 < w[2] for w in a[6])]
+        self.assertGreaterEqual(len(sunday_morning), 50)
+        self.assertEqual(m["notes"]["none"] + m["notes"]["noted"] + m["notes"]["applied"] + m["notes"]["conditional"], m["with_xy"])
+
+    def test_edge_population_is_recorded(self):
+        for i, m in enumerate(self.d["munis"]):
+            edge = sum(c[4] for c in self.d["cells"] if c[0] == i and c[5])
+            self.assertEqual(edge, m["edge_pop"], m["id"])
+        m = next(x for x in self.d["munis"] if x["id"] == "machida")
+        self.assertGreater(m["edge_pop"] / m["pop"], 0.5)  # 町田市は市境付近が人口の約59%
 
     def test_aed_records_valid(self):
         for a in self.d["aed"]:
@@ -48,12 +75,13 @@ class TestData(unittest.TestCase):
             if out:
                 continue
             self.assertTrue(bb[0] - 0.2 < lon < bb[2] + 0.2 and bb[1] - 0.2 < lat < bb[3] + 0.2, name)
-            self.assertIn(kind, (0, 1, 2, 3))
+            self.assertIn(kind, (0, 1, 2, 3, 4))
+            self.assertIn(note, (0, 1, 2))
             if kind in (1, 3):
                 self.assertTrue(payload)
                 for mask, s, e in payload:
                     self.assertTrue(1 <= mask <= 127 and 0 <= s < e <= 1440, (name, payload))
-            elif kind == 2:
+            elif kind in (2, 4):
                 self.assertIsInstance(payload, str)
             else:
                 self.assertEqual(payload, [])
@@ -90,10 +118,14 @@ class TestSource(unittest.TestCase):
         for text in (html, readme):
             for w in ("CC BY", "国勢調査", "国土地理院", "民間の24時間AED"):
                 self.assertIn(w, text)
+            self.assertNotIn("BY-SA", text)  # Geoshape は公式表記の CC BY 4.0
+            self.assertIn("おかやまオープンデータカタログ", text)
         d = json.loads(read("data/aed.json"))
         for m in d["munis"]:
             self.assertIn(m["name"], readme)
             self.assertIn(m["license"].split("（")[0], readme)
+            if m["id"] in ("ibara", "kurashiki"):
+                self.assertIn("おかやまオープンデータカタログ", m["credit"])
 
     def test_no_forbidden_terms_on_screen(self):
         text = read("index.html") + read("app.js")

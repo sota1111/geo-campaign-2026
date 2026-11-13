@@ -70,14 +70,15 @@ async function scenario(w, h, tag) {
   await c.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 720 });
   await load(c, base + '#m=machida&d=0&t=180&r=500&mode=strict');
   check(`${tag} 起動して4自治体のボタン`, await c.ev('document.querySelectorAll("#ctl-muni button").length') === 4);
-  check(`${tag} 町田市・平日3時: 使えるAEDは確認できた分だけ(14台)`, await c.ev('App.S.cov.usable.length') === 14);
+  check(`${tag} 町田市・午前3時: 使えるAEDは11台・2か所（救急車内などは数えない）`, await c.ev('App.S.cov.usable.length') === 11 && await c.ev('App.S.cov.sites') === 2);
+  check(`${tag} 見出しに設置か所数と、市境付近を除いた旨と全体の数字`, /2か所/.test(await c.ev('document.getElementById("headline").textContent')) && /市境付近（800m以内）を含む市全体/.test(await c.ev('document.getElementById("headline").textContent')));
   check(`${tag} 圏外メッシュが描画されている`, await c.ev('App.getMap().queryRenderedFeatures({layers:["cells-fill"]}).length') > 0);
   check(`${tag} 見出しに圏外の人数と割合`, /約[\d,]+人（\d+(\.\d)?%）/.test(await c.ev('document.getElementById("headline").textContent')));
   check(`${tag} 空白の意味（民間の24時間AEDは載らない）を常時表示`, (await c.ev('document.querySelector(".notice.warn").textContent')).includes('民間の24時間AED'));
   await c.shot(`${tag}-1-night.png`);
   const night = await popOut(c);
 
-  await click(c, '#presets button:nth-child(2)'); // 平日14時
+  await click(c, '#presets button:nth-child(2)'); // 水曜14時
   await sleep(800);
   const day = await popOut(c);
   check(`${tag} 14時は3時より圏外が少ない`, day < night, `3時=${night} 14時=${day}`);

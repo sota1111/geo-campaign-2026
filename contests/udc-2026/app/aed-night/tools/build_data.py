@@ -6,7 +6,8 @@ usage: python3 -I tools/build_data.py <fetch_raw.py の作業ディレクトリ>
 
 出力 aed.json:
   munis: 自治体ごとの出典・件数・時間表記の集計
-  aed:   [muni番号, 緯度, 経度, 名称, 設置位置, 種別(0=24時間/1=時間指定/2=不明/3=曜日を毎日と仮定した時間指定), 窓 or 理由コード, 特記事項あり, 座標が市の範囲外(0/1。市境から約1km超。除外せず印を付けて数える)]
+  aed:   [muni番号, 緯度, 経度, 名称, 設置位置, 種別(0=24時間/1=時間指定/2=不明/3=曜日を毎日と仮定した時間指定/4=一般の人が使えない設置位置（救急車内・病棟・職員室など）), 窓 or 理由コード,
+          特記事項(0=なし/1=あり・曜日と時間には反映できなかった/2=あり・曜日と時間に反映した。祝日・年末年始・第N週は未反映), 座標が市の範囲外(0/1。市境から約1km超。除外せず印を付けて数える)]
          窓 = [[曜日ビット(月=1,火=2,…,日=64), 開始分, 終了分], ...]
   cells: [muni番号, メッシュコード, 中心緯度, 中心経度, 人口, 境界付近(0/1), 地区番号]
   areas: 地区名（逆ジオコーダが返した町丁目名。500mメッシュ中心の住所なので目安）
@@ -35,6 +36,7 @@ UA = {"User-Agent": "udc2026-aed-night/0.1 (research; GET only)"}
 EDGE_M = 800  # 境界からこの距離以内の地区は、隣の自治体のAEDが入っていないため過大評価の可能性
 REVGEO = "https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lon={lon}&lat={lat}"
 KIND = {"24h": 0, "timed": 1, "unknown": 2}
+NOTE_CODE = {"none": 0, "noted": 1, "applied": 2, "conditional": 1}
 
 
 def mesh_center(code):
@@ -77,19 +79,21 @@ def load_aeds(m, work, assume):
                 avail = aed_time.parse_availability("", "", "", (mm.group(1) if mm else free).strip(), assume)
                 mp = re.search(r"設置場所[：:]([^\n]*)", free)
                 rec = {"name": x["名称"].strip(), "place": mp.group(1).strip() if mp else "",
-                       "note": 1 if (mm and re.search(r"[（(〔].*[）)〕]", mm.group(1))) else 0}
+                       "note": 1 if (mm and re.search(r"[（(〔].*[）)〕]", mm.group(1))) else 0, "nstat": "none"}
             else:
                 lat, lon = float(x["緯度"]), float(x["経度"])
                 avail = aed_time.parse_availability(x["利用可能曜日"], x["開始時間"], x["終了時間"], "", assume)
-                rec = {"name": x["名称"].strip(), "place": x.get("設置位置", "").strip(),
-                       "note": 1 if x.get("利用可能日時特記事項", "").strip() else 0}
+                note_text = x.get("利用可能日時特記事項", "").strip()
+                avail, nstat = aed_time.apply_special_note(avail, note_text)
+                rec = {"name": x["名称"].strip(), "place": x.get("設置位置", "").strip(), "note": NOTE_CODE[nstat], "nstat": nstat}
         except (ValueError, KeyError):
             out.append(None)  # 緯度経度なし
             continue
         if not (20 < lat < 46 and 122 < lon < 154):
             out.append(None)
             continue
-        rec.update(lat=round(lat, 5), lon=round(lon, 5), avail=avail)
+        avail, access = aed_time.classify_access(rec["name"], rec["place"], avail)
+        rec.update(lat=round(lat, 5), lon=round(lon, 5), avail=avail, access=access)
         out.append(rec)
     return rows, out
 
@@ -157,24 +161,33 @@ def main():
         pprep = prep(poly)
         rows_strict, parsed_strict = load_aeds(m, work, False)
         _, parsed_assume = load_aeds(m, work, True)
-        # 集計（曜日の仮定なし／あり）
-        total = len(rows_strict)
+        # 集計（曜日の仮定なし／あり）。登録数は名称のある行（元CSVには名称も座標も空の行が含まれることがある）
+        total = sum(1 for r in rows_strict if (r.get("名称") or "").strip())
+        blank_rows = len(rows_strict) - total
         with_xy = sum(1 for p in parsed_strict if p)
-        reasons, kinds = {}, {"24h": 0, "timed": 0, "unknown": 0}
-        kinds_a = {"24h": 0, "timed": 0, "unknown": 0}
+        reasons, kinds = {}, {"24h": 0, "timed": 0, "unknown": 0, "nonpublic": 0}
+        kinds_a = {"24h": 0, "timed": 0, "unknown": 0, "nonpublic": 0}
+        notes = {"none": 0, "noted": 0, "applied": 0, "conditional": 0}
         for p, pa in zip(parsed_strict, parsed_assume):
             if not p:
+                continue
+            notes[p["nstat"]] += 1
+            if p["access"] == "nonpublic":
+                kinds["nonpublic"] += 1
+                kinds_a["nonpublic"] += 1
                 continue
             kinds[p["avail"]["kind"]] += 1
             kinds_a[pa["avail"]["kind"]] += 1
             if p["avail"]["kind"] == "unknown":
                 reasons[p["avail"]["reason"]] = reasons.get(p["avail"]["reason"], 0) + 1
-        n_assumed = sum(1 for p in parsed_assume if p and p["avail"]["assumed"])
+        n_assumed = sum(1 for p in parsed_assume if p and p["avail"]["assumed"] and p["access"] == "public")
         for p, pa in zip(parsed_strict, parsed_assume):
             if not p:
                 continue
             a_s, a_a = p["avail"], pa["avail"]
-            if a_s["kind"] != "unknown":
+            if p["access"] == "nonpublic":
+                kind, payload = 4, "nonpublic"
+            elif a_s["kind"] != "unknown":
                 kind = KIND[a_s["kind"]]
                 payload = [] if a_s["kind"] == "24h" else days_mask(a_s["windows"])
             elif a_a["kind"] != "unknown":
@@ -219,9 +232,10 @@ def main():
             "id": m["id"], "name": m["name"], "pref": m["pref"], "code": m["code"], "format": m["format"],
             "bbox": [round(minx, 4), round(miny, 4), round(maxx, 4), round(maxy, 4)],
             "dataset": m["dataset"], "landing": m["landing"], "license": m["license"], "credit": m["credit"],
-            "rows": total, "with_xy": with_xy,
-            "kinds": kinds, "kinds_if_everyday": kinds_a, "assumed_days": n_assumed, "unknown_reasons": reasons,
+            "rows": total, "blank_rows": blank_rows, "with_xy": with_xy,
+            "kinds": kinds, "kinds_if_everyday": kinds_a, "assumed_days": n_assumed, "unknown_reasons": reasons, "notes": notes,
             "out_of_range": sum(1 for a in aeds if a[0] == mi and a[8]), "cells": len(sel), "pop": sum(c[3] for c in sel),
+            "edge_cells": sum(1 for c in sel if c[4]), "edge_pop": sum(c[3] for c in sel if c[4]),
         })
     cpath.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
     meta = {"mesh": src["mesh_note"], "edge_m": EDGE_M, "areas": areas, "munis": munis, "aed": aeds, "cells": cells_out}

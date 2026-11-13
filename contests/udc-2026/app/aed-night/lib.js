@@ -8,12 +8,20 @@
   var DAYS = ["月", "火", "水", "木", "金", "土", "日"];
   var RADII = [300, 500, 800];
   var DEF = { m: "machida", d: 0, t: 180, r: 500, mode: "strict" };
-  /* AED レコードの種別: 0=24時間 1=時間指定 2=不明 3=曜日が空欄で時刻だけある（毎日と仮定した場合のみ使える） */
-  var K24 = 0, KTIMED = 1, KUNKNOWN = 2, KASSUMED = 3;
+  /* AED レコードの種別: 0=24時間 1=時間指定 2=不明 3=曜日が空欄で時刻だけある（毎日と仮定した場合のみ使える）
+     4=一般の人が使えない設置位置（救急車内・病室・診察室・医務室など）。どのモードでも「使える」に数えない */
+  var K24 = 0, KTIMED = 1, KUNKNOWN = 2, KASSUMED = 3, KNONPUBLIC = 4;
+  /* 最大見積でも、夜間（22時〜翌6時）に使える根拠がない不明の理由（施設の開館時間・条件付き・季節別・終日の意味が不明など） */
+  var NIGHT_NO = { facility: 1, conditional: 1, seasonal: 1, closure: 1, allday: 1, multi: 1 };
+  var NIGHT_FROM = 22 * 60, NIGHT_TO = 6 * 60;
   var REASON_LABEL = {
     empty: "曜日・時間とも未記入",
     facility: "「施設の開館時間」など時刻が書かれていない",
-    conditional: "「学校使用時のみ」など条件付きで時刻が読めない",
+    conditional: "「学校使用時のみ」「施錠」など条件付きで時刻が読めない",
+    allday: "「終日」だけで、24時間か開館中かが区別できない",
+    seasonal: "季節や月で時間が変わる記載",
+    closure: "休館日以外、とあるが休みの曜日が書かれていない",
+    multi: "複数の設置箇所の条件が混ざった記載",
     no_time: "曜日だけで時刻がない",
     no_day: "時刻だけで曜日がない",
     garbled: "解釈できない記載",
@@ -25,7 +33,10 @@
     var kind = aed[5];
     if (kind === K24) return true;
     if (kind === KTIMED) return inWindows(aed[6], day, minute);
-    return mode === "max";
+    if (kind === KNONPUBLIC) return false;
+    if (mode !== "max") return false;
+    if (kind === KUNKNOWN && NIGHT_NO[aed[6]] && (minute >= NIGHT_FROM || minute < NIGHT_TO)) return false;
+    return true;
   }
   function inWindows(wins, day, minute) {
     for (var i = 0; i < wins.length; i++) {
@@ -90,8 +101,24 @@
       if (covered[i]) popIn += c[4]; else popOut += c[4];
       if (!c[5]) { popCore += c[4]; if (!covered[i]) popOutCore += c[4]; }
     }
-    return { usable: usable, covered: covered, dist: dist, popIn: popIn, popOut: popOut,
+    var seen = {}, sites = 0;
+    usable.forEach(function (a) { var k = a[1] + "," + a[2]; if (!seen[k]) { seen[k] = 1; sites++; } });
+    return { usable: usable, sites: sites, empty: cells.length === 0, covered: covered, dist: dist, popIn: popIn, popOut: popOut,
       popTotal: popIn + popOut, popOutCore: popOutCore, popCore: popCore };
+  }
+
+  /* 月〜金（0..4）それぞれの圏外の割合の最小・最大。core=true は市境から800m以内を除いた人口での割合。
+     「平日」は月曜だけで代表させない（月曜は祝日・休館が多く、平日で最も条件が悪くなりやすい） */
+  function weekdayRange(cells, aeds, minute, radius, mode, core) {
+    var lo = null, hi = null, loD = 0, hiD = 0;
+    for (var d = 0; d < 5; d++) {
+      var c = coverage(cells, aeds, d, minute, radius, mode);
+      var den = core ? c.popCore : c.popTotal, num = core ? c.popOutCore : c.popOut;
+      var sh = den ? num / den : 0;
+      if (lo === null || sh < lo) { lo = sh; loD = d; }
+      if (hi === null || sh > hi) { hi = sh; hiD = d; }
+    }
+    return { min: lo, max: hi, minDay: loD, maxDay: hiD };
   }
 
   /* 1台足すと: 点 (lat,lon) に24時間使えるAEDを置いたとき、新たに圏内に入る人口 */
@@ -179,7 +206,8 @@
   function parseHash(h, ids) {
     var out = { m: DEF.m, d: DEF.d, t: DEF.t, r: DEF.r, mode: DEF.mode };
     String(h || "").replace(/^#/, "").split("&").forEach(function (kv) {
-      var p = kv.split("="), k = p[0], v = decodeURIComponent(p[1] || "");
+      var p = kv.split("="), k = p[0], v = "";
+      try { v = decodeURIComponent(p[1] || ""); } catch (e) { return; } /* 途中で切れた共有URLでも既定値で起動する */
       if (k === "m" && (!ids || ids.indexOf(v) >= 0)) out.m = v;
       else if (k === "d" && /^[0-6]$/.test(v)) out.d = +v;
       else if (k === "t" && /^\d+$/.test(v) && +v >= 0 && +v < 1440) out.t = +v;
@@ -193,6 +221,7 @@
   function windowsText(aed) {
     var kind = aed[5], p = aed[6];
     if (kind === K24) return "24時間（毎日）";
+    if (kind === KNONPUBLIC) return "一般の人が使えない設置位置（救急車内・病室・診察室・医務室など）。台数に数えていません";
     if (kind === KUNKNOWN) return "不明（" + (REASON_LABEL[p] || "解釈できない記載") + "）";
     var parts = p.map(function (w) {
       var ds = "";
@@ -206,14 +235,14 @@
 
   /* 時間表記の集計（画面の「時間表記を読めた割合」）。kinds = {"24h":n,"timed":n,"unknown":n} */
   function readableShare(kinds) {
-    var total = kinds["24h"] + kinds.timed + kinds.unknown;
+    var total = kinds["24h"] + kinds.timed + kinds.unknown; /* 一般の人が使えない設置位置（nonpublic）は分母に入れない */
     return total ? (kinds["24h"] + kinds.timed) / total : 0;
   }
 
   return {
-    DAYS: DAYS, RADII: RADII, DEF: DEF, REASON_LABEL: REASON_LABEL, K24: K24, KTIMED: KTIMED, KUNKNOWN: KUNKNOWN, KASSUMED: KASSUMED,
+    DAYS: DAYS, RADII: RADII, DEF: DEF, REASON_LABEL: REASON_LABEL, K24: K24, KTIMED: KTIMED, KUNKNOWN: KUNKNOWN, KASSUMED: KASSUMED, KNONPUBLIC: KNONPUBLIC,
     isUsable: isUsable, inWindows: inWindows, haversine: haversine, buildIndex: buildIndex, nearestWithin: nearestWithin,
-    coverage: coverage, gainAt: gainAt, topCandidates: topCandidates, areaTable: areaTable,
+    coverage: coverage, weekdayRange: weekdayRange, gainAt: gainAt, topCandidates: topCandidates, areaTable: areaTable,
     csvCell: csvCell, toCSV: toCSV, hhmm: hhmm, whenLabel: whenLabel, formatHash: formatHash, parseHash: parseHash,
     readableShare: readableShare, windowsText: windowsText
   };

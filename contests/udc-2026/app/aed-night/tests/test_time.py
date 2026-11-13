@@ -84,11 +84,12 @@ class TestFreeText(unittest.TestCase):
         return r["kind"], r["reason"]
 
     def test_24h_notations(self):
-        for s in ("24時間", "２４時間使用可能", "24時間、365日使用可能", "24h", "終日", "常時使用可能"):
+        for s in ("24時間", "２４時間使用可能", "24時間、365日使用可能", "24h", "常時使用可能", "終日（２４時間）"):
             self.assertEqual(t.parse_freetext(s)["kind"], "24h", s)
 
     def test_24h_with_condition_is_unknown(self):
         self.assertEqual(self.kind("終日使用可能（学校使用時のみ）"), ("unknown", "conditional"))
+        self.assertEqual(self.kind("終日"), ("unknown", "allday"))  # 開館中の意味でも使われるので24時間とは読まない
         self.assertEqual(self.kind("２４時間（学校使用時のみ）"), ("unknown", "conditional"))
 
     def test_facility_hours_is_unknown(self):

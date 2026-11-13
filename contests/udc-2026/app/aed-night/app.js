@@ -3,9 +3,10 @@
   "use strict";
   var TILE = "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png";
   var ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>';
+  /* 「平日」の代表は水曜。月曜は祝日（ハッピーマンデー）と月曜休館が多く、平日で最も条件が悪くなりやすいため使わない。月〜金の幅は見出しに出す */
   var PRESETS = [
-    { label: "平日 午前3時", d: 0, t: 180 }, { label: "平日 14時", d: 0, t: 840 },
-    { label: "平日 20時", d: 0, t: 1200 }, { label: "土曜 22時", d: 5, t: 1320 }, { label: "日曜 14時", d: 6, t: 840 }
+    { label: "水曜 午前3時", d: 2, t: 180 }, { label: "水曜 14時", d: 2, t: 840 },
+    { label: "水曜 20時", d: 2, t: 1200 }, { label: "土曜 22時", d: 5, t: 1320 }, { label: "日曜 14時", d: 6, t: 840 }
   ];
   var MODES = [{ id: "strict", label: "確認できたAEDだけ" }, { id: "max", label: "不明も使える（最大見積）" }];
 
@@ -68,7 +69,7 @@
   function aedFeatures() {
     var v = S.view, out = [];
     S.aeds.forEach(function (a, i) {
-      var s = a[5] === AN.KUNKNOWN || a[5] === AN.KASSUMED ? "unk" : (AN.isUsable(a, v.d, v.t, "strict") ? "on" : "off");
+      var s = a[5] === AN.KNONPUBLIC ? "priv" : a[5] === AN.KUNKNOWN || a[5] === AN.KASSUMED ? "unk" : (AN.isUsable(a, v.d, v.t, "strict") ? "on" : "off");
       out.push({ type: "Feature", properties: { s: s, i: i, use: AN.isUsable(a, v.d, v.t, v.mode) ? 1 : 0 },
         geometry: { type: "Point", coordinates: [a[2], a[1]] } });
     });
@@ -88,13 +89,23 @@
       b.setAttribute("aria-pressed", String(PRESETS[i].d === v.d && PRESETS[i].t === v.t));
     });
     var strict = v.mode === "strict" ? cv : S.covOther, max = v.mode === "strict" ? S.covOther : cv;
-    var usableStrict = strict.usable.length;
+    var coreOk = cv.popCore > 0;
+    function share(c) { return coreOk ? (c.popCore ? c.popOutCore / c.popCore : 0) : (c.popTotal ? c.popOut / c.popTotal : 0); }
+    var kn = mu.kinds;
     var h = $("headline"); h.innerHTML = "";
-    h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人: 約" + fmt(cv.popOut) + "人（" + pct(cv.popTotal ? cv.popOut / cv.popTotal : 0) + "）" }));
-    h.appendChild(el("div", { class: "sub", text: mu.name + "・" + AN.whenLabel(v.d, v.t) + "・徒歩圏 直線" + v.r + "m。この時間に使えると確認できたAEDは " + usableStrict +
-      "台（登録 " + mu.with_xy + "台中、うち時間が不明 " + mu.kinds.unknown + "台）。" }));
-    h.appendChild(el("div", { class: "rng", text: "圏外の割合は、確認できたAEDだけなら " + pct(strict.popTotal ? strict.popOut / strict.popTotal : 0) +
-      "、時間が不明のAEDを全部使えるとしても " + pct(max.popTotal ? max.popOut / max.popTotal : 0) + "。（メッシュ人口 " + fmt(cv.popTotal) + "人が対象）" }));
+    /* 見出しの数字は「市境から800m以内を除いた人口」。市境の近くは隣の市のAEDを読み込んでいないため、圏外が多めに出る */
+    h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人: 約" + fmt(coreOk ? cv.popOutCore : cv.popOut) + "人（" + pct(share(cv)) + "）" }));
+    h.appendChild(el("div", { class: "sub", text: mu.name + "・" + AN.whenLabel(v.d, v.t) + "・徒歩圏 直線" + v.r + "m。対象は市の境界から800m以上内側の人口 " + fmt(coreOk ? cv.popCore : cv.popTotal) +
+      "人。この時間に使えると確認できたAEDは " + strict.usable.length + "台（" + strict.sites + "か所）。登録 " + mu.with_xy + "台のうち、時間が不明 " + kn.unknown + "台、一般の人が使えない設置位置（救急車内・病室など）" + kn.nonpublic + "台は数えていません。" }));
+    h.appendChild(el("div", { class: "rng", text: "確認できたAEDだけなら " + pct(share(strict)) + "、時間が不明のAEDを使えるとしても（夜間は施設の開館時間・条件付きなどを除く）" + pct(share(max)) + "。" }));
+    if (coreOk) {
+      h.appendChild(el("div", { class: "edge-note", text: "市境付近（800m以内）を含む市全体（メッシュ人口 " + fmt(cv.popTotal) + "人）では約" + fmt(cv.popOut) + "人（" + pct(cv.popTotal ? cv.popOut / cv.popTotal : 0) +
+        "）。隣の市のAEDを読み込んでいないので、これは上限です。" }));
+    }
+    if (v.d <= 4) {
+      var wr = AN.weekdayRange(S.cells, S.aeds, v.t, v.r, v.mode, coreOk);
+      h.appendChild(el("div", { class: "edge-note", text: "同じ時刻で月〜金を比べると " + pct(wr.min) + "（" + AN.DAYS[wr.minDay] + "曜）〜" + pct(wr.max) + "（" + AN.DAYS[wr.maxDay] + "曜）。祝日は反映していません。" }));
+    }
     renderLegend();
     renderAreas();
     if (!$("pane-out").hidden) renderOut();
@@ -112,6 +123,7 @@
     item("dot", "background:#009E73;border-color:#fff;box-shadow:0 0 0 1px #006", "いま使えるAED");
     item("dot", "background:#fff;border-color:#555", "いまは使えないAED");
     item("dot", "background:#CC79A7;border-color:#fff;box-shadow:0 0 0 1px #6a2c52", "時間が不明のAED");
+    item("dot", "background:#8a8a8a;border-color:#fff;box-shadow:0 0 0 1px #333", "一般の人が使えない位置のAED（数えない）");
     item("", "background:#fff;border:2px dashed #333", "境界付近（隣の市のAEDは未読込）");
   }
 
@@ -200,11 +212,11 @@
           for (var t = 0; t < 1440; t += 180) {
             var a = AN.coverage(S.cellsBy[mi], S.aedsBy[mi], d, t, v.r, "strict");
             var b = AN.coverage(S.cellsBy[mi], S.aedsBy[mi], d, t, v.r, "max");
-            rows.push([mu.name, AN.DAYS[d] + "曜", AN.hhmm(t), v.r, a.usable.length, a.popOut, a.popTotal ? (a.popOut / a.popTotal).toFixed(3) : "", b.usable.length, b.popOut, b.popTotal ? (b.popOut / b.popTotal).toFixed(3) : ""]);
+            rows.push([mu.name, AN.DAYS[d] + "曜", AN.hhmm(t), v.r, a.usable.length, a.sites, a.popOut, a.popTotal ? (a.popOut / a.popTotal).toFixed(3) : "", b.usable.length, b.popOut, b.popTotal ? (b.popOut / b.popTotal).toFixed(3) : ""]);
           }
         }
       });
-      download("aed_all_times_r" + v.r + ".csv", AN.toCSV(["自治体", "曜日", "時刻", "徒歩圏m(直線)", "確認できた使えるAED数", "圏外人口(確認できたAEDのみ)", "圏外割合(確認できたAEDのみ)", "不明も使えるとした時のAED数", "圏外人口(最大見積)", "圏外割合(最大見積)"], rows));
+      download("aed_all_times_r" + v.r + ".csv", AN.toCSV(["自治体", "曜日", "時刻", "徒歩圏m(直線)", "確認できた使えるAED数", "同・設置か所数", "圏外人口(確認できたAEDのみ)", "圏外割合(確認できたAEDのみ)", "不明も使えるとした時のAED数", "圏外人口(最大見積)", "圏外割合(最大見積)"], rows));
       $("io-msg").textContent = "全時間帯の表 " + rows.length + " 行を書き出しました（公開データ上の試算）。";
     }, 30);
   }
@@ -212,17 +224,19 @@
   /* ---------- データタブ・出典 ---------- */
   function renderData() {
     var D = S.data, t = el("table", { class: "data" });
-    var head = el("tr"); ["自治体", "登録数", "24時間", "時間指定", "不明", "読めた割合"].forEach(function (h) { head.appendChild(el("th", { text: h })); });
+    var head = el("tr"); ["自治体", "登録数", "24時間", "時間指定", "不明", "一般不可", "読めた割合"].forEach(function (h) { head.appendChild(el("th", { text: h })); });
     t.appendChild(head);
     D.munis.forEach(function (m) {
       var r = el("tr");
-      [m.name, m.rows, m.kinds["24h"], m.kinds.timed, m.kinds.unknown, pct(AN.readableShare(m.kinds))].forEach(function (x) { r.appendChild(el("td", { text: String(x) })); });
+      [m.name, m.rows, m.kinds["24h"], m.kinds.timed, m.kinds.unknown, m.kinds.nonpublic, pct(AN.readableShare(m.kinds))].forEach(function (x) { r.appendChild(el("td", { text: String(x) })); });
       t.appendChild(r);
     });
     var box = $("data-table"); box.innerHTML = ""; box.appendChild(t);
     D.munis.forEach(function (m) {
       var rs = Object.keys(m.unknown_reasons).map(function (k) { return (AN.REASON_LABEL[k] || k) + " " + m.unknown_reasons[k]; }).join("、");
-      box.appendChild(el("p", { class: "small", text: m.name + ": 緯度経度のある " + m.with_xy + "台のうち、不明 " + m.kinds.unknown + "台の内訳は " + (rs || "なし") +
+      var nt = m.notes || {};
+      box.appendChild(el("p", { class: "small", text: m.name + ": 緯度経度のある " + m.with_xy + "台のうち、一般の人が使えない設置位置 " + m.kinds.nonpublic + "台は数えず、不明 " + m.kinds.unknown + "台の内訳は " + (rs || "なし") +
+        (nt.applied ? "。特記事項を曜日・時間に反映したもの " + nt.applied + "台（祝日・年末年始・第N週・季節限定は未反映）" : "") +
         (m.out_of_range ? "。座標が市の範囲外のもの " + m.out_of_range + "台は地図・判定から除きました（元データの座標誤りの疑い）" : "") + "。曜日が空欄で時刻だけのものを毎日と仮定すれば、不明は " + m.kinds_if_everyday.unknown + "台に減ります（既定では仮定しません）。" }));
     });
     var c = $("credits"); c.innerHTML = "";
@@ -305,8 +319,8 @@
       map.addLayer({ id: "boundary", type: "line", source: "bound", filter: ["==", ["get", "id"], S.view.m], paint: { "line-color": "#111", "line-width": 2 } });
       map.addLayer({ id: "aed", type: "circle", source: "aed", paint: {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 7],
-        "circle-color": ["match", ["get", "s"], "on", "#009E73", "unk", "#CC79A7", "#ffffff"],
-        "circle-stroke-color": ["match", ["get", "s"], "on", "#ffffff", "unk", "#ffffff", "#555555"],
+        "circle-color": ["match", ["get", "s"], "on", "#009E73", "unk", "#CC79A7", "priv", "#8a8a8a", "#ffffff"],
+        "circle-stroke-color": ["match", ["get", "s"], "on", "#ffffff", "unk", "#ffffff", "priv", "#ffffff", "#555555"],
         "circle-stroke-width": 1.5 } });
       map.addLayer({ id: "pick", type: "circle", source: "pick", paint: { "circle-radius": 9, "circle-color": "#7a003c", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
       popup = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" });
@@ -314,9 +328,9 @@
         var f = map.queryRenderedFeatures(e.point, { layers: ["aed"] })[0];
         if (f) {
           var a = S.aeds[f.properties.i], v = S.view;
-          var now = a[5] === AN.KUNKNOWN || a[5] === AN.KASSUMED ? "時間が不明" : (AN.isUsable(a, v.d, v.t, "strict") ? "いま（" + AN.whenLabel(v.d, v.t) + "）使える" : "いま（" + AN.whenLabel(v.d, v.t) + "）は使えない");
+          var now = a[5] === AN.KNONPUBLIC ? "一般の人は使えない位置（数えていません）" : a[5] === AN.KUNKNOWN || a[5] === AN.KASSUMED ? "時間が不明" : (AN.isUsable(a, v.d, v.t, "strict") ? "いま（" + AN.whenLabel(v.d, v.t) + "）使える" : "いま（" + AN.whenLabel(v.d, v.t) + "）は使えない");
           var box = el("div", {}, [el("b", { text: a[3] }), el("div", { text: a[4] ? "設置位置: " + a[4] : "" }), el("div", { text: "利用可能: " + AN.windowsText(a) }),
-            el("div", { text: now }), el("div", { class: "small", text: a[7] ? "※自治体の特記事項（休業日等）あり。反映していません。" : "" })]);
+            el("div", { text: now }), el("div", { class: "small", text: a[7] === 2 ? "※自治体の特記事項を曜日・時間に反映済み。祝日・年末年始・第N週・季節限定は未反映。" : a[7] ? "※自治体の特記事項あり。曜日・時間には反映していません（祝日・年末年始など）。" : "" })]);
           popup.setLngLat(f.geometry.coordinates).setDOMContent(box).addTo(map);
           return;
         }

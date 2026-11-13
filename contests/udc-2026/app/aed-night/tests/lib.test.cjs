@@ -121,3 +121,63 @@ test("hhmm / readableShare", () => {
   assert.equal(AN.readableShare({ "24h": 1, timed: 1, unknown: 2 }), 0.5);
   assert.equal(AN.readableShare({ "24h": 0, timed: 0, unknown: 0 }), 0);
 });
+
+// ---- アグレッサー指摘（重大5・中）の修正 ----
+const ANONPUB = [0, 35.0, 139.0, "救急車内", "救急車内", 4, "nonpublic", 0, 0];
+const AFAC = [0, 35.0, 139.0, "fac", "", 2, "facility", 0, 0];
+const AEMPTY = [0, 35.0, 139.0, "emp", "", 2, "empty", 0, 0];
+
+test("一般の人が使えない設置位置（kind=4）は、どのモード・時刻でも使える扱いにしない", () => {
+  for (const mode of ["strict", "max"]) {
+    for (const t of [180, 600, 1200]) assert.equal(AN.isUsable(ANONPUB, 0, t, mode), false);
+  }
+  assert.equal(AN.coverage(cells, [ANONPUB], 0, 180, 500, "max").usable.length, 0);
+  assert.match(AN.windowsText(ANONPUB), /一般の人が使えない/);
+});
+
+test("最大見積でも、夜間（22時〜翌6時）は施設の開館時間・条件付きの不明を使える扱いにしない", () => {
+  assert.equal(AN.isUsable(AFAC, 0, 180, "max"), false);
+  assert.equal(AN.isUsable(AFAC, 0, 22 * 60, "max"), false);
+  assert.equal(AN.isUsable(AFAC, 0, 5 * 60 + 59, "max"), false);
+  assert.equal(AN.isUsable(AFAC, 0, 6 * 60, "max"), true); // 昼は使える可能性がある
+  assert.equal(AN.isUsable(AFAC, 0, 840, "max"), true);
+  assert.equal(AN.isUsable(AFAC, 0, 840, "strict"), false);
+  assert.equal(AN.isUsable(AEMPTY, 0, 180, "max"), true); // 未記入は夜に使えないとも言えない
+});
+
+test("coverage: 台数のほかに設置か所数（同じ座標を1か所）を返す", () => {
+  const same = [A24, [0, 35.0, 139.0, "b", "", 0, [], 0, 0], [0, 35.001, 139.0, "c", "", 0, [], 0, 0]];
+  const c = AN.coverage(cells, same, 0, 180, 500, "strict");
+  assert.equal(c.usable.length, 3);
+  assert.equal(c.sites, 2);
+});
+
+test("coverage: メッシュ0件は empty=true で、0人（0%）と区別できる", () => {
+  const c = AN.coverage([], [], 0, 180, 500, "strict");
+  assert.equal(c.empty, true);
+  assert.equal(AN.coverage(cells, [], 0, 180, 500, "strict").empty, false);
+});
+
+test("weekdayRange: 月〜金の最小・最大。月曜だけで代表させない", () => {
+  // 火〜金 9時〜17時だけ使える AED。月曜は使えない（ビット: 火2+水4+木8+金16=30）
+  const tueFri = [0, 35.0, 139.0, "tf", "", 1, [[30, 540, 1020]], 0, 0];
+  const w = AN.weekdayRange(cells, [tueFri], 600, 500, "strict", false);
+  assert.equal(w.maxDay, 0); // 月曜が最悪
+  assert.equal(w.min, 350 / 650);
+  assert.equal(w.max, 650 / 650);
+});
+
+test("coverage: 市境付近を除いた人口（popCore）と、そこでの圏外（popOutCore）を返す", () => {
+  const c = AN.coverage(cells, [], 0, 180, 500, "strict");
+  assert.equal(c.popCore, 350); assert.equal(c.popOutCore, 350); assert.equal(c.popTotal, 650);
+});
+
+test("hash: 途中で切れた共有URL（%E0）でも既定値で起動する", () => {
+  assert.doesNotThrow(() => AN.parseHash("#m=%E0&d=1", ["machida"]));
+  const v = AN.parseHash("#m=%E0&d=1&t=600", ["machida"]);
+  assert.equal(v.d, 1); assert.equal(v.t, 600); assert.equal(v.m, "machida");
+});
+
+test("readableShare: 一般の人が使えない設置位置は分母に入れない", () => {
+  assert.equal(AN.readableShare({ "24h": 1, timed: 1, unknown: 2, nonpublic: 5 }), 0.5);
+});

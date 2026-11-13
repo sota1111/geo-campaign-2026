@@ -3,7 +3,7 @@
 
 usage: python3 -I tools/fetch_raw.py <作業ディレクトリ>
   - 各自治体の AED CSV（tools/sources.json の csv_url）
-  - 行政区域の境界 GeoJSON（Geoshape、国土数値情報の行政区域データ N03 を NII が加工。CC BY-SA 4.0）
+  - 行政区域の境界 GeoJSON（Geoshape、国土数値情報の行政区域データ N03 を NII が加工。Geoshape は CC BY 4.0）
   - 地域メッシュ統計（e-Stat 統計GIS、1次メッシュ別 zip）
 取得済みのファイルは再取得しない。
 """
