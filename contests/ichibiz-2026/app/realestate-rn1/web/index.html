@@ -23,6 +23,7 @@
       <label><input type="radio" name="region" value="tokyo23"> 東京23区</label>
       <label><input type="radio" name="region" value="osaka"> 大阪市</label>
     </fieldset>
+    <div id="loadbar" class="loadbar" role="status" hidden><span id="loadtext"></span> <progress id="loadprog" max="100" value="0"></progress></div>
     <form id="search" class="row">
       <label class="sr" for="q">住所・目印を検索</label>
       <input id="q" type="search" placeholder="例: 徳島市役所、徳島市国府町府中" autocomplete="off">
@@ -35,20 +36,22 @@
     <div class="row opts" role="group" aria-label="地図に重ねる範囲">
       <label id="lbRes"><input type="checkbox" id="tgResidential" checked> <span class="sw sw-res"></span>居住誘導区域</label>
       <label id="lbCity"><input type="checkbox" id="tgCity" checked> <span class="sw sw-city"></span>都市機能誘導区域</label>
-      <label><input type="checkbox" id="tgFlood"> <span class="sw sw-flood"></span>洪水浸水想定区域</label>
-      <label><input type="checkbox" id="tgSediment"> <span class="sw sw-sed"></span>土砂災害警戒区域</label>
-      <label><input type="checkbox" id="tgTsunami"> <span class="sw sw-tsunami"></span>津波浸水想定</label>
-      <label><input type="checkbox" id="tgSurge"> <span class="sw sw-surge"></span>高潮浸水想定区域</label>
-      <label><input type="checkbox" id="tgLiq"> <span class="sw sw-liq"></span>液状化の発生傾向</label>
+      <label><input type="checkbox" id="tgFlood"> <span class="sw sw-flood"></span>洪水浸水想定区域<span class="nd" hidden></span></label>
+      <label><input type="checkbox" id="tgSediment"> <span class="sw sw-sed"></span>土砂災害警戒区域<span class="nd" hidden></span></label>
+      <label><input type="checkbox" id="tgTsunami"> <span class="sw sw-tsunami"></span>津波浸水想定<span class="nd" hidden></span></label>
+      <label><input type="checkbox" id="tgSurge"> <span class="sw sw-surge"></span>高潮浸水想定区域<span class="nd" hidden></span></label>
+      <label><input type="checkbox" id="tgLiq"> <span class="sw sw-liq"></span>液状化の発生傾向（しやすい区分を濃淡で塗る）<span class="nd" hidden></span></label>
     </div>
     <div id="map" role="application" aria-label="地図。クリックまたはタップで場所を指定" tabindex="0">
       <div id="tiles"></div>
       <canvas id="over"></canvas>
+      <div id="cross" aria-hidden="true"></div>
       <div id="pin" hidden></div>
+      <div id="maploading" class="maploading" hidden></div>
       <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button></div>
       <div class="attr">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工</div>
     </div>
-    <p class="hint">地図をクリック（タップ）すると、その位置を土地として扱います。ドラッグで移動、ボタンで拡大縮小。実線の円は人口を集計する半径500m、破線の円は徒歩圏の半径800m（直線距離で、道路に沿った距離ではありません）です。</p>
+    <p class="hint">地図をクリック（タップ）すると、その位置を土地として扱います。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心の十字の位置を指定します。東京23区・大阪市では、灰色に覆った範囲は対象外です（押してもシートは出ません）。実線の円は人口を集計する半径500m、破線の円は徒歩圏の半径800m（直線距離で、道路に沿った距離ではありません）です。</p>
   </section>
 
   <section id="step2" class="panel">
@@ -60,7 +63,7 @@
 
   <section id="step3" class="panel">
     <h2>取得データの状況</h2>
-    <p class="hint">同梱した不動産情報ライブラリのデータの、項目ごとの状態です。「未取得」の項目は、シートの該当欄に「未取得」と出ます。</p>
+    <p class="hint">同梱した不動産情報ライブラリのデータの、項目ごとの状態です。「未取得」（取得に失敗）と「データ無し」（取得できたが0件。区域が無い、または収録が無い。安全という意味ではない）は、シートの該当欄にそのとおり出ます。</p>
     <ul id="dataStatus" class="plain"></ul>
   </section>
 </main>

@@ -56,19 +56,19 @@
   const OSAKA_WARDS = [2, 3, 4, 6, 7, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28].map((n) => '271' + String(n).padStart(2, '0'));
   const REGIONS = {
     tokushima: {
-      id: 'tokushima', dir: 'tokushima', name: '徳島市', whole: '徳島市全体', unit: '市', codes: ['36201'], zoning: false, clip: false,
+      id: 'tokushima', dir: 'tokushima', name: '徳島市', whole: '徳島市全体', unit: '市', codes: ['36201'], zoning: false, clip: false, size: '約4.5MB', wait: '回線が遅いと十数秒',
       bbox: [134.42, 33.95, 134.66, 34.16], view: { lon: 134.5548, lat: 34.0703, z: 14 }, zoomMin: 11,
       examples: [{ label: '徳島駅付近', lon: 134.5513, lat: 34.0745 }, { label: '国府町（郊外）', lon: 134.4845, lat: 34.0540 }, { label: '八万町（郊外）', lon: 134.5190, lat: 34.0450 }],
       search: '徳島市役所、徳島市国府町府中',
     },
     tokyo23: {
-      id: 'tokyo23', dir: 'tokyo23', name: '東京23区', whole: '東京23区全体', unit: '区', codes: seq(101, 123, '13'), zoning: true, clip: true,
+      id: 'tokyo23', dir: 'tokyo23', name: '東京23区', whole: '東京23区全体', unit: '区', codes: seq(101, 123, '13'), zoning: true, clip: true, sparse: ['elder'], size: '約12MB', wait: '回線によっては1分ほど',
       bbox: [139.55, 35.51, 139.93, 35.84], view: { lon: 139.7671, lat: 35.6812, z: 13 }, zoomMin: 11,
       examples: [{ label: '東京駅付近（千代田区）', lon: 139.7671, lat: 35.6812 }, { label: '下北沢（世田谷区）', lon: 139.6680, lat: 35.6613 }, { label: '葛西（江戸川区）', lon: 139.8723, lat: 35.6637 }, { label: '北千住（足立区）', lon: 139.8049, lat: 35.7497 }],
       search: '東京都庁、世田谷区役所',
     },
     osaka: {
-      id: 'osaka', dir: 'osaka', name: '大阪市', whole: '大阪市全体', unit: '市', codes: ['27100'].concat(OSAKA_WARDS), groupKey: '27100', zoning: true, clip: true,
+      id: 'osaka', dir: 'osaka', name: '大阪市', whole: '大阪市全体', unit: '市', codes: ['27100'].concat(OSAKA_WARDS), groupKey: '27100', zoning: true, clip: true, size: '約3.5MB', wait: '回線が遅いと十数秒',
       bbox: [135.36, 34.57, 135.62, 34.78], view: { lon: 135.4959, lat: 34.7025, z: 13 }, zoomMin: 11,
       examples: [{ label: '大阪駅付近（北区）', lon: 135.4959, lat: 34.7025 }, { label: '天王寺駅付近', lon: 135.5139, lat: 34.6465 }, { label: '平野区（郊外寄り）', lon: 135.5470, lat: 34.6150 }, { label: '住之江区（湾岸）', lon: 135.4760, lat: 34.6070 }],
       search: '大阪市役所、大阪城',
@@ -263,6 +263,33 @@
     return best ? best.sc : null;
   }
 
+  /** 市区町村コード → 名前（対象外の地点を市名で知らせるため。対象3地域と、その周辺の市区町村。総務省の全国地方公共団体コードによる。表に無いコードは null） */
+  const CITY_NAMES = {
+    36201: '徳島市', 36202: '鳴門市', 36203: '小松島市', 36204: '阿南市', 36205: '吉野川市', 36206: '阿波市', 36301: '勝浦町', 36302: '上勝町', 36321: '佐那河内村', 36341: '石井町', 36342: '神山町', 36401: '松茂町', 36402: '北島町', 36403: '藍住町', 36404: '板野町', 36405: '上板町', 37207: '東かがわ市',
+    11203: '川口市', 11208: '所沢市', 11221: '草加市', 11222: '越谷市', 11223: '蕨市', 11224: '戸田市', 11227: '朝霞市', 11228: '志木市', 11229: '和光市', 11230: '新座市', 11234: '八潮市', 11235: '富士見市', 11237: '三郷市',
+    12203: '市川市', 12204: '船橋市', 12207: '松戸市', 12217: '柏市', 12220: '流山市', 12227: '浦安市',
+    13203: '武蔵野市', 13204: '三鷹市', 13208: '調布市', 13210: '小金井市', 13219: '狛江市', 13221: '清瀬市', 13222: '東久留米市', 13229: '西東京市',
+    14131: '川崎市川崎区', 14132: '川崎市幸区', 14133: '川崎市中原区', 14134: '川崎市高津区', 14135: '川崎市多摩区', 14136: '川崎市宮前区', 14137: '川崎市麻生区',
+    27203: '豊中市', 27204: '池田市', 27205: '吹田市', 27207: '高槻市', 27209: '守口市', 27210: '枚方市', 27211: '茨木市', 27212: '八尾市', 27215: '寝屋川市', 27217: '松原市', 27218: '大東市', 27220: '箕面市', 27221: '柏原市', 27222: '羽曳野市', 27223: '門真市', 27224: '摂津市', 27226: '藤井寺市', 27227: '東大阪市', 27229: '四條畷市',
+    28202: '尼崎市', 28204: '西宮市', 28207: '伊丹市', 28214: '宝塚市', 28217: '川西市',
+  };
+  const WARD_NAMES = {
+    13101: '千代田区', 13102: '中央区', 13103: '港区', 13104: '新宿区', 13105: '文京区', 13106: '台東区', 13107: '墨田区', 13108: '江東区', 13109: '品川区', 13110: '目黒区', 13111: '大田区', 13112: '世田谷区', 13113: '渋谷区', 13114: '中野区', 13115: '杉並区', 13116: '豊島区', 13117: '北区', 13118: '荒川区', 13119: '板橋区', 13120: '練馬区', 13121: '足立区', 13122: '葛飾区', 13123: '江戸川区',
+    27102: '都島区', 27103: '福島区', 27104: '此花区', 27106: '西区', 27107: '港区', 27108: '大正区', 27109: '天王寺区', 27111: '浪速区', 27113: '西淀川区', 27114: '東淀川区', 27115: '東成区', 27116: '生野区', 27117: '旭区', 27118: '城東区', 27119: '阿倍野区', 27120: '住吉区', 27121: '東住吉区', 27122: '西成区', 27123: '淀川区', 27124: '鶴見区', 27125: '住之江区', 27126: '平野区', 27127: '北区', 27128: '中央区',
+  };
+  /** 市区町村コードの名前（東京23区は区名、大阪市は区名。他は表から。分からなければ null） */
+  function cityName(code) {
+    const c = String(code || '');
+    if (WARD_NAMES[c]) return (c.startsWith('271') ? '大阪市' : '') + WARD_NAMES[c];
+    if (CITY_NAMES[c]) return CITY_NAMES[c];
+    if (/^1110\d$/.test(c)) return 'さいたま市';
+    if (/^141(0\d|1[0-8])$/.test(c)) return '横浜市';
+    if (/^2714\d$/.test(c)) return '堺市';
+    return null;
+  }
+  /** 区の名前（シートの題に使う）。徳島市・大阪市の「市」は返さない（区があれば区） */
+  const wardLabel = (region, code) => (region.unit === '区' || region.id === 'osaka' ? WARD_NAMES[String(code)] || null : null);
+
   const PLAN_KUBUN = { 0: '立地適正化計画区域', 31: '居住誘導区域', 32: '都市機能誘導区域' };
   /** 立地適正化計画の区域との重なり。cityCode の計画が同梱データに無い場合は hasPlan:false */
   function planAt(plan, cityCode, lon, lat) {
@@ -339,11 +366,42 @@
   }
 
   /** 指した位置 → 各項目の結果（facts）。取れない項目（データなし）は null のまま */
+  /** 地域の内側か（東京23区・大阪市）: 都市計画区域（XKT001）の多角形に入るか。入れば区のコード（大阪市は最も近い人口メッシュの区。無ければ市のコード）、入らなければ null。
+   *  この判定が使えない地域（徳島市）は undefined。災害の格子は、この多角形の外を消して同梱している（tools/extract.mjs）ので、判定は同じ多角形で行う */
+  function regionCellAt(data, lon, lat) {
+    const areas = data.region.clip && data.zoning && data.zoning.areas;
+    if (!areas) return undefined;
+    const hit = areas.find((e) => regionHas(data.region, e.cityCode) && inPolys(lon, lat, e.polys));
+    if (!hit) return null;
+    if (!data.region.groupKey || !data.pop) return hit.cityCode;
+    let best = null;
+    for (const m of data.pop.meshes) {
+      if (!regionHas(data.region, m.sc) || m.sc === data.region.groupKey) continue;
+      const d = haversine(lon, lat, m.lon, m.lat);
+      if (d <= 2000 && (!best || d < best.d)) best = { d, sc: m.sc };
+    }
+    return best ? best.sc : hit.cityCode;
+  }
+
+  /** 対象の外（都市計画区域の外）と分かっている地点の、隣の市区町村のコード。対象地域に入らない小学校区の多角形、無ければ対象地域に入らない人口メッシュのうち最も近いもの（500m以内）。境界の近くは対象地域のメッシュのほうが近いことがあるので、対象地域のメッシュは除く */
+  function neighborAt(pop, region, lon, lat) {
+    for (const d of pop.districts || []) if (d.city && !regionHas(region, d.city) && inPolys(lon, lat, d.polys)) return String(d.city);
+    let best = null;
+    for (const m of pop.meshes) {
+      if (regionHas(region, m.sc)) continue;
+      const d = haversine(lon, lat, m.lon, m.lat);
+      if (d <= 500 && (!best || d < best.d)) best = { d, sc: m.sc };
+    }
+    return best ? best.sc : null;
+  }
+
   function collect(data, lon, lat) {
-    const f = { lon, lat, inBBox: inBBox(data.bbox, lon, lat), cityCode: null, plan: null, zoning: null, pop: null, district: null, fac: null, hazard: null };
+    const f = { lon, lat, inBBox: inBBox(data.bbox, lon, lat), inRegion: false, cityCode: null, neighbor: null, plan: null, zoning: null, pop: null, district: null, fac: null, hazard: null };
     if (!f.inBBox) return f;
-    f.cityCode = data.pop ? cityAt(data.pop, lon, lat) : null;
-    if (!regionHas(data.region, f.cityCode)) return f; // 対象は選んだ地域（徳島市・東京23区・大阪市）のみ
+    const cell = regionCellAt(data, lon, lat);
+    if (cell !== undefined) { f.inRegion = cell !== null; f.cityCode = cell; }
+    else { f.cityCode = data.pop ? cityAt(data.pop, lon, lat) : null; f.inRegion = regionHas(data.region, f.cityCode); }
+    if (!f.inRegion) { f.neighbor = data.pop ? (cell === null ? neighborAt(data.pop, data.region, lon, lat) : f.cityCode) : null; f.cityCode = null; return f; } // 対象は選んだ地域（徳島市・東京23区・大阪市）のみ
     const key = planKey(data.region, f.cityCode);
     if (data.plan) f.plan = planAt(data.plan, key, lon, lat);
     else if (data.status.XKT003.state === 'empty') f.plan = { hasPlan: false }; // 取得できたが0件: 計画のデータが無い（用途地域の代用を出す）
@@ -363,13 +421,14 @@
   const UNFETCHED = '未取得';
   const NODATA = 'データ無し';
   /** 未取得（取得に失敗）・データ無し（取得できたが0件）の項目。どちらも「該当なし」とは書かない */
-  const unfetched = (data, apis) => apis.filter((a) => data.status[a].state !== 'ok').map((a) => apisFor(data.region)[a].label + '（' + a + '）は' + (data.status[a].state === 'empty' ? NODATA + '（取得できたが0件。区域が無い、または収録が無い）' : UNFETCHED + '（' + data.status[a].reason + '）'));
+  const unfetched = (data, apis) => apis.filter((a) => data.status[a].state !== 'ok').map((a) => apisFor(data.region)[a].label + '（' + a + '）は' + (data.status[a].state === 'empty' ? NODATA + '（取得できたが0件。区域が無い、または収録が無い。安全という意味ではない）' : UNFETCHED + '（' + data.status[a].reason + '）'));
   const ok = (data, a) => data.status[a].state === 'ok';
   /** 周辺と市全体の差（ポイント）を、評価語（「大きい・小さい」）を使わずに述べる */
-  const gap = (loc, city) => {
+  const gap = (loc, city, whole) => {
     if (loc == null || city == null) return '';
+    const w = whole || '市全体';
     const d = Math.round(loc - city);
-    return d === 0 ? '市全体と同じ値' : '市全体との差は ' + (d > 0 ? '+' : '−') + Math.abs(d) + ' ポイント';
+    return d === 0 ? w + 'と同じ値' : w + 'との差は ' + (d > 0 ? '+' : '−') + Math.abs(d) + ' ポイント';
   };
   /** 少人数の時は割合を出さず、この文言にする */
   const SMALL_TEXT = '人数が少なく比較に向かない';
@@ -450,7 +509,7 @@
       sec.lines.push({ tag: 'XKT013', text: head + '。周辺の人数が少なく（' + y0 + '年で' + SMALL_POP + '人未満、または' + y2 + '年の推計が0人）、増減率は' + SMALL_TEXT + 'ため出さない。' });
     } else {
       sec.lines.push({ tag: 'XKT013', text: head + '（' + y0 + '→' + y1 + '年 ' + fmtPct(changePct(L[y0].p, L[y1].p)) + '、' + y0 + '→' + y2 + '年 ' + fmtPct(lc) + '）。' });
-      sec.lines.push({ tag: '作成者の集計', text: '' + data.region.whole + 'は' + y0 + '→' + y2 + '年で ' + fmtPct(cc) + '。周辺は ' + fmtPct(lc) + '（' + gap(lc, cc) + '）。' });
+      sec.lines.push({ tag: '作成者の集計', text: '' + data.region.whole + 'は' + y0 + '→' + y2 + '年で ' + fmtPct(cc) + '。周辺は ' + fmtPct(lc) + '（' + gap(lc, cc, data.region.whole) + '）。' });
       const s0 = share(L[y0], 'c'), s2 = share(L[y2], 'c'), cs0 = share(C[y0], 'c'), cs2 = share(C[y2], 'c');
       const sp = (v) => (v == null ? '—' : v.toFixed(0) + '%');
       if (s0 != null && s2 != null) sec.lines.push({ tag: 'XKT013', text: '65歳以上の割合: ' + y0 + '年 ' + sp(s0) + ' → ' + y2 + '年 ' + sp(s2) + '（' + data.region.whole + 'は ' + sp(cs0) + ' → ' + sp(cs2) + '）。' });
@@ -459,15 +518,21 @@
     }
     const subst = data.region.zoning && !(f.plan && f.plan.hasPlan); // 立地適正化計画の代わりに用途地域を示している
     sec.lines.push({ tag: '注意', text: (subst ? '1の用途地域・区域区分と人口の増減は、別々の事実を並べたもので、関係（この用途地域だから減る、など）は示さない。' : '1の区域の内外と人口の増減は、別々の事実を並べたもので、関係（区域の外だから減る、など）は示さない。') + '将来人口は推計で、実際の人口ではない（下の注記）。' });
-    sec.ask.push('市に、この地区の将来人口の見通しと、公共施設や公共交通の見直しの予定があるかを聞く。');
+    sec.ask.push(unitOf(data.region) + 'に、この地区の将来人口の見通しと、公共施設や公共交通の見直しの予定があるかを聞く。');
     return sec;
   }
 
   function schoolSection(data, f) {
     const sec = { id: 'school', title: '3. 小学校区と子どもの数（推計）', apis: ['XKT004', 'XKT013'], lines: [], ask: [], missing: unfetched(data, ['XKT004']) };
     const d = f.district;
-    if (!d) return sec;
-    if (!d.name) { sec.lines.push({ tag: 'XKT004', text: '指した位置を含む小学校区は、取得したデータにありません。' }); return sec; }
+    if (!d) { sec.ask.push('教育委員会に、この地区の通学区域（小学校区）と、見直し・統合の予定を聞く。'); return sec; }
+    if (!d.name) {
+      const wardMissing = data.districts && data.region.id !== 'tokushima' && !data.districts.some((e) => String(e.city) === String(f.cityCode));
+      const wn = wardLabel(data.region, f.cityCode);
+      sec.lines.push({ tag: 'XKT004', text: wardMissing ? '小学校区: ' + (wn || 'この区') + 'は、取得した小学校区のデータに1件もない（区の単位で収録が無い）。ここの校区は分からない（安全や問題が無いという意味ではない）。' : '指した位置を含む小学校区は、取得したデータにありません。' });
+      sec.ask.push('教育委員会に、この地区の通学区域（小学校区）と、見直し・統合の予定を聞く。');
+      return sec;
+    }
     sec.lines.push({ tag: 'XKT004', text: '小学校区は「' + d.name + '」。' });
     if (d.sums && ok(data, 'XKT013')) {
       const [y0, , y2] = pickYears(f.pop ? f.pop.years : [2025, 2035, 2050]);
@@ -483,6 +548,8 @@
     return sec;
   }
 
+  /** 収録が少ない種類（東京23区の老人福祉施設は282件で、大阪市の約1/5）。0件を「該当なし」と読ませない */
+  const sparse = (data, key) => !!(data.region.sparse && data.region.sparse.includes(key));
   function facSection(data, f) {
     const sec = { id: 'fac', title: '4. 徒歩圏（直線800m）の生活施設', apis: ['XKT006', 'XKT007', 'XKT010', 'XKT011'], lines: [], ask: [], missing: unfetched(data, ['XKT006', 'XKT007', 'XKT010', 'XKT011']) };
     const fac = f.fac;
@@ -491,9 +558,9 @@
     for (const g of fac.groups) {
       if (!g.have) continue;
       const near = g.nearest ? '最寄りは' + g.nearest.name + '（約' + fmtDist(g.nearest.dist) + '）' : '';
-      sec.lines.push({ tag: apiOf[g.key], text: g.label + ': ' + (g.count ? g.count + '件（' + g.names.join('、') + (g.count > g.names.length ? ' など' : '') + '）' : '直線800m以内に該当なし' + (near ? '。' + near : '')) + '。' });
+      sec.lines.push({ tag: apiOf[g.key], text: g.label + ': ' + (g.count ? g.count + '件（' + g.names.join('、') + (g.count > g.names.length ? ' など' : '') + '）' : (sparse(data, g.key) ? '直線800m以内に収録なし（この地域は収録が少なく、施設が無いという意味ではない）' : '直線800m以内に該当なし') + (near ? '。' + near : '')) + '。' });
     }
-    sec.lines.push({ tag: '注意', text: 'ここでの徒歩圏は、指した位置から直線800m以内で、道路に沿った距離ではない（規約の「1分=80m」は道路距離。坂・川・踏切・遠回りがあれば実際はより長い）。位置は整備時点（医療機関は令和2年度、学校・福祉施設は令和5年度）のもので、その後の閉鎖・開設は反映されず、将来も続くかは分からない。' + (data.region.clip ? '同梱は' + data.region.name + 'の内側の施設のみ（境界の近くは隣の施設を数えない）。収録は自治体で差があり、少なく出ることがある。' : '') + '' });
+    sec.lines.push({ tag: '注意', text: 'ここでの徒歩圏は、指した位置から直線800m以内で、道路に沿った距離ではない（規約の「1分=80m」は道路距離。坂・川・踏切・遠回りがあれば実際はより長い）。位置は整備時点（医療機関は令和2年度、学校・福祉施設は令和5年度）のもので、その後の閉鎖・開設は反映されず、将来も続くかは分からない。' + (data.region.clip ? '同梱は' + data.region.name + 'の内側の施設のみ（境界の近くは隣の施設を数えない）。収録は自治体で差があり、少なく出ることがある。' : '') + (sparse(data, 'elder') ? '老人福祉施設は' + data.region.name + 'で' + ((data.fac && data.fac.elder) || []).length + '件しか収録がなく（大阪市は約1,400件）、地域どうしを比べる材料にはならない。' : '') + '' });
     sec.ask.push('気になる施設は、現在も運営しているか、受け入れ状況を、施設か自治体に直接確かめる。');
     return sec;
   }
@@ -520,16 +587,27 @@
     const h = f.hazard;
     if (!h) return sec;
     const yn = (v) => (v ? '想定区域の中にある' : '想定区域の外にある');
-    if ('sediment' in h) sec.lines.push({ tag: 'XKT029', text: '土砂災害警戒区域: ' + yn(h.sediment) + '。このシートは警戒区域と特別警戒区域を区別していない（特別警戒区域は建築や開発に制限がかかる場合があるため、市のハザードマップで確かめる）。' });
+    if ('sediment' in h) sec.lines.push({ tag: 'XKT029', text: '土砂災害警戒区域: ' + yn(h.sediment) + '。このシートは警戒区域と特別警戒区域を区別していない（特別警戒区域は建築や開発に制限がかかる場合があるため、' + unitOf(data.region) + 'のハザードマップで確かめる）。' });
     for (const spec of RASTER_HAZARDS) if (spec.part in h) sec.lines.push({ tag: spec.api, text: rasterHazardText(spec, data.hazard[spec.part], h[spec.part]) });
     // 東京都は、国の想定とは別に、中小河川・内水も含めた「浸水予想区域図」を公表している（国土数値情報 洪水浸水想定区域（A31b）の注記。2026-11-14 に原ページで確認）
     if (data.region.id === 'tokyo23' && 'flood' in h) sec.lines.push({ tag: '注意', text: '東京都は別に、内水等も含む「浸水予想区域図」を公表しており、区のハザードマップと異なる場合がある（国土数値情報の注記）。' });
-    if (data.status.XKT028.state === 'empty') sec.lines.push({ tag: '注意', text: '津波浸水想定は、この地域ではデータ無し（取得できたが0件）。想定が無い、または安全である、という意味ではない。' });
     if ('tsunami' in h) sec.lines.push({ tag: '注意', text: TSUNAMI_NOTE });
     if ('liquefaction' in h) sec.lines.push({ tag: '注意', text: LIQ_NOTE });
     sec.lines.push({ tag: '注意', text: '扱っていない災害: 内水氾濫、ため池、地すべり、急傾斜地、大規模盛土造成地、災害の履歴、津波の到達時間・地震の揺れ・火災。区域の外は安全を意味せず、同じ区域でも深さは場所で違う。安全・危険の判定ではない。' });
-    sec.ask.push('市のハザードマップと避難場所を確認し、不動産会社に重要事項説明（水害ハザードマップ上の位置）を聞く。');
+    sec.ask.push(unitOf(data.region) + 'のハザードマップと避難場所を確認し、不動産会社に重要事項説明（水害ハザードマップ上の位置）を聞く。');
     return sec;
+  }
+
+  /** 対象の外の地点: 市（区）の名前で知らせる。名前の表に無い時だけ、市区町村コードを書く */
+  function outOfRegionText(data, f) {
+    const rn = data.region.name, tail = '他の地域は、画面の「対象地域」で選べます。印刷はできません。';
+    const own = f.neighbor && regionHas(data.region, f.neighbor);
+    if (f.neighbor && !own) {
+      const nm = cityName(f.neighbor);
+      return '指した地点は' + (nm ? '「' + nm + '」' : '別の市区町村（市区町村コード ' + f.neighbor + '）') + 'で、' + rn + 'の対象の外です。この地域の対象は' + rn + 'のみで、' + (nm || 'この市区町村') + 'のデータは同梱していません。' + tail;
+    }
+    if (data.region.clip) return '指した地点は、' + rn + 'の都市計画区域の範囲の外です（海・川・埋立地、または' + rn + 'の外）。同梱データは' + rn + 'の内側だけなので、シートは出しません。' + tail;
+    return 'この地点の近く（約' + MESH_SNAP + 'm以内）に、人口の推計があるメッシュがありません（海・川・山林など）。人が住む場所を指してください。' + tail;
   }
 
   /** 1枚シートの中身を作る。範囲外・徳島市外の場合は outOfScope に理由を入れて、各節は空にする */
@@ -537,14 +615,16 @@
     const sheet = { title: '住む場所の先行きシート', outOfScope: null, sections: [], missing: [] };
     if (!f.inBBox) { sheet.outOfScope = 'この地点は、同梱データの範囲（' + data.region.name + '周辺）の外です。他の地域は、画面の「対象地域」で選べます。'; return sheet; }
     if (!ok(data, 'XKT013')) { sheet.outOfScope = '将来推計人口（XKT013）が' + UNFETCHED + 'のため、位置が' + data.region.name + 'の中か判定できません（' + data.status.XKT013.reason + '）。'; return sheet; }
-    if (!regionHas(data.region, f.cityCode)) { sheet.outOfScope = f.cityCode ? 'この地域の対象は' + data.region.name + 'のみです。この地点は別の市区町村（市区町村コード ' + f.cityCode + '）です。他の地域は、画面の「対象地域」で選べます。' : 'この地点の近く（約' + MESH_SNAP + 'm以内）に、人口の推計があるメッシュがありません（海・川・山林など）。人が住む場所を指してください。'; return sheet; }
+    if (!f.inRegion) { sheet.outOfScope = outOfRegionText(data, f); return sheet; }
+    const wl = wardLabel(data.region, f.cityCode);
+    sheet.title = '住む場所の先行きシート（' + data.region.name + (wl ? '・' + wl : '') + '）';
     sheet.sections = [planSection(data, f), popSection(data, f), schoolSection(data, f), facSection(data, f), hazardSection(data, f)];
     sheet.missing = ['学校・病院・店が10年後も続くか（公開データに将来の存続はない）', '空き家の多さ、道路・上下水道の維持の計画、地価や取引の動き（このシートでは扱わない）', '個別の物件の状態（接道・境界・建物の劣化など）'];
     return sheet;
   }
 
   return {
-    processedFor, regionNote, REGIONS, DEFAULT_REGION, regionHas, planKey, apisFor, ZONING_APIS, NODATA, zoningAt, REINFOLIB_URL, CREDIT, ATTRIBUTION, NLNI_SOURCE, NLNI_SHORT, TSUNAMI_NOTE, LIQ_NOTE, SCHOOL_FAC_NOTE, ORIG_NOTES, PROCESSED, RESPONSIBILITY, POP_NOTE, PLAN_PDF, PLAN_PAGE, WALK_RADIUS, POP_RADIUS, MESH_SNAP, APIS, PLAN_KUBUN, UNFETCHED, FAC_GROUPS,
+    processedFor, regionNote, REGIONS, DEFAULT_REGION, regionHas, planKey, cityName, wardLabel, outOfRegionText, regionCellAt, apisFor, ZONING_APIS, NODATA, zoningAt, REINFOLIB_URL, CREDIT, ATTRIBUTION, NLNI_SOURCE, NLNI_SHORT, TSUNAMI_NOTE, LIQ_NOTE, SCHOOL_FAC_NOTE, ORIG_NOTES, PROCESSED, RESPONSIBILITY, POP_NOTE, PLAN_PDF, PLAN_PAGE, WALK_RADIUS, POP_RADIUS, MESH_SNAP, APIS, PLAN_KUBUN, UNFETCHED, FAC_GROUPS,
     lonLatToWorld, worldToLonLat, haversine, inRing, inPolygon, inPolys, inBBox, fmtDist, decodeRaster, rleDecode, inRaster, levelAt, rasterAround, cellOn, pickYears, RASTER_HAZARDS, SMALL_POP, SMALL_CHILD,
     assemble, cityAt, planAt, sumMeshes, popAround, changePct, fmtPct, fmtNum, share, districtAt, facilitiesAround, collect, buildSheet,
   };
