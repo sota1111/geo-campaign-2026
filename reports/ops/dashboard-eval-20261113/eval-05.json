@@ -1,0 +1,211 @@
+{
+  "evaluator": 5,
+  "model": "gpt-6.1-sol low",
+  "portal": {
+    "A": [
+      4,
+      4,
+      5,
+      4,
+      4
+    ],
+    "goals": {
+      "P-1": {
+        "achieved": true,
+        "value": "衛星2026/11/30 12:00（あと16日）、イチBiz2026/11/30 20:00・ビジネス（あと16日）、UDC2026/12/27 23:59・本応募（あと44日）、ODPT2027/1/11 23:59（あと59日）。年はコンペ名・詳細の表示で補完。",
+        "where": "01-portal.png"
+      },
+      "P-2": {
+        "achieved": true,
+        "value": "衛星:提出文・デモ済、B/α選定とFAQ7確認・本人/体制記入・提出が残る。イチBiz:提出文・デモ済、部門ごとの案選定・本人/背景・PPT記入・登録が残る。UDC:11/9概要登録・説明/デモ下書き済、作品②のタイプ判断・公開URL・本応募が残る。ODPT:アプリ済、提出文下書き・N2連続収集判断・公開/監査・提出が残る。",
+        "where": "01-portal.png、07-portal-mobile-open.png"
+      },
+      "P-3": {
+        "achieved": true,
+        "value": "1280×765の一覧位置はUDC行上端358pxで開閉前後不変。390×844ではスクロール95px・UDC行上端363pxが詳細を開く前、開いている間、閉じた後すべて一致。同一CDP接続で検証。",
+        "where": "06-portal-mobile.png、07-portal-mobile-open.png"
+      },
+      "P-4": {
+        "achieved": true,
+        "value": "トップのコンペ別リンクから4アプリへ進み、各画面左上「統合ダッシュボード」でトップへ復帰できた。",
+        "where": "01-portal.png、08-memory-match.png、13-aed-night.png、15-sat-rank.png、18-moritsuchi-place.png"
+      }
+    }
+  },
+  "apps": [
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        3,
+        4,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 3,
+        "C-BIZ4": 2
+      },
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）・洪水。半径1km内の碑は全4件、種類が合う洪水碑1件。大禹謨(だいうぼ)・1972年・350m。近隣災害の手がかりであり、地名との因果や危険度は示さない。",
+          "where": "08-memory-match.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "手順3で空中写真1945〜50年を選び、濃さ70%で地図に重ねた。",
+          "where": "09-memory-photo.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "ぬま田の架空の語り・出典・語り手を入力欄に写し、1件保存。未確認・公開範囲未定となり、公開分に入らない理由も表示された。",
+          "where": "10-memory-record.png"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "確認役を兼ねる画面で確認済み・公開を選択。公開分1件をchimei-kioku-public.geojsonとして書き出し、成功通知を確認。外部公開は行っていない。",
+          "where": "11-memory-export.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "オレンジの地名と語りは架空、青い伝承碑は国土地理院の実データ。語り手Aも架空・実在しないと明記。",
+          "where": "08-memory-match.png、10-memory-record.png"
+        }
+      }
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "B": [
+        5,
+        4,
+        3,
+        3,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 5,
+        "C-BIZ3": 4,
+        "C-BIZ4": 2
+      },
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市、水曜03:00、使えると確認できたAED11台（2か所）。登録288台、不明5台、一般利用不可4台は数えない。",
+          "where": "13-aed-night.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "直線500m圏外は約167,400人（96%）。分母は市境から800m以上内側175,218人。市全体430,913人では約421,800人（98%）で隣接市未読込による上限。月〜金の同時刻はいずれも96%。",
+          "where": "13-aed-night.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "地図の空き地点をクリックして24時間AED1台追加を試算、新規圏内約7,100人。最寄りの既存利用可能AEDは直線約2,679m。候補一覧1位は原町田二丁目付近・約12,700人（市境付近の注記）。",
+          "where": "14-aed-scenario.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "候補・出力で「設置先候補をCSVで書き出す」を実行。aed_candidates_machida_水0300_r500_strict.csvを保存。Tab/Enterで地区別CSVの出力も実行。",
+          "where": "14-aed-scenario.png"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "時間不明5台、隣接市のAED未読込、直線距離で道路・川・線路・坂を未考慮、祝日未反映。「圏外＝AEDが無い、ではありません」と明記。データタブでも確認。",
+          "where": "13-aed-night.png、14-aed-scenario.png"
+        }
+      }
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "B": [
+        5,
+        5,
+        4,
+        5,
+        3,
+        3,
+        5
+      ],
+      "C": {
+        "C-SAT1": 5,
+        "C-SAT2": 3,
+        "C-SAT3": 3,
+        "C-SAT4": 4,
+        "C-SAT5": 4
+      },
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "最高点0.94。同点3区間S021・S022・S036。表1位S021、区画A3、布設1964年、156m。衛星50%×区画値0.89＋台帳50%×古さ1.00。",
+          "where": "15-sat-rank.png"
+        },
+        "G3-2": {
+          "achieved": true,
+          "value": "3.0kmの予算で「点数の上位から自動で選ぶ」を実行。22区間・2.9kmを選び、走査結果を見る段階へ進んだ。",
+          "where": "16-sat-budget.png"
+        },
+        "G3-3": {
+          "achieved": true,
+          "value": "走査サンプル22区間で疑い7・異常なし15。較正で衛星重み50%→60%へ更新し第2回へ。走査済み除外後の1位S020→S033、S033の第2回点数0.75、上位10区間の順位が10区間で変化。必須5/5完了。",
+          "where": "17-sat-round2.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "架空の街サンプル市。Sentinel-1未取得・InSAR処理未実装・式と乱数の架空値。走査結果も乱数。実際の精度や効果を示さない。",
+          "where": "15-sat-rank.png、16-sat-budget.png、17-sat-round2.png"
+        }
+      }
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        4,
+        4,
+        5
+      ],
+      "C": {
+        "C-UDC1": 4,
+        "C-UDC2": 4,
+        "C-UDC3": 3
+      },
+      "goals": {
+        "G2-1": {
+          "achieved": true,
+          "value": "熱海駅を例に指定。500m内には登録なし、最寄りは北西約1100mの熱海市0012・腹付け型（斜面に盛った盛土）。概ねの範囲。",
+          "where": "18-moritsuchi-place.png"
+        },
+        "G2-2": {
+          "achieved": true,
+          "value": "熱海市0012で昔1961〜69年と背景「航空写真(現在)」を選択。スライダーを5%→95%へ実操作し、現在のカラー写真と昔の白黒写真を見比べた。写真だけで危険判定しない。",
+          "where": "19-moritsuchi-photo.png"
+        },
+        "G2-3": {
+          "achieved": true,
+          "value": "地図中心を記録位置に設定し、建物・道路の見え方の違いについて評価用の架空メモを入力して1件保存。台帳に熱海市0012範囲内の記録として残った。現地の変化を断定せず、市への送信もしていない。",
+          "where": "20-moritsuchi-export.png"
+        },
+        "G2-4": {
+          "achieved": true,
+          "value": "台帳CSVを書き出し「CSVを書き出しました」「必須5/5」を確認。moritsuchi-records-202611132023.csvを保存。さらにTab/EnterでGeoJSON書き出しも確認。",
+          "where": "20-moritsuchi-export.png"
+        }
+      }
+    }
+  ]
+}

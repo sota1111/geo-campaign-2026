@@ -1,0 +1,105 @@
+[3:3:1113/201504.197104:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/ubuntu/.config/google-chrome/Crash Reports/settings.dat: Read-only file system (30)
+[3:3:1113/201504.197229:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/ubuntu/.config/google-chrome/Crash Reports/settings.dat: Read-only file system (30)
+[3:27:1113/201504.200906:ERROR:base/files/file_path_watcher_inotify.cc:338] inotify_init() failed: Too many open files (24)
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.207: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.208: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.208: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.208: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.209: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.209: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.209: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+[3:22:1113/201504.210393:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open /home/ubuntu/.config/google-chrome/Crash Reports/settings.dat: Read-only file system (30)
+[47:77:1113/201504.240657:ERROR:base/files/file_path_watcher_inotify.cc:338] inotify_init() failed: Too many open files (24)
+
+(process:3): dconf-CRITICAL **: 20:15:04.245: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(process:3): dconf-CRITICAL **: 20:15:04.247: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+DevTools listening on ws://127.0.0.1:9302/devtools/browser/69538e5d-134a-4d11-8bb9-fe599b1ac2d1
+[3:3:1113/201504.292867:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.systemd1.Manager.StartTransientUnit: object_path= /org/freedesktop/systemd1: org.freedesktop.DBus.Error.InvalidArgs: Process 3 is a kernel thread, refusing.
+[3:22:1113/201504.331873:ERROR:crypto/nss_util.cc:256] Error initializing NSS with a persistent database (sql:/home/ubuntu/.pki/nssdb): NSS error code: -8126
+
+(chrome-profile --window-size=1280,765 --noerrdialogs --no-first-run --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl about:blank:3): dconf-CRITICAL **: 20:15:04.496: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(chrome-profile --window-size=1280,765 --noerrdialogs --no-first-run --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl about:blank:3): dconf-CRITICAL **: 20:15:04.497: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+
+(chrome-profile --window-size=1280,765 --noerrdialogs --no-first-run --ozone-platform=headless --ozone-override-screen-size=800,600 --use-angle=swiftshader-webgl about:blank:3): dconf-CRITICAL **: 20:15:04.535: unable to create file '/run/user/1000/dconf/user': Read-only file system.  dconf will not work properly.
+Created TensorFlow Lite XNNPACK delegate for CPU.
+[45:45:1113/201653.752385:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1269] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[45:45:1113/201653.784794:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x16dc01d80c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[45:45:1113/201653.800698:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x16dc01d80c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[45:45:1113/201653.819712:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x16dc01d80c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[45:45:1113/201653.828364:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x16dc01d80c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+Warning: maxDynamicUniformBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+Warning: maxDynamicStorageBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1794568684.285579     680 environment.cc:526] Selected adapter: SwiftShader Device (Subzero), arch=swiftshader, vendor=google, backend=Vulkan, adapterType=CPU / Software
+[680:680:1113/201804.285712:ERROR:services/on_device_model/ml/chrome_ml.cc:101] Terminating On-Device Model Service: Failed creation: Failed to create device:
+Required limit (14336) is greater than the supported limit (8192).
+ - While validating maxTextureDimension2D
+ - While validating required limits
+
+[3:3:1113/201804.289281:ERROR:services/on_device_model/public/cpp/service_client.cc:37] Unexpected on_device_model service disconnect; reason: 0, description: 
+[45:45:1113/201808.921974:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1269] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[45:45:1113/201834.568635:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1269] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[45:45:1113/202009.890144:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1269] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[45:45:1113/202038.441933:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1269] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[45:45:1113/202202.783561:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1269] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[1113/202504.197211:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/a8062f1b-ee9c-41e0-a74f-b8db842a32b5.lock: Read-only file system (30)
+[1113/202504.197270:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/080e91f3-66b2-4aa9-a6e7-e3968f1e0d86.lock: Read-only file system (30)
+[1113/202504.197277:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/43d4eb76-fd42-4907-8d81-7f9977844a55.lock: Read-only file system (30)
+[1113/202504.197282:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/1a2f5ca7-a0e8-4848-9a23-32f8d955ee62.lock: Read-only file system (30)
+[1113/202504.197287:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/9b81ddf3-86c8-4f05-8020-e6a8791ef074.lock: Read-only file system (30)
+[1113/202504.197292:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/37cae1ba-84ed-49b1-869e-588b383b5b33.lock: Read-only file system (30)
+[1113/202504.197296:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/080e91f3-66b2-4aa9-a6e7-e3968f1e0d86.lock: Read-only file system (30)
+[1113/202504.197301:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/ff93b995-7295-4458-ada6-4e58d5036c06.lock: Read-only file system (30)
+[1113/202504.197305:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/ff93b995-7295-4458-ada6-4e58d5036c06.lock: Read-only file system (30)
+[1113/202504.197310:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/1a2f5ca7-a0e8-4848-9a23-32f8d955ee62.lock: Read-only file system (30)
+[1113/202504.197314:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/654e6601-3534-4ab3-b100-27bdf4c3b739.lock: Read-only file system (30)
+[1113/202504.197319:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/177bf211-ef0b-4f88-9956-df1250977c1a.lock: Read-only file system (30)
+[1113/202504.197323:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/a8062f1b-ee9c-41e0-a74f-b8db842a32b5.lock: Read-only file system (30)
+[1113/202504.197328:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/177bf211-ef0b-4f88-9956-df1250977c1a.lock: Read-only file system (30)
+[1113/202504.197332:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/25072cc4-1145-4881-a2e7-9daadec6cecc.lock: Read-only file system (30)
+[1113/202504.197338:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/b0c6f6c7-f0c5-44df-ab18-d1dac1ed3d5d.lock: Read-only file system (30)
+[1113/202504.197343:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/b0c6f6c7-f0c5-44df-ab18-d1dac1ed3d5d.lock: Read-only file system (30)
+[1113/202504.197349:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/dadd6113-951c-4b43-84f9-c35d8197590d.lock: Read-only file system (30)
+[1113/202504.197354:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/9b81ddf3-86c8-4f05-8020-e6a8791ef074.lock: Read-only file system (30)
+[1113/202504.197359:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/9fcd5289-29dd-44e5-8c16-42d6f787edba.lock: Read-only file system (30)
+[1113/202504.197364:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/25072cc4-1145-4881-a2e7-9daadec6cecc.lock: Read-only file system (30)
+[1113/202504.197368:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/dadd6113-951c-4b43-84f9-c35d8197590d.lock: Read-only file system (30)
+[1113/202504.197373:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/9fcd5289-29dd-44e5-8c16-42d6f787edba.lock: Read-only file system (30)
+[1113/202504.197378:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/37cae1ba-84ed-49b1-869e-588b383b5b33.lock: Read-only file system (30)
+[1113/202504.197383:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/654e6601-3534-4ab3-b100-27bdf4c3b739.lock: Read-only file system (30)
+[1113/202504.197389:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/43d4eb76-fd42-4907-8d81-7f9977844a55.lock: Read-only file system (30)
+[1113/202504.197433:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/a8062f1b-ee9c-41e0-a74f-b8db842a32b5.lock: Read-only file system (30)
+[1113/202504.197442:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/080e91f3-66b2-4aa9-a6e7-e3968f1e0d86.lock: Read-only file system (30)
+[1113/202504.197446:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/43d4eb76-fd42-4907-8d81-7f9977844a55.lock: Read-only file system (30)
+[1113/202504.197451:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/1a2f5ca7-a0e8-4848-9a23-32f8d955ee62.lock: Read-only file system (30)
+[1113/202504.197455:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/ff93b995-7295-4458-ada6-4e58d5036c06.lock: Read-only file system (30)
+[1113/202504.197460:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/654e6601-3534-4ab3-b100-27bdf4c3b739.lock: Read-only file system (30)
+[1113/202504.197464:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/177bf211-ef0b-4f88-9956-df1250977c1a.lock: Read-only file system (30)
+[1113/202504.197468:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/25072cc4-1145-4881-a2e7-9daadec6cecc.lock: Read-only file system (30)
+[1113/202504.197473:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/b0c6f6c7-f0c5-44df-ab18-d1dac1ed3d5d.lock: Read-only file system (30)
+[1113/202504.197477:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/9b81ddf3-86c8-4f05-8020-e6a8791ef074.lock: Read-only file system (30)
+[1113/202504.197481:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/dadd6113-951c-4b43-84f9-c35d8197590d.lock: Read-only file system (30)
+[1113/202504.197486:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/9fcd5289-29dd-44e5-8c16-42d6f787edba.lock: Read-only file system (30)
+[1113/202504.197491:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:153] open /home/ubuntu/.config/google-chrome/Crash Reports/completed/37cae1ba-84ed-49b1-869e-588b383b5b33.lock: Read-only file system (30)

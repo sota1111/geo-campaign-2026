@@ -1,0 +1,216 @@
+{
+  "evaluator": 4,
+  "model": "gpt-6.1-sol low",
+  "portal": {
+    "A": [
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "goals": {
+      "P-1": {
+        "achieved": true,
+        "value": "次の未了締切：衛星2026/11/30 12:00、イチBiz2026/11/30 20:00（アイデア・不動産は12/10 20:00）、UDC2026/12/27 23:59、ODPT2027/1/11 23:59。UDC概要登録11/15 23:59は11/9登録済。",
+        "where": "01-portal.png、02-biz-detail.png"
+      },
+      "P-2": {
+        "achieved": true,
+        "value": "衛星：提案書・デモ済／Bかαの選定・FAQ7確認・本人/体制欄・提出が残る。イチBiz：全6案の提出文・デモ済／部門別の案選定・本人/背景欄・PPT記入・登録が残る。UDC：概要登録・説明/デモ済／作品②の応募形態判断・公開URL・本応募が残る。ODPT：アプリ済／提出文下書き・N2収集場所/担当の判断・公開/監査・提出が残る。",
+        "where": "01-portal.png、02-biz-detail.png"
+      },
+      "P-3": {
+        "achieved": true,
+        "value": "1280×765で詳細開閉前後scrollY=0。390×844で下方へスクロール後、イチBiz詳細を開く前95px→開いた後95px→閉じた後95px。一覧位置の移動なし。",
+        "where": "02-biz-detail.png、04-portal-mobile.png（数値はCDPで表示スクロール位置を測定）"
+      },
+      "P-4": {
+        "achieved": true,
+        "value": "左の「住む場所の先行き」等から担当画面へ進み、上端「←統合ダッシュボード」でトップへ戻れた。4アプリをこの導線で探索。",
+        "where": "01-portal.png、05-home-future.png、13-land-sheet.png"
+      }
+    }
+  },
+  "apps": [
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "B": [
+        5,
+        4,
+        4,
+        4,
+        3,
+        4,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 4,
+        "C-BIZ4": 1
+      },
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "徳島駅付近（34.0745,134.5513）は居住誘導区域（徳島市の呼称：居住促進区域）内、都市機能誘導区域内。設定日2024-04-01/2019-06-01。",
+          "where": "06-future-result.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500m・11メッシュ：2025年1,643人→2035年1,463人→2050年1,187人（−11%、−28%）。65歳以上39%→47%。市全体2025→2050年−21%より減少が大きい。",
+          "where": "06-future-result.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校区。校区の0〜14歳推計500人→363人（2025→2050年、−27%）。統合/存続は数字だけでは分からない。",
+          "where": "09-future-school.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水想定最大規模内0.5〜3.0m未満、津波内1〜2m未満、高潮内1〜3m未満。土砂災害警戒区域外。液状化しやすい区分。",
+          "where": "07-future-hazard.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "将来人口は国の推計で実人口ではない。区域は市の公表図が正、表示は参考。液状化は250mメッシュの傾向、災害区域は約18m格子へ加工し境界ずれがあり、区域外は安全を意味しない。",
+          "where": "05-home-future.png、06-future-result.png、07-future-hazard.png"
+        }
+      }
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "B": [
+        5,
+        5,
+        4,
+        5,
+        4,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 4,
+        "C-BIZ4": 3
+      },
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅付近の例：商業地域、建ぺい率80%、容積率600%。",
+          "where": "11-land-conditions.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水想定最大規模内（0.5〜3m）、高潮内、津波内、土砂災害警戒区域は入らない。",
+          "where": "11-land-conditions.png"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る：建てられる建物/買い手の用途と説明事項を市・不動産会社に聞く。貸す：駐車場/店舗/住宅等の制限、借り手への説明・修繕を聞く。活かす：建築用途と避難先・敷地高さの確認方法を市/専門家に聞く。手放す：建物の解体要否/費用と国庫帰属前の登記を司法書士・法務局に聞く。",
+          "where": "12-land-exits.png、10-land-start.png（印刷結果）"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "手順5へ進み「印刷・PDFで保存する」を実操作。Chrome印刷出力land-sheet.pdfを作成、A4・1ページを確認。4出口・条件・出典を収録。",
+          "where": "13-land-sheet.png、10-land-start.png（PDFの画像化）"
+        }
+      }
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        3,
+        4,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 5,
+        "C-BIZ3": 4,
+        "C-BIZ4": 1
+      },
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市・平日03:00：11台（2か所）。登録288台、時間不明5台、一般利用できない位置4台を除外。水曜午前3時も選択。",
+          "where": "14-aed-start.png、15-aed-candidates.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "直線500m圏外：約167,400人、96%。分母は市境800m以上内側の175,218人。市全体は約421,800人/430,913人、98%（隣市未読込のため上限）。",
+          "where": "14-aed-start.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "水曜03:00・500mで1台目の候補、原町田二丁目付近に24時間AEDを置くと約12,700人が新たに圏内（境界付近）。候補選択で地図も移動。任意地点の地図クリックでは約0人・最寄り約10,483mの試算も表示された。",
+          "where": "15-aed-candidates.png、16-aed-added.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "「設置先候補をCSVで書き出す」を操作し「設置先候補10件を書き出しました」。aed_candidates_machida_水0300_r500_strict.csvを保存。",
+          "where": "15-aed-candidates.png"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "時間不明5台を区別。市境800m以内と隣市AED未読込を区別。距離は道路でなく直線500m。祝日未反映、民間AEDの未掲載もあり、圏外＝AED無しではない。",
+          "where": "14-aed-start.png"
+        }
+      }
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "B": [
+        5,
+        4,
+        4,
+        5,
+        4,
+        3,
+        5
+      ],
+      "C": {
+        "C-BIZ1": 4,
+        "C-BIZ2": 4,
+        "C-BIZ3": 4,
+        "C-BIZ4": 2
+      },
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）、洪水、半径1km：「手がかりあり」、同種の伝承碑1件。大禹謨（だいうぼ、1972年・洪水）が350m。全種類では4件。地名との因果や危険度は示さない。",
+          "where": "18-memory-match.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "手順3「空中写真1961〜69年」を選び、濃さ70%で標準地図と重ねた白黒写真を目視。",
+          "where": "19-memory-old-photo.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "サンプルを写し、評価用の架空聞き取り文を追加入力し1件保存。「ぬま田（架空）を未確認の記録として保存しました」、地図に？ピン。端末だけに保存、未確認では公開分に入らない。",
+          "where": "17-memory-start.png"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "デモの確認役として公開範囲「公開」・CC BY4.0で確認済みにし、公開分1件をGeoJSON書き出し。chimei-kioku-public.geojsonを保存。「端末内で作成し、送信はしていません」。実際の公開はしていない。",
+          "where": "20-memory-record-export.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "オレンジの地名と語りは架空、青い伝承碑は国土地理院の実データ。語り手Aも架空。書き出した架空記録を実際の公開データとして使わない注意も表示。",
+          "where": "18-memory-match.png、17-memory-start.png、20-memory-record-export.png"
+        }
+      }
+    }
+  ]
+}
