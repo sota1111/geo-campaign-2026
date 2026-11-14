@@ -7,6 +7,7 @@ import {
   meshCenter, roundRing, polysOf, extractPlan, extractMesh, extractSchools, extractPreschools, extractMedical, extractElderCare,
   extractSchoolDistricts, extractAreas, rasterize, tilesFor, POP_YEARS,
   rasterizeLevels, rleEncode, extractFloodLevels, extractLeveledByLabel, extractLiquefaction, FLOOD_RANKS,
+  extractZoning, extractAreaClass, countByCity, makeMask, clipPoints, clipPolys, LevelRaster, inCodes,
 } from '../tools/extract.mjs';
 
 const Lib = createRequire(import.meta.url)('../web/lib.js');
@@ -123,4 +124,73 @@ test('区分つき格子: 連長符号化の往復、重なる所は大きい区
   const lq = extractLiquefaction([{ properties: { liquefaction_tendency_level: 3, note: 'やや液状化しやすい' }, geometry: poly(0, 0, 1) }, { properties: { note: 'x' }, geometry: poly(2, 2, 1) }]);
   assert.deepStrictEqual(lq.labels, { 3: 'やや液状化しやすい' });
   assert.strictEqual(lq.items.length, 1);
+});
+
+// ---- 東京23区・大阪市の追加分 ----
+test('XKT002 用途地域: 地域の市区町村コードだけ残し、市区町村・用途・容積率・建蔽率ごとにまとめる', () => {
+  const z = (code, name, far, bcr, g) => ({ properties: { city_code: code, city_name: code === '13101' ? '千代田区' : '他', use_area_ja: name, youto_id: 10, u_floor_area_ratio_ja: far, u_building_coverage_ratio_ja: bcr }, geometry: g });
+  const r = extractZoning([z('13101', '商業地域', '600%', '80%', poly(0, 0, 1)), z('13101', '商業地域', '600%', '80%', poly(5, 5, 1)), z('13101', '商業地域', '400%', '80%', poly(9, 9, 1)), z('14130', '商業地域', '600%', '80%', poly(0, 0, 1)), { properties: { city_code: '13101', use_area_ja: '' }, geometry: poly(0, 0, 1) }], ['13101', '13102']);
+  assert.strictEqual(r.length, 2);
+  assert.strictEqual(r.find((e) => e.far === '600%').polys.length, 2);
+  assert.strictEqual(r[0].city, '千代田区');
+  assert.strictEqual(extractZoning([z('14130', 'x', '', '', poly(0, 0, 1))], ['13101']).length, 0);
+  assert.strictEqual(extractZoning([z('14130', 'x', '', '', poly(0, 0, 1))]).length, 1); // codes なしは絞らない
+});
+
+test('XKT001 区域区分: 区分名ごとにまとめ、地域外は除く', () => {
+  const a = (code, id, name, g) => ({ properties: { city_code: code, city_name: 'c', kubun_id: id, area_classification_ja: name }, geometry: g });
+  const r = extractAreaClass([a('27100', 21, '都市計画区域', poly(0, 0, 1)), a('27100', 21, '都市計画区域', poly(3, 3, 1)), a('27100', 22, '市街化区域', poly(0, 0, 1)), a('28202', 21, '都市計画区域', poly(0, 0, 1))], ['27100']);
+  assert.deepStrictEqual(r.map((e) => [e.id, e.name, e.polys.length]), [[21, '都市計画区域', 2], [22, '市街化区域', 1]]);
+});
+
+test('countByCity: XKT003 の応答を市区町村ごとに数える（取得結果の記録用）', () => {
+  assert.deepStrictEqual(countByCity([{ properties: { city_code: '27140', city_name: '堺市' } }, { properties: { city_code: '27140', city_name: '堺市' } }, { properties: null }, { properties: { city_code: '27203', city_name: '豊中市' } }]), { '27140 堺市': 2, '27203 豊中市': 1 });
+  assert.deepStrictEqual(countByCity([]), {});
+});
+
+test('福祉施設: codes を渡すと、自治体コード（P14_003）が地域内のものだけ残る（隣の自治体・コードが県だけのものは入れない）', () => {
+  const pt = (c) => ({ properties: { P14_005: '02', P14_006_name_ja: '老人福祉センター', P14_008_ja: 'N' + c, P14_003: c }, geometry: { type: 'Point', coordinates: [135.5, 34.7] } });
+  const rows = [pt('27127'), pt('27000'), pt('27203'), pt('')];
+  assert.deepStrictEqual(extractElderCare(rows, ['27100', '27127']).map((x) => x.name), ['N27127']);
+  assert.strictEqual(extractElderCare(rows).length, 4);
+  assert.ok(inCodes(['13101'], '13101') && !inCodes(['13101'], '1310'));
+});
+
+test('地域の内側（mask）: 点・多角形を地域の外から除く。境界の隣のセルは内側に数える', () => {
+  const m = makeMask([[sq(0, 0, 1)]], [0, 0, 2, 2], 0.01, 0.01);
+  assert.ok(m.has(0.5, 0.5) && !m.has(1.5, 1.5));
+  assert.strictEqual(m.cells, 100 * 100); // 1度×1度を 0.01度の格子で数える
+  assert.ok(m.near(1.005, 0.5) && !m.near(1.5, 0.5)); // 境界の1セル外は内側扱い
+  assert.deepStrictEqual(clipPoints([{ lon: 0.5, lat: 0.5 }, { lon: 1.5, lat: 1.5 }], m).length, 1);
+  assert.strictEqual(clipPolys([[sq(0.2, 0.2, 0.3)], [sq(1.2, 1.2, 0.3)]], m).length, 1);
+});
+
+test('LevelRaster: 全部の多角形から作った格子（rasterizeLevels）と、タイルごとに書き足した格子が一致する（津波ラベル・洪水ランク）', () => {
+  const feats = [
+    { properties: { A40_003: '10m以上 ～ 20m未満' }, geometry: poly(0.1, 0.1, 0.5) },
+    { properties: { A40_003: '2m以上 ～ 3m未満' }, geometry: poly(0.3, 0.3, 0.5) },
+    { properties: { A40_003: '0.3m未満' }, geometry: poly(0.6, 0.6, 0.3) },
+    { properties: { A40_003: '2m以上 ～ 3m未満' }, geometry: poly(0.2, 0.7, 0.2) },
+  ];
+  const bbox = [0, 0, 1, 1];
+  const whole = extractLeveledByLabel(feats, (p) => p.A40_003);
+  const expect = Lib.decodeRaster(rasterizeLevels(whole.items, bbox, whole.labels, 0.01, 0.01));
+  const acc = new LevelRaster(bbox, 0.01, 0.01);
+  for (const f of feats) { // 1件ずつ（タイルごとの取り込みを模す）
+    const rows = [];
+    for (const rings of polysOf(f.geometry, 4)) rows.push({ rings, label: f.properties.A40_003.replace(/\s+/g, '').replace(/～/g, '〜') });
+    acc.addLabeled(rows);
+  }
+  const got = acc.finish();
+  assert.deepStrictEqual(got.labels, whole.labels);
+  assert.deepStrictEqual(got.lv, rasterizeLevels(whole.items, bbox, whole.labels, 0.01, 0.01).lv);
+  assert.strictEqual(got.cells, expect.levels.filter(Boolean).length);
+  // 洪水ランク（coded）と mask
+  const fl = extractFloodLevels([{ properties: { A31a_205: 2 }, geometry: poly(0.1, 0.1, 0.5) }, { properties: { A31a_205: 4 }, geometry: poly(0.3, 0.3, 0.5) }], 5);
+  const a2 = new LevelRaster(bbox, 0.01, 0.01); a2.addCoded(fl.items, fl.labels);
+  const mask = makeMask([[sq(0, 0, 0.4)]], bbox, 0.01, 0.01);
+  const masked = Lib.decodeRaster(a2.finish(mask));
+  assert.strictEqual(Lib.levelAt(masked, 0.35, 0.35), 4);
+  assert.strictEqual(Lib.levelAt(masked, 0.55, 0.55), 0); // 地域の外は区域外にする
+  assert.strictEqual(Lib.levelAt(masked, 0.15, 0.15), 2);
 });
