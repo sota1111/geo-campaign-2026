@@ -127,6 +127,9 @@ export function VerdictPanel({ d }: { d: DiagView }) {
               <span>{fl}へ {cond.w}分以内に {v.yesNo}</span>
             </p>
             <p className="mt-1">{STATUS_NOTE[v.status]}。{v.extra}</p>
+            <p className="mt-1 text-xs" data-testid="verdict-caveat">
+              ※時刻表と<b>直線距離からの徒歩の目安</b>（分速{data.params.walk_m_per_min}m・道のりは直線の{data.params.detour}倍と仮定）で判定。実際の道順・坂・歩く速さ、病院の診療時間は反映していません。
+            </p>
           </div>
           <p data-testid="sheet-last">
             <b>最終便</b>　{nr ? `最寄りの停留所 ${nr.name}（約${nr.m}m）の最終: 平日 ${lastOf('wd')}・休日 ${lastOf('hol')}` : `半径${d.walkInM}m以内に停留所がありません`}
@@ -183,7 +186,7 @@ export function HolPanel({ d, onPickDay }: { d: DiagView; onPickDay: (day: Day) 
         })}
       </div>
       <p className="text-muted-foreground">{v.cmp}</p>
-      <p className="text-xs text-muted-foreground" data-testid="compare-hint">選んでいない側の枠を押すと、結論を切り替えて見比べられます（切り替えると、この手順が済になります）。</p>
+      <p className="text-xs text-muted-foreground" data-testid="compare-hint">選んでいない側の枠を押すと、その曜日の結論に切り替えて、詳しい根拠も見られます。</p>
     </div>
   )
 }
@@ -230,16 +233,24 @@ export function CopyPanel({
 }: { copyText: string; onCopy: () => void; copied: boolean; isLocal: boolean; expiry: string }) {
   return (
     <div className="space-y-2 text-sm">
+      {isLocal && (
+        <p className="rounded-md border border-amber-500 bg-amber-50 p-2 text-xs text-amber-950" role="note" data-testid="local-link-note">
+          <b>リンクについて:</b> いまは手元の確認用アドレス（この端末でしか開けません）で表示しています。コピーした<b>文面の結論・最終便はそのまま相手に伝わります</b>が、リンクは公開後のアドレスで共有したときに相手も開けます。
+        </p>
+      )}
       <Button size="lg" onClick={onCopy} className="h-12 w-full text-base" data-testid="copy-conclusion">
         {copied ? <Check className="size-5" /> : <Copy className="size-5" />}
         {copied ? 'コピー済み（もう一度コピーする）' : '結論とリンクをコピー'}
       </Button>
       <p className="font-medium text-blue-800" role="status" data-testid="copy-done">
-        {copied ? 'コピーしました。LINEやメールに貼り付けて送れます。' : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
+        {copied
+          ? isLocal
+            ? 'コピーしました。LINEやメールに貼り付けて送れます（リンクは確認用のアドレスです。上の注意を参照）。'
+            : 'コピーしました。LINEやメールに貼り付けて送れます。'
+          : '押すと、この結論とこの画面へのリンクがコピーされます（家族に送れます）。'}
       </p>
       <label className="block text-xs text-muted-foreground" htmlFor="odpt-copy-preview">家族に送る文面（「行けるか結論を見る」の1枚と同じ内容。自動でコピーできない時は、ここを選んでコピー）</label>
       <Textarea id="odpt-copy-preview" readOnly rows={7} value={copyText} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
-      {isLocal && <p className="text-xs text-muted-foreground">※いまは手元の確認用アドレスです。公開後のアドレスで共有すると、相手も開けます。</p>}
       <div className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground" data-testid="sustain-note">
         <p className="font-medium text-foreground">データの更新と、使う人たち（想定）</p>
         <ul className="mt-1 list-disc space-y-1 pl-4">

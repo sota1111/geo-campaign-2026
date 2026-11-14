@@ -1,0 +1,205 @@
+{
+  "run": "61-terra-g3-08",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "居住誘導区域内、都市機能誘導区域内",
+          "where": "12-home-results.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500m、2025年1,643人→2035年1,463人→2050年1,187人。2025〜2050年−28%",
+          "where": "12-home-results.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校",
+          "where": "12-home-results.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水0.5〜3.0m未満、津波1〜2m未満、高潮1〜3m未満の想定区域内。土砂災害警戒区域外",
+          "where": "11-home.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "将来人口は推計で実際の人口ではない。計画区域表示は参考で市の公表図が正",
+          "where": "12-home-results.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "先行きシートの「市の計画」と「周りの将来人口」",
+          "trying": "将来も住みやすいか判断",
+          "unclear": "区域内なら将来の人口減少を防げるのか、関係があるように見えた",
+          "action": "注意書きを読み、別の事実で因果を示さないと理解した。約20秒",
+          "suggestion": "区域と推計の見出しの近くに、両者の因果関係は示さないと短く示す"
+        },
+        {
+          "severity": "低",
+          "where": "シートの災害欄",
+          "trying": "地点の洪水を確認",
+          "unclear": "複数の災害と深さの範囲が続き、どの値が何の想定か拾いにくい",
+          "action": "項目ごとに読み直した。約15秒",
+          "suggestion": "災害別に「区域内／外」と深さを表にする"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）：半径1.0km以内に洪水の碑が1件。大禹謨（だいうぼ）、1972年・洪水、350m。因果や危険度は示さない",
+          "where": "05-memory-compare.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "1961〜69年の空中写真と現在の写真を境界を挟んで比較",
+          "where": "06-memory-history.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "サンプルの語りを保存し、「未確認」の記録として地図に残った",
+          "where": "08-memory-saved.png"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "確認済み・公開にした架空の1件を公開分GeoJSONとして書き出した",
+          "where": "10-memory-export.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "地名・語りは架空サンプル。自然災害伝承碑は実データ",
+          "where": "05-memory-compare.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順3「昔の地図・写真と重ねる」",
+          "trying": "昔と今を見比べて次に進む",
+          "unclear": "画面に写真は表示されたが左の進捗が未完了のままで、閲覧だけで完了するのか分からなかった",
+          "action": "手順4に進み、後の画面でも手順3が未完了と表示されるのを確認。約30秒",
+          "suggestion": "比較を完了とする具体的操作を写真の横に表示し、見た時点か選択時点で進捗を更新する"
+        },
+        {
+          "severity": "中",
+          "where": "手順5「確認済みにする」",
+          "trying": "公開分を書き出す",
+          "unclear": "架空サンプルに文献の裏付けがない一方、確認済みにする操作が公開の条件になっており、何を確認した扱いにするか迷った",
+          "action": "デモの確認役を兼ねる説明を読み、架空サンプルとして公開・確認済みにして書き出した。約30秒",
+          "suggestion": "架空サンプルの確認は練習上の状態変更であることと、実運用の確認内容を明示する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "月曜03:00に使用確認できるAEDは11台（2か所）",
+          "where": "13-aed.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "市境から800m以上内側の人口175,218人中、徒歩圏に使えるAEDがない人は約167,400人（96%）",
+          "where": "13-aed.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "原町田二丁目付近に24時間AEDを1台置く候補で新たに徒歩圏に入る人は約12,700人。境界付近",
+          "where": "04-aed-ranking.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "設置先候補をCSVで書き出した",
+          "where": "14-aed-candidate.png"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "徒歩圏は直線500m。登録288台中、時間不明5台と一般人が使えない4台を数えない。市境付近を含む全市の数字は隣市AEDを含まず上限",
+          "where": "13-aed.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "診断の96%と候補一覧の1位",
+          "trying": "1台追加の効果を解釈",
+          "unclear": "診断の母数は市境から800m以上内側なのに、最大候補は「境界付近」とあり、約12,700人をそのまま内側の未カバー人口から差し引けるか分からない",
+          "action": "境界付近という注記を付け、差し引き後の率は算出しなかった。約30秒",
+          "suggestion": "候補の増加人数の集計範囲と、診断の母数との差を候補ごとに明示する"
+        },
+        {
+          "severity": "低",
+          "where": "候補・出力タブ",
+          "trying": "候補をCSVに出す",
+          "unclear": "書き出しボタンが候補10件の下にあり、最初の画面には見えない",
+          "action": "一覧を下へスクロールして見つけた。約15秒",
+          "suggestion": "タブ上部にも書き出しへのリンクを置く"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅付近の例：商業地域、建ぺい率80%・容積率600%",
+          "where": "15-land.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水想定区域内（深さ0.5〜3m）、高潮・津波想定区域内、土砂災害警戒区域外",
+          "where": "15-land.png"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る：買い手への災害説明事項。貸す：用途制限。活かす：建てられる建物の種類。手放す：解体の要否・費用や必要な登記を相談",
+          "where": "16-land-exits.png"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "例のA4・1枚シートを表示し「印刷・PDFで保存する」をクリック。画面に「印刷画面を開きました」と表示",
+          "where": "01-sheet.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "徳島駅付近の例を試した後の手順4・5",
+          "trying": "相談用の条件を読む",
+          "unclear": "例を選ぶと手順2も完了し、「あなたの回答」として建物あり・相続登記まだ等が現れるため、自分が回答した実情と誤認しかけた",
+          "action": "例（回答は架空）の表示を確認し、実際の所有地の結論には使わないことにした。約30秒",
+          "suggestion": "各回答の脇に「例の回答（架空）」を併記し、手順2が自動入力されたと明示する"
+        },
+        {
+          "severity": "低",
+          "where": "4つの出口の一覧",
+          "trying": "出口ごとの質問を比べる",
+          "unclear": "長い縦スクロールで他の出口の位置を見失いやすい",
+          "action": "下へスクロールして各見出しを探した。約20秒",
+          "suggestion": "売る・貸す・活かす・手放すへのページ内リンクを付ける"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

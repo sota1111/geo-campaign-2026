@@ -1,0 +1,207 @@
+{
+  "run": "61-sol-g2-03",
+  "model": "gpt-6.1-sol low",
+  "apps": [
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {
+          "achieved": true,
+          "value": "平日朝8時・20分以内。案A=徳島バス28鍛冶屋原線停止：4,190人、うち65歳以上943人。案B=徳島バス21鳴門線停止：2,190人、うち797人。各例を確定して作成。",
+          "where": "03-bus-plan.png、04-bus-b.png、05-bus-compare.png"
+        },
+        "G5-2": {
+          "achieved": true,
+          "value": "案B。総数が2,000人少なく、65歳以上も146人少ない。「この結論を確認した」を押した。",
+          "where": "05-bus-compare.png"
+        },
+        "G5-3": {
+          "achieved": true,
+          "value": "CSVボタンを実際に押し、plan-comparison-tokushima-wdm20.csv（4,933 bytes）を保存。",
+          "where": "05-bus-compare.png（比較値）；downloads/plan-comparison-tokushima-wdm20.csv"
+        },
+        "G5-4": {
+          "achieved": true,
+          "value": "複数路線を同時停止した人数は「少なくとも」の下限値。全影響人数として断定できない。条件画面と案作成画面に明示。",
+          "where": "02-bus-start.png、03-bus-plan.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "トップの中央の提出・判断待ち情報",
+          "trying": "目的に合うアプリを探す",
+          "unclear": "中央が応募管理情報で、利用者向け入口が最初に目に入らなかった",
+          "action": "左メニューの交通担当者向けを見て入った",
+          "suggestion": "トップの先頭に利用目的別のアプリ入口を置く",
+          "time_lost": "約10秒"
+        },
+        {
+          "severity": "低",
+          "where": "案A/Bの作成",
+          "trying": "独自の2案を作る",
+          "unclear": "初期の例が既に計算済みで、作成済みなのか未作成なのか一瞬迷った",
+          "action": "「例のままで確定」でそれぞれ明示的に確定した",
+          "suggestion": "例であることと未確定状態を入力欄付近でも明示する",
+          "time_lost": "約10秒"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの「回収圏」計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {
+          "achieved": true,
+          "value": "FIT終了時、2045年まで、府外施設あり、未確認拠点除外、直線20km。圏外1,878件・322.5MW（63.4%）。対象3,084件・508.4MW。",
+          "where": "07-solar-before.png"
+        },
+        "G9-2": {
+          "achieved": true,
+          "value": "「距離が最も減る町字を探す」で候補拠点1か所を追加。北緯35.281・東経135.312付近。圏外322.5→166.4MW、63.4→32.7%、平均距離37.4→16.2km。圏外容量156.1MW減。",
+          "where": "08-solar-after.png"
+        },
+        "G9-3": {
+          "achieved": true,
+          "value": "結果をCSVでダウンロード。recovery-zone-kyoto-fit-2045-20km.csv（6,067 bytes）。",
+          "where": "08-solar-after.png；downloads/recovery-zone-kyoto-fit-2045-20km.csv"
+        },
+        "G9-4": {
+          "achieved": true,
+          "value": "設備位置は町字代表点で、同じ町字は重なる。廃棄時期はFIT終了時や運転開始+N年の仮説で実搬出時期ではない。Nは利用者の選択値で公的根拠未確認。京都環境保全公社の北部拠点は所在地推定・受入未確認。距離は直線、追加候補の土地・許可・道路・能力未検討。",
+          "where": "06-solar.png、07-solar-before.png、08-solar-after.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "地図と左の縦スクロール欄",
+          "trying": "追加拠点の操作を探すため下へ読む",
+          "unclear": "地図上のホイールでページが下がらず縮尺が変わった。左欄だけがスクロール対象と気づきにくい",
+          "action": "左欄へポインタを移し、結果表と年別グラフを越えて手順3まで下げた",
+          "suggestion": "手順1〜4への固定ナビと、左欄のスクロール案内を設ける",
+          "time_lost": "約35秒"
+        },
+        {
+          "severity": "中",
+          "where": "手順3「距離が最も減る町字を探す」",
+          "trying": "回収圏外の容量を減らす候補を1か所追加する",
+          "unclear": "最短距離合計を減らす場所と、圏外容量を最小にする場所は同じなのか分からない",
+          "action": "距離最小の候補を追加し、表示された圏外容量の前後だけを報告した",
+          "suggestion": "最適化の目的を明記し、圏外容量を減らす候補探索も選べるようにする",
+          "time_lost": "約15秒"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {
+          "achieved": true,
+          "value": "実データ版（神奈川県横須賀市716か所）を確認。上位5か所を確定。回る順は横須賀市本庁0005（80点・台帳1位）、田浦0047（80点・2位）、逸見0047（80点・4位）、久里浜0012（80点・3位）、本庁0051（77点・5位）。上位選出後、回り順に並べ替え。",
+          "where": "09-fill-data.png、10-fill-record.png；downloads/patrol-plan.csv"
+        },
+        "G4-2": {
+          "achieved": true,
+          "value": "patrol-plan.csv（887 bytes）を実際に書き出した。画面のプレビューは5行。",
+          "where": "downloads/patrol-plan.csv、10-fill-record.png"
+        },
+        "G4-3": {
+          "achieved": true,
+          "value": "横須賀市本庁0005に2026-11-14、評価用巡視班、是正対象を記録。手順7で計画5件のうち記録済み1件・未記録4件、台帳の最新巡視に是正対象と日付を確認。",
+          "where": "10-fill-record.png"
+        },
+        "G4-4": {
+          "achieved": true,
+          "value": "衛星由来の変化量は未接続で点数に含まれない。実データの点数は型・区域・面積・標高差・傾斜の暫定値。衛星による順位変更体験は別の架空12地点。",
+          "where": "09-fill-data.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "左の手順ナビと手順6フォーム",
+          "trying": "計画を書き出してから結果を記録する",
+          "unclear": "手順完了でナビの縦位置が動き、書き出しのつもりで記録画面へ進んだ。未書き出し警告が消えるとフォーム位置も上がる",
+          "action": "手順名を読み直し5へ戻って書き出し、6で改めて入力した",
+          "suggestion": "各手順の高さを固定し、「次へ」ボタンを設ける。警告領域の変化でフォームを動かさない",
+          "time_lost": "約35秒"
+        },
+        {
+          "severity": "低",
+          "where": "実データの手順一覧",
+          "trying": "横須賀の巡視計画だけを作る",
+          "unclear": "必須の間に架空値による手順3があり、実データの点数を変える必要があるのか迷う",
+          "action": "説明に従い手順3を飛ばして実データ上位5か所を計画した",
+          "suggestion": "架空データ体験は独立した任意欄に分ける",
+          "time_lost": "約15秒"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図（画面内見出し：配電線 樹木リスク台帳）",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {
+          "achieved": true,
+          "value": "初期最高はF1-03、136点（衛星・公開85／事業者51）、1位。",
+          "where": "11-power-start.png"
+        },
+        "G8-2": {
+          "achieved": true,
+          "value": "現地確認計画の初期4区間を採用。回り順F1-03、F2-05、F2-03、F3-04。field-check-plan.csvを保存し記録タブへ移った。",
+          "where": "11-power-start.png；downloads/field-check-plan.csv"
+        },
+        "G8-3": {
+          "achieved": true,
+          "value": "F1-03に2026-11-14、評価用確認班、要継続観察を記録。見直しタブで倒木・裸地化の疑いの確認件数1・要伐採0を確認。自動で重みは変わらないため同区分の重み25→0を手動変更。台帳で136→111点（60/51）、最新確認要継続観察・日付を確認。順位は1位のまま、他区間の順位も変化。",
+          "where": "11-power-start.png、12-power-update.png"
+        },
+        "G8-4": {
+          "achieved": true,
+          "value": "①〜④の配電線・区間・点数・停電戸数・現地確認はすべて架空。⑤のみMeta・WRIの東京都青梅市周辺の樹高マップが実データで、そこに引く線は利用者の仮の線。実在配電線・実際の衛星解析結果ではない。",
+          "where": "11-power-start.png、12-power-update.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "②計画→③記録の区間選択",
+          "trying": "計画の最高点区間の確認結果を記録する",
+          "unclear": "計画先頭はF1-03だが記録初期値はF1-01で、対象が引き継がれない",
+          "action": "区間選択をF1-03へ変更した",
+          "suggestion": "計画対象だけを候補にするか、計画先頭を初期選択にする",
+          "time_lost": "約15秒"
+        },
+        {
+          "severity": "中",
+          "where": "④点数の見直し",
+          "trying": "結果を次の優先順位に反映する",
+          "unclear": "記録だけでは点数は更新されない。件数が少ない時に重みをいくつに変えるべきか基準は得られない",
+          "action": "確認1件・要伐採0を見て、動作確認のため重みを25から0に変更し台帳で111点を確認した。0を実務的に適切とは判断していない",
+          "suggestion": "自動反映しない理由、変更前後の点数プレビュー、最小件数や根拠の記録欄を設ける",
+          "time_lost": "約30秒"
+        },
+        {
+          "severity": "低",
+          "where": "トップ名とアプリ内見出し",
+          "trying": "同じアプリか確認する",
+          "unclear": "優先伐採地図と樹木リスク台帳で名称が違う",
+          "action": "上部の名称説明を読んで同じアプリと理解した",
+          "suggestion": "入口と画面内の名称を統一する",
+          "time_lost": "約5秒"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

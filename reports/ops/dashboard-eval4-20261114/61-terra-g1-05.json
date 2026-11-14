@@ -1,0 +1,201 @@
+{
+  "run": "61-terra-g1-05",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": true,
+          "value": "富山市大町、平日朝8時、病院へ30分以内に徒歩で行ける。佐々木病院、直線約469m・徒歩約8分",
+          "where": "06-conclusion.png"
+        },
+        "G1-2": {
+          "achieved": true,
+          "value": "日曜も徒歩で行け、同じ結論",
+          "where": "07-holiday.png"
+        },
+        "G1-3": {
+          "achieved": true,
+          "value": "堀川南大町、平日20:44",
+          "where": "06-conclusion.png"
+        },
+        "G1-4": {
+          "achieved": true,
+          "value": "結論とリンクの文面を表示しコピーボタンをクリック",
+          "where": "09-copy.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "場所検索後",
+          "trying": "結論を見る",
+          "unclear": "検索画面に結果が出ない",
+          "action": "左の結論を見るを押した。約10秒",
+          "suggestion": "検索後に次へボタンを置く"
+        },
+        {
+          "severity": "中",
+          "where": "休日比較",
+          "trying": "比較を完了する",
+          "unclear": "両結果表示後も未完了",
+          "action": "説明を読み休日を選ぶ必要を理解。約10秒",
+          "suggestion": "見るだけで完了にするか必要操作を明示"
+        },
+        {
+          "severity": "中",
+          "where": "コピー画面",
+          "trying": "兄にリンクを送る",
+          "unclear": "127.0.0.1を遠方で開けるか",
+          "action": "注意書きで手元確認用と理解。約10秒",
+          "suggestion": "共有可能なURLを用意する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {
+          "achieved": true,
+          "value": "きよバスを表示、別事業者にも切替",
+          "where": "10-bus.png"
+        },
+        "G12-2": {
+          "achieved": true,
+          "value": "集計なし。位置データ不足、推定できた便0、日中取得不足",
+          "where": "10-bus.png"
+        },
+        "G12-3": {
+          "achieved": true,
+          "value": "公共交通オープンデータセンターのバス位置・時刻表、CC BY 4.0。収集開始直後、蓄積前",
+          "where": "12-bussource.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "出典・ライセンス",
+          "trying": "出典を知る",
+          "unclear": "モーダルは画面内の欄を参照とだけ表示",
+          "action": "右欄下部を探した。約20秒",
+          "suggestion": "モーダルに提供元を直接記載"
+        },
+        {
+          "severity": "低",
+          "where": "事業者選択と地図",
+          "trying": "対象路線を把握",
+          "unclear": "全国地図から対象地域が分かりにくい",
+          "action": "注意書きを読んだ。約10秒",
+          "suggestion": "対象地域と欠測理由を示す"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": true,
+          "value": "熱海市0012、腹付け型、熱海駅の例から北西約1100m",
+          "where": "14-fill.png"
+        },
+        "G2-2": {
+          "achieved": true,
+          "value": "1961〜69年と全国最新写真を比較",
+          "where": "15-photo.png"
+        },
+        "G2-3": {
+          "achieved": true,
+          "value": "建物の見え方が異なるように見え、画像不鮮明で現地確認必要と1件保存",
+          "where": "17-export.png"
+        },
+        "G2-4": {
+          "achieved": true,
+          "value": "通報文のたたき台を表示しコピーをクリック",
+          "where": "18-copyreport.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "起点入力",
+          "trying": "駅近くを調べる",
+          "unclear": "例の熱海駅を起点として使ってよいか",
+          "action": "例を選択。約10秒",
+          "suggestion": "例を起点に使うことを明示"
+        },
+        {
+          "severity": "中",
+          "where": "写真比較",
+          "trying": "変化を確認",
+          "unclear": "画質差で変化を断定できない",
+          "action": "不鮮明で現地確認必要と記録。約30秒",
+          "suggestion": "拡大と画質の説明を追加"
+        },
+        {
+          "severity": "高",
+          "where": "記録フォームと通報文",
+          "trying": "写真の変化を記録",
+          "unclear": "初期分類の亀裂・段差が未確認でも通報文に入る",
+          "action": "保存後に気づいた。約20秒",
+          "suggestion": "分類を未選択で開始し写真比較の選択肢を追加"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "S021・S022・S036が同点0.94",
+          "where": "19-road.png"
+        },
+        "G3-2": {
+          "achieved": true,
+          "value": "3.0km予算で22区間・2.9kmを選択して走査段階へ",
+          "where": "21-results.png"
+        },
+        "G3-3": {
+          "achieved": true,
+          "value": "衛星重み50%から60%、未走査候補1位S020からS033に更新",
+          "where": "23-rank.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "架空の街・データ、走査結果は乱数シミュレーション",
+          "where": "21-results.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "候補区間の点数",
+          "trying": "最高区間を把握",
+          "unclear": "同点3区間なのに表の1位はS021",
+          "action": "説明を読んだ。約10秒",
+          "suggestion": "同点順位を表にも明記"
+        },
+        {
+          "severity": "低",
+          "where": "第2回順位比較",
+          "trying": "第1回と比較",
+          "unclear": "第1回1位S020が最初の最高と違う",
+          "action": "走査済みを除いた比較と理解。約15秒",
+          "suggestion": "表見出しに走査済み除外後を明示"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}
