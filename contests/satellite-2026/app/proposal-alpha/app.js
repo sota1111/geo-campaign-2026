@@ -80,7 +80,7 @@
       '<dt>点数の内訳</dt><dd>' + partsHtml(s) + '</dd>' +
       '<dt>見方</dt><dd>衛星・公開データ由来 ' + s.satScore + ' 点、事業者・自治体のデータ由来 ' + s.opScore + ' 点。樹高の値は区間の相対比較用で、<b>電線との離隔距離ではありません</b>。</dd>' +
       '<dt>現地確認</dt><dd>' + histH + '</dd></dl><p><button id="btn-goto-rec">この区間の結果を記録する</button></p>';
-    $('#btn-goto-rec').onclick = () => { show('record'); $('#r-site').value = s.id; };
+    $('#btn-goto-rec').onclick = () => { show('record', s.id); };
   }
 
   // ---- ② 計画と協議用の表 ----
@@ -88,7 +88,10 @@
   function renderPlan() {
     const p = planData();
     $('#plan-help').textContent = '点数の高い順に上位N区間を選び、航空LiDAR・ドローン等の高精度測定と現地確認に回す対象にします（衛星は「どこを先に測るか」を決める入口）。回る順は営業所（架空）から近い順（地図上の直線距離の最近傍法）で、道路事情・立入可否は考慮しません。';
-    $('#plan-list').innerHTML = p.route.map((s) => '<li>' + esc(s.id) + '（点数' + s.score + '・' + esc(s.change) + '・' + esc(facs(s)) + '・約' + s.lenM + ' m）</li>').join('');
+    // 番号は回る順。点数順と取り違えないよう、各行に台帳の順位を併記する
+    $('#plan-list').innerHTML = p.route.map((s) => '<li>' + esc(s.id) + '（台帳' + s.rank + '位・点数' + s.score + '・' + esc(s.change) + '・' + esc(facs(s)) + '・約' + s.lenM + ' m）</li>').join('');
+    $('#plan-order-note').textContent = '番号は回る順です（点数の順ではありません。点数の順位は各行の「台帳○位」）。';
+    $('#btn-plan-to-rec').textContent = p.route.length ? '③ 現地確認の記録へ進む（' + p.route[0].id + ' から記録）' : '③ 現地確認の記録へ進む';
     const len = p.route.reduce((a, s) => a + s.lenM, 0);
     $('#plan-total').textContent = '高精度測定の対象延長: 約' + (len / 1000).toFixed(1) + ' km（全' + D.sections.reduce((a, s) => a + s.lenM, 0) / 1000 + ' km（架空）のうち）／地図上の周回距離の目安: ' + Math.round(p.total) + '（模式図の単位。道路距離ではありません）';
     $('#share-box').innerHTML = '<b>協議用の区間表（事業者・市町村・府県が共有する）</b><div class="tablewrap"><table><thead><tr><th>順位</th><th>区間</th><th>衛星・公開データ由来</th><th>事業者データ由来</th><th>停電想定・施設</th><th>実施主体・費用負担</th></tr></thead><tbody>' +
@@ -97,8 +100,14 @@
   }
 
   // ---- ③ 記録 ----
-  function renderRecord() {
-    $('#r-site').innerHTML = D.sections.map((s) => '<option value="' + esc(s.id) + '">' + esc(s.id) + ' ' + esc(s.name) + '</option>').join('');
+  // 区間の選択肢は「今回の計画（回る順）」を先に置き、計画の先頭を初期値にする（以前は常に F1-01 が初期値で、計画した区間と違う区間を記録しかけた）
+  function renderRecord(pick) {
+    const planIds = planData().route.map((s) => s.id);
+    const opt = (s) => '<option value="' + esc(s.id) + '">' + esc(s.id) + ' ' + esc(s.name) + '</option>';
+    const byId = (id) => D.sections.find((s) => s.id === id);
+    $('#r-site').innerHTML = (planIds.length ? '<optgroup label="今回の計画（回る順）">' + planIds.map((id) => opt(byId(id))).join('') + '</optgroup><optgroup label="そのほかの区間">' : '') +
+      D.sections.filter((s) => !planIds.includes(s.id)).map(opt).join('') + (planIds.length ? '</optgroup>' : '');
+    $('#r-site').value = pick && byId(pick) ? pick : (planIds[0] || D.sections[0].id);
     $('#r-result').innerHTML = L.RESULTS.map((r) => '<option>' + r + '</option>').join('');
     renderRecTable();
   }
@@ -189,10 +198,11 @@
       '<p><b>⑤の実データ</b>（取得日 ' + esc(CHM.fetched) + '、GET のみ）: ' + esc(CHM.source) + '。この窓の元画像の撮影日は ' + esc(CHM.acq) + '（タイルの撮影日メタデータによる）。背景: 地理院タイル（標準地図、ブラウザが国土地理院から直接取得。国土地理院コンテンツ利用規約）。</p>' +
       '<p>衛星は「どこから先に高精度で測り、現地で確かめるか」を決める入口で、確認と伐採の判断は事業者と自治体が行います。</p>';
   }
-  function show(v) {
+  function show(v, pick) {
     document.querySelectorAll('.view').forEach((e) => (e.hidden = e.id !== 'v-' + v));
     document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.view === v));
     if (v === 'plan') renderPlan();
+    if (v === 'record') { renderRecord(pick); $('#rec-msg').hidden = true; }
     if (v === 'tune') renderTune();
     if (v === 'ledger') renderLedger();
     if (v === 'real') renderReal();
@@ -210,9 +220,26 @@
       e.preventDefault();
       // 別タブで追加された記録を消さないよう、保存済みを読み直してから追加する
       const cur = loadResults();
-      cur.push({ siteId: $('#r-site').value, date: $('#r-date').value, who: $('#r-who').value.trim(), result: $('#r-result').value, memo: $('#r-memo').value.trim() });
+      const rec = { siteId: $('#r-site').value, date: $('#r-date').value, who: $('#r-who').value.trim(), result: $('#r-result').value, memo: $('#r-memo').value.trim() };
+      const dup = cur.some((r) => r.siteId === rec.siteId && r.date === rec.date && r.result === rec.result);
+      cur.push(rec);
       state.results = cur; saveResults(); $('#r-memo').value = ''; recompute(); renderRecTable();
+      // 記録した結果と、点数が自動では変わらないことを、ボタンのすぐ下に返す（記録だけで点数が変わるのか迷わせないため）
+      const sec = state.ranked.find((x) => x.id === rec.siteId);
+      $('#rec-msg-text').textContent = '✔ ' + rec.siteId + ' の確認結果「' + rec.result + '」を記録しました（下の一覧の先頭）。' +
+        (dup ? '同じ区間・同じ日・同じ結果の記録がすでにあります。重複なら下の一覧で確かめてください。' : '') +
+        '点数（いま ' + (sec ? sec.score : '—') + ' 点）は記録だけでは変わりません。';
+      // 計画のうちまだ記録していない区間へ選択を進める（同じ区間を続けて二重に記録しないため）
+      const done = new Set(state.results.map((r) => r.siteId));
+      const left = planData().route.map((x) => x.id).filter((id) => !done.has(id));
+      if (left.length) { $('#r-site').value = left[0]; }
+      $('#rec-msg-text').textContent += left.length
+        ? '計画の残り ' + left.length + ' 区間（次は ' + left[0] + '。区間欄を切り替えました）。記録を集めてから、④点数の見直しで重みを変えると点数と順位が更新されます。'
+        : '計画の区間はすべて記録しました。④点数の見直しで記録の集計を見て重みを変えると、点数と順位が更新されます。';
+      $('#rec-msg').hidden = false;
     };
+    $('#btn-rec-to-tune').onclick = () => show('tune');
+    $('#btn-plan-to-rec').onclick = () => show('record');
     $('#btn-reset').onclick = () => { if (confirm('記録を全て消しますか')) { state.results = []; localStorage.removeItem(KEY_R); recompute(); renderRecTable(); } };
     $('#t-key').onchange = () => { state.tuneKey = $('#t-key').value; renderTune(); };
     $('#btn-weights-reset').onclick = () => { state.weights = clone(L.DEFAULT_WEIGHTS); localStorage.removeItem(KEY_W); recompute(); renderTune(); renderLedger(); };
