@@ -60,7 +60,7 @@ export interface Decision {
 /** 全体（正本の「全体」） */
 export const OVERALL: string[] = [
   '提出に必要な本人欄（氏名・所属・体制・本人の経験など）は、どの応募もまだ空。総司令官が書くまで、どの案も「提出可能」ではない。',
-  'マージ保留（総司令官補佐が SOP で止めた PR）: PR #18（太陽光発電所の盗難対策マップ。憲兵の失格級候補D1）、PR #19（子連れお出かけ診断。憲兵の監査なし・非商用条件が未解決）、PR #21（RN1 3地域版。本人欄が未記入）。reports/command/merge-20261114.md',
+  'マージ保留（総司令官補佐が SOP で止めた PR）: PR #18（太陽光発電所の盗難対策マップ。資源エネルギー庁への電話確認待ち・12/02）、PR #19（子連れお出かけ診断。国土数値情報 P13・P27 の非商用条件を事務局に問い合わせ中・12/11。データはブランチから外した）、PR #27（RN1 3地域版。#21 から solar-guard を除いて作り直し。本人欄が未記入）。判断は reports/command/decision-20261114-*.md',
 ]
 
 const UDC = { deadlineAt: '2026-12-27T23:59:00+09:00', deadlineLabel: '本応募 12/27 23:59' }
@@ -172,17 +172,17 @@ export const PLANS: PlanProgress[] = [
     id: 'biz-realestate-rn1', short: '不動産 RN1', intent: '比較中', contest: 'ichibiz-2026', name: '不動産部門: RN1 住む場所の先行き', kind: '新しい案', ...BIZ_OTHER, appId: 'biz-realestate-rn1',
     done: ['提出文（作戦研究班 14→20）', 'デモ（徳島市の実データ12項目、テスト31＋14件）', '憲兵（指摘対応済み）'],
     todo: [
-      { text: '本人欄3か所（失格級＝未記入。PR #21 は記入と憲兵の再監査までマージ保留）', owner: '総司令官' },
+      { text: '本人欄3か所（失格級＝未記入。PR #27 は記入と憲兵の再監査までマージ保留）', owner: '総司令官' },
       { text: 'XKT003・XKT025 の利用条件の問い合わせ', tag: '判断待ち', owner: '総司令官' },
       { text: '同梱データ約4.5MBの承認', tag: '判断待ち', owner: '総司令官' },
       { text: 'ライブラリ欄の字数上限（395/400、フォームで確認）' },
     ],
   },
   {
-    id: 'biz-solar-guard', short: '太陽光 盗難対策', intent: '比較中', intentNote: '部門未定', contest: 'ichibiz-2026', name: '太陽光発電所の盗難対策マップ', kind: '新しい案・部門未定、PR #18', ...BIZ_BUSINESS,
+    id: 'biz-solar-guard', short: '太陽光 盗難対策', intent: '比較中', intentNote: 'アイデア部門のみ', contest: 'ichibiz-2026', name: '太陽光発電所の盗難対策マップ', kind: '新しい案・アイデア部門のみ、PR #18', ...BIZ_OTHER,
     done: ['デモ（茨城県、個別設備を出さない集計地図＋自己診断）', '憲兵の監査'],
     todo: [
-      { text: '認定情報の利用ルールの確認先と、確認できない場合の扱い（憲兵の失格級候補D1。PR #18 は解消まで保留。reports/escalations/20261114-solar-guard-data-terms.md）', tag: '判断待ち', owner: '総司令官' },
+      { text: '資源エネルギー庁への電話で利用ルールを確認（0570-057-333、台本は reports/command/decision-20261114-solar-guard.md。期限 12/02 18:00。確認できなければ 12/03 から認定情報を使わない版に作り替え、12/09 までに失格級0でなければ出さない）', owner: '総司令官' },
     ],
   },
   {
@@ -203,6 +203,15 @@ export const PLANS: PlanProgress[] = [
       { text: '提出文の磨き込み・監査' },
     ],
     decisions: ['区間ごとの遅れを公開するか'],
+  },
+  {
+    id: 'odpt-kodure', short: '子連れ', intent: '比較中', contest: 'odpt-2026', name: '子連れお出かけ診断', kind: '新しい案、PR #19', ...ODPT,
+    done: ['アプリ第1版', 'アグレッサー', 'デザイン再審査（重大0）', '憲兵の監査（提出不可: 失格級候補＝P13・P27 の非商用条件）'],
+    todo: [
+      { text: '国土数値情報事務局へ P13・P27 の利用可否を問い合わせ（文案は reports/command/decision-20261114-odpt-kodure.md。期限 12/11 18:00。可がなければ 12/12 から商用可データに差し替え、12/25 までに失格級0でなければ候補から外す）', owner: '総司令官' },
+      { text: '東京都「緑のオープンデータ」のライセンス欄をブラウザで確認（部隊からはカタログが 403）', owner: '総司令官' },
+    ],
+    decisions: ['ODPT に出す作品（診断マップ・N2・子連れお出かけ診断）'],
   },
 ]
 
