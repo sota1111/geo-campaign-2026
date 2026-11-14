@@ -1,0 +1,269 @@
+{
+  "run": "61-sol-g3-03",
+  "model": "gpt-6.1-sol low",
+  "apps": [
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅の例（寺島本町東三丁目付近）：商業地域、建ぺい率80%・容積率600%",
+          "where": "03-land-questions.png／04-land-sheet.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水想定最大規模区域内、深さ目安0.5〜3m。高潮・津波も区域内。土砂災害警戒区域は入らない",
+          "where": "03-land-questions.png（洪水等）／手順3表示（土砂、画像なし）"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る：建築用途と買い手の利用範囲を市役所・不動産会社へ。貸す：貸せる用途と災害の説明を確認。活かす：建築種類・避難先を市役所へ。手放す：解体の要否・費用と相続登記を司法書士・法務局へ",
+          "where": "03-land-questions.png（売る）／手順4の下方表示（他の出口、画像なし）"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "シートを生成し「印刷・PDFで保存する」を押した。「印刷画面を開きました」と表示。CDPでland-sheet.pdfを保存",
+          "where": "04-land-sheet.png／land-sheet.pdf"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "トップ中央と左メニュー（01）",
+          "trying": "土地相談の入口を探す",
+          "unclear": "中央は提出不可・締切・総司令官の情報が中心で利用者の入口が分かりにくい",
+          "action": "左の土地所有者向けを読んで選んだ",
+          "suggestion": "中央にも使用目的から選ぶ入口を置く",
+          "time_lost_seconds_estimate": 25
+        },
+        {
+          "severity": "中",
+          "where": "例ボタン→手順4（02・03）",
+          "trying": "土地の条件を確認する",
+          "unclear": "例を押すだけで手順2が完了し、未入力なのに建物あり・登記まだが「あなたの回答」と出た",
+          "action": "シートの「例・架空」を読み直した",
+          "suggestion": "「例の回答による」と表示する",
+          "time_lost_seconds_estimate": 30
+        },
+        {
+          "severity": "中",
+          "where": "左手順バー（03）",
+          "trying": "手順3を開く",
+          "unclear": "完了に伴い段の高さが変わり、前の位置を押して手順4に入った",
+          "action": "手順名を読み直して選び直した",
+          "suggestion": "各段の高さを固定する",
+          "time_lost_seconds_estimate": 15
+        },
+        {
+          "severity": "低",
+          "where": "手順5（04）",
+          "trying": "印刷する",
+          "unclear": "印刷より先に料金・運用構想が大きく表示される",
+          "action": "構想欄の下の印刷ボタンを押した",
+          "suggestion": "印刷を上部に置き構想は折りたたむ",
+          "time_lost_seconds_estimate": 10
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "徳島駅付近（北緯34.0745・東経134.5513）：居住誘導区域（市の呼称は居住促進区域）内、都市機能誘導区域内",
+          "where": "08-home-population.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500m・250mメッシュ11個：2025年1,643人→2035年1,463人→2050年1,187人、25→50年−28%。65歳以上39%→47%",
+          "where": "08-home-population.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校。校区の子ども推計2025年500人→2050年363人（−27%）",
+          "where": "07-home-plan.png／08-home-population.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水区域内（0.5〜3.0m未満）、津波区域内（1m以上〜2m未満）、高潮区域内（1m以上3m未満）。土砂区域外。液状化しやすい区分",
+          "where": "06-home-result.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "人口は国の推計で実人口ではない。区域は参考で住みやすさ・価格を示さない。施設は直線800m、液状化は250mメッシュの傾向で特定地盤の危険度ではない",
+          "where": "05-home-start.png／06-home-result.png／07-home-plan.png／08-home-population.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "埋め込み内のスクロール（05〜08）",
+          "trying": "結果を順に読む",
+          "unclear": "前のアプリとスクロール範囲が異なり、結果の先頭を飛ばした",
+          "action": "上下に戻し区域・人口・校区を探した",
+          "suggestion": "固定の節ナビゲーションを置く",
+          "time_lost_seconds_estimate": 25
+        },
+        {
+          "severity": "中",
+          "where": "計画と人口の並列欄（08）",
+          "trying": "将来も住みやすいか考える",
+          "unclear": "区域内で人口減という表示を区域の効果や居住可否と結びつけかけた",
+          "action": "因果関係を示さない注記と市への質問を読んだ",
+          "suggestion": "因果を示さない説明を見出し付近にも置く",
+          "time_lost_seconds_estimate": 20
+        },
+        {
+          "severity": "低",
+          "where": "XKT003などのラベル（06〜08）",
+          "trying": "情報を理解する",
+          "unclear": "コードの意味が初見で分からず目に入る",
+          "action": "本文・注記を優先した",
+          "suggestion": "コードは出典詳細へ移すか説明を付ける",
+          "time_lost_seconds_estimate": 10
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）・洪水。半径1km内で種類が合う碑1件：大禹謨（1972年・洪水）、350m。範囲内全4件。地名との因果・危険度の証明ではない",
+          "where": "09-memory-start.png（選択元）／初回の手順2の画面表示（結果画像・保存テキストなし）"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "1961〜69年の空中写真と全国最新写真を境界比較。区画模様と今の建物・道路を見比べた",
+          "where": "10-memory-photo.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "架空の語りを入力欄へ写し1件保存。「未確認」で保存され、未確認は公開分に入らないと理解。その後デモの確認役として確認済み・公開にした",
+          "where": "11-memory-export.png（公開後）／手順4・5表示（未確認時の画像なし）"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "確認済み・公開・CC BY 4.0の1件をGeoJSONで書き出し、chimei-kioku-public.geojsonを保存。外部送信なし",
+          "where": "11-memory-export.png／chimei-kioku-public.geojson"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "オレンジの地名・語り・語り手Aは架空。青い伝承碑は国土地理院の実データ。架空記録は実際の公開データとして使わない",
+          "where": "09-memory-start.png／10-memory-photo.png／11-memory-export.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順3の写真と進捗（10・11）",
+          "trying": "写真を見比べて次に進む",
+          "unclear": "見比べても手順3が未完了。どう完了を伝えるか分からない",
+          "action": "写真を確認して手順4へ進んだ。書き出し後も未完了表示が残った",
+          "suggestion": "「比較を終えた」ボタンを置き完了条件を具体化する",
+          "time_lost_seconds_estimate": 35
+        },
+        {
+          "severity": "中",
+          "where": "手順5の確認済み操作",
+          "trying": "公開用ファイルを出す",
+          "unclear": "裏づけのない架空の話を確認済みにしてよいか迷った",
+          "action": "自分が確認役を兼ねるデモの説明を読み、架空記録だけを確認済み・公開にした",
+          "suggestion": "出典の所在確認と内容の検証を区別し、架空の練習を明示する",
+          "time_lost_seconds_estimate": 25
+        },
+        {
+          "severity": "低",
+          "where": "保存直後の入力欄",
+          "trying": "保存を確認する",
+          "unclear": "欄が空に戻るので内容が消えたように感じる",
+          "action": "保存メッセージと地図の？マークを確認した",
+          "suggestion": "保存後の記録カードを表示する",
+          "time_lost_seconds_estimate": 10
+        }
+      ],
+      "bugs": [
+        "手順3の完了表示が観察行為と一致しない。再現：ぬま田を選ぶ→手順3の昔と今の写真を見比べる→手順4で保存→確認済み・公開→書き出す。写真を見たのに手順3が未完了のまま（10・11）。観察のみを検出できない仕様の可能性があり、機能故障とは断定しない。"
+      ]
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市・月曜03:00・直線500m。使えると確認できたAED11台（2か所）、登録288台",
+          "where": "aed-diagnostic.txt（診断表示、台数の画像なし）／12-aed-result.pngは同条件の候補画面"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "市境から800m以上内側175,218人のうち約167,400人（96%）が圏外。市全体430,913人では約421,800人（98%）、隣市未読込のため上限。月〜金は同時刻96%",
+          "where": "aed-diagnostic.txt／aed-diagnostic-scrolled.txt（結果表示、画像なし）"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "地図で押した地点に24時間AED1台を置くと、新たに約4,000人が直線500m圏内。最寄りの利用可能AEDまで約2,248m。候補1位は原町田二丁目付近・約12,700人（境界付近）",
+          "where": "12-aed-result.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "設置先候補CSVと全時間帯CSVを実際に保存：aed_candidates_machida_月0300_r500_strict.csv、aed_all_times_r500.csv",
+          "where": "12-aed-result.pngの候補・出力タブ（ボタンは下方）／CSV2件"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "時間不明5台・一般利用不可4台を除外。隣市AED未読込。距離は直線、人口は250mメッシュ、設置可否は考慮しない。未登録の民間AEDもあり得る",
+          "where": "12-aed-result.png／aed-diagnostic.txt"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "診断の圏外率",
+          "trying": "町田市の圏外人口を答える",
+          "unclear": "主数値96%は市全体でなく市境800m以内を除いた人口。98%とどちらを使うか迷った",
+          "action": "分母と注記を読み、内側と全体を分けた",
+          "suggestion": "見出しに「市境付近を除く」を入れる",
+          "time_lost_seconds_estimate": 25
+        },
+        {
+          "severity": "中",
+          "where": "診断の11台（2か所）",
+          "trying": "利用できるAED数を読む",
+          "unclear": "11か所と読みかけた",
+          "action": "台数と地点数を併記した",
+          "suggestion": "台数と地点数を別指標で表示する",
+          "time_lost_seconds_estimate": 15
+        },
+        {
+          "severity": "中",
+          "where": "候補・出力の一覧（12）",
+          "trying": "増設候補を比較する",
+          "unclear": "各行が独立した1台設置の比較かと思ったが、1台ずつ圏を埋める順次選定だった",
+          "action": "説明を読み、任意地点4,000人と候補1位12,700人を区別した",
+          "suggestion": "各行に前の候補を設置後の追加人数と明示する",
+          "time_lost_seconds_estimate": 25
+        },
+        {
+          "severity": "低",
+          "where": "候補・出力のCSV",
+          "trying": "任意地点の試算を保存する",
+          "unclear": "押した任意地点がCSVに入るか確信できない",
+          "action": "候補と全時間帯を出し、任意地点の収録は未検証とした",
+          "suggestion": "選択地点専用の書き出しを置く",
+          "time_lost_seconds_estimate": 15
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

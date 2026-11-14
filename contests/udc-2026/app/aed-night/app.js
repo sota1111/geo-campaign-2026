@@ -96,10 +96,11 @@
     var kn = mu.kinds;
     var h = $("headline"); h.innerHTML = "";
     /* 見出しの数字は「市境から800m以内を除いた人口」。市境の近くは隣の市のAEDを読み込んでいないため、圏外が多めに出る */
-    h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人: 約" + fmtA(coreOk ? cv.popOutCore : cv.popOut) + "人（" + pct(share(cv)) + "）" }));
+    // 大きな数字の母数（市境から800m以上内側）を数字と同じ行に出す（市全体の割合と取り違えやすかった）
+    h.appendChild(el("div", { class: "big", text: "徒歩圏に使えるAEDがない人" + (coreOk ? "（市境から800m以上内側）" : "") + ": 約" + fmtA(coreOk ? cv.popOutCore : cv.popOut) + "人（" + pct(share(cv)) + "）" }));
     $("toggle-sum").textContent = "徒歩圏外 " + pct(share(cv)) + "（" + AN.whenLabel(v.d, v.t) + "）　";
     h.appendChild(el("div", { class: "sub", text: mu.name + "・" + AN.whenLabel(v.d, v.t) + "・徒歩圏 直線" + v.r + "m。対象は市の境界から800m以上内側の人口 " + fmt(coreOk ? cv.popCore : cv.popTotal) +
-      "人。この時間に使えると確認できたAEDは " + strict.usable.length + "台（" + strict.sites + "か所）。登録 " + mu.with_xy + "台のうち、時間が不明 " + kn.unknown + "台、一般の人が使えない設置位置（救急車内・病室など）" + kn.nonpublic + "台は数えていません。" }));
+      "人。この時間に使えると確認できたAEDは " + strict.usable.length + "台（設置場所は" + strict.sites + "か所）。登録 " + mu.with_xy + "台のうち、時間が不明 " + kn.unknown + "台、一般の人が使えない設置位置（救急車内・病室など）" + kn.nonpublic + "台は数えていません。" }));
     h.appendChild(el("div", { class: "rng", text: "確認できたAEDだけなら " + pct(share(strict)) + "、時間が不明のAEDを使えるとしても（夜間は施設の開館時間・条件付きなどを除く）" + pct(share(max)) + "。" }));
     if (coreOk) {
       h.appendChild(el("div", { class: "edge-note", text: "市境付近（800m以内）を含む市全体（メッシュ人口 " + fmt(cv.popTotal) + "人）では約" + fmtA(cv.popOut) + "人（" + pct(cv.popTotal ? cv.popOut / cv.popTotal : 0) +

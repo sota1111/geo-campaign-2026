@@ -1,0 +1,65 @@
+{
+  "run": "6-luna-g3-04",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {"achieved": false, "value": "区域を確定できず", "where": "07-location.png"},
+        "G10-2": {"achieved": false, "value": "推計人口の傾向を確認できず", "where": "07-location.png"},
+        "G10-3": {"achieved": false, "value": "小学校区を確認できず", "where": "07-location.png"},
+        "G10-4": {"achieved": false, "value": "災害想定区域を確認できず", "where": "07-location.png"},
+        "G10-5": {"achieved": false, "value": "推計・参考情報の区別を確認できず", "where": "07-location.png"}
+      },
+      "confusions": [{"severity":"高","where":"住む場所の先行き画面","trying":"徳島駅付近の区域・人口傾向等を調べる","unclear":"画面遷移後の操作が安定せず、検索や地図の結果に進めなかった","action":"表示を繰り返したが値を得られず未達とした","suggestion":"住所検索・候補地選択を上部に置き、対象地確定を明示する"}],
+      "bugs": ["CDPでアプリ画面を開いた際、別アプリの画面へ戻ることが複数回あり、利用者操作による再現性は未確認"]
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {"achieved": true, "value": "ぬま田（架空）、洪水。半径1.0km内に洪水碑1件：大禹謨（だいうぼ）、1972年、350m。因果・危険度を示さないとの説明", "where": "03-crosscheck.png"},
+        "G6-2": {"achieved": true, "value": "昔1961〜69年と今（全国最新写真）を比較し、重ね地図操作。個別撮影年未確認との説明", "where": "04-overlay.png"},
+        "G6-3": {"achieved": true, "value": "ぬま田（架空）を未確認として保存。未確認は公開分に入らないと表示", "where": "05-record.png"},
+        "G6-4": {"achieved": true, "value": "全記録をGeoJSONで書き出し。4件、chimei-kioku-all.geojson。未確認を含む内部用", "where": "06-export.png"},
+        "G6-5": {"achieved": true, "value": "オレンジの地名・語りは架空、青い碑は国土地理院実データ。架空記録を実際の公開データとして使わない説明", "where": "02-memory.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"手順6・書き出し画面","trying":"保存した未確認記録を出力する","unclear":"公開分と全記録のどちらが適切か","action":"公開分の条件を読んで全記録を書き出した","suggestion":"出力ボタンに公開用・内部用の用途を併記する"},
+        {"severity":"中","where":"手順3・写真と重ね地図","trying":"昔の写真を現在の地図と比較し手順を完了する","unclear":"年代選択と地図重ね操作のどちらで完了するか","action":"画面内の重ね操作を試し進捗を確認した","suggestion":"完了条件を同じ操作領域に短く表示する"},
+        {"severity":"低","where":"手順4・記録フォーム","trying":"聞き取りを保存する","unclear":"サンプル語りを使った模擬記録が意図された操作か","action":"架空サンプル入力ボタンを使い、未確認で保存した","suggestion":"保存後も架空・練習記録の表示を残す"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {"achieved": false, "value": "午前3時の台数を確認できず", "where": "01-home.png"},
+        "G11-2": {"achieved": false, "value": "徒歩圏にAEDがない割合・人数を確認できず", "where": "01-home.png"},
+        "G11-3": {"achieved": false, "value": "追加配置の改善人数を確認できず", "where": "01-home.png"},
+        "G11-4": {"achieved": false, "value": "CSV等の出力を未実施", "where": "01-home.png"},
+        "G11-5": {"achieved": false, "value": "数字の限界を確認できず", "where": "01-home.png"}
+      },
+      "confusions": [],
+      "bugs": []
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {"achieved": false, "value": "用途地域を確定できず", "where": "01-home.png"},
+        "G7-2": {"achieved": false, "value": "災害区域を確認できず", "where": "01-home.png"},
+        "G7-3": {"achieved": false, "value": "4つの出口ごとの質問を確認できず", "where": "01-home.png"},
+        "G7-4": {"achieved": false, "value": "印刷・PDF保存を未確認", "where": "01-home.png"}
+      },
+      "confusions": [],
+      "bugs": []
+    }
+  ]
+}

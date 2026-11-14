@@ -7,6 +7,8 @@ export const KINDS = [
   { id: 'wall', label: '擁壁・のり面のふくらみ／変形' },
   { id: 'haul', label: '土砂・資材の搬入や新しい盛り上がり' },
   { id: 'slide', label: '崩れ・落石' },
+  // ダッシュボード版で追加: 昔の写真との見比べで気づいた違い（現地で亀裂等を見たわけではない記録を、現地の異常と取り違えないため）
+  { id: 'photo', label: '写真で見た違い（現地は未確認）' },
   { id: 'other', label: 'その他' },
 ] as const
 

@@ -473,10 +473,12 @@ export default function App() {
   // 診断範囲外の地点では「場所を決める」を済にしない（結論が出せないため）
   // 「見る」手順は、前提（診断できる地点）がある状態でその手順を表示したら済。自動では切り替えない。地点を変えたらやり直し
   useEffect(() => {
-    if (!verdictShown || (step !== 'verdict' && step !== 'last')) return
-    setSeen((v) => ({ ...(v.pt === ptKey ? v : { pt: ptKey, verdict: false, cmp: false, last: false }), [step]: true }))
+    if (!verdictShown || (step !== 'verdict' && step !== 'last' && step !== 'hol')) return
+    // 休日との比較も、平日と休日の結論を左右に並べて見せるので、表示したら済（以前は枠を押すまで未完了で、見比べたのに済にならず迷わせた）
+    const key = step === 'hol' ? 'cmp' : step
+    setSeen((v) => ({ ...(v.pt === ptKey ? v : { pt: ptKey, verdict: false, cmp: false, last: false }), [key]: true }))
   }, [step, verdictShown, ptKey])
-  // 休日との比較は、見ただけでは済にしない。曜日の枠を押して結論を切り替えた時に済
+  // 曜日の枠を押して結論を切り替えた時も済
   const pickDay = (day: Day) => {
     if (day === cond.day) return
     setC({ day })
@@ -493,7 +495,7 @@ export default function App() {
     { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: verdictShown },
     { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true },
     { id: 'verdict', title: '行けるか結論を見る', hint: '「家族に送る1枚」: 行けるか・最終便・次の一歩・使ったデータ', done: seenVerdict },
-    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日と休日の枠を押して見比べる', done: seenCmp },
+    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日と休日の結論を並べて見比べる', done: seenCmp },
     { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
     { id: 'copy', title: '1枚をコピーして家族に送る', hint: '結論・最終便・使ったデータとリンクを、LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: hasPt && copiedPt === ptKey },
     { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
@@ -582,7 +584,11 @@ export default function App() {
             <div className="rounded-md border-2 border-blue-700 bg-blue-50 p-2 text-sm text-blue-950" data-testid="chosen-place">
               <b>この場所で診断します</b>（{here}）
               {!diag?.v && <span className="block text-xs text-orange-800">診断範囲外の地点です。別の場所を選んでください。</span>}
-              <span className="block text-xs">結論は、サイドバーの「行けるか結論を見る」で見られます。</span>
+              {diag?.v && (
+                <Button size="sm" className="mt-1.5 w-full" onClick={() => setStep('verdict')} data-testid="go-verdict">
+                  この場所の結論を見る（次の手順へ）
+                </Button>
+              )}
             </div>
           )}
           <form role="search" className="space-y-1" onSubmit={(e) => { e.preventDefault(); doSearch(query) }}>

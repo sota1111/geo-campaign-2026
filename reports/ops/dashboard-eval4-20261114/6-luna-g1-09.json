@@ -1,0 +1,128 @@
+{
+  "run": "6-luna-g1-09",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": false,
+          "value": "未取得。紹介画面では平日・朝8時・30分以内・病院と表示されたが、大町の地点を指定できず結論未取得。",
+          "where": "02-transit.png"
+        },
+        "G1-2": {
+          "achieved": false,
+          "value": "日曜ダイヤとの差は未取得。",
+          "where": "02-transit.png"
+        },
+        "G1-3": {
+          "achieved": false,
+          "value": "停留所名・平日の最終便時刻は未取得。",
+          "where": "02-transit.png"
+        },
+        "G1-4": {
+          "achieved": false,
+          "value": "結論とリンクのコピーを実施できず。",
+          "where": "02-transit.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "トップから各アプリの詳細へ移動する箇所",
+          "trying": "生活アクセス診断マップを開こうとした",
+          "unclear": "カードの選択と詳細ペインの「開く」ボタンの対応が分かりにくく、最初の「開く」で衛星アワードの盛土台帳が開いた",
+          "action": "トップへ戻り目的に沿うカードを探し直したが、診断アプリ画面へ到達できなかった",
+          "suggestion": "カードごとに固有の「生活アクセス診断マップを開く」などのボタンを付け、選択中カードと詳細ペインを明示する"
+        }
+      ],
+      "bugs": [
+        "目的のアプリへ進めず診断結果に到達できなかった（詳細な再現は確認できず）"
+      ]
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {
+          "achieved": false,
+          "value": "事業者画面を開けず。",
+          "where": "01-top.png"
+        },
+        "G12-2": {
+          "achieved": false,
+          "value": "遅れの集計と理由を確認できず。",
+          "where": "01-top.png"
+        },
+        "G12-3": {
+          "achieved": false,
+          "value": "出典・データ状態を確認できず。",
+          "where": "01-top.png"
+        }
+      },
+      "confusions": [],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": false,
+          "value": "盛土造成地と型を確認できず。",
+          "where": "01-top.png"
+        },
+        "G2-2": {
+          "achieved": false,
+          "value": "航空写真の比較を確認できず。",
+          "where": "01-top.png"
+        },
+        "G2-3": {
+          "achieved": false,
+          "value": "記録を保存できず。",
+          "where": "01-top.png"
+        },
+        "G2-4": {
+          "achieved": false,
+          "value": "通報文コピー・ファイル書き出し未実施。",
+          "where": "01-top.png"
+        }
+      },
+      "confusions": [],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": false,
+          "value": "最高点の区間を確認できず。",
+          "where": "01-top.png"
+        },
+        "G3-2": {
+          "achieved": false,
+          "value": "予算内の調査対象選択・次段階への移動未実施。",
+          "where": "01-top.png"
+        },
+        "G3-3": {
+          "achieved": false,
+          "value": "第2回順位の更新未確認。",
+          "where": "01-top.png"
+        },
+        "G3-4": {
+          "achieved": false,
+          "value": "トップでは架空データと表示。アプリ内表示未確認。",
+          "where": "01-top.png"
+        }
+      },
+      "confusions": [],
+      "bugs": []
+    }
+  ]
+}

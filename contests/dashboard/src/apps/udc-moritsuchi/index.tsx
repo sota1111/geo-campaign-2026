@@ -20,7 +20,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -167,7 +166,9 @@ export default function App() {
   const op = Math.min(100, Math.max(0, Number(opStr) || 60))
 
   // フォーム
-  const [kind, setKind] = useState('crack')
+  // 初期値は未選択（既定で「亀裂・段差」が入ると、見ていない亀裂を記録・通報してしまう）
+  const [kind, setKind] = useState('')
+  const [copiedMsg, setCopiedMsg] = useState('')
   const [when, setWhen] = useState(() => fmtDate(new Date()).replace(' ', 'T'))
   const [memo, setMemo] = useState('')
   const [blurred, setBlurred] = useState(false)
@@ -437,7 +438,7 @@ export default function App() {
   /* ---------- 記録 ---------- */
   const save = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pick) return
+    if (!pick || !kind) return
     const rec = makeRecord({
       id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       lng: pick.lng, lat: pick.lat, kind, memo,
@@ -449,6 +450,8 @@ export default function App() {
     setPick(null)
     setPickMsg('')
     setMemo('')
+    setKind('')
+    setCopiedMsg('')
     setWhen(fmtDate(new Date()).replace(' ', 'T'))
     setSelRec(rec.id)
     setAddedNow(true)
@@ -475,9 +478,13 @@ export default function App() {
   const copy = async (text: string, okMsg: string, prepared = false) => {
     try {
       await navigator.clipboard.writeText(text)
-      if (prepared) setDidPrepare(true)
+      if (prepared) {
+        setDidPrepare(true)
+        setCopiedMsg(okMsg)
+      }
       toast.success(okMsg)
     } catch {
+      if (prepared) setCopiedMsg('コピーできませんでした。文面を手動で選択してコピーしてください。')
       toast.error('コピーできませんでした。文面を手動で選択してコピーしてください。')
     }
   }
@@ -499,15 +506,17 @@ export default function App() {
 
   const exportGeo = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
-    downloadGeoJson(`moritsuchi-records-${stamp()}.geojson`, markGeoJson(toGeoJSON(records)))
+    const name = `moritsuchi-records-${stamp()}.geojson`
+    downloadGeoJson(name, markGeoJson(toGeoJSON(records)))
     setDidPrepare(true)
-    setIoMsg('GeoJSONを書き出しました。')
+    setIoMsg(`GeoJSONを書き出しました（${name}、${records.length}件。ブラウザのダウンロード先に保存されます）。`)
   }
   const exportCsv = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
-    downloadText(`moritsuchi-records-${stamp()}.csv`, markCsv(toCSV(records)), 'text/csv;charset=utf-8')
+    const name = `moritsuchi-records-${stamp()}.csv`
+    downloadText(name, markCsv(toCSV(records)), 'text/csv;charset=utf-8')
     setDidPrepare(true)
-    setIoMsg('CSVを書き出しました。')
+    setIoMsg(`CSVを書き出しました（${name}、${records.length}件。ブラウザのダウンロード先に保存されます）。`)
   }
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target
@@ -843,13 +852,20 @@ export default function App() {
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="mw-kind">気づいたこと</Label>
-          <Select value={kind} onValueChange={setKind}>
-            <SelectTrigger id="mw-kind" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="mw-kind">気づいたこと（必須）</Label>
+          {/* 標準の select（キーボード・支援技術で確実に選べる）。未選択では保存できない */}
+          <select
+            id="mw-kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+            required
+            data-testid="kind-select"
+            className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">選んでください</option>
+            {KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
+          </select>
+          <p className="text-xs text-muted-foreground">昔の写真との見比べで気づいたことは「写真で見た違い（現地は未確認）」を選びます。</p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="mw-when">気づいた日時</Label>
@@ -879,7 +895,8 @@ export default function App() {
             <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setClearOpen(true)}><Trash2 className="size-3.5" />全記録を消す</Button>
           </div>
         )}
-        <Button type="submit" disabled={!pick} className="w-full">台帳に足す（この端末に保存）</Button>
+        {pick && !kind && <p className="text-xs font-medium text-amber-900" data-testid="kind-required">「気づいたこと」を選ぶと保存できます。</p>}
+        <Button type="submit" disabled={!pick || !kind} className="w-full">台帳に足す（この端末に保存）</Button>
       </div>
     </form>
   )
@@ -912,6 +929,9 @@ export default function App() {
           <Button size="lg" className="h-12 text-base" onClick={exportCsv} disabled={!records.length} data-testid="export-csv"><Download className="size-5" />台帳をCSVで書き出す</Button>
           <Button size="lg" variant="outline" className="h-12 text-base" onClick={exportGeo} disabled={!records.length}><Download className="size-5" />GeoJSONで書き出す</Button>
         </div>
+        {/^(CSV|GeoJSON)を書き出しました/.test(ioMsg) && (
+          <p className="rounded-md border border-sky-700 bg-sky-50 p-2 text-sm font-medium text-sky-950" role="status" data-testid="export-msg">✔ {ioMsg}</p>
+        )}
         <p className="text-xs text-muted-foreground">
           CSVは表計算ソフトで開けます。GeoJSONは、仲間に渡して読み込んでもらったり、地図ソフト（QGIS等）で確かめたりできます。このページは送信しません。
         </p>
@@ -928,7 +948,18 @@ export default function App() {
               {r.outOfCoverage && <div className="text-xs text-destructive">※対象範囲外の位置</div>}
               {r.memo && <div className="whitespace-pre-wrap break-words text-xs text-muted-foreground">{r.memo}</div>}
               <div className="flex gap-2 pt-0.5">
-                <Button size="sm" variant="outline" onClick={() => selectRecord(r.id)}>この記録の通報文</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    selectRecord(r.id)
+                    setCopiedMsg('')
+                    // 通報文は一覧の下に出る。押した直後に見えるよう、そこまで動かす
+                    requestAnimationFrame(() => document.getElementById('mw-report')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+                  }}
+                >
+                  この記録の通報文
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => removeRecord(r.id)}><Trash2 className="size-4" />削除</Button>
               </div>
             </li>
@@ -951,10 +982,15 @@ export default function App() {
       </p>
 
       {selectedRecord && (
-        <div className="space-y-2 rounded-md border p-3">
+        <div id="mw-report" className="space-y-2 rounded-md border p-3">
           <div className="text-sm font-semibold">1件の通報文のたたき台（選んだ記録）</div>
           <Textarea readOnly rows={7} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
           <Button variant="outline" onClick={() => copy(withSampleMark(report), 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-4" />通報文をコピーする</Button>
+          {copiedMsg && (
+            <p className="rounded-md border border-sky-700 bg-sky-50 p-2 text-sm font-medium text-sky-950" role="status" data-testid="copy-msg">
+              {copiedMsg.startsWith('コピーできません') ? copiedMsg : `✔ ${copiedMsg}`}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
           </p>

@@ -1,0 +1,189 @@
+{
+  "run": "6-luna-g3-01",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）の洪水語り。半径1.0km内に洪水碑1件、大禹謨（だいうぼ）1972年、350m。",
+          "where": "04-g6-compare.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "1961〜69年の空中写真と今の写真を並べて表示。",
+          "where": "05-g6-oldmaps.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "ぬま田（架空）を未確認の聞き取り記録として保存。",
+          "where": "13-saved.png"
+        },
+        "G6-4": {
+          "achieved": false,
+          "value": "全記録を内部用GeoJSONに1件書き出し。公開分は0件。",
+          "where": "14-export.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "地名・語りは架空サンプル、伝承碑は国土地理院実データと明記。",
+          "where": "01-top.png, 13-saved.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順3「昔の地図・写真と重ねる」カード",
+          "trying": "昔の写真を開く",
+          "unclear": "カード押下後の内容の表示場所が分からず、切替なのか別画面なのか不明",
+          "action": "下へスクロールして展開パネルを発見",
+          "suggestion": "展開位置への自動スクロールか表示通知を追加"
+        },
+        {
+          "severity": "中",
+          "where": "手順5確認ダイアログと手順6公開分",
+          "trying": "記録を公開GeoJSONに含める",
+          "unclear": "確認後さらに公開範囲と利用条件を指定する流れが分かりにくい",
+          "action": "ダイアログ完了できず、内部用GeoJSONのみ出力",
+          "suggestion": "手順カードに確認→公開条件→公開書き出しを明記"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市月曜03:00、確認できたAED11台（2か所）。",
+          "where": "27-g11-details.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "直線500m、対象人口175,218人中約167,400人（96%）が圏外。",
+          "where": "27-g11-details.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "地図クリック地点で1台追加の場合、約12,900人が新たに徒歩圏。",
+          "where": "34-g11-sim.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "地区別一覧CSVを書き出し操作。",
+          "where": "27-g11-details.png"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "時間不明5台・一般利用不可4台を除外。市境800m以内は隣市データ未読込で上限。直線距離。",
+          "where": "27-g11-details.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "診断地図と候補・出力",
+          "trying": "1台追加効果を試算",
+          "unclear": "候補一覧の行も試算操作か、地図クリックだけか不明",
+          "action": "地図の空白をクリックして試算",
+          "suggestion": "クリックで試算する案内や操作ボタンを地図上に示す"
+        },
+        {
+          "severity": "低",
+          "where": "町田市03:00の集計カード",
+          "trying": "市内の徒歩圏外割合を引用",
+          "unclear": "対象内側人口96%と市境近傍を含む市全体98%の違い",
+          "action": "主値を96%、市全体は上限参考値と理解",
+          "suggestion": "主値と参考値を見出しで分ける"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅付近例は商業地域、建ぺい率80%、容積率600%。",
+          "where": "38-g7-conditions.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水0.5〜3m、高潮、津波区域内。土砂災害警戒区域外。",
+          "where": "38-g7-conditions.png"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る・貸す・活かす・手放す各出口の聞くことを1枚シートに表示。",
+          "where": "40-g7-sheet.png"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "A4・1枚、印刷・PDF保存ボタンと案内を確認。",
+          "where": "40-g7-sheet.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "手順1の地図凡例",
+          "trying": "地点条件を把握",
+          "unclear": "地点指定前、用途地域/ハザード凡例が結果表示か不明",
+          "action": "徳島駅付近例を選択して値を表示",
+          "suggestion": "地点指定前の状態を凡例のそばに表示"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "徳島駅付近は居住誘導区域・都市機能誘導区域内。",
+          "where": "43-g10-station.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500m人口推計: 2025年1643人→2035年1463人→2050年1187人（−28%）。",
+          "where": "43-g10-station.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校区。",
+          "where": "43-g10-station.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水・津波・高潮内、土砂災害警戒区域外、液状化しやすい区分。",
+          "where": "43-g10-station.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "人口は推計、区域は加工参考で市の公表図が正。各データ時点・精度・限界を注記。",
+          "where": "43-g10-station.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "ダッシュボードカードからのアプリ導線",
+          "trying": "住まい探し用アプリを使う",
+          "unclear": "最初に開く案内画面から本体を開く導線が見当たらなかった",
+          "action": "配布リンクを確認して本体を開いた",
+          "suggestion": "案内画面に目立つデモ起動ボタンを置く"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

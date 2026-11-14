@@ -1,0 +1,155 @@
+{
+  "run": "6-luna-g1-04",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": false,
+          "value": "候補区間の点数一覧を画面で確認できず",
+          "where": "02-satellite.png（トップのカード一覧とUDC詳細に遷移）"
+        },
+        "G3-2": {
+          "achieved": false,
+          "value": "予算内選択・次段階への操作を確認できず",
+          "where": "02-satellite.png"
+        },
+        "G3-3": {
+          "achieved": false,
+          "value": "調査結果反映後の第2回順位を確認できず",
+          "where": "02-satellite.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "トップのカードに『架空データ』表示",
+          "where": "01-home.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "トップ画面、衛星データ活用アワードの提案Aカード付近",
+          "trying": "路面下リスクの実行サンプルを起動",
+          "unclear": "どの場所を押せば実行サンプルが開くか分からず、候補区間へ進む操作が成立したか画面から見分けにくかった",
+          "action": "クリック後もトップの内容が続いたため、別カードを試しUDC詳細が開いた。所要約1分",
+          "suggestion": "各アプリカードに明瞭な『開く』ボタンを置き、カード領域との役割を分ける"
+        }
+      ],
+      "bugs": [
+        "カード付近のクリックで意図した実行サンプルが開いたことを確認できず、画面遷移の反応が分かりにくい（トップから該当箇所をクリックして再現を試みた）"
+      ]
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": false,
+          "value": "大町・平日朝・30分以内の病院アクセス結論を画面で得られず",
+          "where": "01-home.png"
+        },
+        "G1-2": {
+          "achieved": false,
+          "value": "日曜ダイヤとの違い未確認",
+          "where": "01-home.png"
+        },
+        "G1-3": {
+          "achieved": false,
+          "value": "近くの停留所名・平日最終便時刻未確認",
+          "where": "01-home.png"
+        },
+        "G1-4": {
+          "achieved": false,
+          "value": "結論とリンクのコピー未確認",
+          "where": "01-home.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "トップ画面、公共交通オープンデータチャレンジの生活アクセス診断マップカード",
+          "trying": "アプリを開いて地点・曜日・所要時間・病院を設定",
+          "unclear": "アプリ詳細を開く手掛かりが読み取りづらく、カードのクリックで詳細またはサンプルに入れるか不明",
+          "action": "複数カードの位置を試したがトップから離れられず、約1分後に中断",
+          "suggestion": "『詳細』『実行サンプルを開く』のボタンを常時表示する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {
+          "achieved": false,
+          "value": "事業者別画面を開けず",
+          "where": "01-home.png"
+        },
+        "G12-2": {
+          "achieved": false,
+          "value": "遅れ集計の有無・理由未確認",
+          "where": "01-home.png"
+        },
+        "G12-3": {
+          "achieved": false,
+          "value": "データ出典・収集状態未確認",
+          "where": "01-home.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "トップ画面、バス定時性カルテカード",
+          "trying": "事業者を選んで事業者別画面に進む",
+          "unclear": "事業者別カルテへ入るリンクや操作が見分けにくい",
+          "action": "トップ画面の事業者向けカードを試したが遷移を確認できなかった。約1分",
+          "suggestion": "カード上に事業者選択と『カルテを見る』の導線を示す"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": false,
+          "value": "熱海駅付近の盛土造成地および型を確認できず",
+          "where": "02-satellite.png（UDC詳細ページのみ）"
+        },
+        "G2-2": {
+          "achieved": false,
+          "value": "航空写真の比較を確認できず",
+          "where": "02-satellite.png"
+        },
+        "G2-3": {
+          "achieved": false,
+          "value": "変化の記録・保存未確認",
+          "where": "02-satellite.png"
+        },
+        "G2-4": {
+          "achieved": false,
+          "value": "通報文コピーまたはファイル書出し未確認",
+          "where": "02-satellite.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "トップ画面からアーバンデータチャレンジ詳細へ遷移後",
+          "trying": "実行サンプルを開いて熱海駅近くを調べる",
+          "unclear": "詳細ページの『開く』操作がどのアプリに対応するかがはっきりせず、実際の地図サンプルへ到達できたか確かめられない",
+          "action": "詳細本文は確認したが実行サンプルを開けず、約1分で終了",
+          "suggestion": "実行サンプルのボタンをアプリ名ごとに明示し、起動後の状態を分かりやすくする"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}
