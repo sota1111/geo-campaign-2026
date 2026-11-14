@@ -6,7 +6,7 @@ import kh
 from test_aggressor_ui import TestUI as _Base, HAVE
 
 
-@unittest.skipUnless(HAVE, "google-chrome / node / ui_shot.mjs が無い")
+@unittest.skipUnless(HAVE, "google-chrome / node / ui_shot.mjs か web/data が無い（web/data は許諾確認中で未同梱）")
 class TestUIFixes(_Base):
     # 親クラスのテストは再実行しない（親の検査は test_aggressor_ui で実行される）
     test_headline_matches_loaded_data = None

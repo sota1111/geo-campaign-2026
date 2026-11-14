@@ -18,8 +18,8 @@ import kh
 
 WEB = kh.ROOT / "web"
 SHOT = kh.ROOT / "tests" / "ui_shot.mjs"
-META = json.loads((WEB / "data" / "meta.json").read_text(encoding="utf-8"))
-HAVE = shutil.which("google-chrome") and shutil.which("node") and SHOT.exists()
+META = kh.load_meta()
+HAVE = shutil.which("google-chrome") and shutil.which("node") and SHOT.exists() and kh.HAVE_DATA
 
 
 def free_port():
@@ -30,7 +30,7 @@ def free_port():
     return p
 
 
-@unittest.skipUnless(HAVE, "google-chrome / node / ui_shot.mjs が無い")
+@unittest.skipUnless(HAVE, "google-chrome / node / ui_shot.mjs か web/data が無い（web/data は許諾確認中で未同梱）")
 class TestUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -18,8 +18,8 @@ from kodure import router as rt
 from lifemap.network import dist_m
 
 DATA = kh.ROOT / "web" / "data"
-META = json.loads((DATA / "meta.json").read_text(encoding="utf-8"))
-NC = len(META["cells"])
+META = kh.load_meta()
+NC = len(META["cells"]) if META else 0
 CACHE = kh.ROOT / "cache"
 
 
@@ -52,7 +52,7 @@ class TestWalkingTransferBetweenStops(unittest.TestCase):
                          "約100m先の別の停留所へ歩いて乗り継ぐ経路が無い（乗換1回までなのに着けない扱い）")
 
 
-@unittest.skipUnless((CACHE / "feed" / "odpt__tokyometro-train.zip").exists(), "取得済みのGTFS（cache/）が無い")
+@unittest.skipUnless((CACHE / "feed" / "odpt__tokyometro-train.zip").exists() and kh.HAVE_DATA, "取得済みのGTFS（cache/）か web/data が無い（web/data は許諾確認中で未同梱）")
 class TestRealNetwork(unittest.TestCase):
     """取得済みの実データで、主要な乗換駅の分断と、出発時刻の位相への過敏さを確かめる（約30秒）。"""
 
@@ -136,6 +136,7 @@ class TestRealNetwork(unittest.TestCase):
         self.assertLessEqual(flip / tot, 0.10, "9:00発と9:05発で %d/%d 組（%.1f%%）が入れ替わる" % (flip, tot, 100 * flip / tot))
 
 
+@unittest.skipUnless(kh.HAVE_DATA, kh.NO_DATA_REASON)
 class TestDestinations(unittest.TestCase):
     def test_closed_facilities_not_listed(self):
         """P27（2013年度版）由来で、閉館済みの施設が行き先に残っている（逓信総合博物館は2013年8月に閉館し、郵政博物館として移転）。"""

@@ -62,3 +62,15 @@ def reference_rounds(trips, n_nodes, sources, t0, transfer_s, tmax, max_rounds=3
         prev = new
         cur_le = new
     return best_le[0], best_le[1], best_le[-1]
+
+
+# 生成済みの web/data（国土数値情報 P13・P27 由来の行き先を含む）はリポジトリに入れていない（許諾確認中。.gitignore）。
+# 手元で `python3 build.py` を実行して作ると、データ前提のテストが動く。
+META_PATH = ROOT / "web" / "data" / "meta.json"
+HAVE_DATA = META_PATH.exists()
+NO_DATA_REASON = "web/data が無い（国土数値情報 P13・P27 の許諾確認中のためリポジトリに同梱していない。python3 build.py で生成すると動く）"
+
+
+def load_meta():
+    import json
+    return json.loads(META_PATH.read_text(encoding="utf-8")) if HAVE_DATA else None

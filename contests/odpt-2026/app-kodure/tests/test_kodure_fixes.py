@@ -146,6 +146,7 @@ class TestParkEntrance(unittest.TestCase):
         self.assertIn("逓信総合博物館", dm.CLOSED)
 
 
+@unittest.skipUnless(kh.HAVE_DATA, kh.NO_DATA_REASON)
 class TestGeneratedMeta(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

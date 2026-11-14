@@ -40,12 +40,22 @@
   }
   function getJSON(url) {
     return fetch(url).then(function (r) {
-      if (!r.ok) throw new Error(url + ' ' + r.status);
+      if (!r.ok) { var er = new Error(url + ' ' + r.status); er.status = r.status; er.url = url; throw er; }
       return r.json();
     });
   }
 
+  function showNoData() {
+    var msg = '行き先データ（国土数値情報 P13・P27）は許諾確認中のため同梱していません。';
+    var h = $('headline');
+    if (h) h.textContent = msg;
+    $('summary').innerHTML = '<div class="notice warn"><b>' + msg + '</b><br>' +
+      '公園・動物園・水族館・博物館などの行き先は、データの利用許諾（「非商用」の条件）を国土数値情報の事務局に確認するまで、このリポジトリと公開物には入れていません。' +
+      '手元で作り直す手順は README の「ビルド」を参照してください。</div>';
+  }
+
   function showFail(what, e) {
+    if (e && e.status === 404 && /data\/meta\.json/.test(e.url || '')) { showNoData(); return; }
     var el = $('summary');
     el.innerHTML = '<div class="notice warn"><b>' + what + 'を表示できませんでした。</b><br>通信の不調や、古い画面が残っていることが原因の場合があります。' +
       '下のボタンでページを読み込み直してください。<br><button type="button" id="btn-reload" class="act">ページを読み込み直す</button>' +

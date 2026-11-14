@@ -92,3 +92,15 @@ class TestWebStatic(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestNoDestDataShipped(unittest.TestCase):
+    """国土数値情報 P13・P27 は許諾確認中のため、行き先データ（名称・座標・種別）を追跡しない。画面は残り、同梱していないと表示する。"""
+    def test_gitignore_covers_generated_data(self):
+        gi = (kh.ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn("web/data/*.json", gi)
+
+    def test_screen_says_data_not_shipped(self):
+        app = (kh.ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("許諾確認中のため同梱していません", app)
+        self.assertIn("showNoData", app)

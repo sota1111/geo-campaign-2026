@@ -8,7 +8,9 @@ from kodure import build as kb
 from kodure import router as rt
 
 DATA = kh.ROOT / "web" / "data"
-META = json.loads((DATA / "meta.json").read_text(encoding="utf-8"))
+if not kh.HAVE_DATA:
+    raise unittest.SkipTest(kh.NO_DATA_REASON)
+META = kh.load_meta()
 NC, ND = len(META["cells"]), len(META["dests"])
 P = META["params"]
 
