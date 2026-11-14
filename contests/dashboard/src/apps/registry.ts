@@ -28,6 +28,8 @@ export interface AppMeta {
   dataNote: string
   /** 元の静的アプリ（リポジトリ内の相対パス。プレースホルダ表示用） */
   originalPath: string
+  /** 新しい案（埋め込み）の出典。ヘッダーの「出典・ライセンス」に出す（元の静的版の出典欄・README と同じ内容） */
+  sources?: { name: string; provider?: string; license?: string; note?: string }[]
   /** 'new' = 新しい案（比較用・未選定）。省略時は今の案 */
   plan?: 'current' | 'new'
   /** 新しい案が隣に並ぶ、今の案の id（ポータルで同じ部門の中に並べる） */
@@ -187,6 +189,11 @@ export const APPS: AppMeta[] = [
     dataKind: 'partial',
     dataNote: '①〜④の配電線・区間・点数・停電戸数は架空。⑤の樹高マップ（Meta・WRI。東京都青梅市周辺）は実データで、線は利用者が引く仮の線',
     originalPath: 'contests/satellite-2026/app/proposal-alpha/',
+    sources: [
+      { name: '樹高マップ（⑤）', provider: 'Meta・WRI High Resolution Canopy Height Maps（AWS Open Data）', license: 'CC BY 4.0', note: 'Maxar の衛星画像と機械学習による推定。東京都青梅市周辺、取得 2026-11-13、元画像の撮影日 2020-02-09（冬季）。' },
+      { name: '配電線・区間・点数・停電戸数・現地確認（①〜④）', note: 'すべて架空のサンプルです（実在の配電線ではありません）。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
+    ],
   },
   {
     id: 'biz-business-nb',
@@ -204,6 +211,12 @@ export const APPS: AppMeta[] = [
     dataKind: 'real',
     dataNote: '資源エネルギー庁の再エネ事業計画認定情報（京都府）。位置は町字の代表点（推定）、廃棄時期は仮説',
     originalPath: 'contests/ichibiz-2026/app/business-nb/web/',
+    sources: [
+      { name: '太陽光設備の認定情報（京都府）', provider: '資源エネルギー庁 事業計画認定情報 公表用ウェブサイト', note: '太陽光のみ抽出し、住所を位置に変換して加工。認定情報は毎月更新されます。' },
+      { name: '設備の位置', provider: '国土地理院 住所検索API', note: '町字の代表点（推定）です。設備の正確な位置ではありません。廃棄時期は仮説で推定しています。' },
+      { name: 'リサイクル施設', provider: '京都府（使用済太陽光パネルの適正処理のページ）', note: '事業者名・所在地・URLのみ使用。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル（淡色地図）', license: '国土地理院コンテンツ利用規約' },
+    ],
   },
   {
     id: 'biz-realestate-rn1',
@@ -221,6 +234,10 @@ export const APPS: AppMeta[] = [
     dataKind: 'real',
     dataNote: '不動産情報ライブラリ（国土交通省）のデータ（徳島市周辺）。将来人口は推計',
     originalPath: 'contests/ichibiz-2026/app/realestate-rn1/',
+    sources: [
+      { name: '立地適正化計画の区域・将来推計人口・小学校区・学校・保育園等・医療機関・福祉施設・災害の想定区域', provider: '不動産情報ライブラリ（国土交通省）API', note: '国土数値情報・都市計画決定GISデータ等を API で取得して同梱（ブラウザからは API を呼びません）。将来人口は推計です。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
+    ],
   },
   {
     id: 'udc-aed',
@@ -240,6 +257,12 @@ export const APPS: AppMeta[] = [
     dataKind: 'real',
     dataNote: '町田市・福岡市・井原市・倉敷市が公開したAED設置のオープンデータと、国勢調査の地域メッシュ人口。時間表記を読めないAEDは「不明」として数える',
     originalPath: 'contests/udc-2026/app/aed-night/',
+    sources: [
+      { name: 'AED の設置場所と利用可能な曜日・時間', provider: '町田市・福岡市・井原市・倉敷市のオープンデータ（井原市・倉敷市は「出典：おかやまオープンデータカタログ」）', note: '時間表記を読めない AED は「不明」として数えます。' },
+      { name: '人口', provider: 'e-Stat 統計GIS 令和2年国勢調査 地域メッシュ統計（250m メッシュ、総務省統計局）' },
+      { name: '市の境界', provider: '国土数値情報（行政区域 N03）をもとに CODH・NII の Geoshape が加工したデータ', note: '地図表示用に単純化しています。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル（淡色地図）', license: '国土地理院コンテンツ利用規約' },
+    ],
   },
   {
     id: 'odpt-teiji',
@@ -259,6 +282,10 @@ export const APPS: AppMeta[] = [
     stateNote:
       'いまはデータを貯め始めたところで、まだ遅れの集計はありません（開くと全事業者が「データ蓄積前」と表示されます）。昼間の収集を 11/13 の 11:00〜12:00 に予定していますが、結果は未確定です。',
     originalPath: 'contests/odpt-2026/app-teiji/web/',
+    sources: [
+      { name: 'バスの位置（GTFS-RT）と時刻表（GTFS）', provider: '公共交通オープンデータセンター（各事業者）', license: 'CC BY 4.0', note: '位置から遅れを推定・集計した参考値です（実データでの推定精度は未検証）。事業者ごとの状態（蓄積前・サンプル不足）は画面内に表示します。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
+    ],
   },
 ]
 

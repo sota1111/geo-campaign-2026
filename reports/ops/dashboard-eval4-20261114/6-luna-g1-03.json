@@ -1,0 +1,68 @@
+{
+  "run": "6-luna-g1-03",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {"achieved": true, "value": "熱海駅例から約1,100mの熱海市0012、腹付け型", "where": "14-landslide-candidates.png"},
+        "G2-2": {"achieved": true, "value": "1961〜69年／1974〜78年と全国最新写真を比較。個別撮影年未確認との表示あり", "where": "16-oldphoto.png"},
+        "G2-3": {"achieved": true, "value": "熱海市0012の記録1件をメモ付きで端末内台帳に保存", "where": "21-land-saved.png"},
+        "G2-4": {"achieved": true, "value": "台帳CSVを書き出し、完了表示を確認", "where": "23-land-csv.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"近くの盛土一覧","trying":"自宅近くの候補を確認","unclear":"熱海駅は例の起点で自宅結果ではなく、500m以内に候補なし。最寄り候補は約1,100mと離れていた","action":"駅例の起点から候補を選択","suggestion":"例の起点と自宅位置の違い、候補の距離を近隣範囲と合わせて明確に表示"},
+        {"severity":"中","where":"昔の写真比較","trying":"昔と現在の変化を判断","unclear":"撮影年未確認で、画像だけから何が変わったか確定できる範囲","action":"画像比較し、断定を避け不確実さを記録","suggestion":"撮影年月と比較可能な範囲を写真の近くに表示"},
+        {"severity":"低","where":"記録フォーム","trying":"気づきを保存","unclear":"位置を選ぶまで保存できないこと","action":"地図をクリックして記録位置を置き保存","suggestion":"位置未選択で保存できない理由をボタン近くに表示"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {"achieved": true, "value": "最高点0.94でS021・S022・S036が同点", "where": "05-sat-selected.png"},
+        "G3-2": {"achieved": true, "value": "3.0km予算に対し22区間、2.9kmを選択", "where": "05-sat-selected.png"},
+        "G3-3": {"achieved": true, "value": "第2回未調査候補1位S033、点数0.75。第1回1位S020から更新", "where": "10-sat-round2list.png"},
+        "G3-4": {"achieved": true, "value": "架空の街の架空データで、調査結果も乱数シミュレーションと表示", "where": "10-sat-round2list.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"予算内で調査対象を選ぶ画面","trying":"予算に収まる候補区間を自動選択","unclear":"上位15以外を含む合計22区間の選択と予算の関係","action":"合計2.9/3.0kmを見て続行","suggestion":"自動選択のルールと候補外を含む理由を操作前に示す"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {"achieved": true, "value": "大町（富山市周辺）から平日朝に川田病院へ徒歩で30分以内（徒歩目安約3分）", "where": "31life-result.png"},
+        "G1-2": {"achieved": true, "value": "日曜ダイヤも徒歩で行ける。平日と同じ結果", "where": "32life-sunday.png"},
+        "G1-3": {"achieved": true, "value": "片原町（約508m）、平日最終便19:48", "where": "33life-lastbus.png"},
+        "G1-4": {"achieved": true, "value": "結論とリンクを共有文に表示し、コピー操作", "where": "34life-copy.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"大町の住所検索","trying":"富山市の大町の地点を選択","unclear":"同名候補のうちどれが富山市内か、診断対象内か","action":"大町（富山市周辺）を選択","suggestion":"行政地域と対象範囲を検索直後に明瞭に表示"},
+        {"severity":"低","where":"病院へ行ける結論画面","trying":"徒歩での通院可能性を把握","unclear":"判定が徒歩圏距離の推定であり、予約・診療時間や実際の歩行可否は含まないこと","action":"画面の注意書きを確認","suggestion":"距離判定であることを結論見出しにも表示"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {"achieved": true, "value": "きよバス（データ蓄積前）を選択", "where": "37-bus.png"},
+        "G12-2": {"achieved": true, "value": "集計なし。取得40回・1日分、車両数中央値/最大0、遅れ推定0件。蓄積初期でデータ状況は測れていない（判定不能）。時間帯には昼間の追加取得、区間には同一区間8回以上の観測が必要", "where": "37-bus.png; 40-busscroll.png"},
+        "G12-3": {"achieved": true, "value": "公共交通オープンデータセンター（各事業者）の位置・時刻表（CC BY 4.0）。遅れ推定・集計は本アプリ加工。現状は蓄積初期／データ不足", "where": "40-busscroll.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"画面上部の地図と集計欄","trying":"遅れのある時間帯・区間を確認","unclear":"地図上の路線表示だけで遅れ集計が見られるか、データ蓄積前のため無いのか","action":"詳細欄を下へスクロールし未集計と必要観測数を確認","suggestion":"集計欄に未集計理由を要約表示"}
+      ],
+      "bugs": []
+    }
+  ]
+}

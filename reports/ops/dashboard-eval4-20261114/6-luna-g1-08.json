@@ -1,0 +1,72 @@
+{
+  "run": "6-luna-g1-08",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {"achieved": true, "value": "最高点0.94。同点はS021・S022・S036（A3）、表の1位はS021", "where": "03-p3-scrolled.png"},
+        "G3-2": {"achieved": true, "value": "走行延長上限3.0 km内で22区間、合計2.9 kmを選択し走査へ進んだ", "where": "06-p3-selected.png"},
+        "G3-3": {"achieved": true, "value": "衛星重み50%→60%、第2回未調査候補1位はS033（第1回S020）、上位10区間で10区間入替", "where": "11-p3-rank2.png"},
+        "G3-4": {"achieved": true, "value": "架空の街・架空データ、走査結果は乱数シミュレーションと明記", "where": "02-p3-app.png"}
+      },
+      "confusions": [
+        {"severity": "低", "where": "最高点カードと順位表", "trying": "最高点の区間を特定", "unclear": "最高点カードに3区間が並び、順位表にはS021が1位とあり、同点か単独1位か一瞬迷った", "action": "値0.94を照合し3区間同点、表の先頭はS021と判断。約15秒", "suggestion": "同点数と表上の先頭区間を一文で明示する"},
+        {"severity": "低", "where": "予算内選択画面", "trying": "上位スコア区間を予算内で選択", "unclear": "自動選択後に候補15区間を超える22区間が選ばれた理由", "action": "上位15区間以外の7区間も選択された説明を読み、3.0 km内で延長を最大化する選択と理解。約20秒", "suggestion": "自動選択の延長上限と追加選択のルールをボタン付近に説明する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {"achieved": true, "value": "富山市大町、平日朝8時・30分以内・病院は徒歩で行ける", "where": "21-access-copied.png"},
+        "G1-2": {"achieved": true, "value": "日曜ダイヤでも徒歩で行ける。平日と同じ結論", "where": "18-access-holiday.png"},
+        "G1-3": {"achieved": true, "value": "堀川南町（約136m）、平日の最終便20:44発（休日20:45発）", "where": "21-access-copied.png"},
+        "G1-4": {"achieved": true, "value": "結論・リンクをコピーし成功表示を確認。リンク本文は127.0.0.1の手元確認用", "where": "21-access-copied.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "結論とリンクをコピー画面", "trying": "結論とリンクを遠方の兄へ送る", "unclear": "コピーされた127.0.0.1リンクを兄も開けるか", "action": "画面下の手元確認用・公開後URLで共有との注記を見て、現状リンクは遠方では開けないと判断。約30秒", "suggestion": "コピー完了時にもURLがローカル用であることを表示し、共有用URL未設定を明示する"},
+        {"severity": "低", "where": "結論画面と最寄り停留所画面", "trying": "平日の最終便を確認", "unclear": "結論画面の時刻と停留所詳細の値がどちらの確定値か", "action": "停留所専用手順を開いて照合。約20秒", "suggestion": "同じ時刻の出典と対象曜日を両画面で揃えて表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {"achieved": true, "value": "仙台市交通局（データ蓄積前）を選択", "where": "24-bus-selected.png"},
+        "G12-2": {"achieved": true, "value": "遅れ集計なし。1日・40回分で蓄積が短く、同一区間を8回以上観測するまで集計されない。遅れ推定0便", "where": "25-bus-lower.png"},
+        "G12-3": {"achieved": true, "value": "仙台市交通局のバス位置・時刻表（公共交通オープンデータセンター、CC BY 4.0）。遅れ推定・集計はアプリ加工。観測不足で蓄積中", "where": "25-bus-lower.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "事業者選択後の右側パネル", "trying": "路線・時間帯別の遅れ集計を探す", "unclear": "集計が空の理由と、いつ集計が出るか", "action": "右パネルを下へスクロールし、同一区間8回以上の観測条件を確認。約1分", "suggestion": "空状態に現在の観測数・必要数・不足理由を表示する"},
+        {"severity": "低", "where": "事業者の選択一覧と取得状況", "trying": "集計可能な事業者を選択", "unclear": "データ蓄積前の候補が多く、選択後に集計が出る見込み", "action": "選択後に40回・1日分という取得状態を読み、観測不足と判断。約30秒", "suggestion": "事業者ごとの最終取得日時・対象期間・集計可否を一覧表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G2-1": {"achieved": true, "value": "熱海市0012、熱海駅から約1,100m、腹付け型。500m以内には登録地なし", "where": "30-fill-nearby.png"},
+        "G2-2": {"achieved": true, "value": "1961〜69年写真と全国最新写真を比較し、境界スライダーを動かした", "where": "33-fill-photo.png"},
+        "G2-3": {"achieved": true, "value": "熱海市0012範囲内に亀裂・段差の記録を1件保存。道路・建物の見え方の差は写真だけで時期・原因を断定できない旨を記載", "where": "31-fill-photo.png"},
+        "G2-4": {"achieved": true, "value": "CSV書き出しボタンを押し、画面の完了表示を確認（指定評価フォルダにファイルは見当たらず）", "where": "32-fill-export.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "トップの盛土関連アプリ一覧", "trying": "熱海駅周辺の住民向け盛土アプリを開く", "unclear": "盛土巡視台帳と住民向けウォッチの用途の違い", "action": "横須賀市の自治体職員向け巡視台帳を一度開き、対象地域と利用者を見て戻り、みんなの盛土ウォッチを選択。約1分", "suggestion": "アプリ名の近くに対象地域と利用者区分を表示する"},
+        {"severity": "中", "where": "自宅地点入力画面", "trying": "熱海駅近くの自宅を起点にする", "unclear": "初期表示の熱海駅が自宅検索結果か例示地点か", "action": "例示地点との注記を確認して進み、結果でも自宅結果ではないとの表示を確認。約30秒", "suggestion": "例示地点で進む操作と自宅住所入力を明確に分ける"},
+        {"severity": "中", "where": "近くの盛土造成地一覧", "trying": "駅近くの対象地を1つ特定", "unclear": "500m以内にない場合、登録漏れなのか候補が存在しないのか", "action": "最寄り候補の距離を確認し、熱海市0012・約1,100mと理解。約30秒", "suggestion": "検索範囲外の最寄り候補であることを強調する"},
+        {"severity": "低", "where": "昔の写真比較画面", "trying": "造成前後の変化を時期とともに理解", "unclear": "写真の撮影日・提供元・更新時点", "action": "1961〜69年と全国最新写真を見比べ、変化の時期や原因は断定しないと判断", "suggestion": "写真ごとの撮影時期・提供元・更新日を併記する"},
+        {"severity": "低", "where": "台帳へ記録画面", "trying": "気づいた点を地点付きで保存", "unclear": "住所検索地点と地図タップ位置の関係", "action": "地図をタップし座標・造成地名を確認して保存。約30秒", "suggestion": "記録地点の造成地名・型・距離をフォーム内に固定表示する"}
+      ],
+      "bugs": ["台帳CSV書き出しで完了表示が出たが、指定評価フォルダにファイルが見当たらなかった。手順：記録を1件保存→手順5→『台帳をCSVで書き出す』をクリック。画面表示とファイル実体が一致しない可能性。"]
+    }
+  ]
+}

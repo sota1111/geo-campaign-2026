@@ -444,6 +444,9 @@ export default function App() {
         </div>
         <p className="rounded-md border-l-4 border-primary bg-primary/10 p-2 text-sm font-medium" data-testid="multi-hint">
           路線を足すと、複数路線を同時に止める案になります（人数は「少なくとも」の下限値）。足すには、下の「＋ 止める路線を追加」で選びます。
+          <span className="mt-1 block text-xs font-normal" data-testid="lower-bound-example">
+            下限になる理由の例: 路線1だけ止めても路線2で、路線2だけ止めても路線1で病院へ行ける人は、どちらの単独の計算にも入りません。両方を同時に止めると行けなくなりますが、この計算には含まれないため、実際の人数は表示より多くなりえます。
+          </span>
         </p>
         <div className="flex min-h-8 flex-wrap gap-1.5" data-testid={`chips-${k}`}>
           {p.routes.length ? p.routes.map((r) => (

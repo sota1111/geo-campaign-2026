@@ -1,0 +1,161 @@
+{
+  "run": "61-terra-g1-01",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": true,
+          "value": "富山県富山市大町、平日朝8時発、病院へ30分以内に徒歩で行ける。佐々木病院は直線約469m、徒歩目安約8分",
+          "where": "06.png"
+        },
+        "G1-2": {
+          "achieved": true,
+          "value": "休日（日曜ダイヤ）朝8時も徒歩で行ける。同じ結果",
+          "where": "07.png"
+        },
+        "G1-3": {
+          "achieved": true,
+          "value": "堀川南大町、平日20:44（休日20:45）",
+          "where": "06.png"
+        },
+        "G1-4": {
+          "achieved": true,
+          "value": "結論とリンクを含む文章とコピーボタンが表示された。ボタンを押した",
+          "where": "08.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "場所を決める・検索結果",
+          "trying": "大町の自宅付近を指定",
+          "unclear": "町名検索で選ばれた点が母の実際の住所とどれほど違うか分からない",
+          "action": "町名の代表点として使用した（時間損失は約10〜30秒の概算）",
+          "suggestion": "検索結果の精度と住所の代表点であることを明示し、ピンの微調整を案内する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {
+          "achieved": true,
+          "value": "きよバスを選択した画面",
+          "where": "09.png"
+        },
+        "G12-2": {
+          "achieved": true,
+          "value": "遅れの集計なし。遅れを推定できるだけの位置データがまだなく、同一区間を8回以上観測すると集計表示",
+          "where": "09.png、10.png"
+        },
+        "G12-3": {
+          "achieved": true,
+          "value": "公共交通オープンデータセンターのきよバス位置・時刻表、CC BY 4.0。1日分40回取得、データ蓄積前",
+          "where": "09.png、10.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "右上「出典・ライセンス」",
+          "trying": "データの出典を確認",
+          "unclear": "ダイアログは元の静的版とREADMEを指し、実データ名が直接出ない",
+          "action": "ダイアログを閉じ、右ペインを下へスクロールして出典欄を見つけた（時間損失は約10〜30秒の概算）",
+          "suggestion": "ダイアログに実際のデータ出典を直接示すか、その欄へ誘導する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": true,
+          "value": "熱海市0012、腹付け型。熱海駅の例から北西約1100m、500m以内には登録なし",
+          "where": "12.png"
+        },
+        "G2-2": {
+          "achieved": true,
+          "value": "1961〜69年の写真と全国最新写真を境界表示で比較",
+          "where": "03.png"
+        },
+        "G2-3": {
+          "achieved": true,
+          "value": "「建物や道路の見え方が変わったように見える。画像が不鮮明なため現地確認が必要」をその他として端末に保存",
+          "where": "04.png"
+        },
+        "G2-4": {
+          "achieved": false,
+          "value": "通報文のたたき台を表示しコピーボタンを押したが、コピー成功を確認できなかった",
+          "where": "04.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "昔の写真と見比べる",
+          "trying": "造成地の変化を判断",
+          "unclear": "古い写真が粗く、境界付近の建物や道路の変化を確信できない",
+          "action": "不鮮明で現地確認が必要と記録した（時間損失は約10〜30秒の概算）",
+          "suggestion": "画像の解像度や撮影時期の限界を比較画面の近くに強調し、拡大方法を案内する"
+        },
+        {
+          "severity": "中",
+          "where": "台帳にまとめて市に届ける",
+          "trying": "通報文をコピー",
+          "unclear": "ボタン押下後にコピー成功を確認できなかった",
+          "action": "たたき台の表示まで確認した（時間損失は約10〜30秒の概算）",
+          "suggestion": "コピー成功・失敗を明確に表示する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "S021、S022、S036が表示上0.94で同点。表の1位はS021",
+          "where": "11.png"
+        },
+        "G3-2": {
+          "achieved": true,
+          "value": "3.0kmの予算で上位を自動選択、22区間・2.9kmで走査結果へ進んだ",
+          "where": "02.png"
+        },
+        "G3-3": {
+          "achieved": true,
+          "value": "衛星重み50%から60%に更新。走査済みを除く1位がS020からS033へ、上位10区間が入れ替わった",
+          "where": "02.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "架空の街「サンプル市」、データはすべて架空。走査結果も乱数シミュレーション",
+          "where": "02.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "候補区間の点数一覧",
+          "trying": "最高点の区間を決める",
+          "unclear": "0.94が3区間で並び、1位だけを最高と答えてよいか迷った",
+          "action": "同点の3区間と表の1位を併記した（時間損失は約10〜30秒の概算）",
+          "suggestion": "同点と順位の決め方を一覧の見出しにも明記する"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

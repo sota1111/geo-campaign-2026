@@ -52,7 +52,9 @@
       <button id="btn-share-csv">協議用の区間表をCSVで書き出す</button>
     </div>
     <p id="plan-help"></p>
+    <p id="plan-order-note" class="note"></p>
     <ol id="plan-list"></ol>
+    <p><button id="btn-plan-to-rec" type="button">③ 現地確認の記録へ進む</button></p>
     <p id="plan-total"></p>
     <div class="share" id="share-box"></div>
   </section>
@@ -65,6 +67,7 @@
       <label class="wide">メモ <input type="text" id="r-memo" maxlength="200"></label>
       <button type="submit">記録する</button>
     </form>
+    <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-tune" type="button">④ 点数の見直しへ進む</button></p></div>
     <p class="note">記録はこのブラウザの localStorage にだけ保存されます（外部へ送信しません）。氏名等の個人情報は入れないでください。区間はすべて架空です。</p>
     <div class="filters"><button id="btn-rec-csv">記録をCSVで書き出す</button><button id="btn-ledger-csv">台帳をCSVで書き出す</button><button id="btn-reset">記録を全消去</button></div>
     <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区間</th><th>確認者</th><th>結果</th><th>メモ</th></tr></thead><tbody></tbody></table></div>

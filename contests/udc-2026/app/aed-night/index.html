@@ -56,13 +56,14 @@
 
     <section id="pane-out" role="tabpanel" aria-labelledby="tab-out" hidden>
       <p class="note">いま選んでいる<b id="out-when"></b>・徒歩圏<b id="out-r"></b>mで、<b>新たに徒歩圏に入る人が多い順</b>に、24時間使えるAEDを置く場所の候補を出します（1台置くごとに、その圏内を埋めて次を選ぶ）。これは設置先を検討するための材料で、設置の可否（敷地・管理者・電源・見守り）は含みません。</p>
-      <ol id="cand-list" class="arealist"></ol>
+      <!-- 書き出しは候補の長い一覧の上に置く（一覧の下だと最初の画面から見えず、見つけにくかった） -->
       <div class="row wrap">
         <button type="button" id="btn-csv-cand" class="btn">設置先候補をCSVで書き出す</button>
         <button type="button" id="btn-csv-area" class="btn">地区別一覧をCSVで書き出す</button>
         <button type="button" id="btn-csv-all" class="btn">全時間帯の表をCSVで書き出す</button>
       </div>
       <p id="io-msg" class="small" role="status"></p>
+      <ol id="cand-list" class="arealist"></ol>
       <p class="small">CSV は端末内で作り、外部へ送信しません。「全時間帯の表」は自治体ごとに、曜日×3時間おきの使えるAEDの数と圏外人口を並べます。</p>
     </section>
 

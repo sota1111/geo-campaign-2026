@@ -1,0 +1,71 @@
+{
+  "run": "6-luna-g2-07",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {"achieved": true, "value": "案A 4,190人（65歳以上943人）、案B 2,190人（65歳以上797人）。徳島市周辺・平日朝8時・20分以内。", "where": "09-solar-map.png; 10-solar-controls.png"},
+        "G5-2": {"achieved": true, "value": "影響が小さい案はB。比較画面で案Bの総数・65歳以上がともに少ないことを確認し、結論確認を押した。", "where": "09-solar-map.png"},
+        "G5-3": {"achieved": true, "value": "plan-comparison-tokushima-wdm20.csv を書き出し、画面で保存完了と5/5工程完了を確認。", "where": "10-solar-controls.png"},
+        "G5-4": {"achieved": true, "value": "複数路線同時停止は『少なくとも』の下限値。代替交通の残数も算術上の仮定。", "where": "02-bus.png; 09-solar-map.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "左の工程一覧・手順4と5", "trying": "結論確認前にCSVを書き出そうとした", "unclear": "後続の書き出し手順を先に開けるのか、工程の前提は何か", "action": "手順5を開くと未完了手順の注意が出たため、手順4へ戻って比較・確認してから書き出した", "suggestion": "前工程未完了の工程を無効化するか、先に必要な工程をボタン付近に表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {"achieved": true, "value": "2045年までの推定設備3,084件・508.4MWのうち、20km直線距離で圏外は1,878件・322.5MW（63.4%）。", "where": "09-solar-place.png"},
+        "G9-2": {"achieved": true, "value": "1か所追加試算で圏外322.5MW（63.4%）→166.4MW（32.7%）、平均距離37.4km→16.2km。候補座標35.281, 135.312付近。", "where": "09-solar-place.png"},
+        "G9-3": {"achieved": true, "value": "結果CSV出力ボタンを押した。施設別・年別・市区町村別・前提・出典をUTF-8 BOM付きCSVにする案内を確認。", "where": "04-solar-results.png"},
+        "G9-4": {"achieved": true, "value": "廃棄時期は調達期間終了時と置いた仮説、設備位置は市区町村代表点。直線距離で、道路・運搬費・受入能力・許可範囲は未評価。", "where": "09-solar-place.png; 04-solar-results.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "左側スクロール内の『拠点を足すと？（試算）』", "trying": "候補拠点を1か所追加する", "unclear": "地図と左パネルのスクロールが別々で、候補操作ボタンが今どこにあるか", "action": "左パネルを上下して操作場所を探し、『距離が最も減る町字を探す』で候補を置いた", "suggestion": "各セクションへの固定リンクと候補追加後の結果への戻りリンクを置く"},
+        {"severity": "中", "where": "条件欄『府外の施設も含める』『受入が未確認の拠点を除く』", "trying": "回収圏外量を計画前提として読み取る", "unclear": "どの施設集合・受入状況を前提にした値か", "action": "選択中の初期条件で数値を記録し、受入能力未確認の注記も確認した", "suggestion": "選択中条件を結果見出しとCSVプレビューに常時併記し、条件別の差を並列表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {"achieved": true, "value": "実データ版（横須賀市・716か所）で上位5地点を計画。本庁0005 80点、田浦0047 80点、久里浜0012 80点、逸見0047 80点、本庁0051 77点。", "where": "06-solar-hub.png; 08-solar-controls.png"},
+        "G4-2": {"achieved": true, "value": "patrol-plan.csv（5行）を書き出し、プレビューを確認。", "where": "08-solar-controls.png"},
+        "G4-3": {"achieved": true, "value": "本庁0005に2026-11-14、巡視班、『問題なし』を記録。台帳と計画の最新巡視欄に反映し、計画5件中1件記録済みを確認。", "where": "10-solar-bottom.png"},
+        "G4-4": {"achieved": true, "value": "実データ版の衛星由来変化量は未接続で点数に含まれない。架空12地点の値は別サンプル。", "where": "05-solar-bottom.png"}
+      },
+      "confusions": [
+        {"severity": "低", "where": "工程6『巡視結果を記録する』の結果欄", "trying": "結果を『問題なし』にして記録する", "unclear": "選択リストが開いた状態で意図した選択肢を選べているか", "action": "未選択の通知を見てから、キー操作で選び直した", "suggestion": "選択後の値を欄付近に明示し、キーボード操作も案内する"},
+        {"severity": "低", "where": "計画の回り順と台帳順位", "trying": "優先度上位5地点を巡回計画にする", "unclear": "地図上の回る順が台帳の優先順位と違う理由", "action": "各行に台帳順位が併記されているのを確認した", "suggestion": "回り順は経路順で優先度順ではない旨を見出しで示す"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図（画面内見出し：配電線 樹木リスク台帳）",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {"achieved": true, "value": "1位はF1-03、136点（衛星・公開データ由来85点＋事業者データ由来51点）。", "where": "11-solar-export.png"},
+        "G8-2": {"achieved": true, "value": "高精度測定・現地確認を4区間に設定し、上位4区間を計画に選んでCSV出力を実行。F1-03 136点、F2-03 92点、F3-04 81点、F2-05 79点。回り順はF1-03→F2-05→F2-03→F3-04。", "where": "11-solar-export.png"},
+        "G8-3": {"achieved": false, "value": "F1-03に『要伐採』を記録したが、点数・順位の更新は確認できず。記録一覧に同内容が3行追加された。", "where": "12-solar-downloaded.png; 11-solar-export.png"},
+        "G8-4": {"achieved": true, "value": "①〜④の区間・配電線・点数・停電戸数・確認は架空。⑤だけMeta・WRI樹高マップの実データ体験で、配電線は利用者が引く。", "where": "12-solar-downloaded.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "タブ③『現地確認の記録』の記録一覧", "trying": "F1-03の現地確認結果を1件保存する", "unclear": "記録ボタンを押した後、保存できたか画面上部で分からず、一覧も画面下にあった", "action": "同じ内容を複数回押してしまい、スクロールしてから重複行に気づいた", "suggestion": "保存完了をボタン付近に表示し、同日・同区間・同結果の重複を警告する"},
+        {"severity": "中", "where": "タブ④『点数の見直し』", "trying": "記録した現地結果を次の優先順位へ反映する", "unclear": "記録後に点数が自動更新するのか、集計を見て人が重みを変更するのか", "action": "確認1件・要伐採1件、率は出さず重みは担当者判断と表示されたため、既定値へ戻した。自動更新は確認できなかった", "suggestion": "自動反映の有無と、手動変更後の再順位付け手順・前後差を明記する"}
+      ],
+      "bugs": [
+        "同一区間・同日・同じ確認者・同じ結果を連続登録すると、同じ行が複数登録される。再現: タブ③でF1-03を選び、確認者と要伐採を入力して『記録する』を複数回押す。今回の記録一覧にはF1-03が3行追加された。重複許容の仕様は画面で確認できず、要確認。"
+      ]
+    }
+  ]
+}

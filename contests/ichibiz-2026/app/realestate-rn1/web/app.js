@@ -177,10 +177,16 @@
     }
     el.innerHTML =
       '<h3>' + esc(s.title) + '</h3>' +
-      '<p class="meta">' + esc(where) + '　作成日: ' + new Date().toLocaleDateString('ja-JP') + '　取得データ: ' + esc(state.data.fetchedAt || '—') + ' 取得</p>' + body +
+      '<p class="meta">' + esc(where) + '　作成日: ' + new Date().toLocaleDateString('ja-JP') + '　取得データ: ' + esc(state.data.fetchedAt || '—') + ' 取得</p>' +
+      // シートは縦に長い。項目への目次を先頭に置く（区域・人口・学校区・災害を探してスクロールで行き来していた）。印刷には出さない
+      (s.outOfScope ? '' : '<nav class="sec-toc" aria-label="シートの項目へ移動">項目へ移動: ' + s.sections.map((sec) => '<button type="button" data-jump="' + esc(sec.id) + '">' + esc(sec.title) + '</button>').join('') + '</nav>') + body +
       '<div class="fine"><p>' + esc(Lib.ATTRIBUTION) + '。取得日 ' + esc(state.data.fetchedAt || '—') + '。</p><p>' + esc(Lib.PROCESSED) + '。</p><p>' + esc(Lib.NLNI_SHORT) + '。' + esc(Lib.SCHOOL_FAC_NOTE) + '</p><p>' + esc(Lib.CREDIT) + '。</p><p>' + esc(Lib.RESPONSIBILITY) + '。</p>' +
       '<p>区域は市が公表する図が正。' + esc(Lib.POP_NOTE) + '。</p></div>';
     $('printBtn').disabled = false;
+    el.querySelectorAll('[data-jump]').forEach((b) => b.addEventListener('click', () => {
+      const t = el.querySelector('[data-sec="' + b.dataset.jump + '"]');
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
   }
   function renderStatus() {
     const d = state.data;
@@ -200,7 +206,8 @@
     state.facts = Lib.collect(state.data, lon, lat);
     $('status').textContent = statusText(state.facts);
     render(); renderSheet();
-    $('sheet').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // 結果は地図の下にある。シートの先頭（見出しと目次）が見える位置まで動かす
+    $('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
     App.last = state.facts;
   }
 

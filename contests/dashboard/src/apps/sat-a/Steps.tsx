@@ -87,7 +87,13 @@ function RankTable({
               <TableCell>{s.id}</TableCell>
               <TableCell>{s.cell}</TableCell>
               <TableCell className="text-right">{s.year}</TableCell>
-              <TableCell className="text-right font-medium">{s.score.toFixed(2)}</TableCell>
+              <TableCell className="text-right font-medium">
+                {s.score.toFixed(2)}
+                {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差か、区間IDの順） */}
+                {(rows[i - 1]?.score.toFixed(2) === s.score.toFixed(2) || rows[i + 1]?.score.toFixed(2) === s.score.toFixed(2)) && (
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground" data-testid="tie-mark">同点</span>
+                )}
+              </TableCell>
               {prev && (
                 <TableCell className="text-right text-xs">{p ? `${p}位 ${d > 0 ? `↑${d}` : d < 0 ? `↓${-d}` : '→'}` : '—'}</TableCell>
               )}
@@ -171,7 +177,7 @@ export function TopPanel({
           testId="m-top"
         />
       </div>
-      <div className="text-sm font-medium">点数の高い順 上位10区間（行をタップすると地図に表示）</div>
+      <div className="text-sm font-medium">点数の高い順 上位10区間（<b>行を1つ選ぶ</b>と地図に表示され、この手順が完了します）</div>
       <RankTable rows={candidates.slice(0, 10)} focus={focus} onFocus={onFocus} />
     </div>
   )
@@ -257,7 +263,7 @@ export function PickPanel({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((s) => (
+          {rows.map((s, i) => (
             <TableRow
               key={s.id}
               data-state={selected.has(s.id) ? 'selected' : undefined}
@@ -268,7 +274,13 @@ export function PickPanel({
                 <Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggle(s.id)} aria-label={`区間 ${s.id} を選ぶ`} />
               </TableCell>
               <TableCell>{s.id}</TableCell>
-              <TableCell className="text-right font-medium">{s.score.toFixed(2)}</TableCell>
+              <TableCell className="text-right font-medium">
+                {s.score.toFixed(2)}
+                {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差か、区間IDの順） */}
+                {(rows[i - 1]?.score.toFixed(2) === s.score.toFixed(2) || rows[i + 1]?.score.toFixed(2) === s.score.toFixed(2)) && (
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground" data-testid="tie-mark">同点</span>
+                )}
+              </TableCell>
               <TableCell className="text-right">{s.lenM} m</TableCell>
             </TableRow>
           ))}
@@ -450,7 +462,7 @@ export function Round2Panel({
           </TableRow>
         </TableBody>
       </Table>
-      <div className="text-sm font-medium">第{round}回の順位 上位10区間（「前回」＝第{prev.round}回の順位）</div>
+      <div className="text-sm font-medium">第{round}回の順位 上位10区間（「前回」＝第{prev.round}回の重みのまま、走査した区間を除いて並べ直した順位。走査した区間が抜けた分だけ繰り上がります）</div>
       <RankTable rows={candidates.slice(0, 10)} focus={focus} onFocus={onFocus} prev={prev} />
       <Button size="sm" variant="outline" onClick={onExport} data-testid="export-round2"><Download />第{round}回の順位をCSVで書き出す</Button>
     </div>

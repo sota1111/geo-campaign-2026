@@ -75,3 +75,9 @@ ul.plain { margin:0; padding-left:1.2rem; font-size:.88rem; }
   .tag { font-size:6pt; }
   .sec h4 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* シートの項目への目次（画面のみ） */
+.sec-toc { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 13px; margin: 4px 0 8px; position: sticky; top: 0; background: #fff; padding: 4px 0; z-index: 2; }
+.sec-toc button { font-size: 12px; padding: 2px 8px; }
+.sec { scroll-margin-top: 44px; }
+@media print { .sec-toc { display: none; } }

@@ -77,3 +77,7 @@ button[aria-pressed=true] { background: #009E73; color: #fff; border-color: #009
 .tag-ext { display: inline-block; font-size: 11px; background: #fff3cd; border: 1px solid #c9a227; border-radius: 3px; padding: 0 4px; margin-left: 4px; }
 .zero { background: #fff3e0; border-left: 4px solid #D55E00; padding: 6px 10px; margin: 6px 0; font-size: 13px; }
 button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 左欄の中の移動リンク（書き出しが長い表の下にあり見つけにくかった） */
+.jump { font-size: 13px; margin: 4px 0 8px; }
+.jump a { font-weight: 600; }

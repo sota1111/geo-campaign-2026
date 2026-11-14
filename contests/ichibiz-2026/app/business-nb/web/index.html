@@ -26,6 +26,7 @@
       </ul>
     </div>
 
+    <nav class="jump" aria-label="この欄の中で移動">この欄の中で移動: <a href="#sec-cand">3 拠点を足す</a> ／ <a href="#sec-export">4 書き出す</a></nav>
     <div class="box step1">
       <h2><span class="step">1</span>仮説を置く</h2>
       <div class="row"><span class="lab">廃棄時期</span><div id="ctl-basis" class="seg" role="radiogroup" aria-label="廃棄時期の置き方"></div></div>
@@ -46,8 +47,8 @@
     </div>
 
     <div class="box">
-      <h2><span class="step">3</span>拠点を足すと？（試算）</h2>
-      <p class="note">集約拠点を1か所足したと仮定して、回収圏の外が減るかを見ます。地図をクリックして置くか、距離の合計が最も減る町字を探します。用地・許可・道路は見ていない距離だけの目安です。</p>
+      <h2 id="sec-cand"><span class="step">3</span>拠点を足すと？（試算）</h2>
+      <p class="note">集約拠点を1か所足したと仮定して、回収圏の外が減るかを見ます。地図をクリックして置くか、<b>設備から最寄り施設までの距離の合計（出力で重み付け）</b>が最も減る町字を探します（圏外の量を最小にする場所とは限りません。結果に圏外の変化も出します）。候補は実在の施設ではなく、用地・許可・道路は見ていない距離だけの目安です。</p>
       <button id="btn-place" type="button" aria-pressed="false">地図をクリックして置く</button>
       <button id="btn-suggest" type="button">距離が最も減る町字を探す</button>
       <button id="btn-clear" type="button">候補を消す</button>
@@ -60,7 +61,7 @@
     </div>
 
     <div class="box">
-      <h2><span class="step">4</span>書き出す・出典</h2>
+      <h2 id="sec-export"><span class="step">4</span>書き出す・出典</h2>
       <p class="note">施設別・年別・市区町村別・前提・出典を1つのCSV（UTF-8、BOM付き）にします。この端末の中で作るだけで、どこにも送信しません。</p>
       <button id="btn-csv" type="button" class="primary">結果をCSVでダウンロード</button>
       <button id="btn-about" type="button">出典・前提・限界</button>
