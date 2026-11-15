@@ -128,7 +128,24 @@
       .sort(function (a, b) { return b.seg - a.seg || routeSortKey(a, b); }).slice(0, limit || 4);
   }
 
-  var api = { segmentCounts: segmentCounts, hasSegments: hasSegments, routeListSorted: routeListSorted, suggestSegmentRoutes: suggestSegmentRoutes, routeList: routeList, segmentsFor: segmentsFor, bandHasData: bandHasData, routeBandStatus: routeBandStatus, esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
+  /* 選択路線のまとめ: 個別の時間帯（全時間帯を除く）のうち集計できたものを比べ、定時率が最も低い時間帯と、
+     全時間帯を通じて遅れが最も増える区間を返す。データにない値は作らない（比べられる時間帯が1つなら compared=1 で返す）。 */
+  function routeConclusion(op, id) {
+    var bands = BANDS.filter(function (b) { return b !== 'all'; });
+    var got = [], missing = [], thin = [];
+    bands.forEach(function (b) {
+      var st = routeBandStatus(op, id, b);
+      if (st.kind === 'missing') missing.push(b);
+      else if (st.kind === 'ok') got.push({ band: b, row: st.row });
+      else thin.push(b);
+    });
+    got.sort(function (a, b) { return a.row.ontime_pct - b.row.ontime_pct || b.row.late_pct - a.row.late_pct; });
+    var segs = (op.segments || []).filter(function (s) { return s.route_id === id; })
+      .sort(function (a, b) { return b.median_added_s - a.median_added_s; });
+    return { worst: got[0] || null, compared: got.length, missing: missing, thin: thin, topSeg: segs[0] || null };
+  }
+
+  var api = { segmentCounts: segmentCounts, hasSegments: hasSegments, routeListSorted: routeListSorted, suggestSegmentRoutes: suggestSegmentRoutes, routeList: routeList, segmentsFor: segmentsFor, bandHasData: bandHasData, routeBandStatus: routeBandStatus, routeConclusion: routeConclusion, esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
     toCsv: toCsv, routesCsv: routesCsv, segmentsCsv: segmentsCsv, periodText: periodText, routeSortKey: routeSortKey, BAND_LABEL: BAND_LABEL, BANDS: BANDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.TeijiLib = api;

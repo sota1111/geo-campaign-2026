@@ -21,7 +21,7 @@ it('取得済み実データを初期表示し、空の事業者のCSVは無効�
   op.value = 'odpt_kan_etsu_transportation_all_lines'
   op.dispatchEvent(new win.Event('change'))
   await new Promise(resolve => setTimeout(resolve, 0))
-  expect(doc.getElementById('routes-table')!.textContent).toContain('この時間帯は未取得です')
+  expect(doc.getElementById('routes-table')!.textContent).toContain('この時間帯のデータは取得していません')
   expect((doc.getElementById('csv-routes') as HTMLButtonElement).disabled).toBe(true)
   expect(doc.getElementById('layout')!.classList.contains('no-segments')).toBe(true)
   dom.window.close()

@@ -99,7 +99,7 @@
   function selectRoute(id) {
     STATE.route = id;
     render();
-    if (id && $('route-detail').scrollIntoView) $('route-detail').scrollIntoView({ block: 'nearest' });
+    if (id && $('route-detail').scrollIntoView) $('route-detail').scrollIntoView({ block: window.innerWidth <= 800 ? 'start' : 'nearest' });
   }
 
   function routeName(op, id) {
@@ -123,7 +123,11 @@
       (noSeg.length ? '<optgroup label="区間の集計がない路線（' + noSeg.length + '）">' + noSeg.map(opt).join('') + '</optgroup>' : '');
     var box = $('route-detail');
     if (STATE.route == null) {
-      box.innerHTML = list.length ? '<p class="note">路線を選ぶと、その路線の時間帯別の定時率・遅れと、遅れが増える区間がここに出ます。区間の集計がある路線は ' + L.routeListSorted(op, true).length + ' / ' + list.length + ' 路線です（選ぶ欄の先頭に「区間あり」で並べています）。</p>' : '';
+      var quick = L.suggestSegmentRoutes(op, null, 6);
+      box.innerHTML = list.length ? '<p class="note">路線を選ぶと、その路線の時間帯別の定時率・遅れと、遅れが増える区間がここに出ます。区間の集計がある路線は ' + L.routeListSorted(op, true).length + ' / ' + list.length + ' 路線です（選ぶ欄の先頭に「区間あり」で並べています）。</p>' +
+        (quick.length ? '<p class="note">区間まで見られる路線（区間の多い順）:</p><div class="alt">' + quick.map(function (r) {
+          return '<button type="button" class="act" data-go="' + L.esc(r.route_id) + '">' + L.esc(r.name) + '（区間 ' + r.seg + ' 件）</button>';
+        }).join('') + '</div>' : '') : '';
       return;
     }
     var id = STATE.route, p = op.period || {};
@@ -131,7 +135,7 @@
       var st = L.routeBandStatus(op, id, b), cur = b === STATE.band ? ' class="cur" aria-current="true"' : '';
       var head = '<th scope="row">' + L.esc(L.BAND_LABEL[b]) + (b === STATE.band ? '<span class="tag">表示中</span>' : '') + '</th>';
       if (st.kind === 'missing') {
-        return '<tr' + cur + '>' + head + '<td colspan="4" class="miss">この時間帯は未取得（取得期間 ' + L.esc(p.first || '') + ' 〜 ' + L.esc(p.last || '') + ' に含まれません）。サンプル不足ではありません。</td></tr>';
+        return '<tr' + cur + '>' + head + '<td colspan="4" class="miss">この時間帯のデータは取得していません（取得したのは ' + L.esc(p.first || '') + ' 〜 ' + L.esc(p.last || '') + ' の間の一部の時間だけ）。</td></tr>';
       }
       if (st.kind === 'norow') {
         return '<tr' + cur + '>' + head + '<td colspan="4" class="miss">この路線は便が観測されていません（集計なし）</td></tr>';
@@ -149,7 +153,7 @@
         return '<li><b>' + L.esc(s.from) + ' → ' + L.esc(s.to) + '</b>: ' + L.fmtDelay(s.median_added_s) + '（観測 ' + s.n + ' 回）</li>';
       }).join('') + '</ul>' + (nseg > 5 ? '<p class="note">残りは下の「遅れが増える区間」の表にあります。</p>' : '');
     } else if (total) {
-      segHtml = '<p class="warn">この路線の区間の集計は「' + L.esc(L.BAND_LABEL[STATE.band]) + '」にはありません（同じ区間の観測が8回未満）。区間の集計がある時間帯: ' +
+      segHtml = '<p class="warn">この路線の区間の集計は「' + L.esc(L.BAND_LABEL[STATE.band]) + '」にはありません（' + (L.bandHasData(op, STATE.band) ? '同じ区間の観測が8回未満' : 'この時間帯のデータは取得していません') + '）。区間の集計がある時間帯: ' +
         L.BANDS.filter(function (b) { return L.segmentsFor(op, b, id).length; }).map(function (b) { return L.esc(L.BAND_LABEL[b]); }).join('、') + '。時間帯を切り替えてください。</p>';
     } else {
       var alt = L.suggestSegmentRoutes(op, id, 4);
@@ -159,7 +163,16 @@
           return '<button type="button" class="act" data-go="' + L.esc(r.route_id) + '">' + L.esc(r.name) + '（区間 ' + r.seg + ' 件）</button>';
         }).join('') + '</div>' : '');
     }
+    var c = L.routeConclusion(op, id), lab = function (b) { return L.esc(L.BAND_LABEL[b]); };
+    var cBand = c.worst
+      ? '<li><b>遅れやすい時間帯: ' + lab(c.worst.band) + '</b>（定時率 ' + L.fmtPct(c.worst.row.ontime_pct) + '、5分超の遅れ ' + L.fmtPct(c.worst.row.late_pct) + '）' +
+        (c.compared < 2 ? '。集計できた時間帯はこの1つだけで、他の時間帯とは比べられません' + (c.missing.length ? '（' + c.missing.map(lab).join('・') + 'は未取得）' : '') : '。集計できた ' + c.compared + ' 時間帯のうち定時率が最も低い') + '。</li>'
+      : '<li><b>遅れやすい時間帯: 判断できません</b>（便数が足りる時間帯がありません' + (c.missing.length ? '。' + c.missing.map(lab).join('・') + 'は未取得' : '') + '）。</li>';
+    var cSeg = c.topSeg
+      ? '<li><b>遅れが最も増える区間: ' + L.esc(c.topSeg.from) + ' → ' + L.esc(c.topSeg.to) + '</b>（' + L.fmtDelay(c.topSeg.median_added_s) + '、' + lab(c.topSeg.band) + '、観測 ' + c.topSeg.n + ' 回）。</li>'
+      : '<li><b>遅れが増える区間: この路線は集計がありません</b>（同じ区間の観測が8回未満）。下のボタンから区間のある路線を選べます。</li>';
     box.innerHTML = '<div class="rd"><h3>選択中の路線: ' + L.esc(routeName(op, id)) + (total ? '<span class="segflag">区間あり</span>' : '') + '</h3>' +
+      '<div class="concl" role="status"><p class="concl-h">この路線のまとめ（' + L.esc(L.periodText(op)) + 'の参考値）</p><ul>' + cBand + cSeg + '</ul></div>' +
       '<button type="button" class="act clear" data-clear="1">路線の選択を解除（全路線に戻す）</button>' +
       '<div class="tablewrap"><table><caption class="sr">' + L.esc(routeName(op, id)) + ' の時間帯別の定時率と遅れ</caption>' +
       '<thead><tr><th scope="col">時間帯</th><th scope="col">便数</th><th scope="col">定時率</th><th scope="col">遅れ(5分超)</th><th scope="col">遅れ中央値</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
@@ -181,7 +194,7 @@
     var rows = op.routes.filter(function (r) { return r.band === band && (!STATE.onlySeg || cnt[r.route_id]); }).sort(function (a, b) { return (!!cnt[b.route_id] - !!cnt[a.route_id]) || L.routeSortKey(a, b); });
     var t = $('routes-table');
     if (!rows.length) {
-      t.innerHTML = '<tr><td class="empty">この時間帯は未取得です（取得期間 ' + L.esc(op.period.first || '') + ' 〜 ' + L.esc(op.period.last || '') + '）。サンプル不足とは別で、車両位置の蓄積（昼間の取得）が必要です。</td></tr>';
+      t.innerHTML = '<tr><td class="empty">この時間帯のデータは取得していません（取得したのは ' + L.esc(op.period.first || '') + ' 〜 ' + L.esc(op.period.last || '') + ' の間の一部の時間だけ）。サンプル不足とは別で、この時間帯の車両位置の取得が必要です。</td></tr>';
       return;
     }
     t.innerHTML = '<caption class="sr">' + L.esc(op.name) + ' の ' + L.esc(L.BAND_LABEL[band]) + ' の路線別集計</caption>' +
@@ -190,7 +203,7 @@
         var bunch = r.bunch_enough ? L.fmtPct(r.bunch_pct) + '<span class="sub">（' + r.bunch_pairs + '組）</span>' : '<span class="sub">対象外・不足</span>';
         var on = r.route_id === STATE.route;
         return '<tr class="pick' + (on ? ' sel' : '') + '" data-rid="' + L.esc(r.route_id) + '"><th scope="row"><button type="button" class="rbtn" aria-pressed="' + on + '" data-rid="' + L.esc(r.route_id) + '">' + L.esc(r.name) + '</button>' + (on ? '<span class="tag">選択中</span>' : '') + '</th><td>' + r.n_trips + '</td><td>' + L.esc(L.ontimeLabel(r)) + '</td>' +
-          '<td>' + (r.enough ? L.fmtPct(r.late_pct) : '—') + '</td><td>' + (r.enough ? L.fmtDelay(r.median_delay_s) : '—') + '</td><td>' + bunch + '</td></tr>';
+          '<td>' + (r.enough ? L.fmtPct(r.late_pct) : '—') + '</td><td>' + (r.enough ? L.fmtDelay(r.median_delay_s) : '—') + '</td><td>' + bunch + '</td><td>' + (cnt[r.route_id] ? '区間あり（' + cnt[r.route_id] + '件）' : '<span class="sub">なし</span>') + '</td></tr>';
       }).join('') + '</tbody>';
     Array.prototype.forEach.call(t.querySelectorAll('tr.pick'), function (tr) {
       tr.addEventListener('click', function () {
@@ -205,7 +218,7 @@
     var t = $('seg-table');
     $('seg-h').textContent = STATE.route == null ? '遅れが増える区間（上位）' : '遅れが増える区間（上位）: ' + routeName(op, STATE.route) + ' だけ';
     if (!rows.length) {
-      var why = !L.bandHasData(op, band) ? 'この時間帯は未取得です（取得期間 ' + (op.period.first || '') + ' 〜 ' + (op.period.last || '') + '）。サンプル不足ではありません。'
+      var why = !L.bandHasData(op, band) ? 'この時間帯のデータは取得していません（取得したのは ' + (op.period.first || '') + ' 〜 ' + (op.period.last || '') + ' の間の一部の時間だけ）。'
         : (STATE.route != null ? 'この路線には、この時間帯に表示できる区間がありません（同じ区間を8回以上観測すると表示します）。「全路線」に戻すと他の路線の区間を見られます。'
           : '区間の集計はまだありません（路線×時間帯で10便・50観測以上、同じ区間で8観測以上が必要です）。');
       t.innerHTML = '<tr><td class="empty">' + L.esc(why) + '</td></tr>';
