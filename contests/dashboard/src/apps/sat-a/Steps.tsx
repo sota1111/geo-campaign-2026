@@ -371,7 +371,7 @@ export function ScanPanel({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
-        <Metric label="走査した区間" value={`${batch.length}`} />
+        <Metric label="調査した区間" value={`${batch.length}`} />
         <Metric label="▲ 空洞の疑い" value={`${hit}`} testId="s3-hit" />
         <Metric label="○ 異常なし" value={`${batch.length - hit}`} />
       </div>
@@ -485,9 +485,9 @@ export function Round2Panel({
       <p className="text-sm font-medium" data-testid="what-changed">
         {prev.calibrated
           ? prev.newW === prev.oldW
-          ? `何が変わったか: 調査結果に照らしても重み（衛星${pct(prev.newW)}%）は変わらず、走査済み${prev.scanned}区間を除いた順位を作り直しました。`
-          : `何が変わったか: 調査結果に照らして当たりやすい重み（衛星${pct(prev.newW)}%）に更新し、走査済み${prev.scanned}区間を除いた順位を作り直しました。`
-          : `何が変わったか: 結果が不足していたため重みは据え置き、走査済み${prev.scanned}区間を除いた順位を作り直しました。`}
+          ? `何が変わったか: 調査結果に照らしても重み（衛星${pct(prev.newW)}%）は変わらず、調査した${prev.scanned}区間を除いた順位を作り直しました。`
+          : `何が変わったか: 調査結果に照らして当たりやすい重み（衛星${pct(prev.newW)}%）に更新し、調査した${prev.scanned}区間を除いた順位を作り直しました。`
+          : `何が変わったか: 結果が不足していたため重みは据え置き、調査した${prev.scanned}区間を除いた順位を作り直しました。`}
       </p>
       <p className="text-xs text-muted-foreground" data-testid="calib-msg">{msg}</p>
       <Table>
@@ -497,9 +497,9 @@ export function Round2Panel({
         <TableBody>
           <TableRow><TableCell>衛星指標の重み</TableCell><TableCell className="text-right">{pct(prev.oldW)}%</TableCell><TableCell className="text-right">{pct(prev.newW)}%</TableCell></TableRow>
           <TableRow>
-            <TableCell>走査済みを除いた候補の1位</TableCell>
+            <TableCell>調査した区間を除いた候補の1位<br /><span className="text-xs text-muted-foreground">（第{prev.round}回の重みのままの1位と、反映後の1位を比べます）</span></TableCell>
             <TableCell className="text-right">{prev.topId}</TableCell>
-            <TableCell className="text-right">{prev.topId === prev.newTopId ? '変わらず' : prev.newTopId}</TableCell>
+            <TableCell className="text-right">{prev.topId === prev.newTopId ? `${prev.newTopId}（同じ）` : prev.newTopId}</TableCell>
           </TableRow>
           <TableRow>
             <TableCell>上位10の入れ替わり</TableCell><TableCell className="text-right">—</TableCell>
@@ -507,7 +507,7 @@ export function Round2Panel({
           </TableRow>
         </TableBody>
       </Table>
-      <div className="text-sm font-medium">第{round}回の順位 上位10区間（「前回」＝第{prev.round}回の重みのまま、走査した区間を除いて並べ直した順位。走査した区間が抜けた分だけ繰り上がります）</div>
+      <div className="text-sm font-medium">第{round}回の順位 上位10区間（「第1回からの変化」は、第{prev.round}回の重みのまま調査した区間を除いて並べ直した順位との比較です）</div>
       <RankTable rows={candidates.slice(0, 10)} focus={focus} onFocus={onFocus} prev={prev} />
       <Button size="sm" variant="outline" onClick={onExport} data-testid="export-round2"><Download />第{round}回の順位をCSVで書き出す</Button>
     </div>

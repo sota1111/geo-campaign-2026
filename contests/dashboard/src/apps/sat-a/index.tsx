@@ -72,7 +72,7 @@ function applyOf(segs: Segment[], cellSat: Record<string, number>, w: number, ro
   if (calib && calib.w !== null) {
     msg = `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（調査結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `走査した区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `走査した区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
   } else {
-    msg = '較正に使える結果が不足していたため、重みは変えていません（走査済みの区間が候補から外れた分だけ順位が繰り上がります）。'
+    msg = '較正に使える結果が不足していたため、重みは変えていません（調査した区間が候補から外れた分だけ順位が繰り上がります）。'
   }
   return { prev, msg, newW }
 }
