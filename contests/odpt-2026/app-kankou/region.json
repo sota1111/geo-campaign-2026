@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "id": "asakusa-ueno",
+  "name": "浅草・上野・押上周辺（台東区・墨田区を中心とした東京都心東部）",
+  "pref": "13",
+  "bbox": [139.73, 35.64, 139.87, 35.78],
+  "reason": "観光客の集中が課題とされる浅草・上野・スカイツリー周辺を含み、東京都交通局バスと台東区コミュニティバスが、アクセストークン不要・CC BY 4.0 で取得できる。京都市営バス・箱根（伊豆箱根バス）・鎌倉（江ノ電バス）は ODPT の基本ライセンスでトークンが必要、または GTFS が公開されていないため選ばなかった。",
+  "feeds": [
+    {
+      "key": "toei",
+      "name": "東京都交通局 都営バス",
+      "operator": "東京都交通局",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+      "page": "https://ckan.odpt.org/dataset/b_bus_gtfs_jp-toei",
+      "url": "https://api-public.odpt.org/api/v4/files/Toei/data/ToeiBus-GTFS.zip"
+    },
+    {
+      "key": "taito",
+      "name": "台東区コミュニティバス（めぐりん）",
+      "operator": "台東区",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+      "page": "https://ckan.odpt.org/dataset/tokyo_taito_city_megurin_ccby40",
+      "url": "https://api-public.odpt.org/api/v4/files/odpt/TokyoTaitoCity/megurinCCBY40.zip?date=current"
+    }
+  ],
+  "ksj": {
+    "tourist": "https://nlftp.mlit.go.jp/ksj/gml/data/P12/P12-14/P12-14_13_GML.zip",
+    "hospital": "https://nlftp.mlit.go.jp/ksj/gml/data/P04/P04-20/P04-20_13_GML.zip",
+    "school": "https://nlftp.mlit.go.jp/ksj/gml/data/P29/P29-21/P29-21_13_GML.zip",
+    "station": "https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-22/N02-22_GML.zip"
+  }
+}

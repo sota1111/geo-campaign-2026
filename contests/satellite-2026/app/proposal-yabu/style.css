@@ -1,0 +1,65 @@
+:root{--ink:#1f2933;--paper:#f5f7fa;--line:#c5cdd8;--accent:#1f4e79;--hot:#c85a00}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.6 "Noto Sans JP",system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+header{background:#e4ecf5;border-bottom:2px solid var(--accent);padding:8px 16px}
+h1{margin:0;font-size:20px}h1 small{display:block;font-size:12px;font-weight:400;color:#3c4a5a}
+h2{font-size:16px;margin:4px 0}
+.banner{margin:6px 0;padding:6px 10px;background:#fff3d6;border:1px solid #c98a00;font-size:13px}
+.can{margin:6px 0;background:#fff;border:1px solid var(--line);padding:4px 10px;font-size:13px}
+.can summary{cursor:pointer;font-weight:700}
+.can .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.can ul{margin:2px 0 4px;padding-left:18px}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:1px solid var(--line);background:#fff;padding:6px 12px;cursor:pointer;border-radius:4px 4px 0 0}
+nav button[aria-selected=true]{background:var(--accent);color:#fff}
+main{padding:12px 16px}
+.split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-bottom:10px}
+.pane{min-width:0}
+#map{width:100%;height:460px;border:1px solid var(--line);background:#e9eef3}
+.layers{margin:6px 0;border:1px solid var(--line);background:#fff;padding:4px 10px}
+.layers legend{font-size:12px;padding:0 4px}
+.layers label{display:block;font-size:13px}
+.tablewrap{max-width:100%;overflow-x:auto}
+table{border-collapse:collapse;width:100%;background:#fff}
+th,td{border:1px solid var(--line);padding:4px 8px;text-align:left;white-space:nowrap}
+th{background:#e4ecf5}
+tbody tr[data-id]{cursor:pointer}
+tbody tr.sel{background:#ffe2bd}
+.filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+button{font:inherit;padding:4px 10px;cursor:pointer}
+button:focus-visible,tr:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #0b5cad;outline-offset:1px}
+.note,.legend{font-size:12px;color:#44505e;margin:4px 0}
+.tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:12px;border:1px solid #8896a6;background:#eef2f7}
+.tag.r0{background:#ffd9a8;border-color:#c85a00}
+.tag.r1{background:#d6e6f7;border-color:#1f4e79}
+.tag.r2{background:#e8e8e8}
+.tag.r3{background:#fff;border-style:dashed}
+.src{display:inline-block;padding:0 5px;border-radius:3px;font-size:11px;color:#fff;margin-right:4px}
+.src-sat{background:#1f4e79}.src-hist{background:#8a4b00}.src-osm{background:#4a5560}
+#detail{background:#fff;border:1px solid var(--line);padding:8px 12px}
+#detail dl{margin:0}#detail dt{font-weight:700;margin-top:6px}#detail dd{margin:0}
+.bar{display:inline-block;height:8px;background:var(--hot);vertical-align:middle;margin-left:4px;border-radius:2px}
+#rec-form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:8px}
+#rec-form label{display:flex;flex-direction:column;font-size:13px}
+#rec-form .wide{flex:1 1 260px}
+#rec-form .wide input{width:100%}
+.recmsg{background:#e4f0fb;border:1px solid var(--accent);padding:4px 10px;margin:6px 0}
+.weights{margin:10px 0;background:#fff;border:1px solid var(--line);padding:4px 10px}
+.weights summary{cursor:pointer;font-weight:700}
+#weights{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 16px}
+#weights label{display:flex;flex-direction:column;font-size:12px}
+footer{padding:10px 16px;font-size:12px;color:#44505e;border-top:1px solid var(--line)}
+@media(max-width:800px){
+  .split{grid-template-columns:minmax(0,1fr)}
+  .can .cols{grid-template-columns:minmax(0,1fr)}
+  #map{height:340px}
+  main{padding:8px}
+  header{padding:8px}
+}
+.saved { margin: 6px 0; padding: 6px 10px; border-left: 4px solid #1b4f8a; background: #f3f7fc; }
+.terms { font-size: 13px; margin: 6px 0; }
+.terms dt { font-weight: bold; } .terms dd { margin: 0 0 4px 1em; }
+.old { color: #9a3412; }
+.mode-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e8eef6; border: 1px solid #1b4f8a; font-size: 13px; font-weight: bold; }
+.mode-pill.sat { background: #fde9d6; border-color: #b45309; }
+.unused { opacity: .55; }
