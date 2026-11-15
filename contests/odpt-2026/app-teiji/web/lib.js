@@ -108,7 +108,27 @@
     return { kind: bandHasData(op, band) ? 'norow' : 'missing', row: null };
   }
 
-  var api = { routeList: routeList, segmentsFor: segmentsFor, bandHasData: bandHasData, routeBandStatus: routeBandStatus, esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
+  /* 区間の集計がある路線: route_id -> 区間の件数（全時間帯の合計）。区間は同じ区間の観測が8回以上で出る */
+  function segmentCounts(op) {
+    var m = {};
+    (op.segments || []).forEach(function (s) { if (s.route_id != null) m[s.route_id] = (m[s.route_id] || 0) + 1; });
+    return m;
+  }
+  function hasSegments(op, routeId) { return !!segmentCounts(op)[routeId]; }
+  /* 区間あり路線を先、続けて名称順。onlySeg なら区間ありだけ */
+  function routeListSorted(op, onlySeg) {
+    var cnt = segmentCounts(op);
+    var list = routeList(op).map(function (r) { return { route_id: r.route_id, name: r.name, seg: cnt[r.route_id] || 0 }; });
+    if (onlySeg) list = list.filter(function (r) { return r.seg > 0; });
+    return list.sort(function (a, b) { return (b.seg > 0) - (a.seg > 0) || routeSortKey(a, b); });
+  }
+  /* 選択路線に区間がないときの代わり: 区間の多い順に最大 limit 路線（選択中を除く） */
+  function suggestSegmentRoutes(op, excludeId, limit) {
+    return routeListSorted(op, true).filter(function (r) { return r.route_id !== excludeId; })
+      .sort(function (a, b) { return b.seg - a.seg || routeSortKey(a, b); }).slice(0, limit || 4);
+  }
+
+  var api = { segmentCounts: segmentCounts, hasSegments: hasSegments, routeListSorted: routeListSorted, suggestSegmentRoutes: suggestSegmentRoutes, routeList: routeList, segmentsFor: segmentsFor, bandHasData: bandHasData, routeBandStatus: routeBandStatus, esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
     toCsv: toCsv, routesCsv: routesCsv, segmentsCsv: segmentsCsv, periodText: periodText, routeSortKey: routeSortKey, BAND_LABEL: BAND_LABEL, BANDS: BANDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.TeijiLib = api;

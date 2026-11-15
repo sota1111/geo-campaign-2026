@@ -60,3 +60,9 @@ tr.sel th, tr.sel td { background: #eaf1fa; }
 @media (max-width: 800px) {
   .no-segments #mapbox { position: relative; height: 180px; min-height: 180px; }
 }
+
+.chk{display:block;margin-top:6px;font-size:.9rem}
+#routes-sec>summary{cursor:pointer;font-weight:700;padding:8px 0}
+.rd .alt{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.rd .warn{background:#fff6e0;border-left:4px solid #E69F00;padding:8px;margin:8px 0}
+.segflag{color:#0072B2;font-weight:700;font-size:.85em;margin-left:4px}

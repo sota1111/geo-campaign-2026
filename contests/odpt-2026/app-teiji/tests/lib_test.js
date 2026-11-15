@@ -70,4 +70,22 @@ assert.strictEqual(L.routeBandStatus(op2, 'B', 'day').kind, 'norow');
 assert.strictEqual(L.routeBandStatus(op2, 'A', 'morning').kind, 'missing');
 assert.strictEqual(L.bandHasData(op2, 'night'), false);
 
+
+// 「区間あり」路線の判定・並び順・代替提案
+{
+  const o = {
+    routes: [{ route_id: 'A', name: 'あ' }, { route_id: 'B', name: 'い' }, { route_id: 'C', name: 'う' }],
+    segments: [
+      { route_id: 'C', name: 'う', band: 'all' }, { route_id: 'C', name: 'う', band: 'day' }, { route_id: 'B', name: 'い', band: 'all' },
+    ],
+  };
+  assert.deepStrictEqual(L.segmentCounts(o), { C: 2, B: 1 });
+  assert.strictEqual(L.hasSegments(o, 'C'), true);
+  assert.strictEqual(L.hasSegments(o, 'A'), false);
+  assert.deepStrictEqual(L.routeListSorted(o).map(r => r.route_id), ['B', 'C', 'A']);
+  assert.deepStrictEqual(L.routeListSorted(o, true).map(r => r.route_id), ['B', 'C']);
+  assert.deepStrictEqual(L.suggestSegmentRoutes(o, 'C', 3).map(r => r.route_id), ['B']);
+  assert.deepStrictEqual(L.suggestSegmentRoutes(o, 'A', 1).map(r => r.route_id), ['C']);
+  assert.deepStrictEqual(L.segmentCounts({}), {});
+}
 console.log('lib_test OK');

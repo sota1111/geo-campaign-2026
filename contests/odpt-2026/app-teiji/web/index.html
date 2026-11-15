@@ -6,7 +6,7 @@
 <title>バス定時性カルテ｜路線×時間帯の定時率・区間の遅れ・団子運転</title>
 <meta name="description" content="バスの位置データ（GTFS-RT）を蓄積し、時刻表と突き合わせて、路線×時間帯の定時率・区間ごとの遅れ・団子運転を見える化します。CC BY 4.0 のデータだけを使用。">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <main id="layout">
@@ -32,19 +32,20 @@
 
     <section id="route-sec" aria-label="路線を選ぶ">
       <h2>路線を選ぶ</h2>
-      <label for="route" class="lbl-top">路線（表の路線名を押しても選べます）</label>
+      <label for="route" class="lbl-top">路線（「区間あり」は、遅れが増える区間の集計がある路線です）</label>
       <select id="route"></select>
+      <label class="chk"><input type="checkbox" id="only-seg"> 区間の集計がある路線だけ表示</label>
       <div id="route-detail" aria-live="polite"></div>
     </section>
 
     <section id="quality" aria-label="データの状況"></section>
 
-    <section id="routes-sec" aria-label="路線ごとの定時率">
-      <h2>路線×時間帯の定時率・団子運転</h2>
+    <details id="routes-sec" aria-label="路線ごとの定時率">
+      <summary>路線×時間帯の定時率・団子運転（路線表。開いて路線名を押しても選べます）</summary>
       <p class="note">定時＝時刻表より1分早い〜5分遅いの範囲。サンプルが足りない行は数値を出さず「サンプル不足」と表示します。</p>
       <div class="tablewrap"><table id="routes-table"></table></div>
       <button id="csv-routes" type="button" class="act">この表をCSVで保存</button>
-    </section>
+    </details>
 
     <section id="seg-sec" aria-label="遅れが増える区間">
       <h2 id="seg-h">遅れが増える区間（上位）</h2>
@@ -69,7 +70,7 @@
 </main>
 <noscript>このページの表示にはJavaScriptが必要です。</noscript>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
-<script src="lib.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="lib.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
