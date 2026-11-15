@@ -59,3 +59,5 @@ button.primary { background: #1a5fb4; color: #fff; border-color: #1a5fb4; font-w
 .recprog .picks button { margin: 2px 4px 2px 0; }
 #tabs button.ready::after { content: " ●見直せます"; font-size: 11px; color: #0b5394; font-weight: bold; }
 button.primary.ready { outline: 3px solid #f2b705; outline-offset: 2px; }
+
+.okmsg { background:#eaf6ee; border:1px solid #8cc5a0; border-radius:4px; padding:4px 8px; }

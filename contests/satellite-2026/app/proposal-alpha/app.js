@@ -119,7 +119,7 @@
     $('#r-site').innerHTML = (planIds.length ? '<optgroup label="今回の計画（回る順）">' + planIds.map((id) => opt(byId(id))).join('') + '</optgroup><optgroup label="そのほかの区間">' : '') +
       D.sections.filter((s) => !planIds.includes(s.id)).map(opt).join('') + (planIds.length ? '</optgroup>' : '');
     $('#r-site').value = pick && byId(pick) ? pick : (planIds[0] || D.sections[0].id);
-    $('#r-result').innerHTML = L.RESULTS.map((r) => '<option>' + r + '</option>').join('');
+    $('#r-result').innerHTML = '<option value="">（確認結果を選んでください）</option>' + L.RESULTS.map((r) => '<option>' + r + '</option>').join('');
     renderRecTable();
   }
   // ④の見直しに必要な条件と到達度。記録画面の上と、記録直後の案内に出す
@@ -201,7 +201,8 @@
       const done = ch.length && !r.diff.length ? '<p>この記録に対する重みはすでに反映済みなので、前回から点数は変わりません（初期値からの変化は①の表で見られます）。</p>' : '';
       why = done + none + few + chH + noH + (ch.length ? '<p class="note">規則は仮置きです（根拠のある値ではありません）: 区分の要伐採の率を見込みの' + Math.round(L.REVIEW_PRIOR * 100) + '%と比べ、要伐採が多ければ重みを上げ、少なければ下げます（0.5〜1.5倍）。記録のない区分は変えません。</p>' : '');
     } else why = '<p>' + esc(r.label) + '。</p>';
-    el.innerHTML = '<h2 style="font-size:16px;margin:0 0 4px">見直しの結果</h2>' + why + diffH;
+    if (state.justRecorded) r.recorded = state.justRecorded;
+    el.innerHTML = '<h2 style="font-size:16px;margin:0 0 4px">見直しの結果</h2>' + (r.recorded ? '<p class="okmsg">' + esc(r.recorded) + '</p>' : '') + why + diffH;
     const b = $('#btn-review-to-ledger'); if (b) b.onclick = () => show('ledger');
   }
 
@@ -316,7 +317,8 @@
       $('#rec-msg-text').textContent += ' ' + progressText(pg);
       $('#rec-msg').hidden = false;
       // 「記録して、すぐ点数を見直す」で送った場合は、そのまま④で反映する
-      if (e.submitter && e.submitter.dataset.go === 'tune') { show('tune'); applyReview(); }
+      $('#r-result').value = '';
+      if (e.submitter && e.submitter.dataset.go === 'tune') { state.justRecorded = '✔ ' + rec.siteId + ' の確認結果「' + rec.result + '」を記録しました（③の一覧に残っています）。その記録で点数を見直した結果です。'; show('tune'); applyReview(); state.justRecorded = null; }
     };
     $('#btn-rec-to-tune').onclick = () => { show('tune'); applyReview(); };
     $('#btn-apply-review').onclick = applyReview;

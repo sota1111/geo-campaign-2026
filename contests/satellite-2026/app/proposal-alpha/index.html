@@ -65,9 +65,9 @@
       <label>区間 <select id="r-site"></select></label>
       <label>確認日 <input type="date" id="r-date" required></label>
       <label>確認者 <input type="text" id="r-who" maxlength="40" required></label>
-      <label>結果 <select id="r-result"></select></label>
+      <label>結果 <select id="r-result" required></select></label>
       <label class="wide">メモ <input type="text" id="r-memo" maxlength="200"></label>
-      <button type="submit" data-go="tune" class="primary">記録して、すぐ点数を見直す（④）</button>
+      <button type="submit" data-go="tune" class="primary">記録して、すぐ点数を見直す（④ 点数の見直し へ移ります）</button>
       <button type="submit">記録だけする（続けて別の区間も記録）</button>
     </form>
     <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-tune" type="button" class="primary">④ 記録を反映して点数を見直す</button></p></div>
