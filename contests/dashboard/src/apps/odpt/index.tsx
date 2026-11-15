@@ -24,7 +24,7 @@ import {
 } from './panels'
 import {
   altConditions, dataUsedLine, distM, condIndex, levelLabel, matchRank, DAYS, DAY_FULL, PERIODS, PERIOD_LABEL, cellStatus, fmtMin, indexCells, looksLikeAddress, lastService, lostPopulation, meshBounds, meshCodeAt,
-  coverageScope, expiredNote, ODPT_NOTICE, soonNote, needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
+  odptProgress, coverageScope, expiredNote, ODPT_NOTICE, soonNote, needLevel, nearbyNodes, parseGsi, parseQuery, regionForPoint, searchStops, shortName, stopLabels, verdict, writeQuery,
   type Day, type Lost, type Period, type RegionData, type RegionIndex,
 } from './lib'
 
@@ -491,13 +491,15 @@ export default function App() {
   const condHint = data
     ? `いま: ${DAY_FULL[cond.day]}・${PERIOD_LABEL[cond.per]}${data.params.start_hours[cond.per]}時・${cond.w}分以内・${data.facility_labels[data.facility_order[cond.fi]]}`
     : '行き先・曜日・時刻・許容時間'
+  // 必須は「場所」「結論」「コピー」の3つ。休日比較・最終便は目的の達成に必須ではないので任意（参考）に置く
+  const ps = odptProgress({ hasPt, verdictShown, fromLink, seenVerdict, seenCmp, seenLast, copied: copiedPt === ptKey, condTouched })
   const stepDefs = [
-    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: verdictShown },
-    { id: 'cond', title: '条件を確認する', hint: condHint, done: condTouched, optional: true },
-    { id: 'verdict', title: '行けるか結論を見る', hint: '「家族に送る1枚」: 行けるか・最終便・次の一歩・使ったデータ', done: seenVerdict },
-    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日と休日の結論を並べて見比べる', done: seenCmp },
-    { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻', done: seenLast },
-    { id: 'copy', title: '1枚をコピーして家族に送る', hint: '結論・最終便・使ったデータとリンクを、LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: hasPt && copiedPt === ptKey },
+    { id: 'place', title: '場所を決める', hint: '住所・駅名で探す、または地図をタップ', done: ps.place.done, auto: ps.place.auto },
+    { id: 'verdict', title: '行けるか結論を見る', hint: '「家族に送る1枚」: 行けるか・最終便・次の一歩・使ったデータ', done: ps.verdict.done },
+    { id: 'copy', title: '1枚をコピーして家族に送る', hint: '結論・最終便・使ったデータとリンクを、LINEやメールに貼り付けて送れます', action: 'コピーすると完了', done: ps.copy.done },
+    { id: 'cond', title: '条件を確認する', hint: condHint, done: ps.cond.done, optional: true },
+    { id: 'hol', title: '休日（日曜ダイヤ）と比べる', hint: '平日と休日の結論を並べて見比べる（任意）', done: ps.hol.done, optional: true },
+    { id: 'last', title: '最寄りの停留所の最終便を見る', hint: '停留所名と、平日の最終の時刻（任意）', done: ps.last.done, optional: true },
     { id: 'region', title: '参考: 地域全体の集計', hint: '地域の人口に占める割合・65歳以上', done: false, optional: true },
     { id: 'whatif', title: '参考: 路線を止めたら？', hint: '行けなくなる人の数', done: false, optional: true },
     { id: 'compare', title: '参考: 5地域を比べる', hint: '同じ条件で並べる', done: false, optional: true },

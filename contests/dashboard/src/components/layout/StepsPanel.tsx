@@ -86,10 +86,10 @@ function StepItem({
         <span className="min-w-0 flex-1">
           <span className="block leading-snug">{step.title}</span>
           {/* 説明は済んだ後も出す（済むと項目の高さが縮み、次の項目の位置がずれて押し間違える）。「次はこれ」は説明の行の頭に付ける */}
-          {(step.action || status === 'current') && !small && (
+          {(step.action || status === 'current' || (step.done && step.auto)) && !small && (
             <span className={cn('mt-0.5 block text-[11px] font-normal leading-snug text-muted-foreground', status === 'done' && 'opacity-70')}>
               {status === 'current' && <span className="mr-1 font-semibold text-primary">次はこれ</span>}
-              {step.action}
+              {step.done && step.auto ? <span className="font-medium text-amber-800" data-testid="step-auto">{step.auto}</span> : step.action}
             </span>
           )}
         </span>

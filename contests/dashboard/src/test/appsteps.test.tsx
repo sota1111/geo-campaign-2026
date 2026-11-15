@@ -73,6 +73,11 @@ describe('progressLabel', () => {
     expect(progressLabel(steps)).toBe('必須 5 のうち 3 完了（任意 1）')
     expect(progressLabel(steps.slice(0, 5))).toBe('5 のうち 3 完了')
   })
+  it('自動で満たされた手順は「うち自動 n」と区別して示す（未完了の自動指定は数えない）', () => {
+    const steps: AppStep[] = [{ ...s('a', true), auto: '自動で設定済み' }, s('b', true), { ...s('c', false), auto: 'x' }, s('o', false, true)]
+    expect(progressLabel(steps)).toBe('必須 3 のうち 2 完了（うち自動 1・任意 1）')
+    expect(progressLabel(steps.slice(0, 2))).toBe('2 のうち 2 完了（うち自動 1）')
+  })
 })
 
 describe('activeId / onSelectStep', () => {
