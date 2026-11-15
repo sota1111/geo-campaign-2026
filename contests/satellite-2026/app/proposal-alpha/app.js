@@ -46,11 +46,11 @@
   }
   function renderLedger() {
     const rows = filtered();
-    $('#ledger thead').innerHTML = '<tr><th>順位</th><th>点数<br><small>衛星・公開 / 事業者データ</small></th><th>区間</th><th>樹高(m)</th><th>高木率</th><th>変化</th><th>地形</th><th>停電想定</th><th>衛星のみなら</th><th>最新の確認</th></tr>';
+    $('#ledger thead').innerHTML = '<tr><th>順位</th><th>点数<br><small>合計（うち衛星・公開データ由来 / 事業者データ由来）</small></th><th>区間</th><th>樹高(m)</th><th>高木率</th><th>変化</th><th>地形</th><th>停電想定</th><th>衛星のみなら</th><th>最新の確認</th></tr>';
     $('#ledger tbody').innerHTML = rows.map((s) => {
       const latest = s.latest ? '<span class="tag ' + resClass(s.latest.result) + '">' + esc(s.latest.result) + '</span> ' + esc(s.latest.date) : '未確認';
       const sel = s.id === state.sel ? ' class="sel"' : '';
-      return '<tr data-id="' + s.id + '"' + sel + '><td>' + s.rank + '</td><td>' + s.score + '（' + s.satScore + ' / ' + s.opScore + '）' + (weightsChanged() && state.base[s.id] !== s.score ? '<br><small class="chg">見直し後。初期 ' + state.base[s.id] + ' → ' + s.score + '</small>' : '') + (s.missing && s.missing.length ? ' <span class="tag r1" title="' + esc(s.missing.join('・')) + 'が欠損">欠損あり</span>' : '') + '</td><td>' + s.id + '</td><td>' + (s.p90 == null ? '不明' : s.p90) + '</td><td>' + (s.tallPct == null ? '不明' : s.tallPct + '%') + '</td><td>' + esc(s.change) + '</td><td>' + esc(s.terrain) + '</td><td>' + esc(facs(s)) + '</td><td>' + state.satRank[s.id] + '位</td><td>' + latest + '</td></tr>';
+      return '<tr data-id="' + s.id + '"' + sel + '><td>' + s.rank + '</td><td>' + s.score + '<small>（衛星' + s.satScore + ' / 事業者' + s.opScore + '）</small>' + (weightsChanged() && state.base[s.id] !== s.score ? '<br><small class="chg">見直し後。初期 ' + state.base[s.id] + ' → ' + s.score + '</small>' : '') + (s.missing && s.missing.length ? ' <span class="tag r1" title="' + esc(s.missing.join('・')) + 'が欠損">欠損あり</span>' : '') + '</td><td>' + s.id + '</td><td>' + (s.p90 == null ? '不明' : s.p90) + '</td><td>' + (s.tallPct == null ? '不明' : s.tallPct + '%') + '</td><td>' + esc(s.change) + '</td><td>' + esc(s.terrain) + '</td><td>' + esc(facs(s)) + '</td><td>' + state.satRank[s.id] + '位</td><td>' + latest + '</td></tr>';
     }).join('') || '<tr><td colspan="10">該当なし</td></tr>';
     $('#count').textContent = rows.length + '区間（架空）を、' + (state.satOnly ? '衛星・公開データ由来の点数だけ' : '事業者データを重ねた点数') + 'の高い順に表示。「衛星のみなら」は事業者データを重ねない場合の順位。';
     const rb = $('#review-banner');
@@ -127,13 +127,18 @@
     const k = L.REVIEW_MIN_N;
     if (pg.ready) return '見直しの条件を満たしました（記録 ' + pg.nRec + ' 区間分）。④で点数に反映できます。';
     let t = '見直しには、要伐採・要継続観察・問題なしのどれかで記録した区間が' + k + '件以上必要です（立入不可・再訪は数えません）。いまの記録は ' + pg.nRec + ' 区間分。';
-    if (pg.target) t += ' 条件に近いのは ' + TUNE_KEYS[pg.target.key] + '「' + pg.target.cat + '」で、' + pg.target.n + ' / ' + k + ' 件（あと ' + pg.target.need + ' 件）。次に記録するとよい区間: ' + pg.candidates.join('、') + '。';
+    if (pg.target) t += ' あと ' + pg.target.need + ' 件。計画の区間から記録するとよい: ' + pg.candidates.join('、') + '。';
     else if (pg.countMet) t += ' 記録した区間の区分は初期の重みが0のため、重みが動きません。別の区間も記録してください。';
     return t;
   }
   function renderProgress() {
     const pg = L.reviewProgress(D.sections, state.results, L.DEFAULT_WEIGHTS), el = $('#rec-progress');
     el.className = 'recprog' + (pg.ready ? ' ready' : '');
+    if (!pg.ready) {
+      const done = new Set(state.results.map((r) => r.siteId));
+      const planLeft = planData().route.map((x) => x.id).filter((id) => !done.has(id));
+      if (planLeft.length) pg.candidates = planLeft.slice(0, 3);
+    }
     el.innerHTML = '<b>④ 見直しまでの到達度</b>: ' + esc(progressText(pg)) +
       (!pg.ready && pg.candidates.length ? ' <span class="picks">' + pg.candidates.map((id) => '<button type="button" data-pick="' + esc(id) + '">' + esc(id) + ' を選ぶ</button>').join(' ') + '</span>' : '');
     el.querySelectorAll('[data-pick]').forEach((b) => (b.onclick = () => { $('#r-site').value = b.dataset.pick; }));
@@ -310,6 +315,8 @@
         : '計画の区間はすべて記録しました。青いボタンで④へ進み、記録を点数に反映します。';
       $('#rec-msg-text').textContent += ' ' + progressText(pg);
       $('#rec-msg').hidden = false;
+      // 「記録して、すぐ点数を見直す」で送った場合は、そのまま④で反映する
+      if (e.submitter && e.submitter.dataset.go === 'tune') { show('tune'); applyReview(); }
     };
     $('#btn-rec-to-tune').onclick = () => { show('tune'); applyReview(); };
     $('#btn-apply-review').onclick = applyReview;

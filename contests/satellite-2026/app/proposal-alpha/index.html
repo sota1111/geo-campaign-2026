@@ -67,7 +67,8 @@
       <label>確認者 <input type="text" id="r-who" maxlength="40" required></label>
       <label>結果 <select id="r-result"></select></label>
       <label class="wide">メモ <input type="text" id="r-memo" maxlength="200"></label>
-      <button type="submit">記録する</button>
+      <button type="submit" data-go="tune" class="primary">記録して、すぐ点数を見直す（④）</button>
+      <button type="submit">記録だけする（続けて別の区間も記録）</button>
     </form>
     <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-tune" type="button" class="primary">④ 記録を反映して点数を見直す</button></p></div>
     <p class="note">記録はこのブラウザの localStorage にだけ保存されます（外部へ送信しません）。氏名等の個人情報は入れないでください。区間はすべて架空です。</p>
