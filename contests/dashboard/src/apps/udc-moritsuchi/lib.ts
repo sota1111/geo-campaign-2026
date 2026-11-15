@@ -322,3 +322,27 @@ export function reportText(r: MwRecord) {
   }
   return lines.join('\n')
 }
+
+/** 手順の進み具合の判定（画面の状態 → 各手順が済か・自動か）。
+ *  必須は「自宅の場所を入れる」「台帳に記録を足す」「台帳にまとめて届ける」の3つ。
+ *  近くの造成地を確かめる・昔の写真と見比べるは確認用で、やらなくても記録と届け出はできるので任意。
+ *  どちらも、利用者が実際に選ぶ・動かす操作をしたときだけ済にする（手順の画面を開いただけでは済にしない）。
+ *  起点が「熱海駅の例」の場合は、場所の手順を「例の地点で設定済み」と区別する（自宅の結果ではない）。 */
+export interface MoritsuchiProgressInput {
+  originChosen: boolean
+  originIsExample: boolean
+  didLook: boolean
+  didCompare: boolean
+  addedNow: boolean
+  didPrepare: boolean
+}
+export interface StepState { done: boolean; optional: boolean; auto?: string }
+export function moritsuchiProgress(i: MoritsuchiProgressInput): Record<'place' | 'look' | 'compare' | 'rec' | 'prep', StepState> {
+  return {
+    place: { done: i.originChosen, optional: false, auto: i.originChosen && i.originIsExample ? '例の地点で設定済み（自宅ではありません）' : undefined },
+    look: { done: i.didLook, optional: true },
+    compare: { done: i.didCompare, optional: true },
+    rec: { done: i.addedNow, optional: false },
+    prep: { done: i.didPrepare, optional: false },
+  }
+}

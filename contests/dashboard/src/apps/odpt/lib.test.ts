@@ -193,3 +193,34 @@ describe('診断の範囲・データの期限の文言（収録データから�
     expect(ODPT_NOTICE).toMatch(/公共交通事業者への直接の問合せは行わないでください/)
   })
 })
+
+describe('手順の進み具合（odptProgress）', () => {
+  const base: L.OdptProgressInput = { hasPt: false, verdictShown: false, fromLink: false, seenVerdict: false, seenCmp: false, seenLast: false, copied: false, condTouched: false }
+  const req = (p: ReturnType<typeof L.odptProgress>) => Object.values(p).filter((s) => !s.optional)
+  it('必須は場所・結論・コピーの3つ。何もしていなければ0完了', () => {
+    const p = L.odptProgress(base)
+    expect(req(p)).toHaveLength(3)
+    expect(req(p).filter((s) => s.done)).toHaveLength(0)
+  })
+  it('場所を決めてコピーしたら、休日比較・最終便を見なくても必須はすべて完了', () => {
+    const p = L.odptProgress({ ...base, hasPt: true, verdictShown: true, copied: true })
+    expect(req(p).every((s) => s.done)).toBe(true)
+    expect(p.hol.done).toBe(false)
+    expect(p.last.done).toBe(false)
+  })
+  it('結論の手順は、見たかコピーしたら済。地点がなければ済にならない', () => {
+    expect(L.odptProgress({ ...base, hasPt: true, verdictShown: true, seenVerdict: true }).verdict.done).toBe(true)
+    expect(L.odptProgress({ ...base, hasPt: true, verdictShown: true }).verdict.done).toBe(false)
+    expect(L.odptProgress({ ...base, copied: true }).copy.done).toBe(false)
+  })
+  it('共有リンクで地点が自動で入った場合だけ「自動で設定済み」。自分で選んだ場合は付かない', () => {
+    expect(L.odptProgress({ ...base, hasPt: true, verdictShown: true, fromLink: true }).place.auto).toMatch(/設定済み/)
+    expect(L.odptProgress({ ...base, hasPt: true, verdictShown: true }).place.auto).toBeUndefined()
+    expect(L.odptProgress({ ...base, fromLink: true }).place.auto).toBeUndefined()
+  })
+  it('任意の手順（休日・最終便・条件）は完了しても必須に数えない', () => {
+    const p = L.odptProgress({ ...base, hasPt: true, verdictShown: true, seenCmp: true, seenLast: true, condTouched: true })
+    expect(req(p).filter((s) => s.done)).toHaveLength(1)
+    expect([p.cond, p.hol, p.last].every((s) => s.optional)).toBe(true)
+  })
+})

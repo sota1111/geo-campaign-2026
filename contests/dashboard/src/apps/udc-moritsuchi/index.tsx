@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   ATAMI_STATION, KINDS, KIND_LABEL, distText, fmtDate, inCoverage, kindDescription,
-  ledgerSummary, makeRecord, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
+  ledgerSummary, makeRecord, moritsuchiProgress, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
   type FillFeature, type MwRecord, type NearFill,
 } from './lib'
 import { KIND_HELP, NEAR_M, nearSummary, searchPlaces, type PlaceHit } from './search'
@@ -296,6 +296,7 @@ export default function App() {
     const f = fills.find((x) => x.properties.id === id)
     if (!f) return
     setSelFill(id)
+    setDidLook(true)
     toast.success(`${id}（${f.properties.kind}）を選びました`)
     mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
   }, [fills])
@@ -331,10 +332,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, fills])
 
-  // 「確かめる」: 起点を決めたうえで表示したら済。造成地が未選択なら最寄りを選んだ状態で見せる
+  // 「確かめる」: 画面を開いただけでは済にしない（一覧か地図で造成地を自分で選んだとき済）。造成地が未選択なら最寄りを選んだ状態で見せる
   useEffect(() => {
     if (step !== 'look' || !originChosen || !fills.length) return
-    setDidLook(true)
     if (selFill === null) {
       const first = nearbyFills(origin.lng, origin.lat, fills, 1)[0]
       if (first) setSelFill(first.id)
@@ -342,10 +342,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, originChosen, fills])
 
-  // 「見比べる」: 造成地を選んだうえで表示したら済。昔の写真が未選択なら1961〜69年を重ねて見せる
+  // 「見比べる」: 画面を開いただけでは済にしない（写真の境界を動かす・切り替えたとき済）。見せ方の初期化だけここで行う
   useEffect(() => {
     if (step !== 'compare' || selFill === null) return
-    setDidCompare(true)
     // 主役は新旧比較。大きな地図への半透明の重ね表示は、旧操作の折りたたみを開いたときだけ出す
     if (!sample) setOld('none')
     const f = fills.find((x) => x.properties.id === selFill)
@@ -396,6 +395,14 @@ export default function App() {
       selectRecord(id)
     } else if (layerId === 'fills-fill') {
       setSelFill(String(f.properties?.id))
+      // 地図上の盛土を押したら、その造成地の詳細（「近くの盛土造成地を確かめる」の画面）を開く。
+      // 記録の位置を決めている最中（rec）・書き出し中（prep）・写真の見比べ中（compare）は画面を切り替えない
+      if (step === 'place' || step === 'ref') {
+        setDidLook(true)
+        goStep('look')
+      } else if (step === 'look') {
+        setDidLook(true)
+      }
     }
   }
   const onMapClick = ({ lng, lat }: { lng: number; lat: number }) => {
@@ -569,13 +576,15 @@ export default function App() {
   }
 
   // 左サイドバー（スマホは上部ステッパー）が唯一のナビゲーション。上から順に進めると目的を達成できる
+  // 必須は「場所」「記録」「届け出の準備」の3つ。造成地の確認・昔の写真は確認用の任意（参考）。判定は lib.ts の moritsuchiProgress
+  const ps = moritsuchiProgress({ originChosen, originIsExample, didLook, didCompare, addedNow, didPrepare })
   useAppSteps(
     [
-      { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: originChosen },
-      { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: didLook },
-      { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今', done: didCompare },
-      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: addedNow },
-      { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: didPrepare },
+      { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: ps.place.done, auto: ps.place.auto },
+      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: ps.rec.done },
+      { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: ps.prep.done },
+      { id: 'look', title: STEP_META.look.title, hint: '一覧か地図の盛土を選び、型を見る（任意）', action: '造成地を選ぶと完了', done: ps.look.done, optional: true },
+      { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今（任意）', action: '写真の境界を動かすと完了', done: ps.compare.done, optional: true },
       { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
     ],
     {
@@ -692,6 +701,13 @@ export default function App() {
           </p>
         )}
       </div>
+      {(originIsExample || !originChosen) && (
+        <Alert data-testid="home-howto">
+          <AlertDescription>
+            自宅を設定するには、下の検索欄に自宅の住所や最寄り駅を入れて「探す」を押し、出てきた候補を選んでください。いまの「熱海駅」は例の位置で、自宅ではありません。
+          </AlertDescription>
+        </Alert>
+      )}
       {searchForm}
       <p className="text-xs text-muted-foreground">検索は国土地理院の地名検索（GETのみ）を使います。入力した文字だけが送られ、記録は送られません。</p>
       <div className="flex flex-wrap gap-2">
@@ -730,6 +746,11 @@ export default function App() {
       <div className="rounded-md border-2 border-primary bg-accent/50 p-2">
         <div className="text-xs text-muted-foreground" data-testid="near-origin">起点: 「{origin.label}」{originIsExample && '（自宅の結果ではありません）'}</div>
         <div className="text-sm font-semibold" data-testid="near-summary">{nearSummary(stationList)}</div>
+        {originIsExample && (
+          <button type="button" className="mt-1 text-xs font-medium text-primary underline" data-testid="look-set-home" onClick={() => goStep('place')}>
+            自宅の近くを見るには: 「自宅の場所を入れる」で住所を検索する
+          </button>
+        )}
       </div>
       <ul className="space-y-1.5" aria-label="近い盛土造成地">
         {stationList.map((d) => (
@@ -767,7 +788,7 @@ export default function App() {
           <KindBadge kind={selFillFeature.properties.kind} />
         </div>
       ) : (
-        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。手順2の一覧か、地図の色付きの範囲をタップして選ぶと、その造成地の昔の写真と今を見比べられます。</p>
+        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。「近くの盛土造成地を確かめる」の一覧か、地図の色付きの範囲をタップして選ぶと、その造成地の昔の写真と今を見比べられます。</p>
       )}
       {selFillFeature && (
         <>
