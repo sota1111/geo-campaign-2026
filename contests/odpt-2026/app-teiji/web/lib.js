@@ -81,7 +81,34 @@
     return x < y ? -1 : (x > y ? 1 : 0);
   }
 
-  var api = { esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
+  /* 路線の一覧（route_id 重複なし、名称順） */
+  function routeList(op) {
+    var seen = {}, out = [];
+    (op.routes || []).concat(op.segments || []).forEach(function (r) {
+      if (r.route_id != null && !seen[r.route_id]) { seen[r.route_id] = 1; out.push({ route_id: r.route_id, name: r.name }); }
+    });
+    return out.sort(routeSortKey);
+  }
+
+  /* 区間を時間帯と（任意で）路線で絞る。絞り込み後に上位 limit 件（元の並び順を保つ） */
+  function segmentsFor(op, band, routeId, limit) {
+    var rows = (op.segments || []).filter(function (s) { return s.band === band && (routeId == null || s.route_id === routeId); });
+    return limit ? rows.slice(0, limit) : rows;
+  }
+
+  /* その時間帯に、事業者全体で1行でも集計があるか（無ければ「未取得」） */
+  function bandHasData(op, band) {
+    return (op.routes || []).some(function (r) { return r.band === band; }) || (op.segments || []).some(function (s) { return s.band === band; });
+  }
+
+  /* 選択路線の時間帯別の状態。kind: ok | thin（サンプル不足） | norow（この路線は行なし） | missing（時間帯が未取得） */
+  function routeBandStatus(op, routeId, band) {
+    var row = (op.routes || []).filter(function (r) { return r.route_id === routeId && r.band === band; })[0];
+    if (row) return { kind: row.enough ? 'ok' : 'thin', row: row };
+    return { kind: bandHasData(op, band) ? 'norow' : 'missing', row: null };
+  }
+
+  var api = { routeList: routeList, segmentsFor: segmentsFor, bandHasData: bandHasData, routeBandStatus: routeBandStatus, esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
     toCsv: toCsv, routesCsv: routesCsv, segmentsCsv: segmentsCsv, periodText: periodText, routeSortKey: routeSortKey, BAND_LABEL: BAND_LABEL, BANDS: BANDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.TeijiLib = api;

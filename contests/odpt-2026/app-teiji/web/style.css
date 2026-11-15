@@ -32,6 +32,16 @@ tr.pick:hover { background: #f3f5f8; }
 .sr { position: absolute; left: -9999px; }
 #map-legend { position: absolute; left: 8px; top: 8px; z-index: 2; background: rgba(255,255,255,.94); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: .75rem; display: flex; flex-direction: column; gap: 2px; }
 #map-legend i { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+#route-detail { margin-top: 8px; }
+#route-detail .rd { border: 2px solid var(--accent); border-radius: 6px; padding: 8px 10px; }
+#route-detail h3 { font-size: .95rem; margin: 0 0 4px; }
+#route-detail tr.cur th, #route-detail tr.cur td { background: #eaf1fa; }
+#route-detail .miss { color: var(--mute); }
+.rbtn { font: inherit; font-weight: 600; text-align: left; background: none; border: none; color: var(--accent); text-decoration: underline; padding: 8px 2px; min-height: 44px; cursor: pointer; }
+.rbtn:focus-visible { outline: 3px solid #f5a623; outline-offset: 1px; }
+tr.sel th, tr.sel td { background: #eaf1fa; }
+.tag { display: inline-block; font-size: .7rem; border: 1px solid var(--accent); color: var(--accent); border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+.act.clear { margin: 0 0 6px; }
 @media (max-width: 800px) {
   #layout { display: block; height: auto; }
   #mapbox { position: sticky; top: 0; height: 42vh; z-index: 1; }

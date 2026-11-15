@@ -52,4 +52,22 @@ assert.ok(L.periodText({ period: { first: 'a', last: 'b', observed_days: ['d1', 
 const sorted = [{ name: 'B' }, { name: 'A' }].sort(L.routeSortKey);
 assert.strictEqual(sorted[0].name, 'A');
 
+// 選択路線の絞り込み
+const op2 = { routes: [
+    { route_id: 'A', name: '北47', band: 'all', enough: true }, { route_id: 'A', name: '北47', band: 'day', enough: false },
+    { route_id: 'B', name: '上46', band: 'all', enough: true }],
+  segments: [
+    { route_id: 'A', name: '北47', band: 'day', median_added_s: 90 }, { route_id: 'B', name: '上46', band: 'day', median_added_s: 80 },
+    { route_id: 'A', name: '北47', band: 'day', median_added_s: 70 }] };
+assert.strictEqual(L.routeList(op2).length, 2);
+assert.strictEqual(L.segmentsFor(op2, 'day', null).length, 3);
+assert.deepStrictEqual(L.segmentsFor(op2, 'day', 'A').map(s => s.median_added_s), [90, 70]);
+assert.strictEqual(L.segmentsFor(op2, 'day', 'A', 1).length, 1);
+assert.strictEqual(L.segmentsFor(op2, 'all', 'A').length, 0);
+assert.strictEqual(L.routeBandStatus(op2, 'A', 'all').kind, 'ok');
+assert.strictEqual(L.routeBandStatus(op2, 'A', 'day').kind, 'thin');
+assert.strictEqual(L.routeBandStatus(op2, 'B', 'day').kind, 'norow');
+assert.strictEqual(L.routeBandStatus(op2, 'A', 'morning').kind, 'missing');
+assert.strictEqual(L.bandHasData(op2, 'night'), false);
+
 console.log('lib_test OK');
