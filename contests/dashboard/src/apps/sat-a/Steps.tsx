@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
-  aucAt, totalKm, type Calibration, type CellSat, type Exclusion, type Scanned, type Scored, type Segment,
+  aucAt, totalKm, type Calibration, type CellSat, type Exclusion, type Outcome, type OutcomeInput, type Scanned, type Scored, type Segment,
 } from './logic'
 
 const pct = (x: number) => Math.round(x * 100)
@@ -292,7 +292,7 @@ export function PickPanel({
 
 /* ---------- 4 走査結果を見る ---------- */
 export function ScanPanel({
-  segs, ranked, selected, revealed, lastBatch, results, onScan,
+  segs, ranked, selected, revealed, lastBatch, results, outcomes, onOutcome, onFillSample, onScan,
 }: {
   segs: Segment[]
   ranked: Scored[]
@@ -300,26 +300,64 @@ export function ScanPanel({
   revealed: boolean
   lastBatch: string[]
   results: Map<string, boolean>
+  outcomes: OutcomeInput
+  onOutcome: (id: string, o: Outcome | undefined) => void
+  onFillSample: () => void
   onScan: () => void
 }) {
   const km = totalKm(segs, selected)
   const batch = lastBatch.map((id) => ({ id, hit: results.get(id) === true, score: ranked.find((s) => s.id === id)?.score ?? 0 }))
   const hit = batch.filter((b) => b.hit).length
   if (!revealed) {
+    const rows = ranked.filter((s) => selected.has(s.id))
+    const entered = rows.filter((s) => outcomes[s.id] === 'hit' || outcomes[s.id] === 'none').length
     return (
       <div className="space-y-3">
-        {results.size > 0 ? (
-          <Alert><AlertDescription>走査結果は反映済みです。再び走査するには、第2回で調査対象を選び直してください。</AlertDescription></Alert>
+        {results.size > 0 && selected.size === 0 ? (
+          <Alert><AlertDescription>調査結果は反映済みです。再び入力するには、第2回で調査対象を選び直してください。</AlertDescription></Alert>
         ) : (
           <p className="text-sm">
-            選んだ <b data-testid="s3-count">{selected.size}</b> 区間（{fmt1(km)} km）を地中レーダで走査した、と想定して結果を表示します。
+            選んだ <b data-testid="s3-count">{selected.size}</b> 区間（{fmt1(km)} km）を地中レーダで調査した結果を、区間ごとに入力します。
+            「未調査」や未入力の区間は今回の結果に含めず、次回も候補に残ります。
           </p>
         )}
-        <p className="text-xs text-muted-foreground">結果は乱数で作ったシミュレーションで、実際の走査結果ではありません。</p>
+        <p className="text-xs text-muted-foreground">この画面のデータはすべて架空です。手入力でなく「サンプル結果」を使うと、乱数で作った架空の結果が入ります。</p>
         {selected.size === 0 && results.size === 0 && (
-          <Alert><AlertDescription>走査する区間がありません。「予算内で調査対象を選ぶ」の手順で区間を選んでください。</AlertDescription></Alert>
+          <Alert><AlertDescription>入力する区間がありません。「予算内で調査対象を選ぶ」の手順で区間を選んでください。</AlertDescription></Alert>
         )}
-        <Button size="sm" onClick={onScan} disabled={selected.size === 0} data-testid="scan"><Radar />走査結果を見る（サンプル）</Button>
+        {rows.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow><TableHead>区間</TableHead><TableHead className="text-right">点数</TableHead><TableHead>調査結果</TableHead></TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>{r.id}</TableCell>
+                  <TableCell className="text-right">{r.score.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <select
+                      className="h-8 rounded-md border bg-background px-2 text-sm"
+                      aria-label={`${r.id} の調査結果`}
+                      data-testid={`outcome-${r.id}`}
+                      value={outcomes[r.id] ?? ''}
+                      onChange={(e) => onOutcome(r.id, (e.target.value || undefined) as Outcome | undefined)}
+                    >
+                      <option value="">（未入力）</option>
+                      <option value="hit">▲ 空洞あり</option>
+                      <option value="none">○ 空洞なし</option>
+                      <option value="unknown">－ 未調査</option>
+                    </select>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={onScan} disabled={entered === 0} data-testid="scan"><Radar />入力した結果を反映する（{entered}/{rows.length} 区間）</Button>
+          <Button size="sm" variant="outline" onClick={onFillSample} disabled={rows.length === 0} data-testid="scan-sample"><Wand2 />サンプル結果を一括で入れる</Button>
+        </div>
       </div>
     )
   }
@@ -331,11 +369,11 @@ export function ScanPanel({
         <Metric label="○ 異常なし" value={`${batch.length - hit}`} />
       </div>
       <p className="text-xs text-muted-foreground">
-        疑いありの区間は管内カメラ調査等の追加確認に回す想定です（このデモでは扱いません）。地図にも結果の印を出しています。
+        疑いありの区間は管内カメラ調査等の追加確認に回す想定です（このデモでは扱いません）。地図にも結果の印を出しています。データは架空です。
       </p>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>区間</TableHead><TableHead className="text-right">点数</TableHead><TableHead>結果（サンプル）</TableHead></TableRow>
+          <TableRow><TableHead>区間</TableHead><TableHead className="text-right">点数</TableHead><TableHead>入力した結果</TableHead></TableRow>
         </TableHeader>
         <TableBody>
           {batch.map((b) => (

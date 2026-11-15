@@ -19,7 +19,7 @@ import {
 import { SOURCES } from './About'
 import {
   NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, rank, satNorm, selectByBudget, totalKm,
-  type SampleData, type Segment,
+  applyOutcomes, sampleOutcomes, type Outcome, type OutcomeInput, type SampleData, type Segment,
 } from './logic'
 
 type StepId = 'top' | 'weight' | 'pick' | 'scan' | 'apply' | 'round2'
@@ -29,7 +29,7 @@ const TITLES: Record<StepId, string> = {
   top: '候補区間の点数を見る',
   weight: '衛星指標の重みを変えてみる（任意）',
   pick: '予算（走行延長）内で調査対象を選ぶ',
-  scan: '走査結果を見る',
+  scan: '調査結果を入力する',
   apply: '較正を反映して第2回へ進む',
   round2: '第2回の順位を確かめる',
 }
@@ -37,19 +37,14 @@ const HINTS: Record<StepId, string> = {
   top: '最も点数の高い区間を確かめる（データはすべて架空）',
   weight: 'スライダーで点数と順位が変わる',
   pick: '「点数の上位から自動で選ぶ」か、地図・表で手直し',
-  scan: '結果は乱数のシミュレーション',
+  scan: '結果を手で入力（サンプル一括入力も可）',
   apply: '重みが更新され、順位が作り直される',
   round2: '第1回との対比を見る',
 }
 
 /** 第1回の走査: 選んだ区間を走査済みにして、較正の結果を作る（通常操作と実行サンプルで共通） */
-function scanOf(segs: Segment[], selected: Set<string>, results: Map<string, boolean>, cellSat: Record<string, number>, w: number) {
-  const nextResults = new Map(results)
-  const nextSegs = segs.map((s) => {
-    if (!selected.has(s.id)) return s
-    nextResults.set(s.id, s.sim_cavity)
-    return { ...s, surveyed: true }
-  })
+function scanOf(segs: Segment[], outcomes: OutcomeInput, results: Map<string, boolean>, cellSat: Record<string, number>, w: number) {
+  const { segs: nextSegs, results: nextResults, done } = applyOutcomes(segs, outcomes, results)
   const data3 = nextSegs.filter((s) => s.surveyed).map((s) => ({ ...s, hit: s.sim_cavity }))
   const c = calibrate(data3, cellSat)
   const calib: CalibResult = {
@@ -58,7 +53,7 @@ function scanOf(segs: Segment[], selected: Set<string>, results: Map<string, boo
     ex1: c.w === null ? null : exclusionAccuracy(data3, cellSat, c.w),
     pastCount: data3.length - nextResults.size,
   }
-  return { nextResults, nextSegs, calib }
+  return { nextResults, nextSegs, calib, done }
 }
 
 /** 較正の反映: 次回の重み・比較用の情報・説明文を作る */
@@ -92,6 +87,7 @@ export default function App() {
   const [round, setRound] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [results, setResults] = useState<Map<string, boolean>>(new Map())
+  const [outcomes, setOutcomes] = useState<OutcomeInput>({})
   const [lastBatch, setLastBatch] = useState<string[]>([])
   const [revealed, setRevealed] = useState(false)
   const [calib, setCalib] = useState<CalibResult | null>(null)
@@ -126,8 +122,8 @@ export default function App() {
         const cs = Object.fromEntries(d.cells.map((c) => [c.id, satNorm(c.disp)]))
         const w0 = 0.5
         const ids = new Set(selectByBudget(rank(base, cs, w0), 3))
-        const sc = scanOf(base, ids, new Map(), cs, w0)
-        const ap = applyOf(sc.nextSegs, cs, w0, 1, sc.calib, ids.size)
+        const sc = scanOf(base, sampleOutcomes(base, ids), new Map(), cs, w0)
+        const ap = applyOf(sc.nextSegs, cs, w0, 1, sc.calib, sc.done.length)
         setSegs(sc.nextSegs)
         setResults(sc.nextResults)
         setPrev(ap.prev)
@@ -179,14 +175,21 @@ export default function App() {
     if (s && s.cls === 'life' && !s.surveyed) toggle(id)
   }
 
+  const setOutcome = (id: string, o: Outcome | undefined) => setOutcomes((cur) => ({ ...cur, [id]: o }))
+  const fillSample = () => setOutcomes((cur) => ({ ...cur, ...sampleOutcomes(segs, selected) }))
+
+  /** 入力された結果（空洞あり／なし）を反映する。選んだ区間のうち入力済みのものだけが対象 */
   const doScan = () => {
-    const ids = [...selected]
-    const { nextResults, nextSegs, calib: c } = scanOf(segs, selected, results, cellSat, w)
+    const input: OutcomeInput = {}
+    for (const id of selected) input[id] = outcomes[id]
+    const { nextResults, nextSegs, calib: c, done } = scanOf(segs, input, results, cellSat, w)
+    if (done.length === 0) return
     setCalib(c)
     setResults(nextResults)
     setSegs(nextSegs)
-    setLastBatch(ids)
-    setSelected(new Set())
+    setLastBatch(done)
+    setSelected((cur) => new Set([...cur].filter((id) => !done.includes(id))))
+    setOutcomes({})
     setRevealed(true)
   }
 
@@ -212,7 +215,7 @@ export default function App() {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
         done: scanned || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
-      { id: 'scan', title: '走査結果を見る', hint: '結果は乱数のシミュレーション', done: scanned },
+      { id: 'scan', title: '調査結果を入力する', hint: '区間ごとに空洞あり／なし／未調査を入れる', done: scanned },
       { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', action: revealed ? 'ボタンを押すと完了' : undefined, done: round > 1 },
       { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', action: round > 1 ? '第2回の順位ができました。ここを押して確かめる' : undefined, done: round > 1 && viewedR2 },
     ],
@@ -282,7 +285,7 @@ export default function App() {
                   ／{focusSeg.cls === 'arterial'
                     ? '過去に調査済み（点数の対象外）'
                     : focusSeg.surveyed
-                      ? results.has(focusSeg.id) ? `走査結果: ${results.get(focusSeg.id) ? '▲ 疑い' : '○ なし'}（シミュレーション）` : '過去に調査済み'
+                      ? results.has(focusSeg.id) ? `調査結果: ${results.get(focusSeg.id) ? "▲ 空洞あり" : "○ なし"}（架空データ）` : '過去に調査済み'
                       : selected.has(focusSeg.id) ? '選択中' : '未調査'}
                 </span>
               </div>
@@ -352,6 +355,9 @@ export default function App() {
                 revealed={revealed}
                 lastBatch={lastBatch}
                 results={results}
+                outcomes={outcomes}
+                onOutcome={setOutcome}
+                onFillSample={fillSample}
                 onScan={doScan}
               />
             )}
