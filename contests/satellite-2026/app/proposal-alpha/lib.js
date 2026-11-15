@@ -127,26 +127,26 @@
 
 
   // ---- 記録を重みに反映する見直し ----
-  // 仮置きの規則（根拠のある値ではない）: 区分ごとの「要伐採の率」を、同じ見直し項目で記録された区間全体の率と比べ、
-  // 全体より高ければ重みを上げ、低ければ下げる（倍率は 0〜2 倍、重みは 0〜50 に収める）。
-  // 確認が REVIEW_MIN_N 件に満たない区分、全体の要伐採が0件、初期の重みが0の区分は変えず、理由を返す。
-  const REVIEW_MIN_N = 2, REVIEW_KEYS = ['change', 'terrain', 'facility', 'road'];
+  // 仮置きの規則（根拠のある値ではない）: 区分ごとの「要伐採の率」を、見込みの率 REVIEW_PRIOR（50%）と比べ、
+  // 倍率 0.5 + 率（0.5〜1.5 倍）を初期の重みにかける（重みは 0〜50 に収める）。要伐採なら上がり、問題なし・要継続観察なら下がる。
+  // 「立入不可・再訪」は結果が出ていないので数えない。確認が REVIEW_MIN_N 件に満たない区分と、初期の重みが0の区分は変えず、理由を返す。
+  const REVIEW_MIN_N = 1, REVIEW_PRIOR = 0.5, REVIEW_KEYS = ['change', 'terrain', 'facility', 'road'];
+  const judged = (results) => sanitizeResults(results).filter((r) => r.result !== '立入不可・再訪');
   function proposeWeights(sections, results, weights, minN) {
     minN = minN || REVIEW_MIN_N;
+    const res = judged(results);
     const w = normalizeWeights(weights), next = JSON.parse(JSON.stringify(w)), rows = [];
     REVIEW_KEYS.forEach((key) => {
-      const st = hitStats(sections, results, key), cats = Object.keys(DEFAULT_WEIGHTS[key]);
-      let N = 0, H = 0; cats.forEach((c) => { if (st[c]) { N += st[c].n; H += st[c].hit; } });
+      const st = hitStats(sections, res, key), cats = Object.keys(DEFAULT_WEIGHTS[key]);
       cats.forEach((c) => {
         const o = st[c] || { n: 0, hit: 0 }, from = w[key][c];
         const row = { key, cat: c, n: o.n, hit: o.hit, from, to: from, reason: '' };
         if (o.n < minN) row.reason = '確認が' + o.n + '件で、' + minN + '件に満たない';
-        else if (H === 0) row.reason = '要伐採が1件もなく、区分どうしの違いが出ない';
         else if (from === 0) row.reason = '初期の重みが0のため、倍率をかけても0';
         else {
-          const f = Math.max(0, Math.min(2, (o.hit / o.n) / (H / N)));
+          const f = (1 - REVIEW_PRIOR) + o.hit / o.n;
           row.to = Math.max(0, Math.min(50, Math.round(from * f)));
-          if (row.to === from) row.reason = '要伐採の率が全体と同じで、重みは変わらない';
+          if (row.to === from) row.reason = '要伐採の率が見込み（' + Math.round(REVIEW_PRIOR * 100) + '%）と同じで、重みは変わらない';
         }
         next[key][c] = row.to; rows.push(row);
       });
@@ -158,7 +158,7 @@
   // 数値は記録と区間データから数えた件数だけ（予測や効果は出さない）。
   function reviewProgress(sections, results, weights, minN) {
     minN = minN || REVIEW_MIN_N;
-    const w = normalizeWeights(weights), clean = sanitizeResults(results);
+    const w = normalizeWeights(weights), clean = judged(results);
     const prop = proposeWeights(sections, clean, DEFAULT_WEIGHTS, minN);
     const done = new Set();
     sections.forEach((s) => { if (latestResult(clean, s.id)) done.add(s.id); });
@@ -263,6 +263,6 @@
     return Object.assign({ lengthM: total, bufferCells: k, bufferUsedM: k * cellM, insideShare: allSamples ? allInside / allSamples : 0 }, whole, { chunks });
   }
 
-  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults, proposeWeights, reviewProgress, scoreDiff, REVIEW_MIN_N };
+  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults, proposeWeights, reviewProgress, scoreDiff, REVIEW_MIN_N, REVIEW_PRIOR };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TreeLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

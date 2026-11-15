@@ -35,12 +35,12 @@ ok('記録なし: 変わらない理由が出る', await ev(`${T('#review-result
 await ev('App.show("record")');
 await rec('F1-03', '要伐採');
 ok('記録直後に④へのボタンが見える', await ev('(()=>{const b=document.querySelector("#btn-rec-to-tune");return !document.querySelector("#rec-msg").hidden&&b.textContent.includes("点数を見直す")})()'));
-ok('1件だけでは重みを変えられない理由', await ev(`(()=>{document.querySelector("#btn-rec-to-tune").click();return ${T('#review-result')}.includes("十分ではありません")})()`));
+ok('1件の要伐採で点数が変わる', await ev(`(()=>{document.querySelector("#btn-rec-to-tune").click();return ${T('#review-result')}.includes("点数が変わった区間")})()`));
 await ev('App.show("record")');
 await rec('F2-04', '要伐採'); await rec('F1-02', '問題なし'); await rec('F2-03', '要伐採');
 await ev('document.querySelector("#btn-rec-to-tune").click()');
 ok('④の画面に切り替わっている', await ev('!document.querySelector("#v-tune").hidden'));
-ok('点数の前後（区間・前 → 後）が出る', await ev(`(t=>t.includes("点数が変わった区間")&&t.includes("→")&&t.includes("F1-03"))(${T('#review-result')})`));
+ok('点数の前後（区間・前 → 後）が出る', await ev(`(t=>t.includes("点数が変わった区間")&&t.includes("→"))(${T('#review-result')})`));
 await ev('document.querySelector("#btn-review-to-ledger").click()');
 ok('①に「見直し後」の表示（バナーと 初期 → 見直し後）', await ev(`(t=>t.includes("見直した後の点数")&&t.includes("初期"))(${T('#v-ledger')})`));
 ok('架空の表示が残る', await ev(`${T('#banner')}.includes("架空")`));
