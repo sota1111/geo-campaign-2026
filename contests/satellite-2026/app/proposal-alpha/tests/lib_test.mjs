@@ -129,4 +129,62 @@ t('実データ: 例の線で集計でき、結果が範囲内', () => {
   assert.ok(r.chunks.length >= 8);
   assert.ok(r.max >= 15 && r.tallShare > 0.1, "例の線は高木のある所を通る");
 });
+t('見直し: 記録が無ければ重みも点数も変わらず、理由が「確認0件」', () => {
+  const pr = L.proposeWeights(D.sections, [], L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, false);
+  assert.ok(pr.rows.every((r) => r.reason));
+  assert.deepEqual(L.scoreDiff(D.sections, L.DEFAULT_WEIGHTS, pr.weights, D.refYear, []), []);
+});
+t('見直し: 問題なしだけなら重みが下がる（見込み50%より低い）', () => {
+  const res = ['F1-01', 'F1-02', 'F1-05'].map((id) => ({ siteId: id, result: '問題なし', date: '2026-10-01' }));
+  const pr = L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, true);
+  assert.ok(pr.rows.filter((r) => r.n > 0 && r.from > 0).every((r) => r.to < r.from));
+});
+t('見直し: 要伐採1件だけでも、その区間の区分の重みが上がり点数が上がる', () => {
+  const res = [{ siteId: 'F1-03', result: '要伐採', date: '2026-10-01' }];
+  const pr = L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, true);
+  const d = L.scoreDiff(D.sections, L.DEFAULT_WEIGHTS, pr.weights, D.refYear, res).find((x) => x.id === 'F1-03');
+  assert.ok(d && d.after > d.before);
+});
+t('見直し: 立入不可・再訪だけでは数えず、変えない', () => {
+  const res = [{ siteId: 'F1-03', result: '立入不可・再訪', date: '2026-10-01' }];
+  const pr = L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, false);
+  assert.equal(L.reviewProgress(D.sections, res, L.DEFAULT_WEIGHTS).ready, false);
+});
+t('見直し: 区分で要伐採の率が違えば重みが動き、点数・順位の前後が出る', () => {
+  // 地形: 斜面2件（問題なし・要伐採 → 50%で据え置き）、谷筋2件（とも要伐採 → 1.5倍）
+  const res = [['F1-02', '問題なし'], ['F2-03', '要伐採'], ['F1-03', '要伐採'], ['F2-04', '要伐採']].map((a) => ({ siteId: a[0], result: a[1], date: '2026-10-01' }));
+  const pr = L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, true);
+  const ter = (c) => pr.rows.find((r) => r.key === 'terrain' && r.cat === c);
+  assert.equal(ter('谷筋・急斜面').n, 2); assert.equal(ter('谷筋・急斜面').hit, 2);
+  assert.equal(ter('谷筋・急斜面').to, 23);
+  assert.equal(ter('斜面').to, 8); assert.ok(ter('斜面').reason.includes('見込み'));
+  assert.ok(ter('平地').reason, '平地は確認0件で変えない');
+  const diff = L.scoreDiff(D.sections, L.DEFAULT_WEIGHTS, pr.weights, D.refYear, res);
+  const d = diff.find((x) => x.id === 'F1-03');
+  assert.ok(d && d.after > d.before, '谷筋の区間は点数が上がる');
+  assert.ok(diff.every((x) => x.before !== x.after || x.rankBefore !== x.rankAfter));
+  assert.deepEqual(L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS).weights, pr.weights);
+  Object.values(pr.weights.terrain).forEach((v) => assert.ok(v >= 0 && v <= 50));
+});
+t('到達度: 記録なし → 動かない・候補を示す', () => {
+  const pg = L.reviewProgress(D.sections, [], L.DEFAULT_WEIGHTS);
+  assert.equal(pg.ready, false); assert.equal(pg.nRec, 0); assert.equal(pg.minN, L.REVIEW_MIN_N);
+  assert.ok(pg.target && pg.target.n === 0 && pg.target.need === L.REVIEW_MIN_N);
+  assert.ok(pg.candidates.length >= 1 && pg.candidates.every((id) => sec(id)[pg.target.key] === pg.target.cat));
+});
+t('到達度: 1件記録で ready（proposeWeights と一致）', () => {
+  const res = [{ siteId: 'F1-03', result: '要伐採', date: '2026-10-01' }];
+  const pg = L.reviewProgress(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pg.ready, true); assert.equal(pg.nRec, 1); assert.equal(pg.target, null); assert.deepEqual(pg.candidates, []);
+  assert.equal(pg.ready, L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS).changed);
+});
+t('到達度: 同じ区間の再訪は件数を増やさない', () => {
+  const res = [{ siteId: 'F1-03', result: '要伐採', date: '2026-10-01' }, { siteId: 'F1-03', result: '要伐採', date: '2026-10-05' }];
+  assert.equal(L.reviewProgress(D.sections, res, L.DEFAULT_WEIGHTS).nRec, 1);
+});
 console.log(`\n${n} tests passed`);

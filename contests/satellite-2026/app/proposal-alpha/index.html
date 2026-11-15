@@ -35,6 +35,7 @@
           <label><input type="checkbox" id="f-sat"> 衛星・公開データ由来の点数だけで並べる</label>
           <label><input type="checkbox" id="f-unvisited"> 未確認のみ</label>
         </div>
+        <p id="review-banner" class="review-banner" role="status" hidden></p>
         <p id="count" class="note"></p>
         <div class="tablewrap"><table id="ledger"><thead></thead><tbody></tbody></table></div>
       </div>
@@ -59,21 +60,25 @@
     <div class="share" id="share-box"></div>
   </section>
   <section id="v-record" class="view" hidden>
+    <div id="rec-progress" class="recprog" aria-live="polite"></div>
     <form id="rec-form">
       <label>区間 <select id="r-site"></select></label>
       <label>確認日 <input type="date" id="r-date" required></label>
       <label>確認者 <input type="text" id="r-who" maxlength="40" required></label>
-      <label>結果 <select id="r-result"></select></label>
+      <label>結果 <select id="r-result" required></select></label>
       <label class="wide">メモ <input type="text" id="r-memo" maxlength="200"></label>
-      <button type="submit">記録する</button>
+      <button type="submit" data-go="tune" class="primary">記録して、すぐ点数を見直す（④ 点数の見直し へ移ります）</button>
+      <button type="submit">記録だけする（続けて別の区間も記録）</button>
     </form>
-    <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-tune" type="button">④ 点数の見直しへ進む</button></p></div>
+    <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-tune" type="button" class="primary">④ 記録を反映して点数を見直す</button></p></div>
     <p class="note">記録はこのブラウザの localStorage にだけ保存されます（外部へ送信しません）。氏名等の個人情報は入れないでください。区間はすべて架空です。</p>
     <div class="filters"><button id="btn-rec-csv">記録をCSVで書き出す</button><button id="btn-ledger-csv">台帳をCSVで書き出す</button><button id="btn-reset">記録を全消去</button></div>
     <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区間</th><th>確認者</th><th>結果</th><th>メモ</th></tr></thead><tbody></tbody></table></div>
   </section>
   <section id="v-tune" class="view" hidden>
-    <p>現地確認の結果を、区分ごとに集計します。件数が少ないうちは率を出さず、重みの見直しは職員・事業者が判断します（自動では変えません）。</p>
+    <p>現地確認の結果を、区分ごとに集計します。「記録を反映して点数を見直す」を押すと、記録が1件からでも、区分ごとの要伐採の率を見込みの50%と比べて重みを0.5〜1.5倍に見直します（仮置きの規則で、根拠のある値ではありません）。件数が少ないうちは1件で大きく動くので、採用するかは職員・事業者が判断してください。重みは下の表で手で直すことも、初期値に戻すこともできます。</p>
+    <div class="filters"><button id="btn-apply-review" type="button" class="primary">記録を反映して点数を見直す</button><span class="note">記録した区分ごとの「要伐採の率」から重みを上げ下げし、点数・順位を計算し直します（ボタンを押したときだけ変わります）。</span></div>
+    <div id="review-result" class="review-result" aria-live="polite" hidden></div>
     <div class="filters"><label>見直す区分 <select id="t-key"></select></label></div>
     <div class="tablewrap"><table id="hit-table"><thead><tr><th>区分</th><th>確認件数</th><th>要伐採</th><th>初期の重み</th><th>変更後の重み</th></tr></thead><tbody></tbody></table></div>
     <div class="filters"><button id="btn-weights-reset">重みを初期値に戻す</button></div>
