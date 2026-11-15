@@ -131,14 +131,11 @@
     return { pop: gain, popCore: gainCore, cells: n };
   }
 
-  /* 置いた後に徒歩圏にない人。cv は coverage() の結果。見出しと同じ母数にそろえる:
-     市境から800m以上内側の人口があればそれ（popCore）、なければ市全体（popTotal）。
-     gain は新たに圏内に入る人口（gainAt の pop / popCore、または topCandidates の累計）。 */
-  function remaining(cv, gain, gainCore) {
-    var core = cv.popCore > 0;
-    var base = core ? cv.popOutCore : cv.popOut, den = core ? cv.popCore : cv.popTotal, g = core ? gainCore : gain;
-    var left = Math.max(0, base - g);
-    return { pop: left, share: den ? left / den : 0, den: den, core: core };
+  /* 置いた後に徒歩圏にない人。cv は coverage() の結果、gain は新たに圏内に入る人口（gainAt の pop、または topCandidates の cumPop）。
+     「新たに入る人」と同じ母数（市全体のメッシュ人口）で数える。境界付近の候補でも、横に並ぶ「新たに入る人」と矛盾しない。 */
+  function remaining(cv, gain) {
+    var left = Math.max(0, cv.popOut - gain);
+    return { pop: left, share: cv.popTotal ? left / cv.popTotal : 0, den: cv.popTotal, before: cv.popOut };
   }
 
   /* 設置先候補: 圏外のメッシュ中心を候補として、新たに入る人口が大きい順に貪欲に選ぶ（選んだ後はその圏内を埋める） */
