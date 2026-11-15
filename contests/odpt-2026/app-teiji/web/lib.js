@@ -81,7 +81,71 @@
     return x < y ? -1 : (x > y ? 1 : 0);
   }
 
-  var api = { esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
+  /* 路線の一覧（route_id 重複なし、名称順） */
+  function routeList(op) {
+    var seen = {}, out = [];
+    (op.routes || []).concat(op.segments || []).forEach(function (r) {
+      if (r.route_id != null && !seen[r.route_id]) { seen[r.route_id] = 1; out.push({ route_id: r.route_id, name: r.name }); }
+    });
+    return out.sort(routeSortKey);
+  }
+
+  /* 区間を時間帯と（任意で）路線で絞る。絞り込み後に上位 limit 件（元の並び順を保つ） */
+  function segmentsFor(op, band, routeId, limit) {
+    var rows = (op.segments || []).filter(function (s) { return s.band === band && (routeId == null || s.route_id === routeId); });
+    return limit ? rows.slice(0, limit) : rows;
+  }
+
+  /* その時間帯に、事業者全体で1行でも集計があるか（無ければ「未取得」） */
+  function bandHasData(op, band) {
+    return (op.routes || []).some(function (r) { return r.band === band; }) || (op.segments || []).some(function (s) { return s.band === band; });
+  }
+
+  /* 選択路線の時間帯別の状態。kind: ok | thin（サンプル不足） | norow（この路線は行なし） | missing（時間帯が未取得） */
+  function routeBandStatus(op, routeId, band) {
+    var row = (op.routes || []).filter(function (r) { return r.route_id === routeId && r.band === band; })[0];
+    if (row) return { kind: row.enough ? 'ok' : 'thin', row: row };
+    return { kind: bandHasData(op, band) ? 'norow' : 'missing', row: null };
+  }
+
+  /* 区間の集計がある路線: route_id -> 区間の件数（全時間帯の合計）。区間は同じ区間の観測が8回以上で出る */
+  function segmentCounts(op) {
+    var m = {};
+    (op.segments || []).forEach(function (s) { if (s.route_id != null) m[s.route_id] = (m[s.route_id] || 0) + 1; });
+    return m;
+  }
+  function hasSegments(op, routeId) { return !!segmentCounts(op)[routeId]; }
+  /* 区間あり路線を先、続けて名称順。onlySeg なら区間ありだけ */
+  function routeListSorted(op, onlySeg) {
+    var cnt = segmentCounts(op);
+    var list = routeList(op).map(function (r) { return { route_id: r.route_id, name: r.name, seg: cnt[r.route_id] || 0 }; });
+    if (onlySeg) list = list.filter(function (r) { return r.seg > 0; });
+    return list.sort(function (a, b) { return (b.seg > 0) - (a.seg > 0) || routeSortKey(a, b); });
+  }
+  /* 選択路線に区間がないときの代わり: 区間の多い順に最大 limit 路線（選択中を除く） */
+  function suggestSegmentRoutes(op, excludeId, limit) {
+    return routeListSorted(op, true).filter(function (r) { return r.route_id !== excludeId; })
+      .sort(function (a, b) { return b.seg - a.seg || routeSortKey(a, b); }).slice(0, limit || 4);
+  }
+
+  /* 選択路線のまとめ: 個別の時間帯（全時間帯を除く）のうち集計できたものを比べ、定時率が最も低い時間帯と、
+     全時間帯を通じて遅れが最も増える区間を返す。データにない値は作らない（比べられる時間帯が1つなら compared=1 で返す）。 */
+  function routeConclusion(op, id) {
+    var bands = BANDS.filter(function (b) { return b !== 'all'; });
+    var got = [], missing = [], thin = [];
+    bands.forEach(function (b) {
+      var st = routeBandStatus(op, id, b);
+      if (st.kind === 'missing') missing.push(b);
+      else if (st.kind === 'ok') got.push({ band: b, row: st.row });
+      else thin.push(b);
+    });
+    got.sort(function (a, b) { return a.row.ontime_pct - b.row.ontime_pct || b.row.late_pct - a.row.late_pct; });
+    var segs = (op.segments || []).filter(function (s) { return s.route_id === id; })
+      .sort(function (a, b) { return b.median_added_s - a.median_added_s; });
+    return { worst: got[0] || null, compared: got.length, missing: missing, thin: thin, topSeg: segs[0] || null };
+  }
+
+  var api = { segmentCounts: segmentCounts, hasSegments: hasSegments, routeListSorted: routeListSorted, suggestSegmentRoutes: suggestSegmentRoutes, routeList: routeList, segmentsFor: segmentsFor, bandHasData: bandHasData, routeBandStatus: routeBandStatus, routeConclusion: routeConclusion, esc: esc, fmtDelay: fmtDelay, fmtPct: fmtPct, segColor: segColor, SEG_LEGEND: SEG_LEGEND, ontimeLabel: ontimeLabel,
     toCsv: toCsv, routesCsv: routesCsv, segmentsCsv: segmentsCsv, periodText: periodText, routeSortKey: routeSortKey, BAND_LABEL: BAND_LABEL, BANDS: BANDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.TeijiLib = api;

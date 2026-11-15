@@ -141,10 +141,10 @@ class TestPublicFiles(unittest.TestCase):
 
 
 class TestPage(unittest.TestCase):
-    def test_notice_has_three_points_and_placeholder_and_no_unverified_accuracy(self):
+    def test_notice_has_three_points_and_contact_and_no_unverified_accuracy(self):
         web = APP / "web"
         text = "".join((web / f).read_text(encoding="utf-8") for f in ("index.html", "app.js"))
-        for need in ("公共交通オープンデータセンター", "保証されません", "問い合わせ先", "【総司令官記入】"):
+        for need in ("公共交通オープンデータセンター", "保証されません", "問い合わせ先", "https://github.com/sota1111/geo-campaign-2026/issues"):
             self.assertIn(need, text)
         self.assertNotIn("数十秒", text)
         self.assertNotIn("判定: <b>", text)

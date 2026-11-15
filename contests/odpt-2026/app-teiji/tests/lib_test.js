@@ -52,4 +52,56 @@ assert.ok(L.periodText({ period: { first: 'a', last: 'b', observed_days: ['d1', 
 const sorted = [{ name: 'B' }, { name: 'A' }].sort(L.routeSortKey);
 assert.strictEqual(sorted[0].name, 'A');
 
+// 選択路線の絞り込み
+const op2 = { routes: [
+    { route_id: 'A', name: '北47', band: 'all', enough: true }, { route_id: 'A', name: '北47', band: 'day', enough: false },
+    { route_id: 'B', name: '上46', band: 'all', enough: true }],
+  segments: [
+    { route_id: 'A', name: '北47', band: 'day', median_added_s: 90 }, { route_id: 'B', name: '上46', band: 'day', median_added_s: 80 },
+    { route_id: 'A', name: '北47', band: 'day', median_added_s: 70 }] };
+assert.strictEqual(L.routeList(op2).length, 2);
+assert.strictEqual(L.segmentsFor(op2, 'day', null).length, 3);
+assert.deepStrictEqual(L.segmentsFor(op2, 'day', 'A').map(s => s.median_added_s), [90, 70]);
+assert.strictEqual(L.segmentsFor(op2, 'day', 'A', 1).length, 1);
+assert.strictEqual(L.segmentsFor(op2, 'all', 'A').length, 0);
+assert.strictEqual(L.routeBandStatus(op2, 'A', 'all').kind, 'ok');
+assert.strictEqual(L.routeBandStatus(op2, 'A', 'day').kind, 'thin');
+assert.strictEqual(L.routeBandStatus(op2, 'B', 'day').kind, 'norow');
+assert.strictEqual(L.routeBandStatus(op2, 'A', 'morning').kind, 'missing');
+assert.strictEqual(L.bandHasData(op2, 'night'), false);
+
+
+// 「区間あり」路線の判定・並び順・代替提案
+{
+  const o = {
+    routes: [{ route_id: 'A', name: 'あ' }, { route_id: 'B', name: 'い' }, { route_id: 'C', name: 'う' }],
+    segments: [
+      { route_id: 'C', name: 'う', band: 'all' }, { route_id: 'C', name: 'う', band: 'day' }, { route_id: 'B', name: 'い', band: 'all' },
+    ],
+  };
+  assert.deepStrictEqual(L.segmentCounts(o), { C: 2, B: 1 });
+  assert.strictEqual(L.hasSegments(o, 'C'), true);
+  assert.strictEqual(L.hasSegments(o, 'A'), false);
+  assert.deepStrictEqual(L.routeListSorted(o).map(r => r.route_id), ['B', 'C', 'A']);
+  assert.deepStrictEqual(L.routeListSorted(o, true).map(r => r.route_id), ['B', 'C']);
+  assert.deepStrictEqual(L.suggestSegmentRoutes(o, 'C', 3).map(r => r.route_id), ['B']);
+  assert.deepStrictEqual(L.suggestSegmentRoutes(o, 'A', 1).map(r => r.route_id), ['C']);
+  assert.deepStrictEqual(L.segmentCounts({}), {});
+}
+
+// routeConclusion: 集計できた時間帯のうち定時率が最も低いものと、遅れが最も増える区間
+(function () {
+  var op = { period: {}, routes: [
+    { route_id: 'R', name: 'R', band: 'all', n_trips: 30, enough: true, ontime_pct: 0.6, late_pct: 0.3 },
+    { route_id: 'R', name: 'R', band: 'morning', n_trips: 12, enough: true, ontime_pct: 0.4, late_pct: 0.5 },
+    { route_id: 'R', name: 'R', band: 'day', n_trips: 18, enough: true, ontime_pct: 0.8, late_pct: 0.1 },
+    { route_id: 'Q', name: 'Q', band: 'day', n_trips: 3, enough: false }],
+    segments: [{ route_id: 'R', band: 'day', from: 'A', to: 'B', median_added_s: 30, n: 9 }, { route_id: 'R', band: 'morning', from: 'C', to: 'D', median_added_s: 90, n: 8 }] };
+  var c = L.routeConclusion(op, 'R');
+  assert.strictEqual(c.worst.band, 'morning'); assert.strictEqual(c.compared, 2);
+  assert.strictEqual(c.topSeg.from, 'C');
+  assert.deepStrictEqual(c.missing, ['evening', 'night']);
+  var q = L.routeConclusion(op, 'Q');
+  assert.strictEqual(q.worst, null); assert.strictEqual(q.topSeg, null);
+})();
 console.log('lib_test OK');

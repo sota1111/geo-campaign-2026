@@ -5,7 +5,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var q = /[?&]data=([a-z0-9-]+)/.exec(location.search);
   var DATA = q ? q[1] : 'data';
-  var STATE = { index: null, op: null, band: 'all', map: null, ready: false, popup: null };
+  var STATE = { onlySeg: false, index: null, op: null, band: 'all', route: null, map: null, ready: false, popup: null, requested: null };
 
   function getJson(url) {
     return fetch(url, { cache: 'no-cache' }).then(function (r) {
@@ -29,9 +29,16 @@
       STATE.index = idx;
       var sel = $('op');
       sel.innerHTML = idx.operators.map(function (o) {
-        return '<option value="' + L.esc(o.id) + '">' + L.esc(o.name) + (o.stop_estimates ? '' : '（データ蓄積前）') + '</option>';
+        return '<option value="' + L.esc(o.id) + '">' + L.esc(o.name) + '（' + L.esc(o.status || '蓄積中') + '）' + '</option>';
       }).join('');
-      sel.addEventListener('change', function () { loadOp(sel.value); });
+      sel.addEventListener('change', function () { STATE.route = null; loadOp(sel.value); });
+      $('route').addEventListener('change', function () { selectRoute($('route').value || null); });
+      $('only-seg').addEventListener('change', function () { STATE.onlySeg = $('only-seg').checked; if (STATE.op) render(); });
+      $('route-detail').addEventListener('click', function (e) {
+        var go = e.target.getAttribute && e.target.getAttribute('data-go');
+        if (go) { selectRoute(go); return; }
+        if (e.target.getAttribute && e.target.getAttribute('data-clear')) selectRoute(null);
+      });
       $('band').innerHTML = L.BANDS.map(function (b) {
         return '<button type="button" role="radio" data-band="' + b + '" aria-checked="' + (b === 'all') + '">' + L.esc(L.BAND_LABEL[b]) + '</button>';
       }).join('');
@@ -49,7 +56,7 @@
         if (STATE.op) download('teiji_segments_' + STATE.op.id + '_' + STATE.band + '.csv', L.segmentsCsv(STATE.op, STATE.band));
       });
       initMap();
-      var first = idx.operators.filter(function (o) { return o.stop_estimates > 0; })[0] || idx.operators[0];
+      var first = idx.operators.filter(function (o) { return o.status === '集計あり'; })[0] || idx.operators.filter(function (o) { return o.stop_estimates > 0; })[0] || idx.operators[0];
       if (first) { sel.value = first.id; loadOp(first.id); }
       else $('period').textContent = '公開できる集計がまだありません。取得と集計（README の手順）を実行してください。';
     }).catch(function (e) {
@@ -58,10 +65,15 @@
   }
 
   function loadOp(id) {
+    STATE.requested = id;
+    STATE.op = null;
+    $('period').textContent = '集計を読み込んでいます…';
+    $('csv-routes').disabled = $('csv-seg').disabled = true;
     getJson(DATA + '/' + encodeURIComponent(id) + '.json').then(function (op) {
+      if (STATE.requested !== id) return;
       STATE.op = op;
       render();
-    }).catch(function (e) { $('period').textContent = '読み込みに失敗: ' + e.message; });
+    }).catch(function (e) { if (STATE.requested === id) $('period').textContent = '読み込みに失敗しました。事業者を選び直してください: ' + e.message; });
   }
 
   function render() {
@@ -71,11 +83,109 @@
     var synth = STATE.index && STATE.index.synthetic ? '<b>【合成データ】実在の事業者・路線・遅れではありません。画面確認用です。</b><br>' : '';
     $('period').innerHTML = synth + '<b>' + L.esc(op.name) + '</b>: ' + L.esc(L.periodText(op)) +
       (op.period.estimated_days && op.period.estimated_days.length < 14 ? '<br>蓄積が短いため、数値は試作段階の参考値です（日数が増えるほど安定します）。' : '');
+    var available = STATE.index.operators.filter(function (o) { return o.status === '集計あり'; }).length;
+    $('period').innerHTML += '<br>集計を表示できる事業者: ' + available + ' / ' + STATE.index.operators.length + '。最終集計: ' + L.esc(STATE.index.generated) + ' JST。自動収集は未設定です。';
+    $('csv-routes').disabled = !op.routes.some(function (r) { return r.band === band; });
+    $('csv-seg').disabled = !op.segments.some(function (r) { return r.band === band; });
+    document.getElementById('layout').classList.toggle('no-segments', !op.segments.some(function (r) { return r.band === band; }));
+    renderRouteSel(op);
     renderQuality(op);
     renderRoutes(op, band);
     renderSegments(op, band);
     renderAbout(op);
     drawMap(op, band);
+  }
+
+  function selectRoute(id) {
+    STATE.route = id;
+    render();
+    if (id && $('route-detail').scrollIntoView) $('route-detail').scrollIntoView({ block: window.innerWidth <= 800 ? 'start' : 'nearest' });
+  }
+
+  function routeName(op, id) {
+    var r = L.routeList(op).filter(function (x) { return x.route_id === id; })[0];
+    return r ? r.name : id;
+  }
+
+  /* 選択中の路線: 全時間帯の定時率・遅れを固定の並びで出す（時間帯を切り替えても位置が動かない） */
+  function renderRouteSel(op) {
+    var list = L.routeList(op);
+    if (STATE.route != null && !list.some(function (x) { return x.route_id === STATE.route; })) STATE.route = null;
+    var sl = L.routeListSorted(op, STATE.onlySeg);
+    function opt(r) {
+      return '<option value="' + L.esc(r.route_id) + '"' + (r.route_id === STATE.route ? ' selected' : '') + '>' + L.esc(r.name) + (r.seg ? '（区間あり）' : '（区間なし）') + '</option>';
+    }
+    var withSeg = sl.filter(function (r) { return r.seg; }), noSeg = sl.filter(function (r) { return !r.seg; });
+    var selInList = STATE.route == null || sl.some(function (r) { return r.route_id === STATE.route; });
+    $('route').innerHTML = '<option value="">全路線（絞り込まない）</option>' +
+      (selInList ? '' : '<option value="' + L.esc(STATE.route) + '" selected>' + L.esc(routeName(op, STATE.route)) + '（区間なし・選択中）</option>') +
+      '<optgroup label="区間の集計がある路線（' + withSeg.length + '）">' + withSeg.map(opt).join('') + '</optgroup>' +
+      (noSeg.length ? '<optgroup label="区間の集計がない路線（' + noSeg.length + '）">' + noSeg.map(opt).join('') + '</optgroup>' : '');
+    var box = $('route-detail');
+    if (STATE.route == null) {
+      var quick = L.suggestSegmentRoutes(op, null, 6);
+      box.innerHTML = list.length ? '<p class="note">路線を選ぶと、その路線の時間帯別の定時率・遅れと、遅れが増える区間がここに出ます。区間の集計がある路線は ' + L.routeListSorted(op, true).length + ' / ' + list.length + ' 路線です（選ぶ欄の先頭に「区間あり」で並べています）。</p>' +
+        (quick.length ? '<p class="note">区間まで見られる路線（区間の多い順）:</p><div class="alt">' + quick.map(function (r) {
+          return '<button type="button" class="act" data-go="' + L.esc(r.route_id) + '">' + L.esc(r.name) + '（区間 ' + r.seg + ' 件）</button>';
+        }).join('') + '</div>' : '') : '';
+      return;
+    }
+    var id = STATE.route, p = op.period || {};
+    var rows = L.BANDS.map(function (b) {
+      var st = L.routeBandStatus(op, id, b), cur = b === STATE.band ? ' class="cur" aria-current="true"' : '';
+      var head = '<th scope="row">' + L.esc(L.BAND_LABEL[b]) + (b === STATE.band ? '<span class="tag">表示中</span>' : '') + '</th>';
+      if (st.kind === 'missing') {
+        return '<tr' + cur + '>' + head + '<td colspan="4" class="miss">この時間帯のデータは取得していません（取得したのは ' + L.esc(p.first || '') + ' 〜 ' + L.esc(p.last || '') + ' の間の一部の時間だけ）。</td></tr>';
+      }
+      if (st.kind === 'norow') {
+        return '<tr' + cur + '>' + head + '<td colspan="4" class="miss">この路線は便が観測されていません（集計なし）</td></tr>';
+      }
+      var r = st.row;
+      return '<tr' + cur + '>' + head + '<td>' + r.n_trips + '</td><td>' + L.esc(L.ontimeLabel(r)) + '</td><td>' + (r.enough ? L.fmtPct(r.late_pct) : '—') +
+        '</td><td>' + (r.enough ? L.fmtDelay(r.median_delay_s) : '—') + '</td></tr>';
+    }).join('');
+    var segs = L.segmentsFor(op, STATE.band, id, 5);
+    var nseg = L.segmentsFor(op, STATE.band, id).length;
+    var total = L.segmentCounts(op)[id] || 0;
+    var segHtml;
+    if (nseg) {
+      segHtml = '<h4>「' + L.esc(L.BAND_LABEL[STATE.band]) + '」で遅れが増える区間（上位' + segs.length + '件 / 全' + nseg + '件）</h4><ul class="segsum">' + segs.map(function (s) {
+        return '<li><b>' + L.esc(s.from) + ' → ' + L.esc(s.to) + '</b>: ' + L.fmtDelay(s.median_added_s) + '（観測 ' + s.n + ' 回）</li>';
+      }).join('') + '</ul>' + (nseg > 5 ? '<p class="note">残りは下の「遅れが増える区間」の表にあります。</p>' : '');
+    } else if (total) {
+      segHtml = '<p class="warn">この路線の区間の集計は「' + L.esc(L.BAND_LABEL[STATE.band]) + '」にはありません（' + (L.bandHasData(op, STATE.band) ? '同じ区間の観測が8回未満' : 'この時間帯のデータは取得していません') + '）。区間の集計がある時間帯: ' +
+        L.BANDS.filter(function (b) { return L.segmentsFor(op, b, id).length; }).map(function (b) { return L.esc(L.BAND_LABEL[b]); }).join('、') + '。時間帯を切り替えてください。</p>';
+    } else {
+      var alt = L.suggestSegmentRoutes(op, id, 4);
+      segHtml = '<p class="warn"><b>この路線は区間の集計がありません（同じ区間の観測が8回未満）。</b>' +
+        (alt.length ? '区間を見られる路線:' : '') + '</p>' +
+        (alt.length ? '<div class="alt">' + alt.map(function (r) {
+          return '<button type="button" class="act" data-go="' + L.esc(r.route_id) + '">' + L.esc(r.name) + '（区間 ' + r.seg + ' 件）</button>';
+        }).join('') + '</div>' : '');
+    }
+    var c = L.routeConclusion(op, id), lab = function (b) { return L.esc(L.BAND_LABEL[b]); };
+    var cBand = c.worst
+      ? (c.compared < 2
+        ? '<li><b>遅れやすい時間帯（データのある範囲）: ' + lab(c.worst.band) + '</b>（定時率 ' + L.fmtPct(c.worst.row.ontime_pct) + '、5分超の遅れ ' + L.fmtPct(c.worst.row.late_pct) + '）。' +
+          '<span class="caveat">取得できたのはこの時間帯だけなので、他の時間帯と比べた結論ではありません' + (c.missing.length ? '（' + c.missing.map(lab).join('・') + 'は未取得）' : '') + '。</span></li>'
+        : '<li><b>遅れやすい時間帯: ' + lab(c.worst.band) + '</b>（定時率 ' + L.fmtPct(c.worst.row.ontime_pct) + '、5分超の遅れ ' + L.fmtPct(c.worst.row.late_pct) + '）。集計できた ' + c.compared + ' 時間帯のうち定時率が最も低い時間帯です。</li>')
+      : '<li><b>遅れやすい時間帯: 判断できません</b>（便数が足りる時間帯がありません' + (c.missing.length ? '。' + c.missing.map(lab).join('・') + 'は未取得' : '') + '）。</li>';
+    var cSeg = c.topSeg
+      ? '<li><b>遅れが最も増える区間: ' + L.esc(c.topSeg.from) + ' → ' + L.esc(c.topSeg.to) + '</b>（' + L.fmtDelay(c.topSeg.median_added_s) + '、' + lab(c.topSeg.band) + '、観測 ' + c.topSeg.n + ' 回）。</li>'
+      : '<li><b>遅れが増える区間: この路線は集計がありません</b>（同じ区間の観測が8回未満）。下のボタンから区間のある路線を選べます。</li>';
+    box.innerHTML = '<div class="rd"><h3>選択中の路線: ' + L.esc(routeName(op, id)) + (total ? '<span class="segflag">区間あり</span>' : '') + '</h3>' +
+      '<div class="concl" role="status"><p class="concl-h">この路線のまとめ（' + L.esc(L.periodText(op)) + 'の参考値）</p><ul>' + cBand + cSeg + '</ul></div>' +
+      '<button type="button" class="act clear" data-clear="1">路線の選択を解除（全路線に戻す）</button>' +
+      '<div class="tablewrap"><table><caption class="sr">' + L.esc(routeName(op, id)) + ' の時間帯別の定時率と遅れ</caption>' +
+      '<thead><tr><th scope="col">時間帯</th><th scope="col">便数</th><th scope="col">定時率</th><th scope="col">遅れ(5分超)</th><th scope="col">遅れ中央値</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      (c.compared === 1 ? '<p class="note">「全時間帯」の数値は、取得できた時間帯（' + lab(c.worst.band) + '）のデータだけで計算しているため、' + lab(c.worst.band) + 'と同じになります。</p>' : '') +
+      segHtml +
+      '<details class="terms"><summary>用語の意味</summary><ul class="note">' +
+      '<li>定時率: 停留所を通った時刻が、時刻表より1分早い〜5分遅いの範囲に入った割合。</li>' +
+      '<li>遅れ(5分超): 時刻表より5分を超えて遅れて通った割合。遅れ中央値は、各停留所を通った時点で時刻表からどれだけ遅れていたか（始発からの遅れの積み重ね）の真ん中の値。</li>' +
+      '<li>区間で増える遅れ: 隣り合う停留所の間で、遅れがどれだけ増えたか（後の停留所の遅れ − 前の停留所の遅れ、の中央値）。この区間を走る間に新しく増えた分だけで、遅れ中央値（積み重ね）とは別の数です。</li>' +
+      '<li>いずれも車両の位置と時刻表から推定した参考値です。</li></ul></details>' +
+      '</div>';
   }
 
   function renderQuality(op) {
@@ -89,32 +199,44 @@
   }
 
   function renderRoutes(op, band) {
-    var rows = op.routes.filter(function (r) { return r.band === band; }).sort(L.routeSortKey);
+    var cnt = L.segmentCounts(op);
+    var rows = op.routes.filter(function (r) { return r.band === band && (!STATE.onlySeg || cnt[r.route_id]); }).sort(function (a, b) { return (!!cnt[b.route_id] - !!cnt[a.route_id]) || L.routeSortKey(a, b); });
     var t = $('routes-table');
     if (!rows.length) {
-      t.innerHTML = '<tr><td class="empty">この時間帯の集計はまだありません。車両位置の蓄積（昼間の取得）が必要です。</td></tr>';
+      t.innerHTML = '<tr><td class="empty">この時間帯のデータは取得していません（取得したのは ' + L.esc(op.period.first || '') + ' 〜 ' + L.esc(op.period.last || '') + ' の間の一部の時間だけ）。サンプル不足とは別で、この時間帯の車両位置の取得が必要です。</td></tr>';
       return;
     }
     t.innerHTML = '<caption class="sr">' + L.esc(op.name) + ' の ' + L.esc(L.BAND_LABEL[band]) + ' の路線別集計</caption>' +
-      '<thead><tr><th scope="col">路線</th><th scope="col">便数</th><th scope="col">定時率</th><th scope="col">遅れ(5分超)</th><th scope="col">遅れ中央値</th><th scope="col">団子運転</th></tr></thead><tbody>' +
+      '<thead><tr><th scope="col">路線</th><th scope="col">便数</th><th scope="col">定時率</th><th scope="col">遅れ(5分超)</th><th scope="col">遅れ中央値</th><th scope="col">団子運転</th><th scope="col">区間</th></tr></thead><tbody>' +
       rows.map(function (r) {
         var bunch = r.bunch_enough ? L.fmtPct(r.bunch_pct) + '<span class="sub">（' + r.bunch_pairs + '組）</span>' : '<span class="sub">対象外・不足</span>';
-        return '<tr><th scope="row">' + L.esc(r.name) + '</th><td>' + r.n_trips + '</td><td>' + L.esc(L.ontimeLabel(r)) + '</td>' +
-          '<td>' + (r.enough ? L.fmtPct(r.late_pct) : '—') + '</td><td>' + (r.enough ? L.fmtDelay(r.median_delay_s) : '—') + '</td><td>' + bunch + '</td></tr>';
+        var on = r.route_id === STATE.route;
+        return '<tr class="pick' + (on ? ' sel' : '') + '" data-rid="' + L.esc(r.route_id) + '"><th scope="row"><button type="button" class="rbtn" aria-pressed="' + on + '" data-rid="' + L.esc(r.route_id) + '">' + L.esc(r.name) + '</button>' + (on ? '<span class="tag">選択中</span>' : '') + '</th><td>' + r.n_trips + '</td><td>' + L.esc(L.ontimeLabel(r)) + '</td>' +
+          '<td>' + (r.enough ? L.fmtPct(r.late_pct) : '—') + '</td><td>' + (r.enough ? L.fmtDelay(r.median_delay_s) : '—') + '</td><td>' + bunch + '</td><td>' + (cnt[r.route_id] ? '区間あり（' + cnt[r.route_id] + '件）' : '<span class="sub">なし</span>') + '</td></tr>';
       }).join('') + '</tbody>';
+    Array.prototype.forEach.call(t.querySelectorAll('tr.pick'), function (tr) {
+      tr.addEventListener('click', function () {
+        var id = tr.getAttribute('data-rid');
+        selectRoute(id === STATE.route ? null : id);
+      });
+    });
   }
 
   function renderSegments(op, band) {
-    var rows = op.segments.filter(function (s) { return s.band === band; }).slice(0, 15);
+    var rows = L.segmentsFor(op, band, STATE.route, 15);
     var t = $('seg-table');
+    $('seg-h').textContent = STATE.route == null ? '遅れが増える区間（上位）' : '遅れが増える区間（上位）: ' + routeName(op, STATE.route) + ' だけ';
     if (!rows.length) {
-      t.innerHTML = '<tr><td class="empty">区間の集計はまだありません（同じ区間を8回以上観測すると表示します）。</td></tr>';
+      var why = !L.bandHasData(op, band) ? 'この時間帯のデータは取得していません（取得したのは ' + (op.period.first || '') + ' 〜 ' + (op.period.last || '') + ' の間の一部の時間だけ）。'
+        : (STATE.route != null ? 'この路線には、この時間帯に表示できる区間がありません（同じ区間を8回以上観測すると表示します）。「全路線」に戻すと他の路線の区間を見られます。'
+          : '区間の集計はまだありません（路線×時間帯で10便・50観測以上、同じ区間で8観測以上が必要です）。');
+      t.innerHTML = '<tr><td class="empty">' + L.esc(why) + '</td></tr>';
       return;
     }
     t.innerHTML = '<caption class="sr">遅れが増える区間の上位</caption><thead><tr><th scope="col">路線・区間</th><th scope="col">増える遅れ</th><th scope="col">観測</th></tr></thead><tbody>' +
       rows.map(function (s, i) {
         return '<tr class="pick" tabindex="0" data-i="' + i + '"><th scope="row">' + L.esc(s.name) + '<span class="sub">' + L.esc(s.from) + ' → ' + L.esc(s.to) + '</span></th>' +
-          '<td>' + L.fmtDelay(s.median_added_s) + '<span class="sub">時刻表の所要 ' + Math.round(s.sched_run_s / 60 * 10) / 10 + '分</span></td><td>' + s.n + '</td></tr>';
+          '<td>' + L.fmtDelay(s.median_added_s) + '<span class="sub">この区間の時刻表上の所要時間 ' + Math.round(s.sched_run_s / 60 * 10) / 10 + '分</span></td><td>' + s.n + '</td></tr>';
       }).join('') + '</tbody>';
     Array.prototype.forEach.call(t.querySelectorAll('tr.pick'), function (tr) {
       function go() {
@@ -130,6 +252,7 @@
   function renderAbout(op) {
     var p = op.params || {};
     $('about-list').innerHTML =
+      '<li>静的時刻表の取得日時（JST）: ' + L.esc(op.static_gtfs_acquired || '記録なし') + '。取得後のダイヤ改正は自動追従しません。</li>' +
       '<li>バス位置・時刻表: ' + L.esc(op.credit) + '（<a href="' + L.esc(op.page) + '" target="_blank" rel="noopener">データセットのページ</a>）。公共交通オープンデータセンター（ODPT）が配信する CC BY 4.0 のデータだけを使っています。</li>' +
       '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li>' +
       '<li>遅れの推定: 車両位置を停留所列の折れ線に当てはめ、停留所の通過時刻を線形補間して時刻表と比べます。道路形状（shapes）は使いません。推定の誤差の大きさは検証中で、実データでの精度は確認できていません。停留所に止まっていた時間は到着ではなく「停留所を出た時刻」で時刻表の発車と比べ、観測の間隔が5分を超える所は推定しません。</li>' +
@@ -176,8 +299,10 @@
   }
 
   function drawMap(op, band) {
+    if (STATE.popup) { STATE.popup.remove(); STATE.popup = null; }
     if (!STATE.map || !STATE.ready) return;
-    var segs = op.segments.filter(function (s) { return s.band === band; });
+    STATE.map.resize();
+    var segs = L.segmentsFor(op, band, STATE.route);
     var feats = segs.map(function (s) {
       return { type: 'Feature', properties: { name: s.name, from: s.from, to: s.to, median_added_s: s.median_added_s, n: s.n, color: L.segColor(s.median_added_s) },
         geometry: { type: 'LineString', coordinates: [[s.from_lon, s.from_lat], [s.to_lon, s.to_lat]] } };
