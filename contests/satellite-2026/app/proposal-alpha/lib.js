@@ -153,6 +153,34 @@
     });
     return { weights: next, rows, changed: rows.some((r) => r.to !== r.from) };
   }
+  // ④の見直しに必要な条件と、いまの到達度。見直しの規則（proposeWeights）そのものを使い、重みが動くかどうかは実際の計算結果で判定する。
+  // 動かないとき: 次に記録すると件数の条件に近づく区分（記録が minN 件未満で、未記録の区間が足りる区分のうち、記録が多いもの）と、その未記録の区間を示す。
+  // 数値は記録と区間データから数えた件数だけ（予測や効果は出さない）。
+  function reviewProgress(sections, results, weights, minN) {
+    minN = minN || REVIEW_MIN_N;
+    const w = normalizeWeights(weights), clean = sanitizeResults(results);
+    const prop = proposeWeights(sections, clean, DEFAULT_WEIGHTS, minN);
+    const done = new Set();
+    sections.forEach((s) => { if (latestResult(clean, s.id)) done.add(s.id); });
+    const out = { ready: prop.changed, minN, nRec: done.size, countMet: false, target: null, candidates: [] };
+    let best = null;
+    REVIEW_KEYS.forEach((key) => {
+      const st = hitStats(sections, clean, key);
+      Object.keys(DEFAULT_WEIGHTS[key]).forEach((cat) => {
+        const n = st[cat] ? st[cat].n : 0;
+        if (n >= minN) out.countMet = true;
+        if (n >= minN || !(DEFAULT_WEIGHTS[key][cat] > 0 || w[key][cat] > 0)) return;
+        const pool = sections.filter((s) => s[key] === cat && !done.has(s.id));
+        if (pool.length < minN - n) return;
+        if (!best || n > best.n || (n === best.n && pool.length > best.pool.length)) best = { key, cat, n, pool };
+      });
+    });
+    if (best && !out.ready) {
+      out.target = { key: best.key, cat: best.cat, n: best.n, need: minN - best.n };
+      out.candidates = best.pool.slice(0, 3).map((s) => s.id);
+    }
+    return out;
+  }
   // 重みを変える前後で、点数・順位が変わった区間を返す
   function scoreDiff(sections, wBefore, wAfter, refYear, results, satOnly) {
     const a = rank(sections, wBefore, refYear, results, satOnly), b = rank(sections, wAfter, refYear, results, satOnly);
@@ -235,6 +263,6 @@
     return Object.assign({ lengthM: total, bufferCells: k, bufferUsedM: k * cellM, insideShare: allSamples ? allInside / allSamples : 0 }, whole, { chunks });
   }
 
-  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults, proposeWeights, scoreDiff, REVIEW_MIN_N };
+  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults, proposeWeights, reviewProgress, scoreDiff, REVIEW_MIN_N };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TreeLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

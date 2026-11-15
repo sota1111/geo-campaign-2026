@@ -122,8 +122,29 @@
     $('#r-result').innerHTML = L.RESULTS.map((r) => '<option>' + r + '</option>').join('');
     renderRecTable();
   }
+  // ④の見直しに必要な条件と到達度。記録画面の上と、記録直後の案内に出す
+  function progressText(pg) {
+    const k = L.REVIEW_MIN_N;
+    if (pg.ready) return '見直しの条件を満たしました（記録 ' + pg.nRec + ' 区間分）。④で点数に反映できます。';
+    let t = '見直しには、同じ区分（例: 地形「斜面」）で' + k + '件以上の記録が必要で、さらに要伐採とそれ以外が混ざる必要があります。いまの記録は ' + pg.nRec + ' 区間分。';
+    if (pg.target) t += ' 条件に近いのは ' + TUNE_KEYS[pg.target.key] + '「' + pg.target.cat + '」で、' + pg.target.n + ' / ' + k + ' 件（あと ' + pg.target.need + ' 件）。次に記録するとよい区間: ' + pg.candidates.join('、') + '。';
+    else if (pg.countMet) t += ' 件数の条件は満たした区分がありますが、重みが動く記録の組み合わせにはなっていません（別の区分の区間や、違う結果の区間を記録してください）。';
+    return t;
+  }
+  function renderProgress() {
+    const pg = L.reviewProgress(D.sections, state.results, L.DEFAULT_WEIGHTS), el = $('#rec-progress');
+    el.className = 'recprog' + (pg.ready ? ' ready' : '');
+    el.innerHTML = '<b>④ 見直しまでの到達度</b>: ' + esc(progressText(pg)) +
+      (!pg.ready && pg.candidates.length ? ' <span class="picks">' + pg.candidates.map((id) => '<button type="button" data-pick="' + esc(id) + '">' + esc(id) + ' を選ぶ</button>').join(' ') + '</span>' : '');
+    el.querySelectorAll('[data-pick]').forEach((b) => (b.onclick = () => { $('#r-site').value = b.dataset.pick; }));
+    const tab = document.querySelector('#tabs button[data-view="tune"]'), btn = $('#btn-rec-to-tune');
+    if (tab) tab.classList.toggle('ready', pg.ready);
+    if (btn) btn.classList.toggle('ready', pg.ready);
+    return pg;
+  }
   function renderRecTable() {
     $('#rec-table tbody').innerHTML = state.results.slice().reverse().map((r) => '<tr><td>' + esc(r.date) + '</td><td>' + esc(r.siteId) + '</td><td>' + esc(r.who) + '</td><td><span class="tag ' + resClass(r.result) + '">' + esc(r.result) + '</span></td><td>' + esc(r.memo) + '</td></tr>').join('') || '<tr><td colspan="5">記録なし</td></tr>';
+    if ($('#rec-progress')) renderProgress();
   }
 
   // ---- ④ 見直し ----
@@ -274,6 +295,7 @@
       const dup = cur.some((r) => r.siteId === rec.siteId && r.date === rec.date && r.result === rec.result);
       cur.push(rec);
       state.results = cur; saveResults(); $('#r-memo').value = ''; recompute(); renderRecTable();
+      const pg = renderProgress();
       // 記録した結果と、点数が自動では変わらないことを、ボタンのすぐ下に返す（記録だけで点数が変わるのか迷わせないため）
       const sec = state.ranked.find((x) => x.id === rec.siteId);
       $('#rec-msg-text').textContent = '✔ ' + rec.siteId + ' の確認結果「' + rec.result + '」を記録しました（下の一覧の先頭）。' +
@@ -286,6 +308,7 @@
       $('#rec-msg-text').textContent += left.length
         ? '続けて記録するなら、次は ' + left.length + ' 区間（' + left[0] + '。区間欄を切り替えました）。区間を記録し終えたら、青いボタンで④へ進み、記録を点数に反映します。'
         : '計画の区間はすべて記録しました。青いボタンで④へ進み、記録を点数に反映します。';
+      $('#rec-msg-text').textContent += ' ' + progressText(pg);
       $('#rec-msg').hidden = false;
     };
     $('#btn-rec-to-tune').onclick = () => { show('tune'); applyReview(); };

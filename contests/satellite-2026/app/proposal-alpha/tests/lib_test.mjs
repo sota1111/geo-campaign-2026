@@ -159,4 +159,28 @@ t('見直し: 区分で要伐採の率が違えば重みが動き、点数・順
   // 重みは 0〜50 に収まる
   Object.values(pr.weights.terrain).forEach((v) => assert.ok(v >= 0 && v <= 50));
 });
+t('到達度: 記録なし → 動かない・候補を示す', () => {
+  const pg = L.reviewProgress(D.sections, [], L.DEFAULT_WEIGHTS);
+  assert.equal(pg.ready, false); assert.equal(pg.nRec, 0); assert.equal(pg.minN, L.REVIEW_MIN_N);
+  assert.ok(pg.target && pg.target.n === 0 && pg.target.need === L.REVIEW_MIN_N);
+  assert.ok(pg.candidates.length >= 1 && pg.candidates.every((id) => sec(id)[pg.target.key] === pg.target.cat));
+});
+t('到達度: 1件記録 → あと1件、候補は未記録の同じ区分の区間だけ', () => {
+  const res = [{ siteId: 'F1-03', result: '要伐採', date: '2026-10-01' }];
+  const pg = L.reviewProgress(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pg.ready, false); assert.equal(pg.nRec, 1);
+  assert.equal(pg.target.n, 1); assert.equal(pg.target.need, L.REVIEW_MIN_N - 1);
+  assert.ok(!pg.candidates.includes('F1-03'));
+  assert.ok(pg.candidates.every((id) => sec(id)[pg.target.key] === pg.target.cat));
+});
+t('到達度: 重みが動く記録がそろえば ready（proposeWeights と一致）', () => {
+  const res = [['F1-02', '問題なし'], ['F2-03', '要伐採'], ['F1-03', '要伐採'], ['F2-04', '要伐採']].map((a) => ({ siteId: a[0], result: a[1], date: '2026-10-01' }));
+  const pg = L.reviewProgress(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pg.ready, true); assert.equal(pg.nRec, 4); assert.equal(pg.target, null); assert.deepEqual(pg.candidates, []);
+  assert.equal(pg.ready, L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS).changed);
+});
+t('到達度: 同じ区間の再訪は件数を増やさない', () => {
+  const res = [{ siteId: 'F1-03', result: '要伐採', date: '2026-10-01' }, { siteId: 'F1-03', result: '要伐採', date: '2026-10-05' }];
+  assert.equal(L.reviewProgress(D.sections, res, L.DEFAULT_WEIGHTS).nRec, 1);
+});
 console.log(`\n${n} tests passed`);
