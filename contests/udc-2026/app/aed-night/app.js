@@ -163,6 +163,8 @@
       var b = el("button", { type: "button" });
       b.appendChild(el("b", { text: c.rank + ". " + name + "付近" }));
       b.appendChild(document.createTextNode("　新たに徒歩圏に入る人 約" + fmtA(c.pop) + "人"));
+      var rem = AN.remaining(S.cov, c.cumPop, c.cumCore);
+      b.appendChild(el("span", { class: "rem", text: "　" + (c.rank === 1 ? "置いた後" : "1位からここまで置いた後") + "も徒歩圏にない人：約" + fmtA(rem.pop) + "人（" + pct(rem.share) + "）" }));
       if (c.edge) b.appendChild(el("span", { class: "edge", text: "　※境界付近" }));
       b.addEventListener("click", function () { map.flyTo({ center: [c.lon, c.lat], zoom: 15.5 }); });
       ol.appendChild(el("li", {}, [b]));
@@ -179,11 +181,15 @@
     S.cov.usable.forEach(function (a) { var d = AN.haversine(lat, lon, a[1], a[2]); if (near === null || d < near) near = d; });
     var card = $("gain-card"); card.innerHTML = "";
     card.appendChild(el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏（直線" + S.view.r + "m）に入る人: 約" + fmtA(g.pop) + "人" })]));
+    var rem = AN.remaining(S.cov, g.pop, g.popCore);
+    card.appendChild(el("div", {}, [el("b", { text: "置いた後も徒歩圏にない人：約" + fmtA(rem.pop) + "人（" + pct(rem.share) + "）" })]));
+    card.appendChild(el("div", { class: "small", text: "いま徒歩圏にない約" + fmtA(rem.core ? S.cov.popOutCore : S.cov.popOut) + "人から、新たに入る約" + fmtA(rem.core ? g.popCore : g.pop) + "人を引いた値。割合の母数は" + (rem.core ? "市境から800m以上内側の人口 " : "メッシュ人口 ") + fmt(rem.den) + "人（上の見出しと同じ）。" }));
     card.appendChild(el("div", { class: "small", text: "いま（" + AN.whenLabel(S.view.d, S.view.t) + "）、この地点から最も近い使えるAEDまで" +
       (near === null ? "（使えるAEDが登録にありません）" : "直線 約" + fmt(near) + "m") + "。人口は250mメッシュの合計で、置ける場所かどうかは考慮していません。" }));
     if (tapped && popup) {
       /* スマホではパネルの結果カードが画面の外になりやすいので、タップした地点の上にも結果を出す */
       var pb = el("div", {}, [el("b", { text: "ここに24時間使えるAEDを1台置くと、新たに徒歩圏に入る人: 約" + fmtA(g.pop) + "人" }),
+        el("div", { text: "置いた後も徒歩圏にない人：約" + fmtA(rem.pop) + "人（" + pct(rem.share) + "）" }),
         el("div", { class: "small", text: near === null ? "いま使えるAEDは登録にありません。" : "いま最も近い使えるAEDまで直線 約" + fmt(near) + "m。" })]);
       popup.setLngLat([lon, lat]).setDOMContent(pb).addTo(map);
     }

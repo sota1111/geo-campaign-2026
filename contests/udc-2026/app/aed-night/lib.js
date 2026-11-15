@@ -123,12 +123,22 @@
 
   /* 1台足すと: 点 (lat,lon) に24時間使えるAEDを置いたとき、新たに圏内に入る人口 */
   function gainAt(cells, covered, lat, lon, radius) {
-    var gain = 0, n = 0;
+    var gain = 0, gainCore = 0, n = 0;
     for (var i = 0; i < cells.length; i++) {
       if (covered[i]) continue;
-      if (haversine(lat, lon, cells[i][2], cells[i][3]) <= radius) { gain += cells[i][4]; n++; }
+      if (haversine(lat, lon, cells[i][2], cells[i][3]) <= radius) { gain += cells[i][4]; if (!cells[i][5]) gainCore += cells[i][4]; n++; }
     }
-    return { pop: gain, cells: n };
+    return { pop: gain, popCore: gainCore, cells: n };
+  }
+
+  /* 置いた後に徒歩圏にない人。cv は coverage() の結果。見出しと同じ母数にそろえる:
+     市境から800m以上内側の人口があればそれ（popCore）、なければ市全体（popTotal）。
+     gain は新たに圏内に入る人口（gainAt の pop / popCore、または topCandidates の累計）。 */
+  function remaining(cv, gain, gainCore) {
+    var core = cv.popCore > 0;
+    var base = core ? cv.popOutCore : cv.popOut, den = core ? cv.popCore : cv.popTotal, g = core ? gainCore : gain;
+    var left = Math.max(0, base - g);
+    return { pop: left, share: den ? left / den : 0, den: den, core: core };
   }
 
   /* 設置先候補: 圏外のメッシュ中心を候補として、新たに入る人口が大きい順に貪欲に選ぶ（選んだ後はその圏内を埋める） */
@@ -137,7 +147,7 @@
     var gapIdx = [];
     for (var i = 0; i < cells.length; i++) if (!cov[i]) gapIdx.push(i);
     var idx = buildIndex(gapIdx.map(function (i) { return { lat: cells[i][2], lon: cells[i][3] }; }));
-    var out = [];
+    var out = [], cumPop = 0, cumCore = 0;
     for (var k = 0; k < n; k++) {
       var best = null;
       for (var g = 0; g < gapIdx.length; g++) {
@@ -152,12 +162,14 @@
       }
       if (!best || best.pop <= 0) break;
       var c = cells[best.i];
-      out.push({ rank: k + 1, lat: c[2], lon: c[3], pop: best.pop, area: c[6], edge: c[5], code: c[1] });
-      var near2 = nearby(idx, c[2], c[3], radius);
+      var near2 = nearby(idx, c[2], c[3], radius), newCore = 0;
       for (var j2 = 0; j2 < near2.length; j2++) {
         var cj2 = gapIdx[near2[j2]];
-        if (haversine(c[2], c[3], cells[cj2][2], cells[cj2][3]) <= radius) cov[cj2] = 1;
+        if (haversine(c[2], c[3], cells[cj2][2], cells[cj2][3]) <= radius) { if (!cov[cj2] && !cells[cj2][5]) newCore += cells[cj2][4]; cov[cj2] = 1; }
       }
+      /* cum*: 1位からこの順位まで順に置いたときに新たに入る人口の累計（popCore は市境から800m以上内側だけ） */
+      cumPop += best.pop; cumCore += newCore;
+      out.push({ rank: k + 1, lat: c[2], lon: c[3], pop: best.pop, popCore: newCore, cumPop: cumPop, cumCore: cumCore, area: c[6], edge: c[5], code: c[1] });
     }
     return out;
   }
@@ -242,7 +254,7 @@
   return {
     DAYS: DAYS, RADII: RADII, DEF: DEF, REASON_LABEL: REASON_LABEL, K24: K24, KTIMED: KTIMED, KUNKNOWN: KUNKNOWN, KASSUMED: KASSUMED, KNONPUBLIC: KNONPUBLIC,
     isUsable: isUsable, inWindows: inWindows, haversine: haversine, buildIndex: buildIndex, nearestWithin: nearestWithin,
-    coverage: coverage, weekdayRange: weekdayRange, gainAt: gainAt, topCandidates: topCandidates, areaTable: areaTable,
+    coverage: coverage, weekdayRange: weekdayRange, gainAt: gainAt, remaining: remaining, topCandidates: topCandidates, areaTable: areaTable,
     csvCell: csvCell, toCSV: toCSV, hhmm: hhmm, whenLabel: whenLabel, formatHash: formatHash, parseHash: parseHash,
     readableShare: readableShare, windowsText: windowsText
   };
