@@ -158,7 +158,7 @@
     $('#t-key').innerHTML = Object.keys(TUNE_KEYS).map((k) => '<option value="' + k + '"' + (k === key ? ' selected' : '') + '>' + TUNE_KEYS[k] + '</option>').join('');
     $('#hit-table tbody').innerHTML = Object.keys(dw).map((c) => {
       const o = st[c] || { n: 0, hit: 0 };
-      return '<tr><td>' + esc(c) + '</td><td>' + o.n + '</td><td>' + o.hit + (o.n >= 5 ? '（' + Math.round(100 * o.hit / o.n) + '%）' : '（件数が少なく率は出しません）') + '</td><td>' + dw[c] + '</td><td><input type="number" min="0" max="50" data-c="' + esc(c) + '" value="' + state.weights[key][c] + '" aria-label="' + esc(c) + 'の重み"></td></tr>';
+      return '<tr><td>' + esc(c) + '</td><td>' + o.n + '</td><td>' + o.hit + (o.n >= 5 ? '（' + Math.round(100 * o.hit / o.n) + '%）' : '（件数が少なく率は表示しません。見直しには使います）') + '</td><td>' + dw[c] + '</td><td><input type="number" min="0" max="50" data-c="' + esc(c) + '" value="' + state.weights[key][c] + '" aria-label="' + esc(c) + 'の重み"></td></tr>';
     }).join('');
     document.querySelectorAll('#hit-table input').forEach((i) => (i.onchange = () => {
       const before = clone(state.weights);

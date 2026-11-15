@@ -76,7 +76,7 @@
     <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区間</th><th>確認者</th><th>結果</th><th>メモ</th></tr></thead><tbody></tbody></table></div>
   </section>
   <section id="v-tune" class="view" hidden>
-    <p>現地確認の結果を、区分ごとに集計します。件数が少ないうちは率を出さず、重みの見直しは職員・事業者が判断します（自動では変えません）。</p>
+    <p>現地確認の結果を、区分ごとに集計します。「記録を反映して点数を見直す」を押すと、記録が1件からでも、区分ごとの要伐採の率を見込みの50%と比べて重みを0.5〜1.5倍に見直します（仮置きの規則で、根拠のある値ではありません）。件数が少ないうちは1件で大きく動くので、採用するかは職員・事業者が判断してください。重みは下の表で手で直すことも、初期値に戻すこともできます。</p>
     <div class="filters"><button id="btn-apply-review" type="button" class="primary">記録を反映して点数を見直す</button><span class="note">記録した区分ごとの「要伐採の率」から重みを上げ下げし、点数・順位を計算し直します（ボタンを押したときだけ変わります）。</span></div>
     <div id="review-result" class="review-result" aria-live="polite" hidden></div>
     <div class="filters"><label>見直す区分 <select id="t-key"></select></label></div>
