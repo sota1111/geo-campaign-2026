@@ -215,7 +215,7 @@ export default function App() {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
         done: scanned || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
-      { id: 'scan', title: '調査結果を入力する', hint: '区間ごとに空洞あり／なし／未調査を入れる', done: scanned },
+      { id: 'scan', title: '調査結果を入力する', hint: '区間ごとに空洞の疑いあり／異常なし／未調査を入れる', done: scanned },
       { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', action: revealed ? 'ボタンを押すと完了' : undefined, done: round > 1 },
       { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', action: round > 1 ? '第2回の順位ができました。ここを押して確かめる' : undefined, done: round > 1 && viewedR2 },
     ],
@@ -285,7 +285,7 @@ export default function App() {
                   ／{focusSeg.cls === 'arterial'
                     ? '過去に調査済み（点数の対象外）'
                     : focusSeg.surveyed
-                      ? results.has(focusSeg.id) ? `調査結果: ${results.get(focusSeg.id) ? "▲ 空洞あり" : "○ なし"}（架空データ）` : '過去に調査済み'
+                      ? results.has(focusSeg.id) ? `調査結果: ${results.get(focusSeg.id) ? "▲ 空洞の疑いあり" : "○ 異常なし"}（架空データ）` : '過去に調査済み'
                       : selected.has(focusSeg.id) ? '選択中' : '未調査'}
                 </span>
               </div>

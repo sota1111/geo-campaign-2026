@@ -66,7 +66,7 @@ function RankTable({
           <TableHead>区画</TableHead>
           <TableHead className="text-right">布設年</TableHead>
           <TableHead className="text-right">点数</TableHead>
-          {prev && <TableHead className="text-right">前回</TableHead>}
+          {prev && <TableHead className="text-right">第1回からの変化</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -95,7 +95,7 @@ function RankTable({
                 )}
               </TableCell>
               {prev && (
-                <TableCell className="text-right text-xs">{p ? `${p}位 ${d > 0 ? `↑${d}` : d < 0 ? `↓${-d}` : '→'}` : '—'}</TableCell>
+                <TableCell className="text-right text-xs">{p ? (d > 0 ? `${p}位から${d}つ上がった` : d < 0 ? `${p}位から${-d}つ下がった` : `${p}位のまま`) : '—'}</TableCell>
               )}
             </TableRow>
           )
@@ -332,7 +332,7 @@ export function ScanPanel({
               <Button size="sm" variant="outline" onClick={onFillSample} data-testid="scan-sample"><Wand2 />サンプル結果を一括で入れる</Button>
             </div>
             <p className="text-xs text-muted-foreground" data-testid="scan-hint">
-              {entered === 0 ? '下の表で1区間以上に「空洞あり」か「空洞なし」を入れると反映できます（全部入れる必要はありません）。' : `${entered} 区間の結果を反映できます。残りの区間は未調査として次回の候補に残ります。`}
+              {entered === 0 ? '下の表で1区間以上に「空洞の疑いあり」か「異常なし」を入れると反映できます（全部入れる必要はありません）。' : `${entered} 区間の結果を反映できます。残りの区間は未調査として次回の候補に残ります。`}
             </p>
           </div>
         )}
@@ -355,8 +355,8 @@ export function ScanPanel({
                       onChange={(e) => onOutcome(r.id, (e.target.value || undefined) as Outcome | undefined)}
                     >
                       <option value="">（未入力）</option>
-                      <option value="hit">▲ 空洞あり</option>
-                      <option value="none">○ 空洞なし</option>
+                      <option value="hit">▲ 空洞の疑いあり</option>
+                      <option value="none">○ 異常なし</option>
                       <option value="unknown">－ 未調査</option>
                     </select>
                   </TableCell>
@@ -432,7 +432,7 @@ export function ApplyPanel({
       {calib && calib.w === null && (
         <Alert className="border-amber-500 bg-amber-50 text-amber-950">
           <AlertTitle>較正に使える結果が不足しています</AlertTitle>
-          <AlertDescription className="text-amber-900">空洞あり {calib.pos} 件・なし {calib.neg} 件（各3件以上で較正）。重みは変えません。</AlertDescription>
+          <AlertDescription className="text-amber-900">空洞の疑いあり {calib.pos} 件・異常なし {calib.neg} 件（各3件以上で較正）。重みは変えません。</AlertDescription>
         </Alert>
       )}
       {calib && calib.w !== null && (
