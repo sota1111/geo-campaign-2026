@@ -6,7 +6,7 @@
 <title>バス定時性カルテ｜路線×時間帯の定時率・区間の遅れ・団子運転</title>
 <meta name="description" content="バスの位置データ（GTFS-RT）を蓄積し、時刻表と突き合わせて、路線×時間帯の定時率・区間ごとの遅れ・団子運転を見える化します。CC BY 4.0 のデータだけを使用。">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <main id="layout">
@@ -32,7 +32,7 @@
 
     <section id="route-sec" aria-label="路線を選ぶ">
       <h2>路線を選ぶ</h2>
-      <label for="route" class="lbl-top">路線（「区間あり」は、遅れが増える区間の集計がある路線です）</label>
+      <label for="route" class="lbl-top">路線（「区間あり」は、遅れが増える区間の集計がある路線です。この欄でも、下のボタンや路線表の路線名でも、同じように選べます）</label>
       <select id="route"></select>
       <label class="chk"><input type="checkbox" id="only-seg"> 区間の集計がある路線だけ表示</label>
       <div id="route-detail" aria-live="polite"></div>
@@ -70,7 +70,7 @@
 </main>
 <noscript>このページの表示にはJavaScriptが必要です。</noscript>
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
-<script src="lib.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="lib.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

@@ -165,8 +165,10 @@
     }
     var c = L.routeConclusion(op, id), lab = function (b) { return L.esc(L.BAND_LABEL[b]); };
     var cBand = c.worst
-      ? '<li><b>遅れやすい時間帯: ' + lab(c.worst.band) + '</b>（定時率 ' + L.fmtPct(c.worst.row.ontime_pct) + '、5分超の遅れ ' + L.fmtPct(c.worst.row.late_pct) + '）' +
-        (c.compared < 2 ? '。集計できた時間帯はこの1つだけで、他の時間帯とは比べられません' + (c.missing.length ? '（' + c.missing.map(lab).join('・') + 'は未取得）' : '') : '。集計できた ' + c.compared + ' 時間帯のうち定時率が最も低い') + '。</li>'
+      ? (c.compared < 2
+        ? '<li><b>遅れやすい時間帯（データのある範囲）: ' + lab(c.worst.band) + '</b>（定時率 ' + L.fmtPct(c.worst.row.ontime_pct) + '、5分超の遅れ ' + L.fmtPct(c.worst.row.late_pct) + '）。' +
+          '<span class="caveat">取得できたのはこの時間帯だけなので、他の時間帯と比べた結論ではありません' + (c.missing.length ? '（' + c.missing.map(lab).join('・') + 'は未取得）' : '') + '。</span></li>'
+        : '<li><b>遅れやすい時間帯: ' + lab(c.worst.band) + '</b>（定時率 ' + L.fmtPct(c.worst.row.ontime_pct) + '、5分超の遅れ ' + L.fmtPct(c.worst.row.late_pct) + '）。集計できた ' + c.compared + ' 時間帯のうち定時率が最も低い時間帯です。</li>')
       : '<li><b>遅れやすい時間帯: 判断できません</b>（便数が足りる時間帯がありません' + (c.missing.length ? '。' + c.missing.map(lab).join('・') + 'は未取得' : '') + '）。</li>';
     var cSeg = c.topSeg
       ? '<li><b>遅れが最も増える区間: ' + L.esc(c.topSeg.from) + ' → ' + L.esc(c.topSeg.to) + '</b>（' + L.fmtDelay(c.topSeg.median_added_s) + '、' + lab(c.topSeg.band) + '、観測 ' + c.topSeg.n + ' 回）。</li>'
@@ -176,7 +178,14 @@
       '<button type="button" class="act clear" data-clear="1">路線の選択を解除（全路線に戻す）</button>' +
       '<div class="tablewrap"><table><caption class="sr">' + L.esc(routeName(op, id)) + ' の時間帯別の定時率と遅れ</caption>' +
       '<thead><tr><th scope="col">時間帯</th><th scope="col">便数</th><th scope="col">定時率</th><th scope="col">遅れ(5分超)</th><th scope="col">遅れ中央値</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      segHtml + '</div>';
+      (c.compared === 1 ? '<p class="note">「全時間帯」の数値は、取得できた時間帯（' + lab(c.worst.band) + '）のデータだけで計算しているため、' + lab(c.worst.band) + 'と同じになります。</p>' : '') +
+      segHtml +
+      '<details class="terms"><summary>用語の意味</summary><ul class="note">' +
+      '<li>定時率: 停留所を通った時刻が、時刻表より1分早い〜5分遅いの範囲に入った割合。</li>' +
+      '<li>遅れ(5分超): 時刻表より5分を超えて遅れて通った割合。遅れ中央値はその遅れの真ん中の値。</li>' +
+      '<li>区間で増える遅れ: 隣り合う停留所の間で、遅れがどれだけ増えたか（後の停留所の遅れ − 前の停留所の遅れ、の中央値）。この区間を走る間に遅れが積み上がることを示します。</li>' +
+      '<li>いずれも車両の位置と時刻表から推定した参考値です。</li></ul></details>' +
+      '</div>';
   }
 
   function renderQuality(op) {

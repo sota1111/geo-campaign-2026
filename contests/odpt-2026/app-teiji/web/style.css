@@ -72,3 +72,6 @@ tr.sel th, tr.sel td { background: #eaf1fa; }
 .concl-h { margin: 0 0 4px; font-weight: bold; font-size: .9rem; }
 .concl ul { margin: 0; padding-left: 1.2em; }
 @media (max-width: 800px) { #route-detail { scroll-margin-top: 44vh; } }
+.concl .caveat { display: block; font-size: .85rem; color: #4b5560; }
+details.terms { margin-top: 6px; }
+details.terms summary { cursor: pointer; font-size: .85rem; }
