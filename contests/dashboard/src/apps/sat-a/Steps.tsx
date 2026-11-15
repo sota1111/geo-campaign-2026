@@ -326,6 +326,17 @@ export function ScanPanel({
           <Alert><AlertDescription>入力する区間がありません。「予算内で調査対象を選ぶ」の手順で区間を選んでください。</AlertDescription></Alert>
         )}
         {rows.length > 0 && (
+          <div className="space-y-1">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={onScan} disabled={entered === 0} data-testid="scan"><Radar />入力した結果を反映する（{entered} 区間入力済み）</Button>
+              <Button size="sm" variant="outline" onClick={onFillSample} data-testid="scan-sample"><Wand2 />サンプル結果を一括で入れる</Button>
+            </div>
+            <p className="text-xs text-muted-foreground" data-testid="scan-hint">
+              {entered === 0 ? '下の表で1区間以上に「空洞あり」か「空洞なし」を入れると反映できます（全部入れる必要はありません）。' : `${entered} 区間の結果を反映できます。残りの区間は未調査として次回の候補に残ります。`}
+            </p>
+          </div>
+        )}
+        {rows.length > 0 && (
           <Table>
             <TableHeader>
               <TableRow><TableHead>区間</TableHead><TableHead className="text-right">点数</TableHead><TableHead>調査結果</TableHead></TableRow>
@@ -354,10 +365,6 @@ export function ScanPanel({
             </TableBody>
           </Table>
         )}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={onScan} disabled={entered === 0} data-testid="scan"><Radar />入力した結果を反映する（{entered}/{rows.length} 区間）</Button>
-          <Button size="sm" variant="outline" onClick={onFillSample} disabled={rows.length === 0} data-testid="scan-sample"><Wand2 />サンプル結果を一括で入れる</Button>
-        </div>
       </div>
     )
   }
