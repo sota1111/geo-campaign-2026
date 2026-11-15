@@ -182,8 +182,8 @@
       segHtml +
       '<details class="terms"><summary>用語の意味</summary><ul class="note">' +
       '<li>定時率: 停留所を通った時刻が、時刻表より1分早い〜5分遅いの範囲に入った割合。</li>' +
-      '<li>遅れ(5分超): 時刻表より5分を超えて遅れて通った割合。遅れ中央値はその遅れの真ん中の値。</li>' +
-      '<li>区間で増える遅れ: 隣り合う停留所の間で、遅れがどれだけ増えたか（後の停留所の遅れ − 前の停留所の遅れ、の中央値）。この区間を走る間に遅れが積み上がることを示します。</li>' +
+      '<li>遅れ(5分超): 時刻表より5分を超えて遅れて通った割合。遅れ中央値は、各停留所を通った時点で時刻表からどれだけ遅れていたか（始発からの遅れの積み重ね）の真ん中の値。</li>' +
+      '<li>区間で増える遅れ: 隣り合う停留所の間で、遅れがどれだけ増えたか（後の停留所の遅れ − 前の停留所の遅れ、の中央値）。この区間を走る間に新しく増えた分だけで、遅れ中央値（積み重ね）とは別の数です。</li>' +
       '<li>いずれも車両の位置と時刻表から推定した参考値です。</li></ul></details>' +
       '</div>';
   }
@@ -236,7 +236,7 @@
     t.innerHTML = '<caption class="sr">遅れが増える区間の上位</caption><thead><tr><th scope="col">路線・区間</th><th scope="col">増える遅れ</th><th scope="col">観測</th></tr></thead><tbody>' +
       rows.map(function (s, i) {
         return '<tr class="pick" tabindex="0" data-i="' + i + '"><th scope="row">' + L.esc(s.name) + '<span class="sub">' + L.esc(s.from) + ' → ' + L.esc(s.to) + '</span></th>' +
-          '<td>' + L.fmtDelay(s.median_added_s) + '<span class="sub">時刻表の所要 ' + Math.round(s.sched_run_s / 60 * 10) / 10 + '分</span></td><td>' + s.n + '</td></tr>';
+          '<td>' + L.fmtDelay(s.median_added_s) + '<span class="sub">この区間の時刻表上の所要時間 ' + Math.round(s.sched_run_s / 60 * 10) / 10 + '分</span></td><td>' + s.n + '</td></tr>';
       }).join('') + '</tbody>';
     Array.prototype.forEach.call(t.querySelectorAll('tr.pick'), function (tr) {
       function go() {
