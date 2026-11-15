@@ -581,9 +581,9 @@ export default function App() {
   useAppSteps(
     [
       { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: ps.place.done, auto: ps.place.auto },
+      { id: 'look', title: STEP_META.look.title, hint: '一覧か地図の盛土を選び、型を見る', action: '造成地を選ぶと完了', done: ps.look.done, optional: false },
       { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: ps.rec.done },
       { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: ps.prep.done },
-      { id: 'look', title: STEP_META.look.title, hint: '一覧か地図の盛土を選び、型を見る', action: '造成地を選ぶと完了', done: ps.look.done, optional: false },
       { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今（任意）', action: '写真の境界を動かすと完了', done: ps.compare.done, optional: true },
       { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
     ],
