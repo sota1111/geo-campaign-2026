@@ -48,3 +48,8 @@ footer{padding:8px 16px;font-size:12px;color:#46503f;border-top:1px solid var(--
 /* ③ 記録した結果（ボタンのすぐ下に返す） */
 .recmsg { margin: 8px 0; padding: 8px 10px; border: 2px solid #0b5394; background: #eef5fc; border-radius: 6px; font-size: 14px; }
 .recmsg p { margin: 2px 0; }
+
+button.primary { background: #1a5fb4; color: #fff; border-color: #1a5fb4; font-weight: bold; }
+.review-banner { background: #fff6d6; border: 1px solid #d9b94a; padding: 6px 10px; margin: 6px 0; }
+.review-result { background: #eef5ff; border: 1px solid #9bb8e0; padding: 8px 12px; margin: 8px 0; }
+.review-result table { margin: 4px 0; }

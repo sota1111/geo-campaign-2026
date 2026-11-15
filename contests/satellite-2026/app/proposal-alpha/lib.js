@@ -125,6 +125,42 @@
     return out;
   }
 
+
+  // ---- 記録を重みに反映する見直し ----
+  // 仮置きの規則（根拠のある値ではない）: 区分ごとの「要伐採の率」を、同じ見直し項目で記録された区間全体の率と比べ、
+  // 全体より高ければ重みを上げ、低ければ下げる（倍率は 0〜2 倍、重みは 0〜50 に収める）。
+  // 確認が REVIEW_MIN_N 件に満たない区分、全体の要伐採が0件、初期の重みが0の区分は変えず、理由を返す。
+  const REVIEW_MIN_N = 2, REVIEW_KEYS = ['change', 'terrain', 'facility', 'road'];
+  function proposeWeights(sections, results, weights, minN) {
+    minN = minN || REVIEW_MIN_N;
+    const w = normalizeWeights(weights), next = JSON.parse(JSON.stringify(w)), rows = [];
+    REVIEW_KEYS.forEach((key) => {
+      const st = hitStats(sections, results, key), cats = Object.keys(DEFAULT_WEIGHTS[key]);
+      let N = 0, H = 0; cats.forEach((c) => { if (st[c]) { N += st[c].n; H += st[c].hit; } });
+      cats.forEach((c) => {
+        const o = st[c] || { n: 0, hit: 0 }, from = w[key][c];
+        const row = { key, cat: c, n: o.n, hit: o.hit, from, to: from, reason: '' };
+        if (o.n < minN) row.reason = '確認が' + o.n + '件で、' + minN + '件に満たない';
+        else if (H === 0) row.reason = '要伐採が1件もなく、区分どうしの違いが出ない';
+        else if (from === 0) row.reason = '初期の重みが0のため、倍率をかけても0';
+        else {
+          const f = Math.max(0, Math.min(2, (o.hit / o.n) / (H / N)));
+          row.to = Math.max(0, Math.min(50, Math.round(from * f)));
+          if (row.to === from) row.reason = '要伐採の率が全体と同じで、重みは変わらない';
+        }
+        next[key][c] = row.to; rows.push(row);
+      });
+    });
+    return { weights: next, rows, changed: rows.some((r) => r.to !== r.from) };
+  }
+  // 重みを変える前後で、点数・順位が変わった区間を返す
+  function scoreDiff(sections, wBefore, wAfter, refYear, results, satOnly) {
+    const a = rank(sections, wBefore, refYear, results, satOnly), b = rank(sections, wAfter, refYear, results, satOnly);
+    const ra = {}; a.forEach((s) => (ra[s.id] = s));
+    return b.filter((s) => ra[s.id].score !== s.score || ra[s.id].rank !== s.rank)
+      .map((s) => ({ id: s.id, before: ra[s.id].score, after: s.score, rankBefore: ra[s.id].rank, rankAfter: s.rank }));
+  }
+
   function csvCell(v) {
     let s = v == null ? '' : String(v);
     if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // 表計算ソフトで数式として解釈されないようにする
@@ -199,6 +235,6 @@
     return Object.assign({ lengthM: total, bufferCells: k, bufferUsedM: k * cellM, insideShare: allSamples ? allInside / allSamples : 0 }, whole, { chunks });
   }
 
-  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults };
+  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults, proposeWeights, scoreDiff, REVIEW_MIN_N };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TreeLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

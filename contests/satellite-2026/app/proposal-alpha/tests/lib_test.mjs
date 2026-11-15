@@ -129,4 +129,34 @@ t('実データ: 例の線で集計でき、結果が範囲内', () => {
   assert.ok(r.chunks.length >= 8);
   assert.ok(r.max >= 15 && r.tallShare > 0.1, "例の線は高木のある所を通る");
 });
+t('見直し: 記録が無ければ重みも点数も変わらず、理由が「確認0件」', () => {
+  const pr = L.proposeWeights(D.sections, [], L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, false);
+  assert.ok(pr.rows.every((r) => r.reason));
+  assert.deepEqual(L.scoreDiff(D.sections, L.DEFAULT_WEIGHTS, pr.weights, D.refYear, []), []);
+});
+t('見直し: 要伐採が0件なら変えず、理由を返す', () => {
+  const res = ['F1-01', 'F1-02', 'F1-05'].map((id) => ({ siteId: id, result: '問題なし', date: '2026-10-01' }));
+  const pr = L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, false);
+  assert.ok(pr.rows.find((r) => r.cat === '平地').reason.includes('要伐採が1件もなく'));
+});
+t('見直し: 区分で要伐採の率が違えば重みが動き、点数・順位の前後が出る', () => {
+  // 地形: 斜面2件（F1-02 問題なし・F2-03 要伐採）、谷筋2件（F1-03・F2-04 とも要伐採）→ 谷筋の率が全体より高く、斜面は低い
+  const res = [['F1-02', '問題なし'], ['F2-03', '要伐採'], ['F1-03', '要伐採'], ['F2-04', '要伐採']].map((a) => ({ siteId: a[0], result: a[1], date: '2026-10-01' }));
+  const pr = L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS);
+  assert.equal(pr.changed, true);
+  const ter = (c) => pr.rows.find((r) => r.key === 'terrain' && r.cat === c);
+  assert.equal(ter('谷筋・急斜面').n, 2); assert.equal(ter('谷筋・急斜面').hit, 2);
+  assert.ok(ter('谷筋・急斜面').to > 15 && ter('斜面').to < 8, JSON.stringify([ter('谷筋・急斜面'), ter('斜面')]));
+  assert.ok(ter('平地').reason, '平地は確認0件で変えない');
+  const diff = L.scoreDiff(D.sections, L.DEFAULT_WEIGHTS, pr.weights, D.refYear, res);
+  const d = diff.find((x) => x.id === 'F1-03');
+  assert.ok(d && d.after > d.before, '谷筋の区間は点数が上がる');
+  assert.ok(diff.every((x) => x.before !== x.after || x.rankBefore !== x.rankAfter));
+  // 初期の重みから計算し直すので、結果は何度でも同じ
+  assert.deepEqual(L.proposeWeights(D.sections, res, L.DEFAULT_WEIGHTS).weights, pr.weights);
+  // 重みは 0〜50 に収まる
+  Object.values(pr.weights.terrain).forEach((v) => assert.ok(v >= 0 && v <= 50));
+});
 console.log(`\n${n} tests passed`);

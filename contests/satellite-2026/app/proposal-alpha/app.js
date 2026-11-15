@@ -12,7 +12,7 @@
   // 保存データは古い形式・空・壊れていることがあるので、読み込み時に必ず整えてから使う
   const loadResults = () => L.sanitizeResults(load(KEY_R, []));
   const loadWeights = () => L.normalizeWeights(load(KEY_W, null));
-  const state = { results: loadResults(), weights: loadWeights(), sel: null, satOnly: false, tuneKey: 'change', line: [], cur: null };
+  const state = { results: loadResults(), weights: loadWeights(), sel: null, satOnly: false, tuneKey: 'change', line: [], cur: null, review: null };
   const D = SAMPLE;
   // 基準年は開いた年（サンプルの伐採年は固定値なので、年が進めば経過年数も進む）。日付は日本時間で扱う
   const REF_YEAR = +new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).slice(0, 4) || new Date().getFullYear();
@@ -21,10 +21,14 @@
     state.ranked = L.rank(D.sections, state.weights, REF_YEAR, state.results, state.satOnly);
     const sat = L.rank(D.sections, state.weights, REF_YEAR, state.results, true);
     state.satRank = {}; sat.forEach((s) => (state.satRank[s.id] = s.rank));
+    // 初期の重みでの点数（見直し後の点数と並べて見せるため）
+    const base = L.rank(D.sections, L.DEFAULT_WEIGHTS, REF_YEAR, state.results, state.satOnly);
+    state.base = {}; base.forEach((s) => (state.base[s.id] = s.score));
     const both = state.satOnly ? L.rank(D.sections, state.weights, REF_YEAR, state.results, false) : state.ranked;
     state.fullRank = {}; both.forEach((s) => (state.fullRank[s.id] = s.rank));
   }
   const saveResults = () => localStorage.setItem(KEY_R, JSON.stringify(state.results));
+  const weightsChanged = () => JSON.stringify(state.weights) !== JSON.stringify(L.normalizeWeights(null));
   const resClass = (r) => 'r' + Math.max(0, L.RESULTS.indexOf(r));
 
   function download(name, text) {
@@ -46,9 +50,16 @@
     $('#ledger tbody').innerHTML = rows.map((s) => {
       const latest = s.latest ? '<span class="tag ' + resClass(s.latest.result) + '">' + esc(s.latest.result) + '</span> ' + esc(s.latest.date) : '未確認';
       const sel = s.id === state.sel ? ' class="sel"' : '';
-      return '<tr data-id="' + s.id + '"' + sel + '><td>' + s.rank + '</td><td>' + s.score + '（' + s.satScore + ' / ' + s.opScore + '）' + (s.missing && s.missing.length ? ' <span class="tag r1" title="' + esc(s.missing.join('・')) + 'が欠損">欠損あり</span>' : '') + '</td><td>' + s.id + '</td><td>' + (s.p90 == null ? '不明' : s.p90) + '</td><td>' + (s.tallPct == null ? '不明' : s.tallPct + '%') + '</td><td>' + esc(s.change) + '</td><td>' + esc(s.terrain) + '</td><td>' + esc(facs(s)) + '</td><td>' + state.satRank[s.id] + '位</td><td>' + latest + '</td></tr>';
+      return '<tr data-id="' + s.id + '"' + sel + '><td>' + s.rank + '</td><td>' + s.score + '（' + s.satScore + ' / ' + s.opScore + '）' + (weightsChanged() && state.base[s.id] !== s.score ? '<br><small class="chg">見直し後。初期 ' + state.base[s.id] + ' → ' + s.score + '</small>' : '') + (s.missing && s.missing.length ? ' <span class="tag r1" title="' + esc(s.missing.join('・')) + 'が欠損">欠損あり</span>' : '') + '</td><td>' + s.id + '</td><td>' + (s.p90 == null ? '不明' : s.p90) + '</td><td>' + (s.tallPct == null ? '不明' : s.tallPct + '%') + '</td><td>' + esc(s.change) + '</td><td>' + esc(s.terrain) + '</td><td>' + esc(facs(s)) + '</td><td>' + state.satRank[s.id] + '位</td><td>' + latest + '</td></tr>';
     }).join('') || '<tr><td colspan="10">該当なし</td></tr>';
     $('#count').textContent = rows.length + '区間（架空）を、' + (state.satOnly ? '衛星・公開データ由来の点数だけ' : '事業者データを重ねた点数') + 'の高い順に表示。「衛星のみなら」は事業者データを重ねない場合の順位。';
+    const rb = $('#review-banner');
+    rb.hidden = !weightsChanged();
+    if (weightsChanged()) {
+      const n = Object.keys(state.base).filter((id) => state.base[id] !== state.ranked.find((x) => x.id === id).score).length;
+      rb.innerHTML = '<b>この表と地図の点数は、④で重みを見直した後の点数です。</b>初期の重みから点数が変わった区間は' + n + '区間（表の「見直し後。初期 ○ → ○」）。前後の一覧は <a href="#" id="lnk-review">④で見る</a>。';
+      $('#lnk-review').onclick = (e) => { e.preventDefault(); show('tune'); };
+    }
     renderMap(rows); renderDetail();
   }
   function renderMap(rows) {
@@ -75,7 +86,7 @@
     if (!s) { el.innerHTML = '<p>左の表か地図で区間を選ぶと、点数の内訳と確認の記録が見られます。</p>'; return; }
     const hist = state.results.filter((r) => r.siteId === s.id).reverse();
     const histH = hist.length ? hist.map((r) => esc(r.date) + ' ' + esc(r.result) + (r.memo ? '（' + esc(r.memo) + '）' : '')).join('<br>') : 'なし';
-    el.innerHTML = '<h2>' + esc(s.id) + '（順位 ' + s.rank + '／点数 ' + s.score + '）</h2><dl>' +
+    el.innerHTML = '<h2>' + esc(s.id) + '（順位 ' + s.rank + '／点数 ' + s.score + (weightsChanged() && state.base[s.id] !== s.score ? '。見直し後・初期は ' + state.base[s.id] : '') + '）</h2><dl>' +
       '<dt>区間</dt><dd>' + esc(s.name) + '（延長 約' + s.lenM + ' m。すべて架空）</dd>' +
       '<dt>点数の内訳</dt><dd>' + partsHtml(s) + '</dd>' +
       '<dt>見方</dt><dd>衛星・公開データ由来 ' + s.satScore + ' 点、事業者・自治体のデータ由来 ' + s.opScore + ' 点。樹高の値は区間の相対比較用で、<b>電線との離隔距離ではありません</b>。</dd>' +
@@ -124,9 +135,48 @@
       return '<tr><td>' + esc(c) + '</td><td>' + o.n + '</td><td>' + o.hit + (o.n >= 5 ? '（' + Math.round(100 * o.hit / o.n) + '%）' : '（件数が少なく率は出しません）') + '</td><td>' + dw[c] + '</td><td><input type="number" min="0" max="50" data-c="' + esc(c) + '" value="' + state.weights[key][c] + '" aria-label="' + esc(c) + 'の重み"></td></tr>';
     }).join('');
     document.querySelectorAll('#hit-table input').forEach((i) => (i.onchange = () => {
+      const before = clone(state.weights);
       state.weights[key][i.dataset.c] = Math.max(0, Math.min(50, +i.value || 0));
-      localStorage.setItem(KEY_W, JSON.stringify(state.weights)); recompute(); renderLedger();
+      applyWeights(before, state.weights, { kind: 'manual', label: TUNE_KEYS[key] + '「' + i.dataset.c + '」の重みを ' + before[key][i.dataset.c] + ' → ' + state.weights[key][i.dataset.c] + ' に手で変更' });
     }));
+    renderReview();
+  }
+  // 重みを確定し、前後の点数を state.review に残して画面に出す
+  function applyWeights(before, after, info) {
+    const diff = L.scoreDiff(D.sections, before, after, REF_YEAR, state.results, state.satOnly);
+    state.weights = clone(after);
+    localStorage.setItem(KEY_W, JSON.stringify(state.weights)); recompute();
+    state.review = Object.assign({ diff, satOnly: state.satOnly }, info);
+    renderLedger(); renderTune();
+  }
+  function applyReview() {
+    const prop = L.proposeWeights(D.sections, state.results, L.DEFAULT_WEIGHTS);  // 毎回、初期の重みから計算する（何度押しても同じ結果）
+    const nRec = new Set(state.results.map((r) => r.siteId).filter((id) => D.sections.some((x) => x.id === id))).size;
+    applyWeights(state.weights, prop.weights, { kind: 'apply', rows: prop.rows, nRec });
+  }
+  function renderReview() {
+    const el = $('#review-result'), r = state.review;
+    if (!r) { el.hidden = true; return; }
+    el.hidden = false;
+    const mode = r.satOnly ? '（衛星・公開データ由来の点数）' : '';
+    const diffH = r.diff.length
+      ? '<p><b>点数が変わった区間（' + r.diff.length + '区間）' + mode + '</b>。①の表と地図は、この見直し後の点数です。</p><table><thead><tr><th>区間</th><th>点数（前 → 後）</th><th>順位（前 → 後）</th></tr></thead><tbody>' +
+        r.diff.map((d) => '<tr><td>' + esc(d.id) + '</td><td>' + d.before + ' 点 → <b>' + d.after + ' 点</b></td><td>' + d.rankBefore + ' 位 → ' + d.rankAfter + ' 位</td></tr>').join('') + '</tbody></table>' +
+        '<p><button type="button" id="btn-review-to-ledger" class="primary">① 見直し後の点数を地図・一覧で見る</button></p>'
+      : '<p><b>どの区間の点数も変わりませんでした。</b></p>';
+    let why = '';
+    if (r.kind === 'apply') {
+      const ch = r.rows.filter((x) => x.to !== x.from);
+      const chH = ch.length ? '<p>重みを変えた区分:</p><ul>' + ch.map((x) => '<li>' + esc(TUNE_KEYS[x.key]) + '「' + esc(x.cat) + '」 ' + x.n + '件中' + x.hit + '件が要伐採 → 重み ' + x.from + ' → <b>' + x.to + '</b></li>').join('') + '</ul>' : '';
+      const nochg = r.rows.filter((x) => x.to === x.from && x.n > 0);
+      const noH = nochg.length && !ch.length ? '<p>重みを変えられなかった理由（記録のある区分）:</p><ul>' + nochg.map((x) => '<li>' + esc(TUNE_KEYS[x.key]) + '「' + esc(x.cat) + '」（' + x.n + '件中' + x.hit + '件が要伐採）: ' + esc(x.reason) + '</li>').join('') + '</ul>' : '';
+      const none = r.nRec === 0 ? '<p><b>点数は変わりませんでした。理由: 現地確認の記録がまだありません。</b>③で記録を保存してから、もう一度押してください。</p>' : '';
+      const few = !ch.length && r.nRec > 0 ? '<p><b>記録（' + r.nRec + '区間分）だけでは、重みを変えるのに十分ではありません。</b>同じ区分（例: 地形「斜面」）の区間を' + L.REVIEW_MIN_N + '件以上記録し、要伐採とそれ以外が混ざると重みが動きます。</p>' : '';
+      const done = ch.length && !r.diff.length ? '<p>この記録に対する重みはすでに反映済みなので、前回から点数は変わりません（初期値からの変化は①の表で見られます）。</p>' : '';
+      why = done + none + few + chH + noH + (ch.length ? '<p class="note">規則は仮置きです（根拠のある値ではありません）: 区分の要伐採の率を、記録した区間全体の率と比べ、高ければ重みを上げ、低ければ下げます（0〜2倍）。確認が' + L.REVIEW_MIN_N + '件に満たない区分は変えません。</p>' : '');
+    } else why = '<p>' + esc(r.label) + '。</p>';
+    el.innerHTML = '<h2 style="font-size:16px;margin:0 0 4px">見直しの結果</h2>' + why + diffH;
+    const b = $('#btn-review-to-ledger'); if (b) b.onclick = () => show('ledger');
   }
 
   // ---- ⑤ 実データ（樹高マップ） ----
@@ -228,21 +278,22 @@
       const sec = state.ranked.find((x) => x.id === rec.siteId);
       $('#rec-msg-text').textContent = '✔ ' + rec.siteId + ' の確認結果「' + rec.result + '」を記録しました（下の一覧の先頭）。' +
         (dup ? '同じ区間・同じ日・同じ結果の記録がすでにあります。重複なら下の一覧で確かめてください。' : '') +
-        '点数（いま ' + (sec ? sec.score : '—') + ' 点）は記録だけでは変わりません。';
+        '点数（いま ' + (sec ? sec.score : '—') + ' 点）は、記録しただけでは変わりません。次の一手は下の青いボタンです。';
       // 計画のうちまだ記録していない区間へ選択を進める（同じ区間を続けて二重に記録しないため）
       const done = new Set(state.results.map((r) => r.siteId));
       const left = planData().route.map((x) => x.id).filter((id) => !done.has(id));
       if (left.length) { $('#r-site').value = left[0]; }
       $('#rec-msg-text').textContent += left.length
-        ? '計画の残り ' + left.length + ' 区間（次は ' + left[0] + '。区間欄を切り替えました）。記録を集めてから、④点数の見直しで重みを変えると点数と順位が更新されます。'
-        : '計画の区間はすべて記録しました。④点数の見直しで記録の集計を見て重みを変えると、点数と順位が更新されます。';
+        ? '続けて記録するなら、次は ' + left.length + ' 区間（' + left[0] + '。区間欄を切り替えました）。区間を記録し終えたら、青いボタンで④へ進み、記録を点数に反映します。'
+        : '計画の区間はすべて記録しました。青いボタンで④へ進み、記録を点数に反映します。';
       $('#rec-msg').hidden = false;
     };
-    $('#btn-rec-to-tune').onclick = () => show('tune');
+    $('#btn-rec-to-tune').onclick = () => { show('tune'); applyReview(); };
+    $('#btn-apply-review').onclick = applyReview;
     $('#btn-plan-to-rec').onclick = () => show('record');
     $('#btn-reset').onclick = () => { if (confirm('記録を全て消しますか')) { state.results = []; localStorage.removeItem(KEY_R); recompute(); renderRecTable(); } };
     $('#t-key').onchange = () => { state.tuneKey = $('#t-key').value; renderTune(); };
-    $('#btn-weights-reset').onclick = () => { state.weights = clone(L.DEFAULT_WEIGHTS); localStorage.removeItem(KEY_W); recompute(); renderTune(); renderLedger(); };
+    $('#btn-weights-reset').onclick = () => { state.weights = clone(L.DEFAULT_WEIGHTS); localStorage.removeItem(KEY_W); state.review = null; recompute(); renderTune(); renderLedger(); };
     const note = '架空サンプル（実在の配電線・解析結果ではありません）';
     $('#btn-rec-csv').onclick = () => download('field-check-records.csv', L.toCSV(['section_id', 'check_date', 'checker', 'result', 'memo', 'data_note'], state.results.map((r) => [r.siteId, r.date, r.who, r.result, r.memo, note])));
     $('#btn-ledger-csv').onclick = () => download('ledger.csv', L.toCSV(['rank', 'score', 'sat_score', 'operator_score', 'id', 'p90_m', 'tall_pct', 'change', 'terrain', 'customers', 'facility', 'road', 'latest_result', 'data_note'], state.ranked.map((s) => [s.rank, s.score, s.satScore, s.opScore, s.id, s.p90, s.tallPct, s.change, s.terrain, s.customers, s.facility, s.road, s.latest ? s.latest.result : '', note])));
@@ -267,6 +318,6 @@
     window.addEventListener('storage', (e) => { if (e.key === KEY_R || e.key === null) { state.results = loadResults(); recompute(); renderRecTable(); renderLedger(); } });
     renderLedger();
   }
-  window.App = { state, show, recompute, renderLedger, renderPlan, renderRecTable, renderReal, DS: { sample: D, real: CHM }, RX, PRESET };
+  window.App = { applyReview, state, show, recompute, renderLedger, renderPlan, renderRecTable, renderReal, DS: { sample: D, real: CHM }, RX, PRESET };
   init();
 })();
