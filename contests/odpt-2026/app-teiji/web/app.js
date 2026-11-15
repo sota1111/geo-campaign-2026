@@ -5,7 +5,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var q = /[?&]data=([a-z0-9-]+)/.exec(location.search);
   var DATA = q ? q[1] : 'data';
-  var STATE = { index: null, op: null, band: 'all', map: null, ready: false, popup: null };
+  var STATE = { index: null, op: null, band: 'all', map: null, ready: false, popup: null, requested: null };
 
   function getJson(url) {
     return fetch(url, { cache: 'no-cache' }).then(function (r) {
@@ -29,7 +29,7 @@
       STATE.index = idx;
       var sel = $('op');
       sel.innerHTML = idx.operators.map(function (o) {
-        return '<option value="' + L.esc(o.id) + '">' + L.esc(o.name) + (o.stop_estimates ? '' : '（データ蓄積前）') + '</option>';
+        return '<option value="' + L.esc(o.id) + '">' + L.esc(o.name) + '（' + L.esc(o.status || '蓄積中') + '）' + '</option>';
       }).join('');
       sel.addEventListener('change', function () { loadOp(sel.value); });
       $('band').innerHTML = L.BANDS.map(function (b) {
@@ -49,7 +49,7 @@
         if (STATE.op) download('teiji_segments_' + STATE.op.id + '_' + STATE.band + '.csv', L.segmentsCsv(STATE.op, STATE.band));
       });
       initMap();
-      var first = idx.operators.filter(function (o) { return o.stop_estimates > 0; })[0] || idx.operators[0];
+      var first = idx.operators.filter(function (o) { return o.status === '集計あり'; })[0] || idx.operators.filter(function (o) { return o.stop_estimates > 0; })[0] || idx.operators[0];
       if (first) { sel.value = first.id; loadOp(first.id); }
       else $('period').textContent = '公開できる集計がまだありません。取得と集計（README の手順）を実行してください。';
     }).catch(function (e) {
@@ -58,10 +58,15 @@
   }
 
   function loadOp(id) {
+    STATE.requested = id;
+    STATE.op = null;
+    $('period').textContent = '集計を読み込んでいます…';
+    $('csv-routes').disabled = $('csv-seg').disabled = true;
     getJson(DATA + '/' + encodeURIComponent(id) + '.json').then(function (op) {
+      if (STATE.requested !== id) return;
       STATE.op = op;
       render();
-    }).catch(function (e) { $('period').textContent = '読み込みに失敗: ' + e.message; });
+    }).catch(function (e) { if (STATE.requested === id) $('period').textContent = '読み込みに失敗しました。事業者を選び直してください: ' + e.message; });
   }
 
   function render() {
@@ -71,6 +76,11 @@
     var synth = STATE.index && STATE.index.synthetic ? '<b>【合成データ】実在の事業者・路線・遅れではありません。画面確認用です。</b><br>' : '';
     $('period').innerHTML = synth + '<b>' + L.esc(op.name) + '</b>: ' + L.esc(L.periodText(op)) +
       (op.period.estimated_days && op.period.estimated_days.length < 14 ? '<br>蓄積が短いため、数値は試作段階の参考値です（日数が増えるほど安定します）。' : '');
+    var available = STATE.index.operators.filter(function (o) { return o.status === '集計あり'; }).length;
+    $('period').innerHTML += '<br>集計を表示できる事業者: ' + available + ' / ' + STATE.index.operators.length + '。最終集計: ' + L.esc(STATE.index.generated) + ' JST。自動収集は未設定です。';
+    $('csv-routes').disabled = !op.routes.some(function (r) { return r.band === band; });
+    $('csv-seg').disabled = !op.segments.some(function (r) { return r.band === band; });
+    document.getElementById('layout').classList.toggle('no-segments', !op.segments.some(function (r) { return r.band === band; }));
     renderQuality(op);
     renderRoutes(op, band);
     renderSegments(op, band);
@@ -108,7 +118,7 @@
     var rows = op.segments.filter(function (s) { return s.band === band; }).slice(0, 15);
     var t = $('seg-table');
     if (!rows.length) {
-      t.innerHTML = '<tr><td class="empty">区間の集計はまだありません（同じ区間を8回以上観測すると表示します）。</td></tr>';
+      t.innerHTML = '<tr><td class="empty">区間の集計はまだありません（路線×時間帯で10便・50観測以上、同じ区間で8観測以上が必要です）。</td></tr>';
       return;
     }
     t.innerHTML = '<caption class="sr">遅れが増える区間の上位</caption><thead><tr><th scope="col">路線・区間</th><th scope="col">増える遅れ</th><th scope="col">観測</th></tr></thead><tbody>' +
@@ -130,6 +140,7 @@
   function renderAbout(op) {
     var p = op.params || {};
     $('about-list').innerHTML =
+      '<li>静的時刻表の取得日時（JST）: ' + L.esc(op.static_gtfs_acquired || '記録なし') + '。取得後のダイヤ改正は自動追従しません。</li>' +
       '<li>バス位置・時刻表: ' + L.esc(op.credit) + '（<a href="' + L.esc(op.page) + '" target="_blank" rel="noopener">データセットのページ</a>）。公共交通オープンデータセンター（ODPT）が配信する CC BY 4.0 のデータだけを使っています。</li>' +
       '<li>地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>（国土地理院）。描画: MapLibre GL JS（BSD-3-Clause）。</li>' +
       '<li>遅れの推定: 車両位置を停留所列の折れ線に当てはめ、停留所の通過時刻を線形補間して時刻表と比べます。道路形状（shapes）は使いません。推定の誤差の大きさは検証中で、実データでの精度は確認できていません。停留所に止まっていた時間は到着ではなく「停留所を出た時刻」で時刻表の発車と比べ、観測の間隔が5分を超える所は推定しません。</li>' +
@@ -176,7 +187,9 @@
   }
 
   function drawMap(op, band) {
+    if (STATE.popup) { STATE.popup.remove(); STATE.popup = null; }
     if (!STATE.map || !STATE.ready) return;
+    STATE.map.resize();
     var segs = op.segments.filter(function (s) { return s.band === band; });
     var feats = segs.map(function (s) {
       return { type: 'Feature', properties: { name: s.name, from: s.from, to: s.to, median_added_s: s.median_added_s, n: s.n, color: L.segColor(s.median_added_s) },

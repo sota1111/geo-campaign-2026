@@ -40,3 +40,13 @@ tr.pick:hover { background: #f3f5f8; }
   #map-legend i { width: 14px; margin-right: 3px; }
   #panel { width: 100%; border-left: none; overflow: visible; }
 }
+
+.act:disabled { opacity: .5; cursor: default; }
+@media (min-width: 801px) {
+  #panel { width: 560px; }
+  .no-segments #mapbox { flex: 0 0 28%; }
+  .no-segments #panel { flex: 1; }
+}
+@media (max-width: 800px) {
+  .no-segments #mapbox { position: relative; height: 180px; min-height: 180px; }
+}
