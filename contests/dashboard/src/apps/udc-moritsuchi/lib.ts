@@ -340,7 +340,7 @@ export interface StepState { done: boolean; optional: boolean; auto?: string }
 export function moritsuchiProgress(i: MoritsuchiProgressInput): Record<'place' | 'look' | 'compare' | 'rec' | 'prep', StepState> {
   return {
     place: { done: i.originChosen, optional: false, auto: i.originChosen && i.originIsExample ? '例の地点で設定済み（自宅ではありません）' : undefined },
-    look: { done: i.didLook, optional: true },
+    look: { done: i.didLook, optional: false },
     compare: { done: i.didCompare, optional: true },
     rec: { done: i.addedNow, optional: false },
     prep: { done: i.didPrepare, optional: false },

@@ -576,14 +576,14 @@ export default function App() {
   }
 
   // 左サイドバー（スマホは上部ステッパー）が唯一のナビゲーション。上から順に進めると目的を達成できる
-  // 必須は「場所」「記録」「届け出の準備」の3つ。造成地の確認・昔の写真は確認用の任意（参考）。判定は lib.ts の moritsuchiProgress
+  // 必須は「場所」「近くの盛土を確かめる」「記録」「届け出の準備」の4つ。昔の写真は確認用の任意（参考）。判定は lib.ts の moritsuchiProgress
   const ps = moritsuchiProgress({ originChosen, originIsExample, didLook, didCompare, addedNow, didPrepare })
   useAppSteps(
     [
       { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: ps.place.done, auto: ps.place.auto },
       { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: ps.rec.done },
       { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: ps.prep.done },
-      { id: 'look', title: STEP_META.look.title, hint: '一覧か地図の盛土を選び、型を見る（任意）', action: '造成地を選ぶと完了', done: ps.look.done, optional: true },
+      { id: 'look', title: STEP_META.look.title, hint: '一覧か地図の盛土を選び、型を見る', action: '造成地を選ぶと完了', done: ps.look.done, optional: false },
       { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今（任意）', action: '写真の境界を動かすと完了', done: ps.compare.done, optional: true },
       { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
     ],

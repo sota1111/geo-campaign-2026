@@ -100,21 +100,21 @@ describe('通報文', () => {
 describe('手順の進み具合（moritsuchiProgress）', () => {
   const base: MoritsuchiProgressInput = { originChosen: false, originIsExample: false, didLook: false, didCompare: false, addedNow: false, didPrepare: false }
   const req = (p: ReturnType<typeof moritsuchiProgress>) => Object.values(p).filter((s) => !s.optional)
-  it('必須は場所・記録・届け出の3つ。初期状態は0完了（熱海駅の表示だけでは場所は済にならない）', () => {
+  it('必須は場所・近くの盛土を確かめる・記録・届け出の4つ。初期状態は0完了（熱海駅の表示だけでは場所は済にならない）', () => {
     const p = moritsuchiProgress(base)
-    expect(req(p)).toHaveLength(3)
+    expect(req(p)).toHaveLength(4)
     expect(req(p).filter((s) => s.done)).toHaveLength(0)
   })
-  it('記録して書き出したら、確認用（造成地・昔の写真）を見なくても必須はすべて完了', () => {
-    const p = moritsuchiProgress({ ...base, originChosen: true, addedNow: true, didPrepare: true })
+  it('近くの盛土を選び、記録して書き出したら、昔の写真を見なくても必須はすべて完了', () => {
+    const p = moritsuchiProgress({ ...base, originChosen: true, didLook: true, addedNow: true, didPrepare: true })
     expect(req(p).every((s) => s.done)).toBe(true)
-    expect(p.look.done).toBe(false)
     expect(p.compare.done).toBe(false)
   })
-  it('確認用の手順は完了しても必須に数えない', () => {
-    const p = moritsuchiProgress({ ...base, didLook: true, didCompare: true })
+  it('昔の写真の見比べは任意で、完了しても必須に数えない', () => {
+    const p = moritsuchiProgress({ ...base, didCompare: true })
     expect(req(p).filter((s) => s.done)).toHaveLength(0)
-    expect([p.look, p.compare].every((s) => s.optional)).toBe(true)
+    expect(p.compare.optional).toBe(true)
+    expect(p.look.optional).toBe(false)
   })
   it('起点が熱海駅の例のときだけ「設定済み」と区別。自宅を検索して選んだら付かない。未選択でも付かない', () => {
     expect(moritsuchiProgress({ ...base, originChosen: true, originIsExample: true }).place.auto).toMatch(/例の地点/)
