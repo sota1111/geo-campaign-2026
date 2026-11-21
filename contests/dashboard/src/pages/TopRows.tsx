@@ -70,8 +70,8 @@ function useFitLevel(deps: string, max: number) {
 }
 
 /**
- * コンペカードの表示の優先順位（残す順）: 見出し帯（名前・次の締切・提出可否）→ 概要 → 審査基準 → 総司令官の判断待ち → 次にやること → 主なルール → 提出可能数 → このコンペに出すアプリの件数。
- * 入りきらないときは下位から削る（行数 → 「ほか n 件」 → 非表示）。概要と審査基準は最後まで残し、削るのは最終手段（概要 3→2→1 行、審査基準 全項目→2→1 行）。
+ * コンペカードの表示の優先順位（残す順）: 見出し帯（名前・次の締切・提出可否）→ 概要 → 審査基準 → 賞金 → 提出予定の合計 → 総司令官の判断待ち → 次にやること → 主なルール → 提出可能数 → 部門ごとの内訳・出すアプリ。
+ * 入りきらないときは下位から削る（行数 → 「ほか n 件」 → 非表示）。概要と審査基準は最後まで残し、行数を減らすのも最後（概要 3→2、審査基準 3→2→1 行）。
  * lv: -1 = 全項目・全文（幅 1024px 未満で縦に積むとき）、0 = 全項目（各2行まで）、1 以上 = 下位から削る。
  */
 export const CARD_MAX_LV = 20
@@ -80,26 +80,26 @@ export function cardPlan(lv: number) {
   const all = lv < 0
   return {
     c2,
-    // 下位から: 件数の行(1) → 提出可能数(2〜4) → 主なルール(5〜7) → 次にやること(8〜10) → 判断待ち(11〜14) → 審査基準・概要の行数(15〜19)
+    // 下位から: 出すアプリ(1) → 部門ごとの行(2。合計の1行に畳む) → 提出可能数(3〜5) → 主なルール(6〜8) → 次にやること(9〜11) → 判断待ち(12〜15) → 提出予定の合計(16) → 概要・審査基準の行数(17〜20)
     hideTargets: lv >= 1,
-    // イチBiz の部門ごとの「予定・選んだ」は、最後の手段（審査基準を1行にする段の次）でだけ畳む。合計の行は残る
-    hideDiv: lv >= 20,
-    nLimits: all ? 99 : lv >= 2 ? 1 : 2,
-    limitsClamp: lv >= 3 ? 'line-clamp-1' : c2,
-    hideLimits: lv >= 4,
-    nRules: all ? 99 : lv >= 5 ? 1 : 2,
-    rulesClamp: lv >= 6 ? 'line-clamp-1' : c2,
-    hideRules: lv >= 7,
-    nNext: all ? 99 : lv >= 8 ? 1 : 2,
-    hideNext: lv >= 10,
-    nextClamp: lv >= 9 ? 'line-clamp-1' : c2,
-    nAsks: all ? 99 : lv >= 12 ? 1 : lv >= 11 ? 2 : 3,
-    hideAsks: lv >= 14,
-    cl: lv >= 13 ? 'line-clamp-1' : c2,
-    // 概要は最大3行（最後の手段でだけ2行）、審査基準は全項目（最後の手段でだけ1行ずつ省略）
-    sumClamp: all ? '' : lv >= 16 ? 'line-clamp-2' : 'line-clamp-3',
+    hideDiv: lv >= 2,
+    nLimits: all ? 99 : lv >= 3 ? 1 : 2,
+    limitsClamp: lv >= 4 ? 'line-clamp-1' : c2,
+    hideLimits: lv >= 5,
+    nRules: all ? 99 : lv >= 6 ? 1 : 2,
+    rulesClamp: lv >= 7 ? 'line-clamp-1' : c2,
+    hideRules: lv >= 8,
+    nNext: all ? 99 : lv >= 9 ? 1 : 2,
+    nextClamp: lv >= 10 ? 'line-clamp-1' : c2,
+    hideNext: lv >= 11,
+    nAsks: all ? 99 : lv >= 13 ? 1 : lv >= 12 ? 2 : 3,
+    cl: lv >= 14 ? 'line-clamp-1' : c2,
+    hideAsks: lv >= 15,
+    hidePlan: lv >= 16,
+    // 概要は最大3行（最後の手段でだけ2行）、審査基準は全項目（最後の手段でだけ2行→1行）
+    sumClamp: all ? '' : lv >= 17 ? 'line-clamp-2' : 'line-clamp-3',
     hideSummary: false,
-    critClamp: all ? '' : lv >= 19 ? 'line-clamp-1' : lv >= 15 ? 'line-clamp-2' : 'line-clamp-3',
+    critClamp: all ? '' : lv >= 20 ? 'line-clamp-1' : lv >= 18 ? 'line-clamp-2' : 'line-clamp-3',
     hideCrit: false,
   }
 }
@@ -129,7 +129,7 @@ export function ContestTopCard({
   const fit = useFit()
   const { ref: regRef, lv: lv0 } = useFitLevel(`${info.id}|${fit}|${selected}|${appsForContest(targets, info.id).length}|${planView(info.id, targets).state}`, CARD_MAX_LV + 1)
   const pl = cardPlan(fit ? lv0 - 1 : -1)
-  const { hideSummary, sumClamp, hideCrit, critClamp, hideRules, nRules, rulesClamp, hideLimits, nLimits, limitsClamp, hideTargets, nAsks, nNext, cl, hideNext, nextClamp, hideAsks } = pl
+  const { hideSummary, sumClamp, hideCrit, critClamp, hideRules, nRules, rulesClamp, hideLimits, nLimits, limitsClamp, hideTargets, nAsks, nNext, cl, hideNext, nextClamp, hideAsks, hidePlan } = pl
   const more = otherNextCount(info.id)
   const cols = columnsOf(info.id)
   const chosen = appsForContest(targets, info.id)
@@ -155,15 +155,13 @@ export function ContestTopCard({
       </h3>
       <div className="flex min-h-0 flex-1 flex-col bg-white/70 px-2.5 py-1 text-[0.8125rem] leading-snug">
       <div ref={regRef} className={`flex min-h-0 flex-1 flex-col justify-between gap-1 overflow-hidden`}>
-        <p className="flex flex-wrap items-center gap-x-2" data-testid="row-deadline">
-          <span className="whitespace-nowrap">
-            次の締切 <span className="font-bold">{nd.text}</span>
-            <Remaining at={nd.at} />
-          </span>
+        <p className="shrink-0 truncate" data-testid="row-deadline" title={`次の締切 ${nd.text}${info.deadlines.length > 1 ? `（${nd.label}）` : ''}`}>
+          次の締切 <span className="font-bold">{nd.text}</span>
+          <Remaining at={nd.at} />
           {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
         </p>
         <PrizeLine info={info} />
-        <p className="flex flex-wrap items-center gap-x-2">
+        <p className="shrink-0 truncate">
           <span className="font-bold" data-testid="row-status" title={st.gap}>
             <span aria-hidden>▲ </span>
             {STATUS_LABEL[info.id]}
@@ -211,8 +209,8 @@ export function ContestTopCard({
           items={info.limits.slice(0, nLimits).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（未確認）'}{r.text}</> }))}
           clamp={limitsClamp}
         />}
-        <PlanLine view={plan} contestId={info.id} hideParts={info.id === 'ichibiz-2026'} />
-        {info.id === 'ichibiz-2026' && !pl.hideDiv && (
+        {!hidePlan && <PlanLine view={plan} contestId={info.id} hideParts={info.id === 'ichibiz-2026'} />}
+        {info.id === 'ichibiz-2026' && !pl.hideDiv && !hidePlan && (
           <PlanDivisions view={plan} contestId={info.id} title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')} />
         )}
         {!hideTargets && (
@@ -368,13 +366,15 @@ function bestCell(appId: string, contest: ContestId) {
  * 提出先の選択（チェック欄・× の理由・注意の全文・判定の理由）は、カード内の「提出先を選ぶ」で開く小さなポップオーバーに置く。
  */
 export function AppFitCard({
-  a, rank, contest, targets, onToggle, cautions,
+  a, rank, contest, targets, onToggle, onPopover, cautions,
 }: {
   a: AppMeta
   rank: number
   contest: ContestId | null
   targets: Targets
   onToggle: (appId: string, columnId: string) => void
+  /** 提出先のポップオーバーを開いた・閉じた（閉じたときに並べ替えるため） */
+  onPopover?: (appId: string, open: boolean) => void
   cautions: ActiveCaution[]
 }) {
   const isNew = isNewPlan(a)
@@ -400,7 +400,7 @@ export function AppFitCard({
       className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${isNew ? 'border-slate-500' : 'border-slate-300'}`}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 text-xs">
-        <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title="いまの並びでの位置（提出先を選んだ候補が先）">{rank}位</span>
+        <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title={`いまの並びの ${rank} 番目です（評価の順位ではありません。提出先を選んだ候補が先に並びます）`}>{rank}番目</span>
         {isNew ? (
           <span className="rounded bg-slate-800 px-1.5 font-bold text-white" data-testid="new-plan-tag" title={NEW_PLAN_LABEL}>新しい案</span>
         ) : (
@@ -429,21 +429,27 @@ export function AppFitCard({
       </p>}
       <ul className={`grid shrink-0 gap-y-0.5 min-[1100px]:grid-cols-2 min-[1100px]:gap-x-1 ${lv >= 6 ? 'grid-cols-2 gap-x-1' : 'grid-cols-1'}`} aria-label="出せるコンペ（◎このコンペ向け ○出せる △条件付き ×出せない ？要確認）">
         {MINI.map((m) => {
-          const cell = bestCell(a.id, m.id)
+          // 選んだ部門があれば、その部門の判定を出す（なければ部門の中で最もよい判定）
+          const pickedCols = columnsOf(m.id).filter((c) => chosen.includes(c.id))
+          const cell = pickedCols.length
+            ? pickedCols.map((c) => cellOf(a.id, c.id)).filter((c): c is NonNullable<typeof c> => !!c).sort((x, y) => y.score - x.score)[0]
+            : bestCell(a.id, m.id)
+          const divName = pickedCols.length > 1 ? `${pickedCols.length}部門` : pickedCols.length === 1 && columnsOf(m.id).length > 1 ? columnShort(pickedCols[0]).replace(/^イチBiz /, '') : ''
           const emph = contest === m.id
-          const picked = columnsOf(m.id).some((c) => chosen.includes(c.id))
+          const picked = pickedCols.length > 0
           return (
             <li
               key={m.id}
               data-fit-mini={m.id}
               data-emph={emph ? 'true' : undefined}
               className={`flex items-center gap-1 rounded px-1 ${picked ? 'border-2 border-slate-900 bg-slate-900 font-bold text-white' : emph ? 'border-2 border-slate-900 bg-yellow-50 font-bold' : 'border border-slate-300'}`}
-              title={cell ? `${m.label}: ${cell.mark} ${MARK_WORD[cell.mark]}` : m.label}
+              title={cell ? `${m.label}${pickedCols.length ? `（選んだ: ${pickedCols.map(columnShort).join('、')}）` : ''}: ${cell.mark} ${MARK_WORD[cell.mark]}` : m.label}
             >
               <span className="shrink-0">{picked && <span aria-hidden>✓</span>}{!picked && emph && <span aria-hidden>▶</span>}{m.label}{picked && <span className="sr-only">（選択済み）</span>}</span>
               <span className="min-w-0 truncate" data-testid={`mini-mark-${a.id}-${m.id}`}>
+                {divName && <span className="text-[0.75rem]">{divName} </span>}
                 <span className="font-bold">{cell?.mark ?? '－'}</span>
-                <span className="text-[0.75rem]"> {cell ? SHORT_WORD[cell.mark] : ''}</span>
+                <span className="text-[0.75rem] max-[1099px]:hidden"> {cell ? SHORT_WORD[cell.mark] : ''}</span>
               </span>
             </li>
           )
@@ -478,7 +484,7 @@ export function AppFitCard({
         >
           アプリを開く<ArrowRight className="size-4 max-xl:hidden" aria-hidden />
         </a>
-        <FitPopover a={a} contest={contest} chosen={chosen} onToggle={onToggle} cautions={cautions} />
+        <FitPopover a={a} contest={contest} chosen={chosen} onToggle={onToggle} onPopover={onPopover} cautions={cautions} />
         {cautions.length > 0 && (
           <span className="rounded border border-amber-700 bg-amber-50 px-1 text-xs font-bold text-amber-950" data-testid={`caution-tag-${a.id}`}><span aria-hidden>▲ </span>注意</span>
         )}
@@ -491,9 +497,10 @@ export function AppFitCard({
 /** 見出し帯の賞金の要約（常に表示）。「内訳」を押すと、賞の名前・金額・件数と出典が小さな表示で開く */
 function PrizeLine({ info }: { info: ContestInfo }) {
   const pr = info.prize
+  const cname = CONTESTS.find((c) => c.id === info.id)?.name ?? info.id
   return (
-    <p className="flex flex-wrap items-center gap-x-2" data-testid="row-prize">
-      <span className="min-w-0">
+    <p className="flex shrink-0 flex-nowrap items-center gap-x-2" data-testid="row-prize">
+      <span className="min-w-0 flex-1 truncate" title={`賞金 ${pr.summary}`}>
         <span className="font-bold">賞金 </span>
         <span data-testid="prize-summary">{pr.summary}</span>
       </span>
@@ -514,8 +521,10 @@ function PrizeLine({ info }: { info: ContestInfo }) {
             sideOffset={4}
             collisionPadding={8}
             data-testid="prize-popover"
+            aria-label={`${cname}の賞金の内訳`}
             className="z-50 max-h-[70vh] w-[22rem] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-md border-2 border-slate-900 bg-white p-2 text-xs leading-snug text-slate-900 shadow-lg"
           >
+            <p className="mb-1 text-sm font-bold">{cname}　賞金の内訳</p>
             <PrizeBreakdown prize={pr} />
             <PopoverPrimitive.Close className="mt-1 min-h-8 rounded-md border-2 border-slate-900 bg-white px-2 text-xs font-bold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-slate-900">
               閉じる
@@ -528,8 +537,8 @@ function PrizeLine({ info }: { info: ContestInfo }) {
 }
 
 function FitPopover({
-  a, contest, chosen, onToggle, cautions,
-}: { a: AppMeta; contest: ContestId | null; chosen: string[]; onToggle: (appId: string, columnId: string) => void; cautions: ActiveCaution[] }) {
+  a, contest, chosen, onToggle, onPopover, cautions,
+}: { a: AppMeta; contest: ContestId | null; chosen: string[]; onToggle: (appId: string, columnId: string) => void; onPopover?: (appId: string, open: boolean) => void; cautions: ActiveCaution[] }) {
   const plan = planOf(a)
   const hl = contest ? columnsOf(contest).map((c) => c.id) : []
   const cols = FIT_COLUMNS.filter((col) => cellOf(a.id, col.id))
@@ -545,7 +554,7 @@ function FitPopover({
     boxes[(i + (e.key === 'ArrowDown' ? 1 : boxes.length - 1)) % boxes.length]?.focus()
   }
   return (
-    <PopoverPrimitive.Root>
+    <PopoverPrimitive.Root onOpenChange={(o) => onPopover?.(a.id, o)}>
       <PopoverPrimitive.Trigger asChild>
         <button
           type="button"
