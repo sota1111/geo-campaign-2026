@@ -21,10 +21,12 @@
   <section id="mapcol" class="mapcol" aria-label="地図">
     <div class="maptools">
       <button type="button" id="pickExample">例の建物を選ぶ</button>
+      <details class="filt"><summary>絞り込み</summary>
       <label>地区 <select id="selTown"><option value="">墨田区全体</option></select></label>
       <label>規模 <select id="selMin">
         <option value="0">すべて</option><option value="5">5階以上</option><option value="8" selected>8階以上</option><option value="12">12階以上</option>
       </select></label>
+      </details>
     </div>
     <div id="mapbox" class="mapbox">
       <div id="map" role="application" aria-label="墨田区の地図。共同住宅らしい規模の建物を色で表示。建物を押すと選べます。矢印キーで移動、＋−で拡大縮小。「例の建物を選ぶ」でも選べます" tabindex="0">
@@ -35,7 +37,7 @@
         </div>
         <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button><button type="button" id="zfit" aria-label="墨田区全体に戻す" class="fit">全体</button></div>
         <div class="attr" id="mapAttr"></div>
-        <div id="mapHint" class="maphint">建物（色の四角）を押すと目安が出ます <button type="button" id="pickExample2">例の建物を選ぶ</button></div>
+        <div id="mapHint" class="maphint">色の四角（建物）を押すと目安が出ます</div>
       </div>
     </div>
     <p class="mapnote" id="mapNote"></p>
@@ -60,7 +62,7 @@
         </div>
       </form>
       <div id="estOut" aria-live="polite"></div>
-      <div id="simMini"></div>
+      <p id="simMini" class="mini"></p>
       <details id="moreCond"><summary>条件を変える（延床・築年・階数・工事回数・階高）</summary>
         <div class="fields">
           <label>延床 <input id="inTfa" type="number" min="1" inputmode="numeric"><span class="u">㎡</span><span id="tfaTag" class="tag" hidden>推定</span></label>

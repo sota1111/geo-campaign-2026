@@ -75,7 +75,13 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const selId = await ev('window.__rp.state.sel && window.__rp.state.sel.id');
   const tgtId = await ev('window.__rp.state.tgt.id');
   check(selId && selId === tgtId, name + ': 実クリックで建物が選べない sel=' + selId + ' tgt=' + tgtId);
-  if (!desktop) { await sleep(600); const st = await ev("Math.round(document.getElementById('side').getBoundingClientRect().top) + 0"); report[name + '-sideTopAfterPick'] = st; check(st < 120, name + ': 建物を選んでも操作パネルへ移らない top=' + st); }
+  if (!desktop) {
+    await sleep(600);
+    const st = JSON.parse(await ev("JSON.stringify({ side: Math.round(document.getElementById('side').getBoundingClientRect().top), mapTop: Math.round(document.getElementById('map').getBoundingClientRect().top), mapBottom: Math.round(document.getElementById('mapcol').getBoundingClientRect().bottom), vh: innerHeight })"));
+    report[name + '-sideTopAfterPick'] = st;
+    check(st.side <= st.mapBottom + 20 && st.side < st.vh * 0.6, name + ': 建物を選んでも操作パネルが地図のすぐ下に来ない ' + JSON.stringify(st));
+    check(st.mapTop >= 0, name + ': 建物を選ぶと地図が隠れる ' + JSON.stringify(st));
+  }
   const card = await text('#selCard');
   report[name + '-card'] = card.slice(0, 200).replace(/\n/g, ' / ');
   check(card.includes('外壁面積の概算') && card.includes('推定階数') && card.includes('推定延床'), name + ': 選んだ建物のカードが足りない');
@@ -102,16 +108,23 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const est = await text('#estOut');
   if (desktop) report[name + '-estTabScroll'] = await ev("(() => { const p = document.getElementById('p-est'); return [p.scrollHeight, p.clientHeight]; })()");
   report[name + '-est'] = est.slice(0, 600).replace(/\n/g, ' / ');
-  check(est.includes('下位25%') && est.includes('修繕費の目安'), name + ': 目安の範囲が出ない');
+  check(est.includes('中位50%') && est.includes('修繕費の目安'), name + ': 目安の範囲が出ない');
   check(!(est.includes('戸数と延床が合っていません') && /延床あたりでは/.test(est)), name + ': 食い違いなのに延床あたりを出している');
   check((await ev("document.querySelectorAll('#estOut .rangebar .you').length")) === 1, name + ': 範囲バーに見積の印がない');
-  check((await ev("document.querySelectorAll('#simMini li').length")) === 2 && !!(await ev("document.getElementById('toSim')")), name + ': 目安タブに似た建物の上位2棟と一覧への案内がない');
+  check((await ev("document.querySelectorAll('#simMini li').length")) === 0 && !!(await ev("document.getElementById('toSim')")), name + ': 目安タブは似た建物への案内1行だけにする');
   check(!est.includes('延床あたりでは'), name + ': 判定が2つ並んでいる（延床あたりは折りたたみに）');
   check(/中央値より[\d.]+%高い/.test(est) && est.includes('上位25%に入る'), name + ': 見積の位置の文言が出ない（9500万円/60戸=158万円/戸）');
   check((await ev("document.body.innerText")).includes('適正な金額であることを保証しません'), name + ': 免責がない');
   if (desktop) check(await ev("(() => { const p = document.getElementById('p-est'); return p.scrollHeight <= p.clientHeight + 2; })()"), name + ': 目安タブにパネル内スクロールがある');
   else check(!!(await text('#selLine')).match(/目安 [\d,]+〜/), name + ': スマホの要約バーに目安が出ない');
   check(!(await ev("document.body.innerText")).includes('査定'), name + ': 「査定」がある');
+  // 桁違いの戸数（推定値の後ろに打ち足した 4760 戸など）は範囲を出さず警告だけ
+  await ev(`(() => { const e = document.getElementById('inUnits'); e.value = 4760; e.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await sleep(200);
+  const bad = await text('#estOut');
+  check(bad.includes('桁が違う') && !bad.includes('修繕費の目安'), name + ': 桁違いの戸数でも範囲を出している');
+  await ev(`(() => { const e = document.getElementById('inUnits'); e.value = 60; e.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await sleep(200);
   await shot(`${name}-2-estimate.png`);
   if (!desktop) { await ev("document.getElementById('side').scrollIntoView()"); await sleep(200); await shot(`${name}-2-estimate-panel.png`); }
 
@@ -119,8 +132,11 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await ev("document.getElementById('t-sim').click()");
   await sleep(500);
   const sim = await text('#simOut');
-  const nsim = await ev("document.querySelectorAll('#simOut .list li').length");
-  check(nsim >= 3 && sim.includes('築年は PLATEAU に入っていない'), name + ': 似た建物が出ない/築年の限界の表示なし ' + nsim);
+  const nsim = await ev("document.querySelectorAll('#simOut tbody tr').length");
+  check(nsim >= 3 && sim.includes('修繕実績・築年は未収録') && sim.includes('機械計算'), name + ': 似た建物が出ない/実績・築年の限界の表示なし ' + nsim);
+  await ev("document.querySelector('#simOut [data-sort=floors]').click()");
+  const fl = await ev("[...document.querySelectorAll('#simOut tbody tr')].map((r) => +r.cells[1].innerText)");
+  check(fl.join() === fl.slice().sort((a, b) => b - a).join(), name + ': 階数で並べ替えできない ' + fl);
   await ev("document.querySelector('#caseOut details.cases').open = true");
   const cases = await text('#caseOut');
   check((cases.match(/架空/g) || []).length >= 4 && cases.includes('公開されている個別の修繕事例はありません'), name + ': 事例の架空表示がない');
@@ -139,7 +155,11 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const ratio = await ev('window.__rp.state.cloudInfo.wallLen / window.__rp.state.sel.per');
   report[name + '-slamRatio'] = ratio;
   check(ratio > 0.8 && ratio < 1.1, name + ': 見本の外周が選んだ建物の外周と合わない ' + ratio);
-  check(slam.includes('操作の練習用') && slam.includes('建物全体') && slam.includes('測れた範囲') && slam.includes('見本のため出しません'), name + ': 見本の表示（練習用・測れた範囲／建物全体・単価なし）がない');
+  check(slam.includes('操作の練習用') && slam.includes('建物全体') && slam.includes('測れた範囲') && slam.includes('実測ではありません') && slam.includes('見積書と照らす'), name + ': 見本の表示（練習用・測れた範囲／建物全体・見積書との照合）がない');
+  await ev(`(() => { const S = window.__rp.state, e = document.getElementById('wQty'); e.value = Math.round(S.wallRef * 1.1); e.dispatchEvent(new Event('input', { bubbles: true })); const u = document.getElementById('wUnit'); u.value = 5000; u.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  const wo = await text('#wOut');
+  report[name + '-wallCheck'] = wo.replace(/\n/g, ' / ');
+  check(/\+10%/.test(wo) && /万円/.test(wo), name + ': 見積書の外壁数量との差・単価の計算が出ない');
   await shot(`${name}-4-slam.png`);
   await ev("document.getElementById('cloudApply').click()");
   await sleep(400);
@@ -154,7 +174,7 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   check(nlinks === 4 && nrev === 4, name + ': 公的リンク4件・架空の口コミ4件でない ' + nlinks + '/' + nrev);
   check(vendor.includes('新しい順') && vendor.includes('実データなし') && vendor.includes('架空です'), name + ': 口コミの規則・架空の表示がない');
   check((await ev("document.querySelectorAll('#vendorOut .rangebar .you').length")) === 3 && /\d件/.test(await text('#vendorOut table.qt')), name + ': 見本の3社が最初から帯に並ばない／口コミ数が出ない');
-  const order = await ev("[...document.querySelectorAll('#vendorOut .list li.fakeitem')].map((l) => (l.innerText.match(/\\d{4}-\\d{2}-\\d{2}/) || [''])[0]).join(',')");
+  const order = await ev("[...document.querySelectorAll('#vendorOut .list li.fakeitem')].map((l) => (l.textContent.match(/\\d{4}-\\d{2}-\\d{2}/) || [''])[0]).join(',')");
   report[name + '-reviewOrder'] = order;
   check(order === order.split(',').sort().reverse().join(','), name + ': 口コミが新しい順でない');
   // 複数社の見積を入れて、同じ帯に並べる
