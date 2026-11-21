@@ -125,6 +125,70 @@
     return out;
   }
 
+
+  // ---- 記録を重みに反映する見直し ----
+  // 仮置きの規則（根拠のある値ではない）: 区分ごとの「要伐採の率」を、見込みの率 REVIEW_PRIOR（50%）と比べ、
+  // 倍率 0.5 + 率（0.5〜1.5 倍）を初期の重みにかける（重みは 0〜50 に収める）。要伐採なら上がり、問題なし・要継続観察なら下がる。
+  // 「立入不可・再訪」は結果が出ていないので数えない。確認が REVIEW_MIN_N 件に満たない区分と、初期の重みが0の区分は変えず、理由を返す。
+  const REVIEW_MIN_N = 1, REVIEW_PRIOR = 0.5, REVIEW_KEYS = ['change', 'terrain', 'facility', 'road'];
+  const judged = (results) => sanitizeResults(results).filter((r) => r.result !== '立入不可・再訪');
+  function proposeWeights(sections, results, weights, minN) {
+    minN = minN || REVIEW_MIN_N;
+    const res = judged(results);
+    const w = normalizeWeights(weights), next = JSON.parse(JSON.stringify(w)), rows = [];
+    REVIEW_KEYS.forEach((key) => {
+      const st = hitStats(sections, res, key), cats = Object.keys(DEFAULT_WEIGHTS[key]);
+      cats.forEach((c) => {
+        const o = st[c] || { n: 0, hit: 0 }, from = w[key][c];
+        const row = { key, cat: c, n: o.n, hit: o.hit, from, to: from, reason: '' };
+        if (o.n < minN) row.reason = '確認が' + o.n + '件で、' + minN + '件に満たない';
+        else if (from === 0) row.reason = '初期の重みが0のため、倍率をかけても0';
+        else {
+          const f = (1 - REVIEW_PRIOR) + o.hit / o.n;
+          row.to = Math.max(0, Math.min(50, Math.round(from * f)));
+          if (row.to === from) row.reason = '要伐採の率が見込み（' + Math.round(REVIEW_PRIOR * 100) + '%）と同じで、重みは変わらない';
+        }
+        next[key][c] = row.to; rows.push(row);
+      });
+    });
+    return { weights: next, rows, changed: rows.some((r) => r.to !== r.from) };
+  }
+  // ④の見直しに必要な条件と、いまの到達度。見直しの規則（proposeWeights）そのものを使い、重みが動くかどうかは実際の計算結果で判定する。
+  // 動かないとき: 次に記録すると件数の条件に近づく区分（記録が minN 件未満で、未記録の区間が足りる区分のうち、記録が多いもの）と、その未記録の区間を示す。
+  // 数値は記録と区間データから数えた件数だけ（予測や効果は出さない）。
+  function reviewProgress(sections, results, weights, minN) {
+    minN = minN || REVIEW_MIN_N;
+    const w = normalizeWeights(weights), clean = judged(results);
+    const prop = proposeWeights(sections, clean, DEFAULT_WEIGHTS, minN);
+    const done = new Set();
+    sections.forEach((s) => { if (latestResult(clean, s.id)) done.add(s.id); });
+    const out = { ready: prop.changed, minN, nRec: done.size, countMet: false, target: null, candidates: [] };
+    let best = null;
+    REVIEW_KEYS.forEach((key) => {
+      const st = hitStats(sections, clean, key);
+      Object.keys(DEFAULT_WEIGHTS[key]).forEach((cat) => {
+        const n = st[cat] ? st[cat].n : 0;
+        if (n >= minN) out.countMet = true;
+        if (n >= minN || !(DEFAULT_WEIGHTS[key][cat] > 0 || w[key][cat] > 0)) return;
+        const pool = sections.filter((s) => s[key] === cat && !done.has(s.id));
+        if (pool.length < minN - n) return;
+        if (!best || n > best.n || (n === best.n && pool.length > best.pool.length)) best = { key, cat, n, pool };
+      });
+    });
+    if (best && !out.ready) {
+      out.target = { key: best.key, cat: best.cat, n: best.n, need: minN - best.n };
+      out.candidates = best.pool.slice(0, 3).map((s) => s.id);
+    }
+    return out;
+  }
+  // 重みを変える前後で、点数・順位が変わった区間を返す
+  function scoreDiff(sections, wBefore, wAfter, refYear, results, satOnly) {
+    const a = rank(sections, wBefore, refYear, results, satOnly), b = rank(sections, wAfter, refYear, results, satOnly);
+    const ra = {}; a.forEach((s) => (ra[s.id] = s));
+    return b.filter((s) => ra[s.id].score !== s.score || ra[s.id].rank !== s.rank)
+      .map((s) => ({ id: s.id, before: ra[s.id].score, after: s.score, rankBefore: ra[s.id].rank, rankAfter: s.rank }));
+  }
+
   function csvCell(v) {
     let s = v == null ? '' : String(v);
     if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // 表計算ソフトで数式として解釈されないようにする
@@ -199,6 +263,6 @@
     return Object.assign({ lengthM: total, bufferCells: k, bufferUsedM: k * cellM, insideShare: allSamples ? allInside / allSamples : 0 }, whole, { chunks });
   }
 
-  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults };
+  const api = { DEFAULT_WEIGHTS, RESULTS, SAT_KEYS, band, scoreSection, rank, planRoute, hitStats, toCSV, csvCell, latestResult, tileOf, percentile, alongLine, mid, dist, normalizeWeights, sanitizeResults, proposeWeights, reviewProgress, scoreDiff, REVIEW_MIN_N, REVIEW_PRIOR };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TreeLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

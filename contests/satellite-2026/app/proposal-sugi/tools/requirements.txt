@@ -1,0 +1,4 @@
+numpy
+rasterio
+shapely>=2
+pyproj

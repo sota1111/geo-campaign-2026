@@ -1,0 +1,195 @@
+{
+ "layers": {
+  "XKT001": {
+   "label": "都市計画区域・区域区分",
+   "status": "ok",
+   "file": "zoning.json",
+   "part": "areas",
+   "z": 13,
+   "tiles": 49,
+   "received": 453,
+   "count": 3,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT002": {
+   "label": "用途地域",
+   "status": "ok",
+   "file": "zoning.json",
+   "part": "use",
+   "z": 13,
+   "tiles": 49,
+   "received": 4258,
+   "count": 29,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT003": {
+   "label": "立地適正化計画",
+   "status": "empty",
+   "reason": "取得はできたが、大阪市の分は0件（取得範囲の全体で315件を受信。隣の自治体の分は同梱しない）",
+   "file": "plan.json",
+   "part": null,
+   "z": 13,
+   "tiles": 49,
+   "received": 315,
+   "count": 0,
+   "fetchedAt": "2026-11-13",
+   "byCity": {
+    "28202 尼崎市": 39,
+    "28204 西宮市": 17,
+    "27204 池田市": 5,
+    "27140 堺市": 13,
+    "27203 豊中市": 35,
+    "27220 箕面市": 3,
+    "27205 吹田市": 23,
+    "27211 茨木市": 14,
+    "27224 摂津市": 10,
+    "27209 守口市": 14,
+    "27223 門真市": 19,
+    "27227 東大阪市": 35,
+    "27212 八尾市": 34,
+    "27207 高槻市": 7,
+    "27210 枚方市": 11,
+    "27215 寝屋川市": 19,
+    "27218 大東市": 16,
+    "29210 香芝市": 1
+   }
+  },
+  "XKT013": {
+   "label": "将来推計人口（250mメッシュ）",
+   "status": "ok",
+   "file": "population.json",
+   "part": null,
+   "z": 13,
+   "tiles": 49,
+   "received": 10020,
+   "count": 8973,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT004": {
+   "label": "小学校区",
+   "status": "empty",
+   "reason": "取得はできたが、大阪市の分は0件（取得範囲の全体で584件を受信。隣の自治体の分は同梱しない）",
+   "file": "districts.json",
+   "part": null,
+   "z": 13,
+   "tiles": 49,
+   "received": 584,
+   "count": 0,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT006": {
+   "label": "学校（小・中学校）",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "schools",
+   "z": 13,
+   "tiles": 49,
+   "received": 1633,
+   "count": 446,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT007": {
+   "label": "保育園・幼稚園等",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "preschools",
+   "z": 13,
+   "tiles": 49,
+   "received": 4239,
+   "count": 1895,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT010": {
+   "label": "医療機関",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "medical",
+   "z": 13,
+   "tiles": 49,
+   "received": 12092,
+   "count": 5925,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT011": {
+   "label": "福祉施設（老人福祉施設）",
+   "status": "ok",
+   "file": "facilities.json",
+   "part": "elder",
+   "z": 13,
+   "tiles": 49,
+   "received": 26165,
+   "count": 1423,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT029": {
+   "label": "土砂災害警戒区域",
+   "status": "empty",
+   "reason": "取得はできたが、大阪市の分は0件（取得範囲の全体で1350件を受信。隣の自治体の分は同梱しない）",
+   "file": "hazards.json",
+   "part": "sediment",
+   "z": 13,
+   "tiles": 49,
+   "received": 1350,
+   "count": 0,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT026": {
+   "label": "洪水浸水想定区域（想定最大規模）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "flood",
+   "z": 14,
+   "tiles": 169,
+   "received": 113110,
+   "count": 380506,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT028": {
+   "label": "津波浸水想定",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "tsunami",
+   "z": 14,
+   "tiles": 169,
+   "received": 28783,
+   "count": 219258,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT027": {
+   "label": "高潮浸水想定区域",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "surge",
+   "z": 13,
+   "tiles": 49,
+   "received": 24712,
+   "count": 357597,
+   "fetchedAt": "2026-11-13"
+  },
+  "XKT025": {
+   "label": "液状化の発生傾向（地形区分に基づく）",
+   "status": "ok",
+   "file": "hazards.json",
+   "part": "liquefaction",
+   "z": 13,
+   "tiles": 49,
+   "received": 12216,
+   "count": 716472,
+   "fetchedAt": "2026-11-13"
+  }
+ },
+ "generator": "fetch-reinfolib.mjs",
+ "source": "国土交通省 不動産情報ライブラリ",
+ "region": "osaka",
+ "city": {
+  "code": "27100",
+  "name": "大阪市"
+ },
+ "bbox": [
+  135.36,
+  34.57,
+  135.62,
+  34.78
+ ],
+ "fetchedAt": "2026-11-13"
+}

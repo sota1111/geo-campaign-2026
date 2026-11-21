@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大雨のときに避けたい駅の出入口と迂回 | 公共交通オープンデータチャレンジ2026</title>
+<meta name="description" content="浸水想定（洪水・高潮のハザード）と駅の出入口を重ね、大雨のときに避けたい出入口と、代わりの出入口・隣の駅・バス停を示します。想定であり、実際の冠水の予測ではありません。">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+<header class="top">
+  <h1>大雨のときに避けたい駅の出入口と迂回</h1>
+  <p class="sub">浸水想定と駅の出入口を重ね、代わりの出入口・隣の駅・バス停を示します</p>
+</header>
+
+<div class="warn-banner" role="note">
+  <strong>これは「想定（ハザード）」であり、実際の冠水の予測ではありません。</strong>
+  洪水・高潮の想定最大規模の図を、出入口の地点に重ねた目安です。内水（下水があふれる浸水）の想定は、この地域では取り込めていません。
+  大雨のときは、気象庁の情報・鉄道会社・自治体の案内と、現地の状況を優先してください。
+</div>
+
+<main class="layout">
+  <section class="mapwrap" aria-label="地図">
+    <div id="map" role="application" aria-label="駅・出入口・バス停の地図"></div>
+    <div class="map-tools">
+      <label><input type="checkbox" id="ovFlood" checked> 洪水の想定を重ねる</label>
+      <label><input type="checkbox" id="ovTide" checked> 高潮の想定を重ねる</label>
+    </div>
+    <ul class="legend" aria-label="地図の凡例">
+      <li><span class="dot d-avoid"></span>▲ 避けたい出入口（想定0.5m以上）</li>
+      <li><span class="dot d-warn"></span>△ 注意（0.5m未満）</li>
+      <li><span class="dot d-none"></span>○ 着色なし</li>
+      <li><span class="dot d-bus"></span>バス停</li>
+    </ul>
+ <details class="terms"><summary>言葉の意味（想定浸水深・高潮・内水 など）</summary><ul class="small">
+      <li><b>想定浸水深</b>: 想定した最大規模の雨・高潮のとき、その場所で水がどの深さまで来るかの見込み。0.5m は大人の膝くらいです。</li>
+      <li><b>洪水</b>: 川があふれる浸水。<b>高潮</b>: 台風などで海面が上がり、海からあふれる浸水。</li>
+      <li><b>内水</b>: 大雨で下水や側溝があふれる浸水。ゲリラ豪雨で起きやすいものですが、この地図には入っていません。</li>
+      <li><b>着色なし</b>: 想定図に色がない場所。安全の保証ではありません。</li>
+      <li><b>OSM</b>: OpenStreetMap。みんなで作る地図で、出入口の位置はここから取っています。</li>
+    </ul></details>
+    <p id="mapfail" class="note" hidden>地図の部品（MapLibre GL JS）を読み込めませんでした。左の一覧は使えます。ネットワーク（unpkg.com）を確認して再読み込みしてください。</p>
+  </section>
+
+  <section class="panel" aria-label="駅の一覧と詳細">
+    <div id="summary" class="summary" aria-live="polite">読み込み中…</div>
+
+    <div class="pick">
+      <label for="pickStation">駅名で探す</label>
+      <div class="pickrow"><input type="search" id="pickStation" list="stationNames" placeholder="例: 錦糸町" autocomplete="off"><button type="button" id="pickGo">表示</button></div>
+      <datalist id="stationNames"></datalist>
+      <p id="pickMsg" class="note small" aria-live="polite"></p>
+    </div>
+
+    <div class="listhead">
+      <h2>浸水想定のある出入口が多い駅</h2>
+      <div class="csv">
+        <button type="button" id="csvStations">駅の一覧をCSV出力</button>
+        <button type="button" id="csvEntrances">出入口ごとをCSV出力</button>
+      </div>
+    </div>
+    <p id="csvMsg" class="saved" role="status" hidden></p>
+    <p class="note small">記号: <b>▲ 避けたい</b>＝想定0.5m以上 ／ <b>△ 注意</b>＝0.5m未満 ／ <b>○ 着色なし</b>＝想定図に色がない（安全の保証ではありません）。「▲ 5 ／ 出入口 8」は、出入口8か所のうち5か所が「避けたい」の意味です。</p>
+    <p class="note small">並び順: 避けたい出入口の数 → 注意を含む数 → 最大の区分。駅名の行を押すと、その場で出入口ごとの想定と代わりの候補が開きます。</p>
+    <ol id="list" class="list"></ol>
+  </section>
+</main>
+
+<footer class="foot" id="foot"></footer>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js?v=3"></script>
+<script src="app.js?v=14"></script>
+</body>
+</html>

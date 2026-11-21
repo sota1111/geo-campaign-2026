@@ -1,0 +1,34 @@
+{
+  "note": "対策の項目は、警察・業界団体が公表した資料の記述だけから作った。効果の大小や必要な組み合わせは各資料も断定しておらず、JPEA・REASP の資料自身が「完全に防ぐ方法があるわけではない」と書いている（p.9）。取得日 2026-11-13。",
+  "sources": {
+    "KM4": { "name": "茨城県警察 金属窃盗特化型 Metal News 令和8年第4号（太陽光発電施設被害抑止対策）", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/documents/metalnews_r0804.pdf" },
+    "KM10": { "name": "茨城県警察 金属窃盗特化型 Metal News 令和8年第10号", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/documents/metalnewsr0810.pdf" },
+    "IBP": { "name": "茨城県警察「金属盗難に注意！」（太陽光発電施設管理者の皆様へ。2026年11月2日更新）", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/kinzoku.html" },
+    "IBF": { "name": "茨城県警察「太陽光発電所の窃盗対策 ～ケーブルへの３つの対策～」（チラシ）", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/documents/taiyoukoutounantaisaku_r0804.pdf" },
+    "JPEA": { "name": "太陽光発電協会（JPEA）・再生可能エネルギー長期安定電源推進協会（REASP）「太陽光発電のケーブル盗難削減に向けて」2024-09-30（p.9, p.10）", "url": "https://www.jpea.gr.jp/wp-content/uploads/20240930npa_jpea_reasp.pdf" }
+  },
+  "classes": [
+    { "id": "low", "label": "低圧（10〜50kW未満）" },
+    { "id": "high", "label": "高圧（50〜2,000kW未満）" },
+    { "id": "special", "label": "特別高圧（2,000kW以上）" },
+    { "id": "unknown", "label": "わからない（全項目を表示）" }
+  ],
+  "items": [
+    { "id": "pipes_buried", "group": "ケーブルを抜けない・切れない", "cls": ["all"], "src": ["IBF", "JPEA"], "text": "地上に転がした配管（コロガシ配管）や、むき出しの配線がない（地中に埋めて、簡単には触れられない）" },
+    { "id": "fix_cable", "group": "ケーブルを抜けない・切れない", "cls": ["all"], "src": ["IBF", "KM4"], "text": "ケーブルを短い間隔で固定している、またはケーブル管内で固定して、引き抜かれにくくしている" },
+    { "id": "collector_cover", "group": "ケーブルを抜けない・切れない", "cls": ["all"], "src": ["IBF", "KM4"], "text": "引込柱・集電箱の付近の露出ケーブルを、防護柵・鋼管・フェンス・カバーで覆っている" },
+    { "id": "aluminum", "group": "ケーブルを抜けない・切れない", "cls": ["all"], "src": ["IBF", "KM4"], "text": "ケーブルを銅からアルミにしている（県警のチラシは、アルミの価値は銅の1/4程度としている）" },
+    { "id": "fence_sensor", "group": "検知・通報・威嚇", "cls": ["all"], "src": ["KM4"], "text": "フェンスセンサー／ワイヤーセンサーで、異常を検知して通知する仕組みがある" },
+    { "id": "machine_security", "group": "検知・通報・威嚇", "cls": ["all"], "src": ["KM4", "IBP"], "text": "機械警備を導入している（ケーブル切断などの異常を感知して通知する）" },
+    { "id": "camera", "group": "検知・通報・威嚇", "cls": ["all"], "src": ["KM4", "IBP"], "text": "防犯カメラ（AI・警報機能付きなど）や侵入検知を複数入れ、死角をなくして夜間も監視している" },
+    { "id": "alarm", "group": "検知・通報・威嚇", "cls": ["all"], "src": ["KM4"], "text": "音や光で犯人を威嚇し、周囲に異常を知らせる警報装置がある" },
+    { "id": "light", "group": "検知・通報・威嚇", "cls": ["all"], "src": ["KM4"], "text": "センサーライトなどの照明機器がある" },
+    { "id": "weed_fence", "group": "見え方・管理", "cls": ["all"], "src": ["IBP"], "text": "雑草を茂らせず、フェンス等を整備して、管理が行き届いている印象を与えている" },
+    { "id": "notice", "group": "見え方・管理", "cls": ["all"], "src": ["IBF"], "text": "防犯対策をしていることを掲示している（多言語ポスター等）" },
+    { "id": "patrol", "group": "見え方・管理", "cls": ["all"], "src": ["JPEA"], "text": "定期巡回・定期的な草刈り・定期保守点検を行っている" },
+    { "id": "tel110", "group": "見え方・管理", "cls": ["all"], "src": ["IBP"], "text": "不審者を見かけたときに110番通報する連絡体制が決まっている" },
+    { "id": "pole_barrier", "group": "区分別（JPEA・REASP p.10）", "cls": ["low"], "src": ["JPEA"], "text": "引込柱の一次側の管路を、管路保護・バリヤで守っている（同資料は、低圧の分割設置では大量盗難の例があるとしている）" },
+    { "id": "pcs_conduit", "group": "区分別（JPEA・REASP p.10）", "cls": ["high"], "src": ["JPEA"], "text": "集電箱とPCSの間の管路を、取られにくい工夫と、犯行に時間がかかったときに駆けつける対応で守っている" },
+    { "id": "hotspot", "group": "区分別（JPEA・REASP p.10）", "cls": ["special"], "src": ["JPEA"], "text": "エリアが広いので、どこを重点に守るかを見極めて、ケーブルPit対応などの効率的な対策を取っている" }
+  ]
+}

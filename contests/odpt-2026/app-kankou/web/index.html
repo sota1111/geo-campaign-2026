@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>観光バスを避ける生活ルート｜浅草・上野・押上周辺（比較用の案）</title>
+<meta name="description" content="観光地点の近くを通るバス系統・時間帯を時刻表から推定し、通院・通勤・通学の経路を観光系統を避けて探します。自治体・事業者向けに系統×時間帯の一覧とCSVも出せます。CC BY 4.0 のデータだけを使用。">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+<link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+<main id="layout">
+  <div id="mapbox">
+    <div id="map" role="region" aria-label="出発地・目的地・経路の地図"></div>
+    <div id="map-legend" aria-label="地図の色の意味"></div>
+    <div id="headline" aria-live="polite"></div>
+    <div id="pickbar" hidden></div>
+  </div>
+
+  <aside id="panel">
+    <header>
+      <h1>観光バスを避ける生活ルート</h1>
+      <p class="lead">観光地の近くを通るバスは、時間帯によって観光客でふくらみ、住民が通院・通勤・通学で乗りにくくなることがあります。<b>出発地と目的地を選ぶと、観光系統を避けた経路と、通常の経路との差</b>を示します。自治体・事業者向けに、観光客が集中しやすい系統×時間帯の一覧も出します。</p>
+      <p class="tag">比較用の案 ／ 対象地域: <span id="region-name"></span></p>
+      <p class="jump-links"><a href="#query">住民の方: 経路を調べる</a> ／ <a href="#route-sec">自治体・事業者の方: 観光客が集中しやすい系統の一覧へ</a></p>
+    </header>
+
+    <section class="notice" id="estimate-note" aria-label="推定であることの明示">
+      <b>これは推定です。</b>実際の混雑（乗客数）は分かりません。「観光地点（国土交通省の観光資源）の近くの停留所を通るか」と「その時間帯に停車する本数」だけから、観光客が集中しやすい系統・時間帯を推定しています。
+      <br><b>観光系統</b>とは: バスの1つの運行ルート（系統。例「上46」）のうち、停留所の一定割合（初期値10%）以上が観光地点から300m以内にあるもの。
+      <details><summary>混雑のデータを使っていない理由</summary>都営バスのリアルタイム情報（車両位置）には、確認した範囲（2026-11-15 に取得した7台分）では混雑度（GTFS-RT の occupancy）が含まれていませんでした。台東区コミュニティバスのリアルタイム情報は見つかりませんでした。</details>
+    </section>
+
+    <section id="query" aria-label="経路の条件">
+      <h2>1. 出発地と目的地を選ぶ</h2>
+
+      <div class="field">
+        <div class="lbl-top" id="o-label">出発地</div>
+        <div class="pick-row">
+          <input id="o-q" type="search" inputmode="search" autocomplete="off" placeholder="バス停・施設の名前（例: 浅草）" aria-labelledby="o-label" aria-controls="o-list">
+          <button type="button" id="o-map" class="act">地図で指す</button>
+        </div>
+        <div id="o-list" class="results" role="listbox" aria-label="出発地の候補" hidden></div>
+        <div id="o-now" class="now" aria-live="polite"></div>
+      </div>
+
+      <div class="field">
+        <div class="lbl-top" id="d-label">目的地（病院・駅・学校など）</div>
+        <div id="d-kind" class="seg" role="radiogroup" aria-label="目的地の種類"></div>
+        <div class="pick-row">
+          <input id="d-q" type="search" inputmode="search" autocomplete="off" placeholder="施設の名前で探す（例: 順天堂）" aria-labelledby="d-label" aria-controls="d-list">
+          <button type="button" id="d-map" class="act">地図で指す</button>
+        </div>
+        <div id="d-list" class="results" role="listbox" aria-label="目的地の候補"></div>
+        <div id="d-now" class="now" aria-live="polite"></div>
+      </div>
+
+      <div class="field">
+        <div class="lbl-top" id="dt-label">いつ出発するか</div>
+        <div id="dt" class="seg" role="radiogroup" aria-labelledby="dt-label"></div>
+        <div class="pick-row" style="margin-top:6px">
+          <label for="time" class="lbl-inline">出発時刻</label>
+          <input id="time" type="time" value="10:00">
+        </div>
+        <p class="note" id="ref-note"></p>
+      </div>
+
+      <details id="cond">
+        <summary>推定の条件（変更できます）</summary>
+        <div class="cond-body">
+          <label for="share" class="lbl-top">観光系統とみなす基準: 系統の停留所のうち、観光地点に近いものが <b id="share-v"></b> 以上</label>
+          <input id="share" type="range" min="0" max="40" step="1" value="10">
+          <div class="lbl-top" style="margin-top:10px">観光客が多いとみなす時間帯（仮定）</div>
+          <div class="pick-row">
+            <select id="ws" aria-label="開始時刻"></select><span>〜</span><select id="we" aria-label="終了時刻"></select>
+          </div>
+          <p class="note">この時間帯は<b>データから求めた値ではなく仮定</b>です（観光の移動は日中が中心になりやすいという想定）。避ける対象は「観光系統で、この時間帯に乗り、観光地点に近い停留所を通る区間」です。観光地点までの距離は <span id="near-m"></span> m（直線）で判定しています。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="result" aria-label="経路の比較" aria-live="polite">
+      <h2>2. 経路の比較</h2>
+      <div id="result-body"></div>
+    </section>
+
+    <section id="sweep-sec" aria-label="出発時刻ごとの所要時間">
+      <h2>3. 出発時刻でどう変わるか</h2>
+      <p class="note">同じ出発地・目的地で、出発時刻を1時間ずつ変えたときの所要時間です。薄い帯は上で仮定した「観光客が多い時間帯」。</p>
+      <div id="sweep"></div>
+    </section>
+
+    <section id="route-sec" aria-label="観光系統の一覧">
+      <h2>4. 自治体・事業者向け: 観光客が集中しやすい系統×時間帯</h2>
+      <p class="note">観光地点に近い停留所へ停車する便数・停車回数を、時刻表から数えた一覧です（観光客の人数ではありません）。停車回数の多い順。</p>
+      <div class="field"><div class="lbl-top" id="tdt-label">日種別</div><div id="t-dt" class="seg" role="radiogroup" aria-labelledby="tdt-label"></div></div>
+      <div class="pick-row">
+        <label class="lbl-inline" for="t-feed">事業者</label><select id="t-feed"></select>
+      </div>
+      <div class="pick-row" style="margin:6px 0">
+        <span class="lbl-inline">時間帯</span><select id="t-hf" aria-label="開始"></select><span>〜</span><select id="t-ht" aria-label="終了"></select>
+      </div>
+      <div id="top-routes" class="top-routes" aria-live="polite"></div>
+      <h3>観光系統（観光地点に近い停留所の割合が高い順）</h3>
+      <div class="tablewrap"><table id="routes-table"></table></div>
+      <h3>系統×時間帯</h3>
+      <div class="tablewrap"><table id="table-table"></table></div>
+      <div class="btn-row">
+        <button id="more" type="button" class="act">さらに表示</button>
+        <button id="csv-table" type="button" class="act">系統×時間帯の一覧をCSVで保存</button>
+        <button id="csv-routes" type="button" class="act">観光系統（停留所の割合）の一覧をCSVで保存</button>
+      </div>
+      <p id="csv-msg" class="saved" role="status" hidden></p>
+      <p class="note" id="table-count"></p>
+    </section>
+
+    <section id="about" aria-label="出典・ライセンス・前提">
+      <h2>出典・ライセンス・前提</h2>
+      <ul class="note" id="about-list"></ul>
+    </section>
+    <section id="limits" aria-label="限界">
+      <h2>この画面の限界</h2>
+      <ul class="note">
+        <li>混雑・乗客数のデータは使っていません。観光客の多さは、観光地点の近くを通ることからの推定です。</li>
+        <li>観光地点は国土交通省「観光資源」（平成26年度版）の一部です。新しい施設や、データに無い人気スポットは反映されません。</li>
+        <li>鉄道（JR・東京メトロ・都営地下鉄・私鉄）は経路に含めていません（時刻表を使っていません）。駅は目的地の候補として表示するだけで、「別の手段として電車がある」ことは計算していません。</li>
+        <li>徒歩は直線距離×1.25を毎分80mで歩く概算です。道路網は使っていません。運賃・バリアフリー・遅延は考慮していません。</li>
+        <li>時刻表は基準日の1日分です。臨時ダイヤ・イベント時の増便は反映されません。</li>
+        <li>データの正確性・完全性は保証されません。事業者・公共交通オープンデータセンターにこの画面について直接問い合わせないでください。</li>
+      </ul>
+    </section>
+  </aside>
+</main>
+<noscript>このページの表示にはJavaScriptが必要です。</noscript>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<script src="lib.js?v=3"></script>
+<script src="app.js?v=15"></script>
+</body>
+</html>

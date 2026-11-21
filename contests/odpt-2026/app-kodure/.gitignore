@@ -1,0 +1,5 @@
+cache/
+__pycache__/
+
+# 国土数値情報 P13・P27 由来の行き先データを含む生成物（許諾確認中のため追跡しない。python3 build.py で手元に作る）
+web/data/*.json
