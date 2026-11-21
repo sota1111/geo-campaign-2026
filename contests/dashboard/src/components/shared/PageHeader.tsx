@@ -1,6 +1,6 @@
 import { useContext, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { CONTESTS, getApp } from '@/apps/registry'
+import { CONTESTS, getApp, type DataKind } from '@/apps/registry'
 import { DataBadge } from './DataBadge'
 import { HeaderSlotContext } from './HeaderSlot'
 
@@ -10,7 +10,7 @@ import { HeaderSlotContext } from './HeaderSlot'
  *   右側に描画する（アプリ名はサイドバー上端／スマホは上部バー。説明文は useAppSteps の description）。
  *   Shell の外で使うと、従来どおり1行で自分の場所に出す。
  */
-export function PageHeader({ appId, actions, compact }: { appId: string; actions?: ReactNode; compact?: boolean }) {
+export function PageHeader({ appId, actions, compact, badge }: { appId: string; actions?: ReactNode; compact?: boolean; badge?: { kind: DataKind; label: string } }) {
   const slot = useContext(HeaderSlotContext)
   const app = getApp(appId)
   if (!app) return null
@@ -18,7 +18,7 @@ export function PageHeader({ appId, actions, compact }: { appId: string; actions
   if (compact) {
     const content = (
       <>
-        <DataBadge kind={app.dataKind} />
+        <DataBadge kind={badge?.kind ?? app.dataKind} label={badge?.label} />
         {actions}
       </>
     )
@@ -34,7 +34,7 @@ export function PageHeader({ appId, actions, compact }: { appId: string; actions
     <header className="mb-4 space-y-2 border-b pb-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-xl font-bold sm:text-2xl">{app.name}</h1>
-        <DataBadge kind={app.dataKind} />
+        <DataBadge kind={badge?.kind ?? app.dataKind} label={badge?.label} />
         <span className="text-xs text-muted-foreground">
           {contest?.short}／{app.division}
         </span>

@@ -17,11 +17,13 @@ export interface SatMapProps {
   step: '1' | '2'
   results: Map<string, boolean>
   demo: boolean
+  /** 説明用デモの「過去の調査」（架空）の区間。小さく薄く描き、今回の走査分だけを大きく見せる */
+  pastIds?: Set<string>
   onSegmentClick: (id: string) => void
   className?: string
 }
 
-export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, step, results, demo, onSegmentClick, className }: SatMapProps) {
+export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, step, results, demo, pastIds, onSegmentClick, className }: SatMapProps) {
   const cellsFc = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: 'FeatureCollection',
@@ -58,12 +60,12 @@ export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, s
         const [a, b] = (byId.get(id) as Scored).coords
         return {
           type: 'Feature',
-          properties: { id, hit: hit ? 1 : 0 },
+          properties: { id, hit: hit ? 1 : 0, past: demo && pastIds?.has(id) ? 1 : 0 },
           geometry: { type: 'Point', coordinates: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] },
         }
       }),
     }
-  }, [ranked, results])
+  }, [ranked, results, demo, pastIds])
 
   const layers = useMemo<MapLayer[]>(() => {
     const fillColor = ['match', ['get', 'k'], ...palette.flatMap((c, k) => [k, c]), '#cccccc']
@@ -90,8 +92,8 @@ export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, s
         layout: { 'line-cap': 'round' }, paint: { 'line-color': SCORE_COLOR, 'line-width': lineW },
       },
       // 調査結果の印（形と大きさで区別。色だけに頼らない）。結果が入った区間にだけ出る
-      { id: 'res-ok', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 0], paint: { 'circle-radius': 4, 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': 2 } },
-      { id: 'res-hit', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 1], paint: { 'circle-radius': 8, 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } },
+      { id: 'res-ok', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 0], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 2, 4], 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1] } },
+      { id: 'res-hit', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 1], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 3.5, 8], 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2.5], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1] } },
       // タップしやすいように、ほぼ透明の太い線を最前面に置く
       { id: 'seg-hit', type: 'line', data: segFc, paint: { 'line-color': '#000', 'line-width': 18, 'line-opacity': 0.01 } },
     ]

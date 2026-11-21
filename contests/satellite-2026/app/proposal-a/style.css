@@ -57,6 +57,10 @@ tr.pick{background:#dff0f4}
 .modal-box ul{margin:2px 0;padding-left:20px}
 #btn-close{min-height:40px;padding:6px 18px;margin-top:10px;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:#fff;font-weight:700;cursor:pointer}
 [hidden]{display:none!important}
+#panel-body{overflow-anchor:none}
+.linkbtn{background:none;border:0;color:var(--acc);text-decoration:underline;font-weight:700;font-size:inherit;cursor:pointer;padding:6px 2px;min-height:44px}
+.why{margin:0 0 4px;font-size:12.5px;color:var(--warn);font-weight:700}
+.stickybar .why .linkbtn{min-height:36px}
 @media (max-width:720px){
   #panel{top:auto;width:100%;height:56vh;border-right:0;border-top:2px solid var(--acc-d);border-radius:14px 14px 0 0;transition:height .2s}
   #panel.closed{height:150px}
@@ -100,5 +104,6 @@ ul.tight li{margin:3px 0}
 @media (max-width:720px){
   #demo-banner{top:52px;left:6px;right:6px;font-size:11px;padding:3px 6px}
   #steps button{font-size:12px}
+  .long{display:none}
   #steps button b{margin-right:3px}
 }
