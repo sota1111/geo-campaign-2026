@@ -128,7 +128,11 @@
     for (let c = 2; c <= 16; c++) if (cnt[c] > cnt[best]) best = c;
     const k = best - 1;
     const classes = cnt.map((n, c) => [c - 1, n]).filter(([c, n]) => c >= 0 && n > 0);
-    return { valid, share: pct(valid, cells.length), k, range: insarRange(k), classes, mixed: classes.length > 1 };
+    // 目立つ動き＝±3.75 mm/年の外（階級 7・8 以外）。沈下側・隆起側の格子数
+    let sink = 0, rise = 0;
+    classes.forEach(([c, n]) => { if (c < 7) sink += n; else if (c > 8) rise += n; });
+    return { valid, share: pct(valid, cells.length), k, range: insarRange(k), classes, mixed: classes.length > 1,
+      sink: pct(sink, valid), rise: pct(rise, valid), move: pct(sink + rise, valid) };
   }
   function summarizeLst(arr, cells) {
     const v = [];
@@ -195,41 +199,56 @@
     land: { name: 'Copernicus Sentinel-2 L2A（2026-08-23 と 2020-08-24）＋ OSM の建物', lic: 'Copernicus: 無償・自由 ／ ODbL', url: 'https://sentinels.copernicus.eu/documents/247904/690755/Sentinel_Data_Legal_Notice' },
   };
 
-  /** 確認項目の一覧。target = { lon, lat, cells } 。layers = decodeRle した格子 */
+  /** 干渉SARの階級の範囲を、言葉で先に言う（階級の数字は注記に回す） */
+  /** 干渉SARの集計を言葉にする。±3.75 mm/年は検出の目安で、それより小さい動きは見分けられない（＝動いていないとは言えない） */
+  function insarWords(n) {
+    if (!n.move) return { word: '目立つ動きなし', text: `年${INSAR_CLASS_W}mm超の動きなし（それ未満は見分けられない）` };
+    const dir = n.sink >= n.rise ? '沈下' : '隆起';
+    return { word: `${dir}気味 ${n.move}%`, text: `範囲の${n.move}%で年${INSAR_CLASS_W}mm超の${dir}（最多の階級 ${fmtRange(n.range)}）` };
+  }
+
+  /** 確認項目の一覧。target = { lon, lat, cells } 。layers = decodeRle した格子
+   *  各項目: label（項目名）・status・value（1行の値）・short（比べる表の短い値）・hint（衛星の項目だけ：何を見るか→何に使うか）・src・note */
   function buildChecks(data, layers, target) {
     const { lon, lat, cells } = target;
     const rows = [];
+    const OUT = '区域の外（概略）';
     const f = summarizeFlood(layers.flood, cells);
-    rows.push({ key: 'flood', label: '洪水の浸水想定', status: f.hit ? 'hit' : 'none', value: f.hit ? `想定区域に重なる（最大 ${f.label}。範囲の ${f.share}%）` : '想定区域に入っていない', src: SRC.flood,
-      note: '想定が作られていない川・内水は含まれない。' });
+    rows.push({ key: 'flood', label: '洪水', status: f.hit ? 'hit' : 'none', value: f.hit ? `最大 ${f.label}・範囲の${f.share}%` : OUT, short: f.hit ? `該当 最大${f.label}` : '外', src: SRC.flood,
+      note: '位置の誤差は数百 m。想定最大規模。想定が作られていない川・内水は含まれない。' });
     const s = summarizeSlide(layers.slide, cells);
-    rows.push({ key: 'slide', label: '土砂災害', status: s.hit ? 'hit' : 'none', value: s.hit ? `${s.zoneLabel}に重なる（${s.types.join('・')}。範囲の ${s.share}%）` : '警戒区域に入っていない', src: SRC.slide,
-      note: '全ての警戒区域が指定済みとは限らない。重要事項説明の代わりにならない。' });
+    rows.push({ key: 'slide', label: '土砂災害', status: s.hit ? 'hit' : 'none', value: s.hit ? `${s.zone === 2 ? 'レッド（特別警戒）' : 'イエロー（警戒）'}・${s.types.map((x) => x.replace('の崩壊', '')).join('・')}・範囲の${s.share}%` : OUT, short: s.hit ? `該当 ${s.zone === 2 ? 'レッド' : 'イエロー'}` : '外', src: SRC.slide,
+      note: '位置の誤差は数百 m。全ての警戒区域が指定済みとは限らない。重要事項説明の代わりにならない。' });
     const t = summarizeDepth(layers.tsunami, cells, data.labels.tsunami);
-    rows.push({ key: 'tsunami', label: '津波の浸水想定', status: t.hit ? 'hit' : 'none', value: t.hit ? `想定区域に重なる（最大 ${t.label}。範囲の ${t.share}%）` : '想定区域に入っていない', src: SRC.tsunami, note: '' });
+    rows.push({ key: 'tsunami', label: '津波', status: t.hit ? 'hit' : 'none', value: (t.hit ? `最大 ${t.label}・範囲の${t.share}%` : OUT) + '・2016年版', short: t.hit ? `該当 最大${t.label}` : '外', src: SRC.tsunami, note: '位置の誤差は数百 m。' });
     const h = summarizeDepth(layers.surge, cells, data.labels.surge);
-    rows.push({ key: 'surge', label: '高潮の浸水想定', status: h.hit ? 'hit' : 'none', value: h.hit ? `想定区域に重なる（最大 ${h.label}。範囲の ${h.share}%）` : '想定区域に入っていない', src: SRC.surge, note: '' });
+    rows.push({ key: 'surge', label: '高潮', status: h.hit ? 'hit' : 'none', value: h.hit ? `最大 ${h.label}・範囲の${h.share}%` : OUT, short: h.hit ? `該当 最大${h.label}` : '外', src: SRC.surge, note: '位置の誤差は数百 m。' });
     const n = summarizeInsar(layers.sub, cells);
-    let nv, nstatus = 'info';
-    if (!n.valid) { nv = '干渉SARの値がない（植生・水面などで干渉が取れない所）'; nstatus = 'nodata'; } else {
-      nv = `階級 ${n.k + 1}/16：${fmtRange(n.range)}${n.mixed ? '（周囲で階級が混在）' : ''}`;
+    let nv, nshort, nstatus = 'info', nnote = '';
+    if (!n.valid) { nv = '値なし（植生・水面など）'; nnote = '植生・水面などでは衛星レーダーの値が取れない。'; nshort = '値なし'; nstatus = 'nodata'; } else {
+      const w = insarWords(n);
+      nv = w.text; nshort = w.word;
+      nnote = `最も多い階級 ${n.k + 1}/16（1 階級 ${INSAR_CLASS_W} mm/年）。動きがないことの保証ではなく、現地確認が要る。`;
     }
-    rows.push({ key: 'insar', label: '地盤の変動（干渉SAR）', status: nstatus, value: nv, src: SRC.insar,
-      note: '1 階級の幅は 3.75 mm/年。数百 m より狭い変動は読めない。階級が 0 をまたぐ近辺は沈下の兆候と言えない。炭鉱の採掘跡など原因は断定しない。' });
+    rows.push({ key: 'insar', label: '地盤の変動', sat: true, hint: '衛星レーダーで、地面が年に何 mm 上下したかを見る → 沈みやすさの手がかり。現地確認が要る', status: nstatus, value: nv, short: nshort, src: SRC.insar,
+      note: nnote + '数百 m より狭い変動は読めない。0 をまたぐ近辺は沈下の兆候と言えない。炭鉱の採掘跡など原因は断定しない。' });
     const l = summarizeLst(layers.lst, cells);
-    rows.push({ key: 'lst', label: '夏の地表面温度（冷却条件の参考）', status: l.valid ? 'info' : 'nodata',
-      value: l.valid ? `${l.median.toFixed(1)} ℃（範囲全体の中央値 ${data.stats.lst_p50} ℃。10〜90% は ${data.stats.lst_p10}〜${data.stats.lst_p90} ℃）` : '値がない（雲など）', src: SRC.lst,
-      note: '2026-08-22 の昼前の 1 場面。気温でも冷却の効率でもない。表面の種類（植生・裸地・建物）で大きく変わる。' });
+    const p50 = data.stats.lst_p50;
+    const cmpText = l.valid ? (l.median > p50 ? '周りより高い' : l.median < p50 ? '周りより低い' : '周りと同じ') : '';
+    rows.push({ key: 'lst', label: '地表面温度', sat: true, hint: '夏の日中の地面の熱さ（気温・冷却の可否そのものではない）', status: l.valid ? 'info' : 'nodata',
+      value: l.valid ? `${l.median.toFixed(1)}℃・${cmpText}（8/22の1場面）` : '値がない（雲など）', short: l.valid ? `${l.median.toFixed(1)} ℃` : '値なし', num: l.valid ? l.median : null, src: SRC.lst,
+      note: `2026-08-22 の昼前の 1 場面で、季節・時刻で変わる。範囲の中央値は ${p50} ℃、範囲全体の 10〜90% は ${data.stats.lst_p10}〜${data.stats.lst_p90} ℃。気温でも冷却の効率でもない。表面の種類（植生・裸地・建物）で大きく変わる。` });
     const ss = nearestSubstation(data.substations, lon, lat, 0), sh = nearestSubstation(data.substations, lon, lat, 66000), ln = nearestLine(data.lines, lon, lat);
-    const subText = ss ? `最寄りの変電所 ${fmtKm(ss.d)}${ss.s.name ? `（${ss.s.name}）` : ''}・${fmtVolt(ss.s.voltage)}` : '範囲内に OSM の変電所なし';
-    const hv = sh && (!ss || sh.s !== ss.s) ? `／電圧 66 kV 以上と記載のある最寄り ${fmtKm(sh.d)}` : '';
-    const lnText = ln ? `／最寄りの送電線 ${fmtKm(ln.d)}（${fmtVolt(ln.l.v)}）` : '';
-    rows.push({ key: 'power', label: '電力設備までの距離', status: 'info', value: subText + hv + lnText, src: SRC.sub,
-      note: 'OSM は網羅的でない。変電所の空き容量・接続の可否は分からない（電力会社の確認が要る）。' });
+    const subText = ss ? `変電所 ${fmtKm(ss.d)}・${fmtVolt(ss.s.voltage)}` : '範囲内に OSM の変電所なし';
+    // 1 行に収める：最寄りの変電所と送電線の距離だけ。66 kV 以上の変電所・送電線の電圧は出典欄へ
+    const hv = sh && (!ss || sh.s !== ss.s) ? `66 kV以上の変電所 ${fmtKm(sh.d)}。` : '';
+    const lnText = ln ? `／送電線 ${fmtKm(ln.d)}` : '';
+    rows.push({ key: 'power', label: '電力設備（OSM）', status: 'info', value: subText + lnText, short: ss ? `変電所 ${fmtKm(ss.d)}` : '変電所なし', src: SRC.sub,
+      note: (ss && ss.s.name ? `最寄りの変電所：${ss.s.name}。` : '') + hv + (ln ? `最寄りの送電線は ${fmtVolt(ln.l.v)}。` : '') + 'いずれも最寄りまでの直線距離。OSM は網羅的でない。変電所の空き容量・接続の可否は分からない（電力会社の確認が要る）。' });
     const d = summarizeLand(layers.land, layers.chg, cells);
-    const parts = [1, 2, 3, 4, 5].filter((v) => d.share[v] > 0).map((v) => `${LAND[v]} ${d.share[v]}%`);
-    rows.push({ key: 'land', label: '土地の状態（Sentinel-2）', status: 'info',
-      value: d.valid ? `${parts.join('・')}。2020→2026 に植生から裸地等へ変化 ${d.changed}%` : '値がない（雲など）', src: SRC.land,
+    const parts = [1, 2, 3, 4, 5].filter((v) => d.share[v] > 0).sort((a, b) => d.share[b] - d.share[a]).map((v) => `${LAND[v]} ${d.share[v]}%`);
+    rows.push({ key: 'land', label: '土地の状態', sat: true, hint: '衛星画像で、いま何があるか・2020 年から植生が裸地等に変わったかを見る → 造成地・遊休地か', status: 'info',
+      value: d.valid ? `${parts.join('・')}${d.changed ? `（植生→裸地等 2020→26年：${d.changed}%）` : ''}` : '値がない（雲など）', short: d.valid ? parts[0] : '値なし', src: SRC.land,
       note: '裸地等は更地・造成地のほか、舗装・未登録の建物・採石場を含む。建物は OSM に登録された分だけ。' });
     return rows;
   }
@@ -238,7 +257,7 @@
     SCENES, SRC, LAND, FLOOD_RANK, SLIDE_ZONE, SLIDE_TYPE, CLICK_RADIUS_M, INSAR_CLASS_W,
     insarRange, lstFromCode, decodeRle, gridOf, cellOf, cellCenter, haversine, distToSegment, pointInRing,
     cellsInRing, cellsInDisk, summarizeFlood, summarizeSlide, summarizeDepth, summarizeInsar, summarizeLst, summarizeLand,
-    maxVoltage, nearestSubstation, nearestLine, fmtKm, fmtVolt, fmtRange, buildChecks,
+    maxVoltage, nearestSubstation, nearestLine, fmtKm, fmtVolt, fmtRange, insarWords, buildChecks,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.DCLib = api;
