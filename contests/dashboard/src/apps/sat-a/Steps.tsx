@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import { dataUrl } from '@/lib/data'
 import {
-  ADOPT_REASON, CLUSTER_GAP_M, LINK_MAX_M, clusterCount, MIN_AUC, MIN_GAIN, aucAt, totalKm, type Adoption, type AdoptReason, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
+  ADOPT_REASON, CLUSTER_GAP_M, LINK_MAX_M, clusterCount, MIN_AUC, MIN_GAIN, MAX_STEP, aucAt, totalKm, type Adoption, type AdoptReason, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
 } from './logic'
 
 const pct = (x: number) => Math.round(x * 100)
@@ -181,8 +181,8 @@ export function TopPanel({
       </div>
       {ties.length > 1 && (
         <p className="rounded border-l-4 border-amber-600 bg-amber-50 px-2 py-1 text-xs" data-testid="tie-warn">
-          <b>{(satShift ?? 0) === 0 ? 'この地区は衛星の差が小さく、台帳の古さで順位が決まっています。' : `衛星で上位20のうち ${satShift} 区間が入れ替わっています。`}</b>
-          <span className="block text-muted-foreground">上位{ties.length}区間が同点（{best.score.toFixed(2)}{ties.length > 10 ? `。表外にも${ties.length - 10}件` : ''}）。衛星で入れ替わり 上位20のうち {satShift ?? 0}。</span>
+          <b>{(satShift ?? 0) === 0 ? '上位は台帳（管の古さ）で決まり、この地区では衛星の影響は小さい。' : `衛星で上位20のうち ${satShift} 区間が入れ替わっています。`}</b>
+          <details className="text-muted-foreground"><summary className="cursor-pointer">詳しく</summary>1位と同点 {ties.length} 区間（{best.score.toFixed(2)}。同点は竣工の古い順）。衛星を0%にした時と比べた入れ替わり: 上位20のうち {satShift ?? 0}。</details>
         </p>
       )}
       <div className="text-sm font-medium">点数の高い順 上位10区間（<b>行を1つ選ぶ</b>と地図に表示され、この手順が完了します）</div>
@@ -326,7 +326,7 @@ function FormatBox({ demo, children }: { demo: boolean; children: React.ReactNod
 }
 
 export function ScanPanel({
-  demo, sample, userCsv, pastCount, onDemo, selected, segs, resultsCount, loadInfo, onFile, onClear, onDemoScan, onGoPick,
+  demo, sample, userCsv, pastCount, onDemo, selected, segs, resultsCount, loadInfo, onFile, onClear, onDemoScan, onDemoAutoScan,
 }: {
   demo: boolean
   sample?: boolean
@@ -340,7 +340,7 @@ export function ScanPanel({
   onFile: (file: File) => void
   onClear: () => void
   onDemoScan: () => void
-  onGoPick: () => void
+  onDemoAutoScan: () => void
 }) {
   const km = totalKm(segs, selected)
   const sm = loadInfo?.summary
@@ -350,11 +350,7 @@ export function ScanPanel({
   if (sm?.unmatched) bad.push(`${LINK_MAX_M} m 以内に区間が無い点 ${sm.unmatched}`)
   return (
     <div className="space-y-3">
-      <ol className="list-decimal space-y-0 pl-5 text-sm" data-testid="flow3">
-        <li>書き出した CSV の cavity 列に あり／なし を書く</li>
-        <li>下でその CSV を選ぶ（あり・なし 各3件以上）</li>
-        <li>手順4で次の回へ進む</li>
-      </ol>
+      {!demo && <p className="text-sm font-medium" data-testid="flow3">書き出した CSV の cavity 列に あり／なし を書いて選ぶ（各3件以上）。例: <code className="text-xs">S0070,…,あり</code></p>}
 
       {demo ? (
         <div className="space-y-2 rounded-md border-l-4 border-amber-600 bg-amber-50 p-2.5 text-sm text-amber-950" data-testid="demo-on">
@@ -363,12 +359,12 @@ export function ScanPanel({
             <b>過去の調査</b>（設定: 幹線すべてと生活道路の約6%を調査済みとした架空の結果）が最初から入っています。今回の走査は、手順2で選んだ <b data-testid="s3-count">{selected.size}</b> 区間（{fmt1(km)} km）が対象です。
           </p>
           {selected.size === 0 && resultsCount - (pastCount ?? 0) > 0 && (
-            <p className="text-xs" data-testid="scan-done">今回の走査 {resultsCount - (pastCount ?? 0)} 区間を入れました。続けて、手順4で「較正を反映して次の回へ進む」を押します。</p>
+            <p className="text-xs" data-testid="scan-done">今回の走査 {resultsCount - (pastCount ?? 0)} 区間（架空）を入れました。手順4で次の回へ進みます。</p>
           )}
           {selected.size === 0 && resultsCount - (pastCount ?? 0) <= 0 && (
-            <p className="text-xs" data-testid="scan-hint">区間を選んでいないので、走査できません。<Button size="sm" variant="link" className="h-auto p-0 underline" onClick={onGoPick}>手順2で区間を選ぶ</Button></p>
+            <p className="text-xs" data-testid="scan-hint"><Button size="sm" variant="outline" onClick={onDemoAutoScan} data-testid="demo-auto-scan">予算内で自動で選んで走査する（架空）</Button></p>
           )}
-          <Button variant={selected.size ? 'default' : 'outline'} size="sm" onClick={onDemoScan} disabled={selected.size === 0} data-testid="demo-scan"><Radar />走査結果を入れる（架空）</Button>
+          {selected.size > 0 && <Button size="sm" onClick={onDemoScan} data-testid="demo-scan"><Radar />走査結果を入れる（架空）</Button>}
         </div>
       ) : (
         <div className="space-y-1.5 rounded-md border border-dashed border-primary/60 bg-background p-2.5">
@@ -401,12 +397,14 @@ export function ScanPanel({
           </p>
         )}
         {loadInfo && !loadInfo.error && sm && sm.segments > 0 && (
-          <p className="text-sm" data-testid="load-ok">
-            「{loadInfo.name}」を読み込みました（{sm.rows} 行）: 区間IDで {sm.byId} 行、緯度・経度の点で {sm.byPoint} 行を区間に結び付け、<b>{sm.segments} 区間</b>の結果（空洞あり {sm.hit}・なし {sm.none}）。
-            {sm.merged > 0 && `同じ区間への複数行 ${sm.merged} 行は「1つでもあり」ならありにまとめました${sm.conflicts ? `（あり・なしが食い違った区間 ${sm.conflicts}）` : ''}。`}
-            {sm.blank > 0 && `空欄 ${sm.blank} 行は未記入として読み飛ばしました。`}
-            {bad.length > 0 && <span className="block text-amber-800">使えなかった行: {bad.join('、')}。</span>}
-          </p>
+          <div className="text-sm" data-testid="load-ok">
+            <p><b>✓ {sm.segments} 区間を取り込みました（あり {sm.hit}・なし {sm.none}）</b>{bad.length > 0 && <span className="block text-amber-800">使えなかった行: {bad.join('、')}</span>}</p>
+            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">内訳</summary>
+              「{loadInfo.name}」（{sm.rows} 行）: 区間IDで {sm.byId} 行、緯度・経度の点で {sm.byPoint} 行を結び付け。
+              {sm.merged > 0 && `同じ区間の複数行 ${sm.merged} 行は「1つでもあり」ならあり${sm.conflicts ? `（食い違い ${sm.conflicts}）` : ''}。`}
+              {sm.blank > 0 && `空欄 ${sm.blank} 行は読み飛ばし。`}
+            </details>
+          </div>
         )}
       </div>
 
@@ -506,17 +504,18 @@ export function ApplyPanel({
           <div className={cn('rounded-md border-l-4 p-2 text-sm', calib.ad.adopt || calib.ad.reason === 'same' ? 'border-emerald-700 bg-emerald-50' : 'border-amber-600 bg-amber-50 text-amber-950')} data-testid={calib.ad.adopt ? 'adopt' : 'no-change'}>
             {(demo || sample) && <b>（架空の結果）</b>}
             {calib.ad.adopt
-              ? <b>重みを {pct(calib.ad.w)}% に更新します（当たりやすさ {calib.ad.cur?.toFixed(2)} → {calib.ad.best?.toFixed(2)}）。</b>
-              : calib.ad.reason === 'same'
-                ? <b>今の重み {pct(calib.ad.w)}% が最も当たりやすい重みでした（当たりやすさ {calib.ad.cur?.toFixed(2)}）。</b>
-                : <><b>この結果では重みを変えられません（{pct(calib.ad.w)}% のまま）</b>：{ADOPT_REASON[calib.ad.reason ?? 'same']}（当たりやすさ {calib.ad.cur?.toFixed(2)}、0.5＝当てずっぽう）。</>}
+              ? <b>重みを {pct(calib.ad.w)}% に更新します。</b>
+              : <><b>重みは {pct(calib.ad.w)}% のまま</b>（{ADOPT_REASON[calib.ad.reason ?? 'same']}）。第{round + 1}回へ進めます。</>}
+            {calib.ad.adopt && (calib.ad.capped || calib.ad.weak) && (
+              <span className="mt-1 block rounded bg-amber-100 px-1.5 py-0.5 text-amber-950" data-testid="weak">{calib.ad.weak ? '結果が少ないか差が弱いので、' : ''}変更は1回 {pct(MAX_STEP)}% までにしています{calib.ad.capped ? `（最良は ${pct(calib.w)}%）` : ''}。台帳の根拠も併せて確かめてください。</span>
+            )}
             {previewChanged != null && <span className="block" data-testid="preview-changed">第{round + 1}回は調査した区間を除き、上位10のうち <b>{previewChanged}</b> 区間の順位が入れ替わります。</span>}
           </div>
           <details className="rounded-md border p-2 text-sm">
           <summary className="cursor-pointer font-medium">詳しく（入った結果 {calib.n} 区間での当たりやすさ）</summary>
           <Table>
             <TableHeader>
-              <TableRow><TableHead>点数のつけ方</TableHead><TableHead className="text-right">当たりやすさ（AUC。0.5＝当てずっぽう）</TableHead></TableRow>
+              <TableRow><TableHead>点数のつけ方</TableHead><TableHead className="text-right">当たりやすさ（AUC。0.5＝くじ引きと同じ、1.0＝全部当たる）</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               <TableRow><TableCell>台帳のみ（衛星0%）</TableCell><TableCell className="text-right">{calib.ledgerOnly?.toFixed(2)}</TableCell></TableRow>
@@ -531,7 +530,7 @@ export function ApplyPanel({
             </TableBody>
           </Table>
           <p className="text-xs text-muted-foreground">
-            重みを変える条件（仮の基準）: AUC {MIN_AUC.toFixed(2)} 以上かつ今の重みより {MIN_GAIN.toFixed(2)} 以上高い。AUC＝空洞のあった区間が高い点数になる確率（0.5＝当てずっぽう）。
+            重みを変える条件（仮の基準）: AUC {MIN_AUC.toFixed(2)} 以上かつ今の重みより {MIN_GAIN.toFixed(2)} 以上高い。1回の変更は {pct(MAX_STEP)}% まで。AUC＝空洞のあった区間が高い点数になる確率（0.5＝くじ引きと同じ）。
             {demo || sample ? '空洞の有無は架空で、精度や効果を示しません。' : '調査した区間の中での比較で、実際の精度・効果ではありません。'}
           </p>
           </details>
@@ -539,7 +538,7 @@ export function ApplyPanel({
       )}
       <div className="flex flex-wrap gap-2">
         {applied && onGoRound2 && <Button size="sm" onClick={onGoRound2} data-testid="goto-round2">第{round}回の順位を見る（手順5へ）</Button>}
-        <Button size="sm" variant={applied && onGoRound2 ? 'outline' : 'default'} onClick={onApply} disabled={calib.w === null} data-testid="apply">{calib.w !== null && !calib.ad.adopt ? `重みを変えずに第${round + 1}回へ進む` : `較正を反映して第${round + 1}回へ進む`}</Button>
+        <Button size="sm" variant={applied && onGoRound2 ? 'outline' : 'default'} onClick={onApply} disabled={calib.w === null} data-testid="apply">第{round + 1}回へ進む</Button>
       </div>
     </div>
   )
@@ -565,7 +564,7 @@ export function Round2Panel({
     return (
       <Alert data-testid="round2-empty">
         <AlertDescription className="space-y-2">
-          <p>第2回の順位はまだありません。「較正を反映して第2回へ進む」まで済ませると、ここに第1回との対比が出ます。</p>
+          <p>第2回の順位はまだありません。「第2回へ進む」まで済ませると、ここに第1回との対比が出ます。</p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={onGoScan} data-testid="goto-scan">手順3へ戻って CSV を入れる</Button>
             <Button size="sm" variant="outline" onClick={onDemoOn} data-testid="round2-demo-on">説明用デモで動きを見る（架空の結果）</Button>

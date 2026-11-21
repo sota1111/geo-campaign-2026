@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, candidatesOf, topShift,
-  parseCsv, clusterCount, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, adoptWeight, MIN_AUC,
+  parseCsv, clusterCount, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, adoptWeight, MAX_STEP, MIN_AUC,
   type DataFile, type DemoData, type Segment,
 } from './logic'
 
@@ -204,6 +204,7 @@ describe('評価ループ第1回: 同点の並べ方と重みを変える条件'
     const a = adoptWeight(calibrate(strong, cs), strong, cs, 0)
     expect(a.adopt).toBe(true)
     expect(a.best).toBeGreaterThanOrEqual(MIN_AUC)
+    expect(a.w).toBeLessThanOrEqual(MAX_STEP + 1e-9) // 1回の更新幅は MAX_STEP まで
     const rnd = mk(40, (i) => i % 4 < 2)
     const r = adoptWeight(calibrate(rnd, cs), rnd, cs, 0.1)
     expect(r.adopt).toBe(false)

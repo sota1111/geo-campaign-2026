@@ -59,11 +59,12 @@ for (const [lab, w, h] of [['d', 1513, 784], ['m', 390, 844]]) {
   await c.ev(`(()=>{const b=[...document.querySelectorAll('#s2 button')].find(x=>x.textContent.includes('自動'));b&&b.click()})()`);
   const selBefore = await c.ev('App.STATE.selected.size'); need(selBefore > 0, '自動選定で選べていない');
   await c.ev('App.setStep(3)'); await c.ev(`document.getElementById('demo-go').click()`); await sleep(1000);
-  need((await c.ev('App.STATE.selected.size')) > 0, 'デモをオンにしたら選択が消えた');
+  // デモはタブを移らずに完結: オンにしただけで、選んでいた区間の走査（架空）まで入る
+  need((await c.ev(`!!document.querySelector('[data-testid=scan-done]')`)) === true, 'デモをオンにしても走査結果が入らない');
   log('demo s3', (await c.ev(`document.getElementById('s3').innerText`)).slice(0, 300)); await shot(c, lab + '-2-demo');
   need((await c.ev(`document.getElementById('s3').innerText`)).includes('過去の調査'), 'デモ中に「過去の調査」の説明が無い');
   need((await c.ev(`document.getElementById('panel-body').scrollTop`)) === 0, 'デモ切替後にパネルが先頭に戻らない');
-  await c.ev(`document.getElementById('scan').click()`); await shot(c, lab + '-3-scanned');
+  await c.ev(`document.getElementById('scan')&&document.getElementById('scan').click()`); await shot(c, lab + '-3-scanned');
   need((await c.ev(`!!document.querySelector('[data-testid=scan-done]') && !document.querySelector('[data-testid=scan-hint]')`)) === true, 'R5: 走査直後に成功の文が出ない／失敗のような文が残る');
   await c.ev(`document.getElementById('apply').click()`); await sleep(500); await shot(c, lab + '-4-round2');
   const r2 = await c.ev(`document.getElementById('round').textContent+' | '+App.STATE.msg`); log('round2', r2); need(r2.startsWith('第2回'), '第2回に進まない');

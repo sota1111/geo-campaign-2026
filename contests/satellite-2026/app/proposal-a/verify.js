@@ -17,10 +17,8 @@ export function verifyHtml(v) {
   const og = v.terciles.find((g) => g.group === 'oldest'), ng = v.terciles.find((g) => g.group === 'newest');
   const summary = `<div class="sum" data-testid="verify-summary"><b>要点</b>
     <ul class="tight">
-      <li>豊中市では、下水道管が古い町ほど、管の長さあたりの下水道起因の陥没が多い傾向（100 km あたり 古い方の3分の1の町 <b>${og.per_100km.toFixed(1)}</b> 件、新しい方 <b>${ng.per_100km.toFixed(1)}</b> 件。1年度・${ck.incidents_used} 件）。<b>原因を示すものではありません</b>。</li>
-      <li>国交省の陥没の表には<b>座標はありません</b>（地名は町名まで）。位置のついた空洞の実データもなく、<b>このアプリの点数の当たり外れは検証できません</b>。</li>
-      <li>全国特別重点調査での豊中市の「空洞 0」は、<b>空洞調査の実施済み延長も 0 km</b>（「空洞がない」ではありません）。</li>
-      <li>提案書の「令和4年度 2,625 件」（国総研）と令和6年度（国交省）は<b>集計の定義が異なり、比べられません</b>。</li>
+      <li>管が古い町ほど、管の長さあたりの下水道起因の陥没が多い傾向（100 km あたり <b>${og.per_100km.toFixed(1)}</b> 件／新しい町 <b>${ng.per_100km.toFixed(1)}</b> 件。1年度）。<b>原因を示すものではありません</b>。</li>
+      <li>陥没の表に<b>座標はありません</b>。点数の当たり外れは検証できません。全国特別重点調査の豊中市「空洞 0」は、<b>空洞調査の実施済み延長も 0 km</b>。</li>
     </ul></div>`;
   return `
   ${summary}
@@ -58,6 +56,7 @@ export function verifyHtml(v) {
   </tbody></table>
   <p class="note">管理者の区分によって、下水道が要因とされる割合に大きな差があります（件数の集計のみ。要因は各管理者の判定で、「要因未確定」も多い）。</p>
 
+  <p class="note">提案書の「令和4年度 2,625 件」（国総研）と令和6年度（国交省）は<b>集計の定義が異なり、比べられません</b>。上の豊中市の傾向は ${ck.incidents_used} 件での整理です。</p>
   <h3>4. 全国特別重点調査（八潮市の事故後。管径 2 m 以上・1994 年度以前の下水道管）での豊中市</h3>
   <ul class="tight">
     <li>令和8年2月末時点で、豊中市は対象延長 ${tokP ? tokP.target_km : '—'} km（優先実施箇所）＋ ${tokO ? tokO.target_km : '—'} km（それ以外）。<b>空洞が確認された箇所は 0</b>（全国の合計は ${tk ? tk.all_cavities_listed : '—'} 箇所）。</li>
@@ -66,12 +65,12 @@ export function verifyHtml(v) {
   </ul>
 
   </details>
-  <h3>出典</h3>
+  <details><summary>出典</summary>
   <ul class="tight">
     <li>国交省 令和6年度 路面陥没発生状況: <a href="https://www.mlit.go.jp/road/sisaku/ijikanri/r6hasseijoukyou.html" target="_blank" rel="noopener">mlit.go.jp/road/sisaku/ijikanri/r6hasseijoukyou.html</a>（02.xlsx、令和8年2月18日訂正版。取得 2026-11-21）</li>
     <li>国交省 下水道管路の全国特別重点調査 別紙2: <a href="https://www.mlit.go.jp/report/press/content/001997561.xlsx" target="_blank" rel="noopener">001997561.xlsx</a>（令和8年2月末時点）</li>
     <li>豊中市 下水道（CC BY 4.0）: <a href="https://data.bodik.jp/dataset/272035_gesuido" target="_blank" rel="noopener">data.bodik.jp/dataset/272035_gesuido</a></li>
     <li>町丁境界: e-Stat 令和2年国勢調査 小地域（町丁・字等）（e-Stat の利用規約に従う。条件は要確認）。加工して作成。</li>
     <li>再現: <code>tools/verify_incidents.py</code>（取得物は sandbox に置いて読むだけ）。</li>
-  </ul>`;
+  </ul></details>`;
 }

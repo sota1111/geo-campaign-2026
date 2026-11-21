@@ -127,7 +127,7 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     const pts = await c.ev(MK_PT);
     await c.ev('document.getElementById("clear-res").click()');
     await c.ev(`App.loadCsvText(${JSON.stringify(pts)},'by_point.csv')`);
-    r.info.load_pt = await c.ev('document.querySelector("[data-testid=load-ok]")?.innerText');
+    r.info.load_pt = await c.ev('document.querySelector("[data-testid=load-ok]")?.textContent'); // 内訳は折りたたみの中
     need(r.info.load_pt && r.info.load_pt.includes('40 区間') && r.info.load_pt.includes('緯度・経度の点で 40 行'), 'CSV(緯度・経度)の取り込み結果が違う');
     r.info.w_pt = await c.ev(W_OF);
     need(r.info.w_pt === r.info.w_id, '2つの書き方で較正が違う ' + r.info.w_id + ' / ' + r.info.w_pt);
@@ -147,6 +147,8 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await c.ev('document.getElementById("auto").click()');
     await c.ev('App.setStep(3)');
     await c.ev('document.getElementById("scan").click()');
+    need(await c.ev('document.getElementById("apply").textContent.trim()') === '第2回へ進む', '第3段階の主ボタンの文言が「第2回へ進む」でない');
+    need(await c.ev('document.documentElement.scrollWidth') <= w, 'デモ中に横スクロール発生');
     r.info.demo_s3 = (await c.ev('document.getElementById("s3").innerText')).slice(0, 700);
     need(await c.ev('document.getElementById("s3").innerText.includes("架空")'), 'デモの第3段階に「架空」がない');
     await shot(c, `${label}_5_demo.png`);

@@ -82,13 +82,22 @@ export const MIN_GAIN = 0.05;
 /** 較正の結果から、次回に使う重みを決める。戻り値 { w, adopt, reason, best, cur }。
  *  reason: 'short'（結果不足）/ 'low'（最良でも MIN_AUC 未満）/ 'small'（今の重みとの差が MIN_GAIN 未満）/ 'same'（今の重みが最良）/ null（更新） */
 export function adoptWeight(cal, scanned, cellSat, curW, minAuc = MIN_AUC, minGain = MIN_GAIN) {
-  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null };
+  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null, capped: false, weak: false };
   const best = aucAt(scanned, cellSat, cal.w), cur = aucAt(scanned, cellSat, curW);
-  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur };
-  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur };
-  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur };
-  return { w: cal.w, adopt: true, reason: null, best, cur };
+  const weak = best < WEAK_AUC || scanned.length < MIN_LABELS;
+  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur, capped: false, weak };
+  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur, capped: false, weak };
+  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur, capped: false, weak };
+  // 1回の較正で動かす幅は MAX_STEP まで（少数・弱い結果で台帳の根拠を一度に捨てないため）
+  const d = cal.w - curW, capped = Math.abs(d) > MAX_STEP + 1e-9;
+  const w = capped ? Math.round((curW + Math.sign(d) * MAX_STEP) * 10) / 10 : cal.w;
+  return { w, adopt: true, reason: null, best, cur, capped, weak };
 }
+/** 1回の較正で重みを動かす上限（仮の基準）。 */
+export const MAX_STEP = 0.3;
+/** これより弱い・少ない結果では、更新しても注意を出す（仮の基準）。 */
+export const WEAK_AUC = 0.7;
+export const MIN_LABELS = 20;
 
 /** 除外の精度: 点数が下位の半分を「異常なし」と判定したとき、その中で実際に異常なしだった割合。
  *  下位半分の件数が minN 未満なら null。 */

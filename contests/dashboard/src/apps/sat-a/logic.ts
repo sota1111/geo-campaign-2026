@@ -101,22 +101,31 @@ export function byScore(a: Scored, b: Scored) {
 export const MIN_AUC = 0.6
 export const MIN_GAIN = 0.05
 export type AdoptReason = 'short' | 'low' | 'small' | 'same' | null
-export interface Adoption { w: number; adopt: boolean; reason: AdoptReason; best: number | null; cur: number | null }
+export interface Adoption { w: number; adopt: boolean; reason: AdoptReason; best: number | null; cur: number | null; capped: boolean; weak: boolean }
+/** 1回の較正で重みを動かす上限（仮の基準）。少数・弱い結果で台帳の根拠を一度に捨てないため */
+export const MAX_STEP = 0.3
+/** これより弱い・少ない結果では、更新しても注意を出す（仮の基準） */
+export const WEAK_AUC = 0.7
+export const MIN_LABELS = 20
 export const ADOPT_REASON: Record<Exclude<AdoptReason, null>, string> = {
   short: '結果が足りない',
-  low: `最良でも AUC が ${MIN_AUC.toFixed(2)} 未満`,
-  small: `今の重みとの AUC の差が ${MIN_GAIN.toFixed(2)} 未満`,
-  same: '今の重みが最良',
+  low: 'あり・なしの差が点数に出ていない',
+  small: '重みを変えても差が小さい',
+  same: '今の重みが最も当たる',
 }
-/** 較正の結果から、次回に使う重みを決める。条件を満たさなければ今の重みのまま（当てずっぽうに近い結果で重みを動かさない） */
+/** 較正の結果から、次回に使う重みを決める。条件を満たさなければ今の重みのまま（当てずっぽうに近い結果で重みを動かさない）。更新幅は MAX_STEP まで */
 export function adoptWeight(cal: Calibration | null, scanned: Scanned[], cellSat: CellSat, curW: number, minAuc = MIN_AUC, minGain = MIN_GAIN): Adoption {
-  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null }
+  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null, capped: false, weak: false }
   const best = aucAt(scanned, cellSat, cal.w) as number
   const cur = aucAt(scanned, cellSat, curW) as number
-  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur }
-  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur }
-  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur }
-  return { w: cal.w, adopt: true, reason: null, best, cur }
+  const weak = best < WEAK_AUC || scanned.length < MIN_LABELS
+  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur, capped: false, weak }
+  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur, capped: false, weak }
+  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur, capped: false, weak }
+  const d = cal.w - curW
+  const capped = Math.abs(d) > MAX_STEP + 1e-9
+  const w = capped ? Math.round((curW + Math.sign(d) * MAX_STEP) * 10) / 10 : cal.w
+  return { w, adopt: true, reason: null, best, cur, capped, weak }
 }
 
 /** 結果が未入力の生活道路（候補）だけを取り出す（順位順を保つ） */

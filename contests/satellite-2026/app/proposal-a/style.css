@@ -207,3 +207,33 @@ ol.tight3 li{margin:0}
 }
 #load-msg{scroll-margin-top:40px}
 @media (max-width:720px){#w-note{display:none}}
+
+/* 評価ループ第4回: 透かしを薄く・横はみ出しなし／スマホのヘッダを1行に・パネルを広く／内訳が固定バーに隠れない */
+#fake-mark{transform:none;overflow:hidden;color:rgba(163,66,0,.07)}
+#fake-mark span{display:block;transform:rotate(-18deg)}
+.howto{font-size:13px;font-weight:700;margin:4px 0 0}
+.step details#ties{background:#fff3e0;border:0;border-left:4px solid var(--warn);border-radius:0;padding:4px 10px;margin:4px 0;font-size:12.5px}
+.step details#ties summary{min-height:0;line-height:1.5;font-weight:400;padding:2px 0}
+#fmt-box summary{min-height:28px;line-height:1.5;padding:4px 0}
+#fmt-box{margin:6px 0 0}
+#score-def{margin:6px 0 0}
+#top20 summary{min-height:28px;line-height:28px;font-size:12px}
+tr.drow,#load-msg{scroll-margin-bottom:90px}
+#steps button,#tab-4{flex:1 1 0!important;padding:0 2px!important}
+@media (max-width:720px){
+  #fake-mark{color:rgba(163,66,0,.1)}
+  #panel{height:66vh}
+  #map{bottom:66vh}
+  #fake-mark{bottom:66vh}
+  #head{display:flex;align-items:center;flex-wrap:wrap;gap:0 6px;padding:2px 12px}
+  #head h1{flex:1 1 auto}
+  #head .foot{flex:0 0 auto}
+  #head .foot .note{display:none}
+  #demo-banner{flex-basis:100%;margin:2px 0}
+  #steps{padding-top:4px}
+  #steps button{min-height:40px}
+  #panel-body{padding-bottom:12px}
+  #ties{font-size:12px}
+  #s2 table{margin:2px 0}
+  #s2 p{margin:3px 0}
+}

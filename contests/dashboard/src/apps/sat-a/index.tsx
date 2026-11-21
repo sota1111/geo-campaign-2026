@@ -33,7 +33,7 @@ const TITLES: Record<StepId, string> = {
   weight: '衛星指標の重みを変えてみる（任意）',
   pick: '予算（走行延長）内で調査対象を選ぶ',
   scan: '調査結果（CSV）を入れる',
-  apply: '較正を反映して第2回へ進む',
+  apply: '較正して第2回へ進む',
   round2: '第2回の順位を確かめる',
   verify: '実データで確かめる（参考）',
 }
@@ -285,6 +285,13 @@ export default function App() {
     addResults(new Map([...selected].map((id) => [id, hit.has(id)])))
   }
 
+  /** デモ中に区間を選んでいない時: 予算内で自動で選んで、そのまま架空の走査まで入れる（タブを移らずに済む） */
+  const onDemoAutoScan = () => {
+    if (!demo || !demoData) return
+    const hit = new Set(demoData.hit)
+    addResults(new Map(selectByBudget(ranked, budgetKm).map((id) => [id, hit.has(id)] as [string, boolean])))
+  }
+
   const applyCalib = () => {
     // 反映前の順位（結果が入った区間を除いた候補の順位）を記録して、第2回との比較に使う
     const r = applyOf(segs, cellSat, w, round, calibNow, roundAdded)
@@ -307,7 +314,7 @@ export default function App() {
         done: pickedOnce || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
       { id: 'scan', title: '調査結果（CSV）を入れる', hint: '一次審査後に GMS3 の結果を入れる枠。区間ID または緯度・経度の CSV', action: 'CSV を入れると完了', done: roundAdded > 0 || round > 1 },
-      { id: 'apply', title: '較正を反映して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
+      { id: 'apply', title: '較正して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
       { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', action: round > 1 ? '第2回の順位ができました。ここを押して確かめる' : undefined, done: round > 1 && viewedR2 },
       { id: 'verify', title: '実データで確かめる（参考）', hint: '陥没の件数との照合・全国の文脈', action: '開いて読むと完了', optional: true, done: viewedVerify },
     ],
@@ -469,7 +476,7 @@ export default function App() {
                 onFile={onFile}
                 onClear={clearResults}
                 onDemoScan={onDemoScan}
-                onGoPick={() => setStep('pick')}
+                onDemoAutoScan={onDemoAutoScan}
               />
             )}
             {step === 'apply' && (

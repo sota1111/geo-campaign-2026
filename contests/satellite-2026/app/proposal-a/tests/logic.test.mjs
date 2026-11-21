@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, adoptWeight, MIN_AUC, MIN_GAIN, aucAt, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, clusterCount } from '../logic.js';
+import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, adoptWeight, MAX_STEP, MIN_AUC, MIN_GAIN, aucAt, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, clusterCount } from '../logic.js';
 
 const data = JSON.parse(fs.readFileSync(new URL('../data/toyonaka.json', import.meta.url)));
 const cellSat = Object.fromEntries(data.cells.map((c) => [c.id, satNorm(c.disp)]));
@@ -47,7 +47,8 @@ test('adoptWeight: 当てずっぽうに近い・差が小さい結果では重�
   const strong = mk(40, (i) => i % 2 === 1); // 衛星（B）がよく当たる
   const cal = calibrate(strong, cs);
   const a = adoptWeight(cal, strong, cs, 0);
-  assert.equal(a.adopt, true); assert.equal(a.w, cal.w); assert.ok(a.best >= MIN_AUC);
+  assert.equal(a.adopt, true); assert.ok(a.best >= MIN_AUC);
+  assert.ok(Math.abs(a.w - Math.min(cal.w, MAX_STEP)) < 1e-9, '1回の更新幅は MAX_STEP まで'); assert.equal(a.capped, cal.w > MAX_STEP);
   const rnd = mk(40, (i) => i % 4 < 2); // 衛星とは無関係
   const ar = adoptWeight(calibrate(rnd, cs), rnd, cs, 0.1);
   assert.equal(ar.adopt, false); assert.equal(ar.w, 0.1);
