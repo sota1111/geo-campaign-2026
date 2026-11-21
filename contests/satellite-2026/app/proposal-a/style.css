@@ -87,7 +87,7 @@ tr.pick{background:#dff0f4}
 .modal-box:focus{outline:none}
 
 .realnote{background:#eef6f8;border-left:4px solid var(--acc);padding:6px 10px;font-size:12px;margin-bottom:10px}
-#demo-banner{position:absolute;top:44px;left:410px;right:10px;z-index:5;background:#fff3e0;border:2px solid var(--warn);color:#7a3000;font-weight:700;padding:5px 10px;border-radius:4px;font-size:13px;text-align:center}
+#demo-banner{margin:4px 0 2px;background:#fff3e0;border:2px solid var(--warn);color:#7a3000;font-weight:700;padding:3px 8px;border-radius:4px;font-size:12px}
 #demo-banner[hidden]{display:none}
 body.demo #badge,body.fake #badge{background:#fff3e0}
 ul.tight{margin:2px 0;padding-left:18px}
@@ -102,8 +102,153 @@ ul.tight li{margin:3px 0}
 .demo-on{background:#fff3e0;border-left:4px solid var(--warn);padding:6px 10px;margin:6px 0}
 #steps button{font-size:13px;padding:0 2px}
 @media (max-width:720px){
-  #demo-banner{top:52px;left:6px;right:6px;font-size:11px;padding:3px 6px}
+  #demo-banner{font-size:11px;padding:2px 6px}
   #steps button{font-size:12px}
   .long{display:none}
   #steps button b{margin-right:3px}
 }
+
+/* 評価ループ第1回: 状態の帯をヘッダに固定・凡例は地図の隅・内訳は行の直下・架空の透かし */
+#status{margin:3px 0 0;font-size:11.5px;background:rgba(255,255,255,.14);border-radius:3px;padding:1px 6px;display:inline-block}
+#status.fake{background:#fff3e0;color:#7a3000;font-weight:700}
+#legend-box{position:absolute;left:410px;bottom:30px;z-index:3;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:6px;padding:2px 10px;font-size:11.5px;max-width:250px}
+#legend-box summary{cursor:pointer;font-weight:700;min-height:32px;line-height:32px}
+#legend{margin:0 0 6px;font-size:11.5px}
+#fake-mark{display:none;position:absolute;top:0;bottom:0;left:400px;right:0;z-index:2;pointer-events:none;align-items:center;justify-content:center;font-size:160px;font-weight:900;color:rgba(163,66,0,.13);transform:rotate(-18deg)}
+body.fake #fake-mark{display:flex}
+tr.rowlink{cursor:pointer}
+tr.rowlink:hover,tr.rowlink:focus{background:#eef6f8;outline:none}
+tr.rowlink td:first-child::before{content:"▸ ";color:var(--acc)}
+tr.on{background:#dfe9f6}
+tr.drow td{padding:0 0 6px}
+.dbox{border-left:4px solid #1a237e;background:#fff;padding:4px 8px;font-size:12.5px}
+.dbox h3{margin:0 0 2px;font-size:13px}.dbox p{margin:0}
+.dbox .btn{min-height:36px;margin-top:4px}
+.r2box{background:#e8f4ea;border:2px solid #2e7d32;border-radius:6px;padding:6px 10px;margin:4px 0 8px;font-size:13px}
+.r2box.fake{background:#fff3e0;border-color:var(--warn)}
+.r2box .btn{margin-top:6px}
+.okmsg{color:#1b5e20;font-weight:700;font-size:13px}
+.warnbox{background:#fff3e0;border-left:4px solid var(--warn);padding:5px 10px;font-size:13px;margin:4px 0}
+.filebox{position:relative;display:flex;align-items:center;gap:10px;border-style:solid}
+.filebox .filebtn{margin:0;display:inline-flex;align-items:center}
+.filebox .fname{font-size:12.5px;color:var(--sub);overflow-wrap:anywhere}
+.filebox input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.filebox:focus-within{outline:3px solid #f2a900;outline-offset:2px}
+table.rank td,table.rank th{padding:3px 3px}
+@media (max-width:720px){
+  #panel{height:62vh}
+  #map{bottom:62vh}
+  #head .sub{display:none}
+  #sheet-toggle{height:32px}
+  #legend-box{left:6px;top:6px;bottom:auto;max-width:210px;max-height:45%;overflow:auto}
+  #fake-mark{left:0;bottom:62vh;font-size:90px}
+  body.sheet-closed #fake-mark{bottom:150px}
+  .stickybar .btn{padding:6px 10px}
+}
+@media (max-width:720px){#badge{max-width:58%}}
+.filebox .filebtn{min-height:44px;padding:6px 14px;border-radius:6px;background:var(--acc);color:#fff;font-weight:700;font-size:14px;white-space:nowrap}
+
+/* 評価ループ第2回: 段階見出しの固定・下部ボタン帯の不透明化と影・3ボタンを1段に・同点の警告・上位の比較 */
+.step h2{position:sticky;top:-10px;background:var(--bg);z-index:3;padding:4px 0;margin:0 0 2px}
+.stickybar{box-shadow:0 -6px 8px -6px rgba(0,0,0,.25);padding-bottom:12px}
+.stickybar.row3{display:flex;gap:4px}
+.stickybar.row3 .btn{flex:1 1 auto;margin:0;padding:6px 8px;font-size:13px;white-space:nowrap}
+#ties{margin:4px 0;font-size:12.5px}
+.cmp{font-size:12px;font-variant-numeric:tabular-nums}
+details.more{border:0;padding:0 2px;margin:0 0 4px;background:none}
+details.more table{margin-top:0}
+.foot{display:flex;flex-wrap:wrap;align-items:center;gap:0 8px}
+.foot .note{font-size:11.5px}
+@media (max-width:720px){
+  .step h2{top:-8px;font-size:14px}
+  #status{display:none}
+  #fake-mark{font-size:64px;color:rgba(163,66,0,.2)}
+  body.fake #map::after{content:"架空";position:absolute;left:6px;bottom:6px;z-index:3;background:#fff3e0;border:2px solid var(--warn);color:var(--warn);font-weight:900;padding:0 8px;border-radius:4px;font-size:13px}
+  .stickybar.row3 .btn{font-size:12px;padding:6px 4px}
+}
+@media (max-width:720px){.stickybar{bottom:-24px}}
+
+/* 評価ループ第3回: 手順を3行に・デモの帯を1行に・スマホの地図を広く・重複した「架空」印をバッジに統一 */
+ol.tight3{margin:2px 0 4px;padding-left:22px;font-size:13px}
+ol.tight3 li{margin:0}
+.need3{margin:6px 0 0!important}
+#demo-banner{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.bannerbtn{background:#fff;border:1px solid var(--warn);color:#7a3000;font-weight:700;font-size:12px;border-radius:4px;min-height:32px;padding:0 8px;cursor:pointer;white-space:nowrap}
+#tab-4{flex:0 0 auto!important;padding:0 10px!important;background:#2f6372!important;font-weight:400!important}
+#tab-4[aria-selected=true]{background:var(--bg)!important}
+.r2box details.more summary{min-height:28px;line-height:28px;font-size:12px}
+@media (max-width:720px){
+  #panel{height:54vh}
+  #map{bottom:54vh}
+  #fake-mark{bottom:54vh}
+  body.fake #map::after{display:none}
+  #head h1{font-size:14px}
+  .bannerbtn{min-height:32px}
+}
+.r2row{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-top:4px}
+.r2row .btn{margin:0}
+.r2row details.more{margin:8px 0 0}
+/* 出典・代用の注記はヘッダの1行に（各段階の本文から外して縦の長さを減らす） */
+#head .foot{margin:3px 0 0;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;font-size:11.5px}
+#head .foot .note{color:#fff;opacity:.85;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#head #status{margin:0;flex:0 0 auto}
+#head #btn-about{color:#fff;font-size:12px;min-height:32px;white-space:nowrap;flex:0 0 auto;margin-left:auto}
+#head #btn-about:focus-visible{outline:3px solid #f2a900}
+.wrow{display:flex;align-items:center;gap:8px;margin-top:6px;font-weight:700}
+.wrow label{white-space:nowrap}
+.wrow input[type=range]{flex:1;width:auto}
+.wrow #w-out{min-width:3em;text-align:right}
+.dbox h3 .dclose{min-height:28px;padding:0 4px;font-size:12px;float:right}
+@media (max-width:720px){
+  .step h2{position:static;font-size:0;height:0;margin:0;padding:0;overflow:hidden}
+  #head .foot{margin:0}
+  #head #btn-about{min-height:32px}
+  #load-msg{scroll-margin-top:4px}
+}
+#load-msg{scroll-margin-top:40px}
+@media (max-width:720px){#w-note{display:none}}
+
+/* 評価ループ第4回: 透かしを薄く・横はみ出しなし／スマホのヘッダを1行に・パネルを広く／内訳が固定バーに隠れない */
+#fake-mark{transform:none;overflow:hidden;color:rgba(163,66,0,.07)}
+#fake-mark span{display:block;transform:rotate(-18deg)}
+.howto{font-size:13px;font-weight:700;margin:4px 0 0}
+.step details#ties{background:#fff3e0;border:0;border-left:4px solid var(--warn);border-radius:0;padding:4px 10px;margin:4px 0;font-size:12.5px}
+.step details#ties summary{min-height:0;line-height:1.5;font-weight:400;padding:2px 0}
+#fmt-box summary{min-height:28px;line-height:1.5;padding:4px 0}
+#fmt-box{margin:6px 0 0}
+#score-def{margin:6px 0 0}
+#top20 summary{min-height:28px;line-height:28px;font-size:12px}
+tr.drow,#load-msg{scroll-margin-bottom:90px}
+#steps button,#tab-4{flex:1 1 0!important;padding:0 2px!important}
+@media (max-width:720px){
+  #fake-mark{color:rgba(163,66,0,.1)}
+  #panel{height:66vh}
+  #map{bottom:66vh}
+  #fake-mark{bottom:66vh}
+  #head{display:flex;align-items:center;flex-wrap:wrap;gap:0 6px;padding:2px 12px}
+  #head h1{flex:1 1 auto}
+  #head .foot{flex:0 0 auto}
+  #head .foot .note{display:none}
+  #demo-banner{flex-basis:100%;margin:2px 0}
+  #steps{padding-top:4px}
+  #steps button{min-height:40px}
+  #panel-body{padding-bottom:12px}
+  #ties{font-size:12px}
+  #s2 table{margin:2px 0}
+  #s2 p{margin:3px 0}
+}
+
+/* 評価ループ第5回: ドラッグで置ける枠・デモのリンクは橙（架空）・点数の説明を1行に */
+.filebox.drag{background:#eef6f8;outline:3px dashed var(--acc);outline-offset:2px}
+#demo-go{color:var(--warn)}
+#score-def b{color:var(--ink)}
+.r2box .cmp{display:inline-block;margin-top:2px}
+.wrow #bud-out{min-width:3.6em;text-align:right;white-space:nowrap}
+@media (max-width:720px){
+  body.st2 #panel{height:56vh}
+  body.st2 #map,body.st2 #fake-mark{bottom:56vh}
+  body.st2.sheet-closed #map,body.st2.sheet-closed #fake-mark{bottom:150px}
+  .maplibregl-ctrl-attrib{font-size:10px;line-height:1.3}
+}
+@media (max-width:720px){body.st2 #panel.closed{height:150px}}
+@media (max-width:720px){[data-testid=sel-ties]{display:none}}

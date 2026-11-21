@@ -19,7 +19,7 @@ import {
 import { VerifyPanel, type VerifyData } from './Verify'
 import { SOURCES } from './About'
 import {
-  NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, totalKm,
+  NOW_YEAR, ADOPT_REASON, adoptWeight, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, topShift, totalKm,
   type DataFile, type DemoData, type Scanned, type Segment,
 } from './logic'
 
@@ -33,7 +33,7 @@ const TITLES: Record<StepId, string> = {
   weight: '衛星指標の重みを変えてみる（任意）',
   pick: '予算（走行延長）内で調査対象を選ぶ',
   scan: '調査結果（CSV）を入れる',
-  apply: '較正を反映して第2回へ進む',
+  apply: '較正して第2回へ進む',
   round2: '第2回の順位を確かめる',
   verify: '実データで確かめる（参考）',
 }
@@ -52,6 +52,7 @@ function calibOf(scanned: Scanned[], cellSat: Record<string, number>, w: number)
   const c = calibrate(scanned, cellSat)
   return {
     ...c,
+    ad: adoptWeight(c, scanned, cellSat, w),
     ex0: exclusionAccuracy(scanned, cellSat, w),
     ex1: c.w === null ? null : exclusionAccuracy(scanned, cellSat, c.w),
     n: scanned.length,
@@ -63,16 +64,16 @@ function applyOf(segs: Segment[], cellSat: Record<string, number>, w: number, ro
   const before = candidatesOf(rank(segs, cellSat, w))
   const rankMap: Record<string, number> = {}
   before.forEach((s, i) => (rankMap[s.id] = i + 1))
-  const newW = calib && calib.w !== null ? calib.w : w
+  const newW = calib ? calib.ad.w : w
   const after = candidatesOf(rank(segs, cellSat, newW))
   const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
   const prev: PrevInfo = {
     rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed,
-    calibrated: !!(calib && calib.w !== null), scanned: scannedCount,
+    calibrated: !!(calib && calib.w !== null), scanned: scannedCount, reason: calib ? calib.ad.reason : 'short',
   }
   let msg: string
   if (calib && calib.w !== null) {
-    msg = `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（入った結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `結果が入った区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `結果が入った区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
+    msg = `${calib.ad.adopt ? `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。` : `衛星指標の重みは ${pct(w)}% のまま（${ADOPT_REASON[calib.ad.reason ?? 'same']}）。`}${before[0]?.id === after[0]?.id ? `結果が入った区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `結果が入った区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
   } else {
     msg = '較正に使える結果が不足していたため、重みは変えていません（結果が入った区間が候補から外れた分だけ順位が繰り上がります）。'
   }
@@ -115,6 +116,9 @@ export default function App() {
   const [viewedVerify, setViewedVerify] = useState(false)
   // 手順2「選ぶ」は、区間を選んだときだけ完了にする（CSV を入れただけでは完了にしない）
   const [pickedOnce, setPickedOnce] = useState(false)
+  // 書き出した直後の確認表示（ファイル名・区間数・延長）。選択を変えたら消す
+  const [exportMsg, setExportMsg] = useState('')
+  useEffect(() => setExportMsg(''), [selected])
 
   useEffect(() => {
     if (round > 1 && step === 'round2') setViewedR2(true)
@@ -180,6 +184,8 @@ export default function App() {
   const candidates = useMemo(() => candidatesOf(ranked), [ranked])
   const surveyedSet = useMemo(() => scannedFrom(segs, results), [segs, results])
   const calibNow = useMemo(() => calibOf(surveyedSet, cellSat, w), [surveyedSet, cellSat, w])
+  // 較正を反映したら上位10が何区間入れ替わるか（反映前に結論として先に出す）
+  const previewChanged = useMemo(() => (calibNow.w !== null ? applyOf(segs, cellSat, w, 1, calibNow, 0).prev.changed : null), [segs, cellSat, w, calibNow])
 
   const toggle = (id: string) => {
     setSelected((cur) => {
@@ -197,15 +203,17 @@ export default function App() {
   // 書き出し CSV の出どころ表記。見本 CSV（架空の値）で較正した順位を「実データ」と書かない
   const dataNote = demo ? '説明用デモ（結果は架空）'
     : srcSample ? '見本 CSV（架空の値）で較正。地中レーダの結果は実際の調査結果ではありません'
-      : srcUser ? '利用者の調査結果による（衛星・道路・台帳は豊中市北東部の実データ。調査結果が実データかは利用者の責任）'
+      : srcUser ? 'あなたが入れた調査結果による（衛星・道路・台帳は豊中市北東部の実データ。調査結果の出所はあなたが確認）'
         : '実データ（豊中市北東部。衛星・道路・台帳）'
   const exportTargets = () => {
     const rk = new Map(candidates.map((s, i) => [s.id, i + 1]))
     const mid = (s: Segment, k: 0 | 1) => ((s.coords[0][k] + s.coords[1][k]) / 2).toFixed(6)
     const rows = [...selected].map((id) => ranked.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s)
       .sort((a, b) => (rk.get(a.id) ?? 999) - (rk.get(b.id) ?? 999))
-      .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote])
-    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
+      // cavity 列は空欄。調査後に あり／なし を書いて、そのまま手順「戻す」で入れられる（空欄の行は読み飛ばす）
+      .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote, ''])
+    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note', 'cavity'], ...rows])), 'text/csv;charset=utf-8')
+    setExportMsg(`survey-targets.csv（${rows.length} 区間。列 segment_id,lat,lon,length_m,score,cavity）を保存。調査後、cavity 列に あり／なし を書いて結果の手順で入れます（スマホは表計算アプリで編集）`)
   }
   const exportRound2 = () => {
     const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, dataNote])
@@ -277,6 +285,13 @@ export default function App() {
     addResults(new Map([...selected].map((id) => [id, hit.has(id)])))
   }
 
+  /** デモ中に区間を選んでいない時: 予算内で自動で選んで、そのまま架空の走査まで入れる（タブを移らずに済む） */
+  const onDemoAutoScan = () => {
+    if (!demo || !demoData) return
+    const hit = new Set(demoData.hit)
+    addResults(new Map(selectByBudget(ranked, budgetKm).map((id) => [id, hit.has(id)] as [string, boolean])))
+  }
+
   const applyCalib = () => {
     // 反映前の順位（結果が入った区間を除いた候補の順位）を記録して、第2回との比較に使う
     const r = applyOf(segs, cellSat, w, round, calibNow, roundAdded)
@@ -299,7 +314,7 @@ export default function App() {
         done: pickedOnce || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
       { id: 'scan', title: '調査結果（CSV）を入れる', hint: '一次審査後に GMS3 の結果を入れる枠。区間ID または緯度・経度の CSV', action: 'CSV を入れると完了', done: roundAdded > 0 || round > 1 },
-      { id: 'apply', title: '較正を反映して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
+      { id: 'apply', title: '較正して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
       { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', action: round > 1 ? '第2回の順位ができました。ここを押して確かめる' : undefined, done: round > 1 && viewedR2 },
       { id: 'verify', title: '実データで確かめる（参考）', hint: '陥没の件数との照合・全国の文脈', action: '開いて読むと完了', optional: true, done: viewedVerify },
     ],
@@ -318,7 +333,7 @@ export default function App() {
       badge={
         demo ? { kind: 'fictional', label: '架空を含む（説明用デモ）' }
           : srcSample ? { kind: 'fictional', label: srcUser ? '架空を含む（見本 CSV＋利用者の CSV）' : '架空を含む（見本 CSV）' }
-            : srcUser ? { kind: 'partial', label: '実データ＋利用者の調査結果（実データかは利用者の責任）' }
+            : srcUser ? { kind: 'partial', label: '実データ＋あなたが入れた調査結果（出所はあなたが確認）' }
               : undefined
       }
       actions={
@@ -421,7 +436,7 @@ export default function App() {
           <Skeleton className="h-40 w-full" />
         ) : (
           <>
-            {step === 'top' && <TopPanel candidates={candidates} focus={focus} onFocus={focusRow} />}
+            {step === 'top' && <TopPanel candidates={candidates} focus={focus} onFocus={focusRow} satShift={topShift(segs, cellSat, w, 20)} />}
             {step === 'weight' && (
               <WeightPanel
                 w={w}
@@ -444,6 +459,7 @@ export default function App() {
                 onAuto={() => setSelected(new Set(selectByBudget(ranked, budgetKm)))}
                 onClear={() => setSelected(new Set())}
                 onExport={exportTargets}
+                exportMsg={exportMsg}
               />
             )}
             {step === 'scan' && (
@@ -460,7 +476,7 @@ export default function App() {
                 onFile={onFile}
                 onClear={clearResults}
                 onDemoScan={onDemoScan}
-                onGoPick={() => setStep('pick')}
+                onDemoAutoScan={onDemoAutoScan}
               />
             )}
             {step === 'apply' && (
@@ -473,6 +489,7 @@ export default function App() {
                 resultsCount={hasResults ? results.size : 0}
                 demo={demo}
                 applied={round > 1 && roundAdded === 0 ? prev : null}
+                previewChanged={previewChanged}
                 onApply={applyCalib}
                 onGoRound2={() => setStep('round2')}
                 onGoScan={() => setStep('scan')}

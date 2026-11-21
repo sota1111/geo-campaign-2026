@@ -87,7 +87,45 @@ export function segScore(seg: Pick<Segment, 'cell' | 'year'>, cellSat: CellSat, 
 export function rank(segs: Segment[], cellSat: CellSat, w: number): Scored[] {
   return segs
     .map((s) => ({ ...s, score: segScore(s, cellSat, w) }))
-    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+    .sort(byScore)
+}
+
+/** 並べ方: 点数の高い順。同点（差 1e-9 未満）は竣工年の古い順（不明は後ろ）、さらに区間ID順 */
+const yearKey = (y: number | null | undefined) => (y == null ? 99999 : y)
+export function byScore(a: Scored, b: Scored) {
+  if (Math.abs(b.score - a.score) > 1e-9) return b.score - a.score
+  return yearKey(a.year) - yearKey(b.year) || a.id.localeCompare(b.id)
+}
+
+/** 重みを変える条件（仮の基準。画面に明示する）: 最良の重みの AUC が MIN_AUC 以上、かつ今の重みより MIN_GAIN 以上高いこと */
+export const MIN_AUC = 0.6
+export const MIN_GAIN = 0.05
+export type AdoptReason = 'short' | 'low' | 'small' | 'same' | null
+export interface Adoption { w: number; adopt: boolean; reason: AdoptReason; best: number | null; cur: number | null; capped: boolean; weak: boolean }
+/** 1回の較正で重みを動かす上限（仮の基準）。少数・弱い結果で台帳の根拠を一度に捨てないため */
+export const MAX_STEP = 0.3
+/** これより弱い・少ない結果では、更新しても注意を出す（仮の基準） */
+export const WEAK_AUC = 0.7
+export const MIN_LABELS = 20
+export const ADOPT_REASON: Record<Exclude<AdoptReason, null>, string> = {
+  short: '結果が足りない',
+  low: '点数が同じ区間が多く、あり・なしの差が出ない',
+  small: '重みを変えても当たり方がほぼ同じ',
+  same: '今の重みが最も当たる',
+}
+/** 較正の結果から、次回に使う重みを決める。条件を満たさなければ今の重みのまま（当てずっぽうに近い結果で重みを動かさない）。更新幅は MAX_STEP まで */
+export function adoptWeight(cal: Calibration | null, scanned: Scanned[], cellSat: CellSat, curW: number, minAuc = MIN_AUC, minGain = MIN_GAIN): Adoption {
+  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null, capped: false, weak: false }
+  const best = aucAt(scanned, cellSat, cal.w) as number
+  const cur = aucAt(scanned, cellSat, curW) as number
+  const weak = best < WEAK_AUC || scanned.length < MIN_LABELS
+  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur, capped: false, weak }
+  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur, capped: false, weak }
+  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur, capped: false, weak }
+  const d = cal.w - curW
+  const capped = Math.abs(d) > MAX_STEP + 1e-9
+  const w = capped ? Math.round((curW + Math.sign(d) * MAX_STEP) * 10) / 10 : cal.w
+  return { w, adopt: true, reason: null, best, cur, capped, weak }
 }
 
 /** 結果が未入力の生活道路（候補）だけを取り出す（順位順を保つ） */
@@ -255,6 +293,7 @@ export interface OutcomeSummary {
   unknownId: number
   unmatched: number
   invalid: number
+  blank: number
   merged: number
   conflicts: number
   segments: number
@@ -266,7 +305,7 @@ export interface ParsedOutcomes {
   results: Map<string, boolean>
   summary: OutcomeSummary
 }
-const EMPTY: OutcomeSummary = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 }
+const EMPTY: OutcomeSummary = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, blank: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 }
 
 /**
  * 調査結果の CSV を、区間ごとの空洞の有無（Map: 区間ID → true/false）にする。
@@ -285,6 +324,8 @@ export function parseOutcomes(text: string, segs: Segment[], maxM = LINK_MAX_M):
   const seen = new Map<string, Set<boolean>>()
   for (const r of rows.slice(1)) {
     sm.rows++
+    // 空洞の列が空欄の行は「未記入」として読み飛ばす（書き出した CSV に一部だけ記入して戻す使い方のため）
+    if (squash(r[cr]) === '') { sm.blank++; continue }
     const v = parseCavity(r[cr])
     if (v === null) { sm.invalid++; continue }
     let id: string | null = null
@@ -316,4 +357,18 @@ export function parseOutcomes(text: string, segs: Segment[], maxM = LINK_MAX_M):
   sm.hit = [...results.values()].filter(Boolean).length
   sm.none = sm.segments - sm.hit
   return { error: null, results, summary: sm }
+}
+
+/** 選んだ区間の「まとまり」の数。端点どうしが gapM 以内の区間を同じまとまりとする（現場で続けて走れる塊の目安。gapM は画面に明示する仮の値） */
+export const CLUSTER_GAP_M = 150
+export function clusterCount(segs: Pick<Segment, 'id' | 'coords'>[], ids: Set<string>, gapM = CLUSTER_GAP_M): number {
+  const sel = segs.filter((s) => ids.has(s.id))
+  const par = sel.map((_, i) => i)
+  const find = (i: number): number => (par[i] === i ? i : (par[i] = find(par[i])))
+  const near = (a: Pick<Segment, 'coords'>, b: Pick<Segment, 'coords'>) => a.coords.some((p) => b.coords.some((q) => {
+    const kx = 111320 * Math.cos((p[1] * Math.PI) / 180)
+    return Math.hypot((p[0] - q[0]) * kx, (p[1] - q[1]) * 110540) <= gapM
+  }))
+  for (let i = 0; i < sel.length; i++) for (let j = i + 1; j < sel.length; j++) if (near(sel[i], sel[j])) par[find(i)] = find(j)
+  return new Set(sel.map((_, i) => find(i))).size
 }

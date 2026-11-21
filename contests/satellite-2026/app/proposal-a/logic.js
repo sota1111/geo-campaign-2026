@@ -23,7 +23,14 @@ export function segScore(seg, cellSat, w) {
 export function rank(segs, cellSat, w) {
   return segs
     .map((s) => ({ ...s, score: segScore(s, cellSat, w) }))
-    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    .sort(byScore);
+}
+
+/** 並べ方: 点数の高い順。同点（差 1e-9 未満）は竣工年の古い順（不明は後ろ）、さらに区間ID順。 */
+const yearKey = (y) => (y == null ? 99999 : y);
+export function byScore(a, b) {
+  if (Math.abs(b.score - a.score) > 1e-9) return b.score - a.score;
+  return yearKey(a.year) - yearKey(b.year) || a.id.localeCompare(b.id);
 }
 
 /** 未調査の生活道路の上位から、予算（km）を超えない範囲で貪欲に選ぶ。 */
@@ -67,6 +74,30 @@ export function calibrate(scanned, cellSat, minEach = 3) {
   cands.sort((a, b) => Math.abs(a.w - 0.5) - Math.abs(b.w - 0.5) || a.w - b.w);
   return { w: cands[0].w, reason: null, pos, neg, table, ledgerOnly: table[0].auc, satOnly: table[10].auc };
 }
+
+/** 重みを変える条件（仮の基準。画面に明示する）: 最良の重みの AUC が MIN_AUC 以上、かつ今の重みより MIN_GAIN 以上高いこと。
+ *  満たさなければ重みは今のまま（当てずっぽうに近い結果で重みを動かさない）。 */
+export const MIN_AUC = 0.6;
+export const MIN_GAIN = 0.05;
+/** 較正の結果から、次回に使う重みを決める。戻り値 { w, adopt, reason, best, cur }。
+ *  reason: 'short'（結果不足）/ 'low'（最良でも MIN_AUC 未満）/ 'small'（今の重みとの差が MIN_GAIN 未満）/ 'same'（今の重みが最良）/ null（更新） */
+export function adoptWeight(cal, scanned, cellSat, curW, minAuc = MIN_AUC, minGain = MIN_GAIN) {
+  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null, capped: false, weak: false };
+  const best = aucAt(scanned, cellSat, cal.w), cur = aucAt(scanned, cellSat, curW);
+  const weak = best < WEAK_AUC || scanned.length < MIN_LABELS;
+  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur, capped: false, weak };
+  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur, capped: false, weak };
+  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur, capped: false, weak };
+  // 1回の較正で動かす幅は MAX_STEP まで（少数・弱い結果で台帳の根拠を一度に捨てないため）
+  const d = cal.w - curW, capped = Math.abs(d) > MAX_STEP + 1e-9;
+  const w = capped ? Math.round((curW + Math.sign(d) * MAX_STEP) * 10) / 10 : cal.w;
+  return { w, adopt: true, reason: null, best, cur, capped, weak };
+}
+/** 1回の較正で重みを動かす上限（仮の基準）。 */
+export const MAX_STEP = 0.3;
+/** これより弱い・少ない結果では、更新しても注意を出す（仮の基準）。 */
+export const WEAK_AUC = 0.7;
+export const MIN_LABELS = 20;
 
 /** 除外の精度: 点数が下位の半分を「異常なし」と判定したとき、その中で実際に異常なしだった割合。
  *  下位半分の件数が minN 未満なら null。 */
@@ -156,7 +187,7 @@ export function nearestSegment(lon, lat, segs, maxM = LINK_MAX_M) {
   return best ? { seg: best, distM: bd } : null;
 }
 
-const EMPTY_SUMMARY = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 };
+const EMPTY_SUMMARY = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, blank: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 };
 
 /**
  * 調査結果の CSV を、区間ごとの空洞の有無（Map: 区間ID → true/false）にする。
@@ -176,6 +207,8 @@ export function parseOutcomes(text, segs, { maxM = LINK_MAX_M } = {}) {
   const seen = new Map(); // 区間ID -> Set(true/false)
   for (const r of rows.slice(1)) {
     sm.rows++;
+    // 空洞の列が空欄の行は「未記入」として読み飛ばす（書き出した CSV に一部だけ記入して戻す使い方のため）
+    if (squash(r[cr]) === '') { sm.blank++; continue; }
     const v = parseCavity(r[cr]);
     if (v === null) { sm.invalid++; continue; }
     let id = null;
@@ -208,3 +241,17 @@ export function parseOutcomes(text, segs, { maxM = LINK_MAX_M } = {}) {
 
 /** 区間と結果（Map）から、較正に使う形（hit 付き）を作る。 */
 export const scannedFrom = (segs, results) => segs.filter((s) => results.has(s.id)).map((s) => ({ ...s, hit: results.get(s.id) }));
+
+/** 選んだ区間の「まとまり」の数。端点どうしが gapM 以内の区間を同じまとまりとする（現場で続けて走れる塊の目安。gapM は画面に明示する仮の値）。 */
+export const CLUSTER_GAP_M = 150;
+export function clusterCount(segs, ids, gapM = CLUSTER_GAP_M) {
+  const sel = segs.filter((s) => ids.has(s.id));
+  const par = sel.map((_, i) => i);
+  const find = (i) => (par[i] === i ? i : (par[i] = find(par[i])));
+  const near = (a, b) => a.coords.some((p) => b.coords.some((q) => {
+    const kx = 111320 * Math.cos((p[1] * Math.PI) / 180);
+    return Math.hypot((p[0] - q[0]) * kx, (p[1] - q[1]) * 110540) <= gapM;
+  }));
+  for (let i = 0; i < sel.length; i++) for (let j = i + 1; j < sel.length; j++) if (near(sel[i], sel[j])) par[find(i)] = find(j);
+  return new Set(sel.map((_, i) => find(i))).size;
+}

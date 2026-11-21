@@ -40,7 +40,7 @@ const MK_ID = `(()=>{const S=App.STATE;const cand=S.ranked.filter(s=>s.cls==='li
 const MK_PT = `(()=>{const S=App.STATE;const rows=[...S.results].map(([id,h])=>{const s=S.segs.find(x=>x.id===id);
   return ((s.coords[0][1]+s.coords[1][1])/2+0.00002).toFixed(6)+','+((s.coords[0][0]+s.coords[1][0])/2).toFixed(6)+','+(h?'あり':'なし')});
   return '緯度,経度,空洞\\n'+rows.join('\\n')+'\\n'})()`;
-const W_OF = `(()=>{const t=document.getElementById("s3").innerText.match(/採用: 衛星 (\\d+)%/);return t&&+t[1]})()`;
+const W_OF = `(()=>{const t=document.getElementById("s3").textContent.match(/採用: 衛星 (\\d+)%/);return t&&+t[1]})()`;
 
 const report = {};
 for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
@@ -102,8 +102,10 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await noFake('第3');
     r.info.s3_default = (await c.ev('document.getElementById("s3").innerText')).slice(0, 300);
     const t3 = await c.ev('document.getElementById("s3").innerText');
-    need(t3.includes('一次審査を通った後') && t3.includes('GMS3'), 'GMS3 の受け皿の説明がない');
-    need(t3.includes('未確認'), 'GMS3 書式未確認の明記がない');
+    const t3all = await c.ev('document.getElementById("s3").textContent');
+    need(t3all.includes('GMS3'), 'GMS3 の受け皿の説明がない');
+    need(t3all.includes('未確認'), 'GMS3 書式未確認の明記がない');
+    need(t3.includes('各3件以上'), '較正に必要な件数が入力欄の近くに無い');
     await shot(c, `${label}_3a_empty.png`);
     const csvId = await c.ev(MK_ID);
     await c.ev(`(()=>{const dt=new DataTransfer();dt.items.add(new File([${JSON.stringify(csvId)}],'by_id.csv',{type:'text/csv'}));const i=document.getElementById('csv-file');i.files=dt.files;i.dispatchEvent(new Event('change'))})()`);
@@ -125,7 +127,7 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     const pts = await c.ev(MK_PT);
     await c.ev('document.getElementById("clear-res").click()');
     await c.ev(`App.loadCsvText(${JSON.stringify(pts)},'by_point.csv')`);
-    r.info.load_pt = await c.ev('document.querySelector("[data-testid=load-ok]")?.innerText');
+    r.info.load_pt = await c.ev('document.querySelector("[data-testid=load-ok]")?.textContent'); // 内訳は折りたたみの中
     need(r.info.load_pt && r.info.load_pt.includes('40 区間') && r.info.load_pt.includes('緯度・経度の点で 40 行'), 'CSV(緯度・経度)の取り込み結果が違う');
     r.info.w_pt = await c.ev(W_OF);
     need(r.info.w_pt === r.info.w_id, '2つの書き方で較正が違う ' + r.info.w_id + ' / ' + r.info.w_pt);
@@ -134,7 +136,7 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await c.ev('document.getElementById("clear-res").click()');
 
     // ---- 説明用デモ: オンの間ずっと「架空」、オフで消える
-    await c.ev('(()=>{const t=document.getElementById("demo-toggle");t.checked=true;t.dispatchEvent(new Event("change"))})()');
+    await c.ev(`document.getElementById("demo-go").click()`);
     await sleep(800);
     need(await c.ev('!document.getElementById("demo-banner").hidden'), 'デモ中なのにバナーが出ない');
     for (const stp of [1, 2, 3, 4]) {
@@ -145,10 +147,12 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await c.ev('document.getElementById("auto").click()');
     await c.ev('App.setStep(3)');
     await c.ev('document.getElementById("scan").click()');
+    need(await c.ev('document.getElementById("apply").textContent.trim()') === '第2回へ進む', '第3段階の主ボタンの文言が「第2回へ進む」でない');
+    need(await c.ev('document.documentElement.scrollWidth') <= w, 'デモ中に横スクロール発生');
     r.info.demo_s3 = (await c.ev('document.getElementById("s3").innerText')).slice(0, 700);
     need(await c.ev('document.getElementById("s3").innerText.includes("架空")'), 'デモの第3段階に「架空」がない');
     await shot(c, `${label}_5_demo.png`);
-    await c.ev('(()=>{const t=document.getElementById("demo-toggle");t.checked=false;t.dispatchEvent(new Event("change"))})()');
+    await c.ev(`document.getElementById("demo-off").click()`);
     await sleep(500);
     need(await c.ev('document.getElementById("demo-banner").hidden && App.STATE.results.size===0 && App.STATE.segs.every(s=>!s.surveyed)'), 'デモをオフにしても架空の結果が残る');
     await noFake('デモ後の第3');

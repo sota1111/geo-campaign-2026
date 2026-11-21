@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, candidatesOf, topShift,
-  parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom,
+  parseCsv, clusterCount, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, adoptWeight, MAX_STEP, MIN_AUC,
   type DataFile, type DemoData, type Segment,
 } from './logic'
 
@@ -189,5 +189,44 @@ describe('sat-a 調査結果 CSV の取り込み（GMS3 の書式は未確認。
       expect(r.summary.hit).toBeGreaterThanOrEqual(3)
       expect(r.summary.none).toBeGreaterThanOrEqual(3)
     }
+  })
+})
+
+describe('評価ループ第1回: 同点の並べ方と重みを変える条件', () => {
+  it('同点は竣工年の古い順（不明は後ろ）→区間ID順', () => {
+    const mk = (id: string, year: number | null) => ({ id, cell: 'A', year, cls: 'life', lenM: 10, coords: [[0, 0], [0, 0]] }) as unknown as Segment
+    expect(rank([mk('S3', 1960), mk('S1', 1962), mk('S2', null), mk('S0', 1960)], { A: 0 }, 1).map((x) => x.id)).toEqual(['S0', 'S3', 'S1', 'S2'])
+  })
+  it('当てずっぽうに近い結果では重みを変えず、明確な差なら更新する', () => {
+    const cs = { A: 0, B: 1 }
+    const mk = (n: number, f: (i: number) => boolean) => Array.from({ length: n }, (_, i) => ({ cell: i % 2 ? 'B' : 'A', year: 1970 + (i % 7), hit: f(i) }))
+    const strong = mk(40, (i) => i % 2 === 1)
+    const a = adoptWeight(calibrate(strong, cs), strong, cs, 0)
+    expect(a.adopt).toBe(true)
+    expect(a.best).toBeGreaterThanOrEqual(MIN_AUC)
+    expect(a.w).toBeLessThanOrEqual(MAX_STEP + 1e-9) // 1回の更新幅は MAX_STEP まで
+    const rnd = mk(40, (i) => i % 4 < 2)
+    const r = adoptWeight(calibrate(rnd, cs), rnd, cs, 0.1)
+    expect(r.adopt).toBe(false)
+    expect(r.w).toBe(0.1)
+    expect(adoptWeight(null, [], cs, 0.3)).toMatchObject({ w: 0.3, reason: 'short' })
+  })
+})
+
+describe('書き出した CSV を戻す（評価ループ第2回）', () => {
+  it('空洞の列が空欄の行は未記入として読み飛ばす', () => {
+    const segs = [{ id: 'S1', cls: 'life', coords: [[135, 34], [135.001, 34]] }, { id: 'S2', cls: 'life', coords: [[135, 34.01], [135.001, 34.01]] }] as never
+    const r = parseOutcomes('rank,segment_id,lat,lon,cavity\n1,S1,34,135,あり\n2,S2,34.01,135,\n', segs)
+    expect(r.error).toBeNull()
+    expect(r.summary).toMatchObject({ segments: 1, blank: 1, invalid: 0 })
+  })
+  it('まとまりの数: 端点が近い区間は1つと数える', () => {
+    const segs = [
+      { id: 'A', coords: [[135, 34], [135.001, 34]] },
+      { id: 'B', coords: [[135.001, 34], [135.002, 34]] },
+      { id: 'C', coords: [[135.05, 34], [135.051, 34]] },
+    ] as never
+    expect(clusterCount(segs, new Set(['A', 'B', 'C']))).toBe(2)
+    expect(clusterCount(segs, new Set())).toBe(0)
   })
 })
