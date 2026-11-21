@@ -1,8 +1,8 @@
 /* 太陽光発電所の金属盗対策アプリ: 計算（画面に依存しない）。ブラウザでは window.Sg、node では module.exports。
-   扱うのは集計（約5kmメッシュ・市町村）と、利用者がその場で入力した1地点だけ。個別設備のデータは持たない。 */
+   扱うのは集計（約2kmメッシュ・市町村）と、利用者がその場で入力した1地点だけ。個別設備のデータは持たない。 */
 (function (root) {
   'use strict';
-  var CELL = 5;            // 集計メッシュ＝1kmメッシュ×5（build_data.py の CELL と同じ）
+  var CELL = 2;            // 集計メッシュ＝1kmメッシュ×2（build_data.py の CELL と同じ）
   var KM2_PER_MESH = 1.04; // 1kmメッシュの面積の目安（緯度36度付近: 東西約1.13km×南北約0.93km）
   /* リスクの色分け（仮の規則。公的な数値の根拠はない。README「色分けの規則」）。
      メッシュ・市町村: 地区の実績（県警の設備あたり件数）を主な根拠にした点数 W_REGION×地区の段階(0〜2) ＋ 人目の少なさ(0か1) を、4段階の色にする。
@@ -86,6 +86,14 @@
     base.forEach(function (c, i) { c.quiet = q[i]; c.level = c.region >= 0 && tiers[c.region] != null ? mapLevel(tiers[c.region], q[i]) : null; });
     return base;
   }
+  /* 町字（散布図）: towns.json の rows（[lon,lat,n,kw,small,dens,region,approx,city,name]）→ 画面用。メッシュ・市町村と同じ規則（点数＝2×地区の段階＋人目の少なさ）。
+     人目の少なさは、町字の人口密度（e-Stat 小地域の人口÷面積）が、公開した町字の中で低い方から1/3か。点（lon,lat）は町字の代表点で、個別の設備の位置ではない */
+  function townLevels(rows, tiers) {
+    var base = rows.map(function (r) { return { lon: r[0], lat: r[1], n: r[2], kw: r[3], small: r[4], dens: r[5], region: r[6], approx: !!r[7], city: r[8], name: r[9] }; });
+    var q = quietFlags(base.map(function (t) { return t.dens; }));
+    base.forEach(function (t, i) { t.quiet = q[i]; t.level = t.region >= 0 && tiers[t.region] != null ? mapLevel(tiers[t.region], q[i]) : null; });
+    return base;
+  }
   /* 市町村: munis.json の rows と地区の対応。n が null（3件未満で秘匿）は level を付けない */
   function muniLevels(rows, regions, tiers, areaNames) {
     var reg = {}; areaNames.forEach(function (a, i) { (regions[a] || []).forEach(function (nm) { reg[nm] = i; }); });
@@ -105,13 +113,13 @@
     for (var i = 0; i < n; i++) { c += (ra[i] - ma) * (rb[i] - mb); va += (ra[i] - ma) * (ra[i] - ma); vb += (rb[i] - mb) * (rb[i] - mb); }
     return va && vb ? c / Math.sqrt(va * vb) : null;
   }
-  /* 位置の地区: 診断の約5kmメッシュが公開メッシュならその地区。隠したメッシュなど公開メッシュでない時は、2メッシュ（約10km）以内でいちばん近い公開メッシュの地区で代用（near=true。推測） */
+  /* 位置の地区: 診断の約2kmメッシュが公開メッシュならその地区。隠したメッシュなど公開メッシュでない時は、5メッシュ（約10km）以内でいちばん近い公開メッシュの地区で代用（near=true。推測） */
   function regionAt(rows, cx, cy) {
     var best = null;
     rows.forEach(function (r) {
       if (r[6] < 0) return;
       var d = Math.max(Math.abs(r[0] - cx), Math.abs(r[1] - cy));
-      if (d > 2) return;
+      if (d > 5) return;
       var e = d * 100 + Math.hypot(r[0] - cx, r[1] - cy);
       if (!best || e < best.e) best = { e: e, idx: r[6], near: d > 0 };
     });
@@ -139,7 +147,7 @@
   /* 事業者の自己診断。
      input: { lon, lat, cls: 'low'|'high'|'special'|'unknown', answers: {id: 'yes'|'no'|'unknown'}（対策）, cond: {id: 'yes'|'no'|'unknown'}（条件） }
      ctx:   { cells, pops, items（対策）, conds（risk.json）, tiers（地区番号→段階）, regionNames }
-     返す値は、地区の実績・周囲の人口（約5kmメッシュ）・条件の判定・リスクの色と、未実施・不明の対策。個別設備の情報は参照しない。 */
+     返す値は、地区の実績・周囲の人口（約2kmメッシュ）・条件の判定・リスクの色と、未実施・不明の対策。個別設備の情報は参照しない。 */
   function diagnose(input, ctx) {
     var m = null, cellRow = null, cellPopulation = null, quiet = null, autoQuiet = null, reg = null;
     if (input.muni) {
@@ -149,7 +157,7 @@
     } else {
       m = toMesh(input.lon, input.lat);
       cellRow = ctx.cells.filter(function (r) { return r[0] === m.cx && r[1] === m.cy; })[0] || null;
-      cellPopulation = cellPop(ctx.pops, m.cx, m.cy);   // 約5kmメッシュの人口だけを使う（入力点の1kmメッシュの人口は使わない）
+      cellPopulation = cellPop(ctx.pops, m.cx, m.cy);   // 約2kmメッシュの人口だけを使う（入力点の1kmメッシュの人口は使わない）
       var allDens = ctx.cells.map(function (r) { return -density(r[5]); });
       var mine = -density(cellPopulation);
       var below = allDens.filter(function (x) { return x < mine; }).length, eq = allDens.filter(function (x) { return x === mine; }).length;
@@ -232,7 +240,7 @@
 
   var api = { CELL: CELL, KM2_PER_MESH: KM2_PER_MESH, LEVELS: LEVELS, W_REGION: W_REGION, TIER_MID: TIER_MID, QUIET_FROM: QUIET_FROM, MAP_LEVEL: MAP_LEVEL, DIAG_CUTS: DIAG_CUTS, diagLevel: diagLevel,
     parseCoord: parseCoord, landSet: landSet, toMesh: toMesh, cellBounds: cellBounds, meshCode: meshCode, popGrid: popGrid, popAt: popAt, localPop: localPop,
-    cellPop: cellPop, density: density, percentRank: percentRank, districtStats: districtStats, quietFlags: quietFlags, mapLevel: mapLevel, meshLevels: meshLevels, muniLevels: muniLevels,
+    cellPop: cellPop, density: density, percentRank: percentRank, districtStats: districtStats, quietFlags: quietFlags, mapLevel: mapLevel, meshLevels: meshLevels, townLevels: townLevels, muniLevels: muniLevels,
     rankCorr: rankCorr, regionAt: regionAt, evalConds: evalConds, diagnose: diagnose, priorities: priorities, csvEscape: csvEscape, toCsv: toCsv };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Sg = api;
 })(typeof window !== 'undefined' ? window : globalThis);
