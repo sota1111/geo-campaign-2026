@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import ContestPage from '@/pages/ContestPage'
@@ -62,6 +62,18 @@ describe('提出予定数（総司令官の決定 2026-11-21）', () => {
     expect(t('アイデア')).toContain('予定1・選んだ2')
     expect(t('アイデア')).toContain('▲')
     expect(t('不動産')).toContain('✓')
+  })
+
+  it('並び順の説明: コンペを選ぶと「このコンペを提出先に選んだ候補（N件）が先」。N は「選んだ N件」と同じ数え方', () => {
+    save({ 'sat-sugi': ['satellite-2026'], 'biz-idea': ['ichibiz-2026-idea'] })
+    render(<Portal />)
+    expect(screen.getByTestId('sort-note').textContent).toContain('選んだ候補（2件）が先')
+    fireEvent.click(screen.getByTestId('pick-satellite-2026'))
+    expect(screen.getByTestId('sort-note').textContent).toContain('このコンペを提出先に選んだ候補（1件）が先')
+    expect(screen.getByTestId('planned-satellite-2026').textContent).toContain('選んだ 1件')
+    const order = [...document.querySelectorAll('[data-testid="app-row"] > li')].map((e) => e.getAttribute('data-app-card'))
+    expect(order[0]).toBe('sat-sugi')
+    expect(order.indexOf('biz-idea')).toBeGreaterThan(0)
   })
 
   it('概要ページ: 提出予定数の節があり、要項の上限とは別と書く', () => {

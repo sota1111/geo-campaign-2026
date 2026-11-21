@@ -48,14 +48,17 @@ export function totalScore(appId: string): number {
 }
 
 /**
- * アプリの並び。提出先を1件以上選んだアプリが先、選んでいないアプリが後。
+ * アプリの並び。先頭に来るのは「選んだアプリ」。
+ *  - コンペを選んでいるとき: そのコンペ（イチBiz は3部門のどれか）を提出先に選んだアプリだけを先頭にする。他のコンペ向けに選んだアプリは先頭にせず、通常の並びに混ぜる。
+ *  - コンペを選んでいないとき: 何かを提出先に選んだアプリを先頭にする。
  * それぞれの中は、コンペを選んだらそのコンペとの score の高い順、未選択なら全列の score 合計の高い順。
  * 同点は registry の並び（APPS の順）。targets を渡さなければ（選択なしとして）関連の強さだけで並べる。
  */
 export function sortApps(apps: AppMeta[], contest: ContestId | null, targets: Targets = {}): AppMeta[] {
   const idx = (a: AppMeta) => APPS.findIndex((x) => x.id === a.id)
   const key = (a: AppMeta) => (contest ? contestScore(a.id, contest) : totalScore(a.id))
-  const chosen = (a: AppMeta) => ((targets[a.id]?.length ?? 0) > 0 ? 1 : 0)
+  const forContest = contest ? new Set(appsForContest(targets, contest)) : null
+  const chosen = (a: AppMeta) => ((forContest ? forContest.has(a.id) : (targets[a.id]?.length ?? 0) > 0) ? 1 : 0)
   return [...apps].sort((a, b) => chosen(b) - chosen(a) || key(b) - key(a) || idx(a) - idx(b))
 }
 
@@ -88,6 +91,15 @@ export function toggleTarget(t: Targets, appId: string, columnId: string): Targe
 export function appsForContest(t: Targets, contest: ContestId): string[] {
   const cols = columnsOf(contest).map((c) => c.id)
   return APPS.filter((a) => (t[a.id] ?? []).some((c) => cols.includes(c))).map((a) => a.id)
+}
+
+/**
+ * 「選んだ N件」の数え方（並び順の説明と提出予定数の比べで共通）。
+ * コンペを渡せば、そのコンペ（イチBiz は3部門）の列に選んだ（アプリ×列）の組の数。渡さなければ全部の組の数。
+ */
+export function selectedCount(t: Targets, contest: ContestId | null): number {
+  if (!contest) return Object.values(t).reduce((n, v) => n + v.length, 0)
+  return columnsOf(contest).reduce((n, c) => appsForColumn(t, c.id).length + n, 0)
 }
 
 export function appsForColumn(t: Targets, columnId: string): string[] {
@@ -238,8 +250,7 @@ function stateOf(planned: number, chosen: number): { state: PlanState; diff: num
  */
 export function planView(contestId: ContestId, t: Targets, plan?: PlannedCount): PlanView {
   const p = plan ?? CONTEST_INFO.find((c) => c.id === contestId)!.planned
-  const cols = columnsOf(contestId)
-  const chosen = cols.reduce((n, c) => n + appsForColumn(t, c.id).length, 0)
+  const chosen = selectedCount(t, contestId)
   const parts: PlanPartView[] = p.parts.map((x) => {
     const got = x.columnId ? appsForColumn(t, x.columnId).length : null
     return { label: x.label, planned: x.count, chosen: got, ...(got === null ? { state: 'undecided' as PlanState, diff: 0 } : stateOf(x.count, got)) }
