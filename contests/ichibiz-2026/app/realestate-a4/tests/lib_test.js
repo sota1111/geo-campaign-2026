@@ -121,6 +121,8 @@ test('近くに標準地が無い時の注意', () => {
   assert.ok(Lib.summaryText([{ point: {}, distance: 5000 }]).includes('離れています'));
   assert.ok(!Lib.summaryText([{ point: {}, distance: 500 }]).includes('離れています'));
   assert.strictEqual(Lib.summaryText([]), '近くの標準地が見つかりませんでした。');
+  assert.strictEqual(Lib.loadedText({ pref: { name: '福岡県' }, points: [{ id: 'a' }, { id: 'a' }, { id: 'b' }] }), '同梱データ: 福岡県 標準地 2 地点（データ 3 件）。');
+  assert.ok(Lib.legendHtml().includes('最も高い価格を100%とした長さ'));
   assert.strictEqual(Lib.distText(450), '450m');
   assert.strictEqual(Lib.distText(1500), '1.5km');
 });
@@ -131,9 +133,9 @@ test('同じ標準地番号のレコードは続けて返し、標準地の数�
   assert.deepStrictEqual(r.map((e) => [e.parcel, e.part, e.parts]), [[1, 1, 2], [1, 2, 2], [2, 1, 1]]);
   assert.strictEqual(Lib.parcelNo(pts[0]), '福岡中央 商業地 9');
   const h = Lib.cardHtml(r[1], 2);
-  assert.ok(h.includes('標準地番号: 福岡中央 商業地 9') && h.includes('同じ標準地番号のデータ 2 件中の 2 件目'));
+  assert.ok(h.includes('標準地番号（作成者による表記）: 福岡中央 商業地 9') && h.includes('同じ標準地番号のデータ 2 件中の 2 件目'));
   assert.ok(!Lib.cardHtml(r[2], 3).includes('件中の'));
-  assert.ok(Lib.summaryText(r).includes('近い順に 2 件の標準地です。') && Lib.summaryText(r).includes('2件ずつ'));
+  assert.ok(Lib.summaryText(r).includes('近い順に 2 地点の標準地です') && Lib.summaryText(r).includes('データは 3 件') && Lib.summaryText(r, { complete: true }).includes('4つの価格がそろう標準地だけ'));
 });
 test('データ検証', () => {
   assert.ok(Lib.validate(sample));

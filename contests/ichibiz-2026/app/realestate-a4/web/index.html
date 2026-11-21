@@ -11,51 +11,59 @@
 <header id="top">
   <h1>同じ土地、四つの値段</h1>
   <p class="lead">土地の値段には、公示価格・相続税路線価・取引事例から求めた価格・収益から求めた価格と、いくつものものさしがあります。場所を指すと、近くの標準地について、この4つを同じ単位（円/㎡）で並べます。</p>
-  <p class="warn"><strong><span id="noticeTop"></span>。</strong>ここに出るのは近くの標準地の価格で、指した土地そのものの価格ではありません。売却額の目安を示すものではなく、価格の見方を知るための参考情報です。国が作成・監修したものではありません。</p>
+  <p class="warn"><strong><span id="noticeTop"></span>。</strong>標準地は、価格を調べるために選ばれた土地（点）です。ここに出るのは近くの標準地の価格で、指した土地そのものの価格ではありません。売却額の目安を示すものではなく、価格の見方を知るための参考情報です。国が作成・監修したものではありません。出典・責任は<a href="#sources">ページ下部</a>にあります。</p>
   <p id="provisional" class="prov" hidden><strong>仮データです。</strong>実際の標準地ではありません（画面の確認用）。</p>
 </header>
 
-<main>
-  <section id="step1" class="panel">
+<main id="work">
+  <section id="step1" class="panel ctl">
     <h2>1. 場所を指す（福岡県）</h2>
     <form id="search" class="row">
       <label class="sr" for="q">住所・目印を検索</label>
       <input id="q" type="search" placeholder="例: 福岡市中央区天神" autocomplete="off">
       <button type="submit">検索</button>
     </form>
+    <p id="status" role="status" class="status">地図で場所を指すか、例の場所を選ぶと、近くの標準地が出ます。</p>
     <div class="row examples" role="group" aria-label="例の場所">
       <span class="hint">例の場所:</span>
       <span id="exButtons"></span>
     </div>
+  </section>
+
+  <div id="mapbox" class="mapbox">
+    <div id="map" role="application" aria-label="地図。クリックまたはタップで場所を指定" tabindex="0">
+      <div id="tiles"></div>
+      <canvas id="over"></canvas>
+      <div id="cross" aria-hidden="true"></div>
+      <div id="pin" hidden></div>
+      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button></div>
+      <div class="attr">地図: 国土地理院タイル／標準地: 不動産情報ライブラリ（国土交通省）を加工</div>
+    </div>
+  </div>
+
+  <section id="opts" class="panel opt">
     <fieldset class="row uses" id="uses">
       <legend>標準地の用途</legend>
       <label><input type="checkbox" name="use" value="住宅地" checked> 住宅地</label>
       <label><input type="checkbox" name="use" value="商業地" checked> 商業地</label>
       <label><input type="checkbox" id="completeOnly"> 4つの価格がそろう標準地だけ</label>
     </fieldset>
-    <div id="map" role="application" aria-label="地図。クリックまたはタップで場所を指定" tabindex="0">
-      <div id="tiles"></div>
-      <canvas id="over"></canvas>
-      <div id="pin" hidden></div>
-      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button></div>
-      <div class="attr">地図: 国土地理院タイル／標準地: 不動産情報ライブラリ（国土交通省）を加工</div>
-    </div>
-    <p class="hint">地図をクリック（タップ）すると、その位置を指定します。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心を指定できます。地図の丸い印は標準地の位置で、数字は近い順です。</p>
+    <p class="hint">地図をクリック（タップ）すると、その位置を指定します。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心の十字の位置を指定できます。地図の黒い丸は標準地の位置で、数字は近い順です。ひし形は検索した場所です。</p>
   </section>
 
-  <section id="step2" class="panel">
+  <section id="step2" class="panel res">
     <h2>2. 近くの標準地の4つの価格</h2>
-    <p id="status" role="status">地図で場所を指すか、例の場所を選ぶと、ここに近くの標準地が出ます。</p>
+    <p id="summary" class="summary">場所を指すと、結果がここに出ます（スマートフォンでは地図の下）。</p>
     <div id="legendBox"></div>
     <div id="cards" class="cards" aria-live="polite"></div>
     <p id="notice2" class="notice2" hidden></p>
   </section>
 </main>
 
-<footer>
+<footer id="sources">
   <h2>出典・加工・責任・限界</h2>
   <ul>
-    <li><strong>出典</strong>: <span id="attribution"></span>（<a id="libLink" href="https://www.reinfolib.mlit.go.jp/" rel="noopener">不動産情報ライブラリ（国土交通省）へのリンク</a>）。価格時点: <span id="year">—</span>年。取得日: <span id="fetchedAt">—</span>。</li>
+    <li><strong>出典の表示</strong>: <span id="attribution"></span>（<a id="libLink" href="https://www.reinfolib.mlit.go.jp/" rel="noopener">不動産情報ライブラリ（国土交通省）へのリンク</a>）。価格時点: <span id="year">—</span>年。取得日: <span id="fetchedAt">—</span>。</li>
     <li><strong>加工した旨</strong>: <span id="processed"></span>。</li>
     <li><strong>クレジット</strong>: <span id="credit"></span>。</li>
     <li><strong>責任</strong>: <span id="resp"></span>。</li>

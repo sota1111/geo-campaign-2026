@@ -105,8 +105,8 @@
     const miss = priceRows(p).filter((r) => !r.value).length;
     const comp = miss ? '4つのうち ' + miss + ' つはデータなし' : '4つの価格がそろっています';
     return '<article class="card" data-id="' + esc(p.id) + '">' +
-      '<h4><span class="nth">標準地 ' + (entry.parcel || nth) + '</span> ' + esc(place) + '</h4>' +
-      '<p class="pn">標準地番号: ' + esc(parcelNo(p)) + (entry.parts > 1 ? '（同じ標準地番号のデータ ' + entry.parts + ' 件中の ' + entry.part + ' 件目）' : '') + '</p>' +
+      '<h3><span class="nth">標準地 ' + (entry.parcel || nth) + '</span> ' + esc(place) + '</h3>' +
+      '<p class="pn">標準地番号（作成者による表記）: ' + esc(parcelNo(p)) + (entry.parts > 1 ? '（同じ標準地番号のデータ ' + entry.parts + ' 件中の ' + entry.part + ' 件目）' : '') + '</p>' +
       '<p class="cm">指した地点から直線 ' + esc(distText(entry.distance)) + '。' + esc(meta) + '</p>' +
       '<p class="cc' + (miss ? ' part' : '') + '">' + esc(comp) + '</p>' +
       '<ul class="prices">' + rows + '</ul>' +
@@ -115,15 +115,22 @@
 
   /** 4つの価格の見方（1回だけ出す定義）。HTML */
   function legendHtml() {
-    return '<dl class="legend">' + PRICES.map((d) => '<dt>' + esc(d.label) + '</dt><dd>' + esc(d.note) + '</dd>').join('') + '</dl>';
+    return '<dl class="legend">' + PRICES.map((d) => '<dt>' + esc(d.label) + '</dt><dd>' + esc(d.note) + '</dd>').join('') + '</dl>' +
+      '<p class="hint">各価格の下の棒は、その標準地の4つのうち最も高い価格を100%とした長さです（標準地どうしの比較には使えません）。</p>';
   }
 
   /** 結果の見出し文（近くに無い時の注意を含む） */
-  function summaryText(entries) {
+  function summaryText(entries, opts) {
     if (!entries.length) return '近くの標準地が見つかりませんでした。';
     const far = entries[0].distance > FAR_M;
     const parcels = new Set(entries.map((e) => e.point.id)).size, multi = entries.length > parcels;
-    return '近い順に ' + parcels + ' 件の標準地です。' + (multi ? '同じ標準地番号のデータが2件ずつ並ぶものがあります（位置は同じで、値が異なることがあります）。' : '') + (far ? '最も近い標準地でも ' + distText(entries[0].distance) + ' 離れています。この地点の近くには標準地が少ない地域です。' : '');
+    return '近い順に ' + parcels + ' 地点の標準地です' + (opts && opts.complete ? '（4つの価格がそろう標準地だけ）' : '') + (multi ? '（データは ' + entries.length + ' 件。同じ標準地番号のデータが2件ずつ並びます。位置は同じで、値が異なることがあります）' : '') + '。' + (far ? '最も近い標準地でも ' + distText(entries[0].distance) + ' 離れています。この地点の近くには標準地が少ない地域です。' : '');
+  }
+
+  /** 読み込み完了の案内。標準地（標準地番号）の数とデータの件数を分けて書く */
+  function loadedText(d) {
+    const parcels = new Set(d.points.map((p) => p.id)).size;
+    return '同梱データ: ' + d.pref.name + ' 標準地 ' + parcels.toLocaleString('en-US') + ' 地点（データ ' + d.points.length.toLocaleString('en-US') + ' 件）。';
   }
 
   /** 読み込んだデータの検証。形が合わなければ null */
@@ -133,7 +140,7 @@
     return d;
   }
 
-  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, parcelNo, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, validate, esc };
+  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, parcelNo, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, loadedText, validate, esc };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

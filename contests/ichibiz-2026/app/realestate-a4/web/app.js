@@ -11,7 +11,7 @@
     { label: '小倉駅付近（北九州市）', lon: 130.8826, lat: 33.8869 },
     { label: '久留米市中心部', lon: 130.5083, lat: 33.3194 },
   ];
-  const state = { data: null, view: { lon: 130.4, lat: 33.59, z: 14 }, pin: null, results: [] };
+  const state = { mark: null, data: null, view: { lon: 130.4, lat: 33.59, z: 14 }, pin: null, results: [] };
 
   // ---- 地図（平面の座標変換） ----
   const map = $('map'), tiles = $('tiles'), cv = $('over'), pinEl = $('pin');
@@ -56,6 +56,11 @@
     const g = cv.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
     g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (state.mark) { // 検索した場所: ひし形（ピンとは形を変える）
+      const m = project(state.mark.lon, state.mark.lat);
+      g.beginPath(); g.moveTo(m.x, m.y - 12); g.lineTo(m.x + 12, m.y); g.lineTo(m.x, m.y + 12); g.lineTo(m.x - 12, m.y); g.closePath();
+      g.fillStyle = '#f0a000'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke(); g.lineWidth = 1; g.strokeStyle = '#1d2733'; g.stroke();
+    }
     state.results.forEach((e, i) => {
       if (e.part > 1) return; // 同じ標準地番号は同じ位置なので、丸は1つ
       const p = project(e.point.lon, e.point.lat);
@@ -106,14 +111,14 @@
     if (!state.data) return;
     state.pin = { lon, lat };
     showResults();
-    $('step2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('status').textContent = '地点を指しました。近くの標準地は、地図の下（広い画面では右）に出しています。別の地点を指すと入れ替わります。';
   }
   function showResults() {
     if (!state.pin || !state.data) return;
     const u = uses();
-    if (!u.length) { state.results = []; $('status').textContent = '標準地の用途を1つ以上選んでください。'; $('cards').innerHTML = ''; $('notice2').hidden = true; render(); return; }
+    if (!u.length) { state.results = []; $('summary').textContent = '標準地の用途を1つ以上選んでください。'; $('legendBox').innerHTML = ''; $('cards').innerHTML = ''; $('notice2').hidden = true; render(); return; }
     state.results = Lib.nearest(state.data.points, state.pin.lon, state.pin.lat, { n: Lib.DEFAULT_COUNT, uses: u, complete: $('completeOnly').checked });
-    $('status').textContent = Lib.summaryText(state.results);
+    $('summary').textContent = Lib.summaryText(state.results, { complete: $('completeOnly').checked });
     $('legendBox').innerHTML = state.results.length ? Lib.legendHtml() : '';
     $('cards').innerHTML = state.results.map((e, i) => Lib.cardHtml(e, i + 1)).join('');
     $('notice2').hidden = !state.results.length; $('notice2').textContent = Lib.NOTICE + '。';
@@ -131,8 +136,9 @@
       const j = await r.json();
       if (!j.length) { $('status').textContent = '見つかりませんでした。地図を直接クリックしてください。'; return; }
       const [lon, lat] = j[0].geometry.coordinates;
-      state.view = { lon, lat, z: 15 }; state.pin = null; state.results = []; render();
-      $('status').textContent = '「' + j[0].properties.title + '」付近に移動しました。土地の位置を地図でクリックしてください（地図にフォーカスして Enter でも、中心を指せます）。';
+      state.view = { lon, lat, z: 15 }; state.pin = null; state.results = []; state.mark = { lon, lat };
+      $('summary').textContent = '場所を指すと、結果がここに出ます（スマートフォンでは地図の下）。'; $('legendBox').innerHTML = ''; $('cards').innerHTML = ''; $('notice2').hidden = true; render();
+      $('status').textContent = '「' + j[0].properties.title + '」付近に移動しました（地図のひし形が検索した場所です）。次に、土地の位置を地図でクリックしてください（地図にフォーカスして Enter でも、中心の十字を指せます）。';
     } catch (err) { $('status').textContent = '検索に失敗しました。地図を直接クリックしてください。'; }
   });
   for (const ex of EXAMPLES) {
@@ -158,7 +164,7 @@
     state.data = d;
     $('year').textContent = d.year; $('fetchedAt').textContent = d.fetchedAt;
     if (d.provisional) $('provisional').hidden = false;
-    $('status').textContent = '同梱データ ' + d.points.length.toLocaleString('en-US') + ' 件の標準地（' + d.pref.name + '）。地図で場所を指すか、例の場所を選んでください。';
+    $('status').textContent = Lib.loadedText(d) + '地図で場所を指すか、例の場所を選んでください。';
   }).catch(() => { $('status').textContent = 'データを読み込めませんでした（data/fukuoka.json が未取得です）。'; });
 
   window.App = { state, choose };

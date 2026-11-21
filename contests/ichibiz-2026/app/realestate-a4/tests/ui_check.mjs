@@ -25,8 +25,8 @@ ws.onmessage = (m) => {
 };
 const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })).result?.result?.value;
-const shot = async (name) => {
-  const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+const shot = async (name, full = true) => {
+  const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: full });
   fs.writeFileSync(path.join(outdir, name), Buffer.from(r.data ?? r.result.data, 'base64'));
 };
 await send('Runtime.enable'); await send('Page.enable');
@@ -39,13 +39,29 @@ for (const [name, w, h] of [['1280', 1280, 900], ['390', 390, 844]]) {
   await sleep(1500);
   report[name] = await ev(`JSON.stringify({
     cards: document.querySelectorAll('.card').length,
+    scrollY: window.scrollY,
     hscroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth,
     status: document.getElementById('status').textContent,
+    summary: document.getElementById('summary').textContent,
     prov: !document.getElementById('provisional').hidden,
+    mapVisible: (() => { const r = document.getElementById('map').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })(),
     rows: document.querySelectorAll('.card')[0]?.querySelectorAll('.pr').length })`);
+  await shot(`shot-${name}-view.png`, false);   // 地点を選んだ直後の第一画面（自動スクロールしないこと）
   await ev("window.scrollTo(0,0)");
   await shot(`shot-${name}.png`);
+  // 住所検索: 案内と印が第一画面にあるか
+  await send('Page.navigate', { url });
+  await sleep(1200);
+  await ev("(() => { const q = document.getElementById('q'); q.value = '久留米市役所'; document.getElementById('search').requestSubmit(); })()");
+  await sleep(2500);
+  report[name + '-search'] = await ev("document.getElementById('status').textContent");
+  await shot(`shot-${name}-search.png`, false);
+  await ev("document.getElementById('map').focus()");
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight' });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight' });
+  await sleep(500);
+  await shot(`shot-${name}-focus.png`, false);
 }
 console.log(JSON.stringify(report, null, 1));
 console.log('console errors:', logs.length ? logs : 'なし');
