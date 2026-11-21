@@ -63,3 +63,60 @@ test('画面の表示規約: 実データ・仮の明示、外部送信なし、
   assert.ok(!/#0f0|#00ff00/.test(read('kanto.css')));
   assert.ok(!/%減る|％減る/.test(html.replace('「花粉が○%減る」とは言えません', '')));
 });
+
+// ---- 区分1の中の順位（人に届きやすい発生源の順位。作成者の式） ----
+const ctx2 = { window: {} }; vm.createContext(ctx2);
+vm.runInContext(read('data/pop.js'), ctx2); vm.runInContext(read('data/verify9.js'), ctx2);
+const POP = ctx2.window.SUGI_POP, V9 = ctx2.window.SUGI_VERIFY9;
+test('人口データは kanto.js のメッシュと同じ並び・件数で、半径が広いほど人口が増える', () => {
+  const n = D.cells.n.length;
+  assert.equal(POP.meta.n, n);
+  for (const R of ['10', '20', '30']) assert.equal(POP.x[R].length, n);
+  for (let i = 0; i < n; i += 97) assert.ok(POP.x['10'][i] <= POP.x['20'][i] + 1 && POP.x['20'][i] <= POP.x['30'][i] + 1);
+  assert.ok(POP.meta.popTotal > 4e7 && POP.meta.popTotal < 6e7);
+  assert.equal(POP.meta.unit, 100);
+});
+test('点数 S = 26年生以上の面積 × 半径内の人口。区分1以外は0。帯は面積の10/30/60%で分かれる', () => {
+  const cls = K.classifyAll(D, P), p = Object.assign({}, P, { rankKm: 20 });
+  const sc = K.scores(D, POP, p, cls), rb = K.rankBands(D, cls, sc.S), bs = K.bandSummary(D, cls, rb.band);
+  assert.equal(sc.pop, true);
+  let tot1 = 0;
+  for (let i = 0; i < cls.length; i++) {
+    if (cls[i] !== 1) { assert.equal(sc.S[i], 0); assert.equal(rb.band[i], 0); continue; }
+    tot1 += D.cells.n[i] * 0.04;
+    assert.ok(Math.abs(sc.S[i] - D.cells.n26[i] * 0.04 * POP.x['20'][i] * 100) < 1e-6);
+    assert.ok(rb.band[i] >= 1 && rb.band[i] <= 4);
+  }
+  assert.ok(Math.abs(bs.tot[1] + bs.tot[2] + bs.tot[3] + bs.tot[4] - tot1) < 1e-6);
+  assert.ok(bs.tot[0] === 0);
+  assert.ok(Math.abs(bs.tot[1] / tot1 - 0.10) < 0.01 && Math.abs((bs.tot[1] + bs.tot[2]) / tot1 - 0.30) < 0.01 && Math.abs((bs.tot[1] + bs.tot[2] + bs.tot[3]) / tot1 - 0.60) < 0.01);
+  const lo = [0, Infinity, Infinity, Infinity, Infinity], hi = [0, 0, 0, 0, 0];
+  for (let i = 0; i < cls.length; i++) if (cls[i] === 1) { const b = rb.band[i]; lo[b] = Math.min(lo[b], sc.S[i]); hi[b] = Math.max(hi[b], sc.S[i]); }
+  for (let b = 1; b < 4; b++) assert.ok(lo[b] >= hi[b + 1]);
+});
+test('人口が無いときの代替は max(0, 1-距離/50) で、画面に出す印（pop=false）が付く', () => {
+  const cls = K.classifyAll(D, P), sc = K.scores(D, null, Object.assign({}, P, { rankKm: 20 }), cls);
+  assert.equal(sc.pop, false);
+  for (let i = 0; i < cls.length; i += 53) assert.ok(Math.abs(sc.x[i] - Math.max(0, 1 - D.cells.dist[i] / 50)) < 1e-9);
+});
+test('林齢では順位を分けない: 点数は26年生以上の面積に比例し、林齢の重みの項がない。R は10/20/30で初期値20', () => {
+  assert.equal(K.RANK_RADII.join(','), '10,20,30');
+  assert.equal(K.DEFAULTS.rankKm, 20);
+  const D1 = { cells: { n: [100], n26: [50], n21: [80], dist: [10] }, munis: [['x', 0, 0, 0, 0]], meta: { prefs: ['x'] } };
+  const pop = { meta: { unit: 100 }, x: { 20: [7] } };
+  const a = K.scores(D1, pop, Object.assign({}, P, { rankKm: 20 }), [1]).S[0], b = K.scores(D1, pop, Object.assign({}, P, { rankKm: 20, age: 21 }), [1]).S[0];
+  assert.equal(a, 50 * 0.04 * 700); assert.equal(b, 80 * 0.04 * 700);
+});
+test('東京都12地点9年分の原表の読み取り: 12地点×9年、青梅の9年平均、回帰係数', () => {
+  assert.equal(V9.sites.length, 12); assert.equal(V9.years.join(','), '2009,2010,2011,2012,2013,2014,2015,2016,2017');
+  for (const s of V9.sites) assert.equal(s.byYear.length, 9);
+  const o = V9.sites.find((s) => s.name === '青梅');
+  assert.equal(o.byYear[0], 11246); assert.equal(o.byYear[2], 31733); assert.equal(o.coef, 2.9141);
+  assert.ok(Math.abs(o.mean9 - 11149.2) < 0.1);
+});
+test('画面の表示規約（順位）: 「効果」「花粉量」と書かない。仮・出典・限界を出す', () => {
+  const t = read('index.html') + read('kanto.js');
+  assert.ok(!/効果|花粉量/.test(t));
+  assert.ok(t.includes('人に届きやすい発生源の順位') && t.includes('作成者の式') && t.includes('選び直していません'));
+  assert.ok(t.includes('林齢では順位を付けていない'));
+});

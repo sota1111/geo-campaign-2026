@@ -24,7 +24,18 @@
     </header>
     <div id="panel-body">
       <section id="legend" aria-labelledby="h-legend"><h2 id="h-legend">凡例：どこで何をするか</h2><div id="legend-rows"></div>
-        <p class="note">色は対策、<b>濃さはその500mメッシュのスギ人工林の多さ</b>（5ha で薄く、20ha 以上で濃い）。色に加えて<b>模様</b>でも区別できます。太い黒の輪郭は林野庁の「伐採重点区域」がある市町村、黒の破線は50km圏の外縁、●は50km圏の起点の都市です。</p>
+        <p class="note">色は対策。区分1は<b>濃さと斜線の太さが「区分1の中の順位」</b>（濃いほど先に着手）、区分2〜4は<b>濃さがスギ人工林の多さ</b>（5ha で薄く、20ha 以上で濃い）。色に加えて<b>模様</b>でも区別できます。太い黒の輪郭は林野庁の「伐採重点区域」がある市町村、黒の破線は50km圏の外縁、●は50km圏の起点の都市です。</p>
+      </section>
+      <section id="rank" aria-labelledby="h-rank"><h2 id="h-rank">区分1の中の順位：どこから手を付けるか</h2>
+        <fieldset class="row"><legend>人口を数える半径 R <span class="chip prov">仮</span>（初期値20 km）</legend>
+          <label><input type="radio" name="rk" value="10"> 10 km</label><label><input type="radio" name="rk" value="20" checked> 20 km</label><label><input type="radio" name="rk" value="30"> 30 km</label></fieldset>
+        <div id="rank-body"></div>
+        <div class="row"><label for="r-pref">市町村の表の都県</label><select id="r-pref"></select></div>
+        <details class="fold"><summary>式と根拠の強さ</summary>
+          <p><b>点数 S ＝ 26年生以上のスギ人工林の面積（ha）× 半径 R km 以内の人口</b>。区分1の中を面積で数えた百分位で4つの帯にします。「人に届きやすい発生源の順位（作成者の式）」で、花粉の量や対策の成果ではありません。</p>
+          <ul class="note"><li><b>根拠あり</b>: 26年生以上を発生源とする（森林総研）／発生源の量×住む人口の形（森林総研が首都圏で人口を考慮）。</li><li><b>方向のみ</b>: 近いほど影響が大きい（東京都12地点の回帰係数 青梅2.91〜大田0.39）。</li><li><b>仮置き</b>: 距離の減り方（半径内=1、外=0）と R。</li><li><b>順位に入れない</b>: 林齢（26年生以上で雄花量は頭打ち。林齢では順位が分かれない）、風、傾斜（別の軸）、まとまり、県別の雄花調査値、ヒノキ。</li></ul>
+        </details>
+        <details class="fold" id="rank-check"><summary>順位の検証と感度（東京都12地点・9年分、R 10/20/30 km）</summary><div id="rank-check-body"></div></details>
       </section>
       <section id="sel" aria-labelledby="h-sel" hidden><h2 id="h-sel">選んだ場所</h2><div id="sel-body"></div></section>
       <section id="params" aria-labelledby="h-params"><h2 id="h-params">仮の基準を変えて見る</h2>
@@ -59,6 +70,8 @@
 
 <script src="vendor/maplibre-gl.js"></script>
 <script src="data/kanto.js"></script>
+<script src="data/pop.js"></script>
+<script src="data/verify9.js"></script>
 <script src="kanto-lib.js"></script>
 <script src="kanto.js"></script>
 </body>
