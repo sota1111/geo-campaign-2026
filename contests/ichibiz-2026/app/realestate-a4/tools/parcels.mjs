@@ -119,3 +119,33 @@ export function diagnoseXpt(features) {
     priceReadable: props.filter((p) => numLead(p.u_current_years_price_ja) !== null).length,
   };
 }
+
+/** 国の標準地番号の形（XPT002 の standard_lot_number_ja で確かめた規則）: 住宅地「地域名-連番」、商業地「地域名5-連番」。
+ *  実データで突き合わせできた 832 地点は全てこの形だった。他の用途は規則が未確認なので null */
+export function lotNumberOf(p) {
+  const seq = String(p.id ?? '').split('-').pop();
+  if (!p.area || !seq) return null;
+  if (p.use === '住宅地') return `${p.area}-${seq}`;
+  if (p.use === '商業地') return `${p.area}5-${seq}`;
+  return null;
+}
+
+/** 突き合わせできなかった標準地の理由の傾向（診断用。原因は断定せず、条件ごとの数だけ数える）。
+ *  各標準地は最初に当てはまる区分に1回だけ数える */
+export function diagnoseUnmatched(parcels, kojiPoints) {
+  const out = { total: 0, sameUseWithin50mButAmbiguous: 0, differentUseWithin50m: 0, sameUse51to500m: 0, sameUse501to2000m: 0, lotNumberFoundElsewhere: 0, nothingWithin2km: 0 };
+  for (const p of parcels) {
+    if (p.koji) continue;
+    out.total++;
+    const near = kojiPoints.map((k) => ({ k, d: dist(p.lon, p.lat, k.lon, k.lat) })).filter((e) => e.d <= 2000).sort((a, b) => a.d - b.d);
+    const sameUse = near.filter((e) => !e.k.use || !p.use || e.k.use === p.use);
+    const lot = lotNumberOf(p);
+    if (sameUse.length && sameUse[0].d <= MATCH_RADIUS_M) out.sameUseWithin50mButAmbiguous++;
+    else if (near.length && near[0].d <= MATCH_RADIUS_M) out.differentUseWithin50m++;
+    else if (sameUse.length && sameUse[0].d <= 500) out.sameUse51to500m++;
+    else if (sameUse.length) out.sameUse501to2000m++;
+    else if (lot && kojiPoints.some((k) => k.lotNo.replace(/\s/g, '') === lot)) out.lotNumberFoundElsewhere++;
+    else out.nothingWithin2km++;
+  }
+  return out;
+}

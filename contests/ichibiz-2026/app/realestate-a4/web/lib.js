@@ -55,14 +55,20 @@
     return has(p.koji && p.koji.price) && ['rosenka', 'hikaku', 'shueki'].every((k) => distinctValues(p[k]).values.length > 0);
   }
 
-  /** 標準地番号（地域名・用途区分・連番。id の末尾が連番）。作成者による表記 */
+  /** 標準地番号を国の形で（XPT002 の標準地番号で確かめた規則: 住宅地「地域名-連番」、商業地「地域名5-連番」）。他の用途は規則が未確認なので null */
   function parcelNo(p) {
     const seq = String(p.id || '').split('-').pop();
-    return [p.area, p.use, seq].filter(Boolean).join(' ');
+    if (!p.area || !seq) return null;
+    if (p.use === '住宅地') return p.area + '-' + seq;
+    if (p.use === '商業地') return p.area + '5-' + seq;
+    return null;
   }
-  /** 見出し下の標準地番号の行。公示のデータ（XPT002）の標準地番号があればそれを出し、無ければ作成者による表記 */
+  /** 見出し下の標準地番号の行。公示のデータ（XPT002）の標準地番号があればそれ。無ければ国の形に組み立てたもの（作成者による表記）。組み立てられなければ地域名・用途・連番 */
   function parcelNoLine(p) {
-    return p.koji && p.koji.lotNo ? '標準地番号: ' + p.koji.lotNo : '標準地番号（作成者による表記）: ' + parcelNo(p);
+    if (p.koji && p.koji.lotNo) return '標準地番号: ' + p.koji.lotNo;
+    const n = parcelNo(p);
+    if (n) return '標準地番号（作成者による表記）: ' + n;
+    return '標準地番号（作成者による表記）: ' + [p.area, p.use, String(p.id || '').split('-').pop()].filter(Boolean).join(' ');
   }
 
   /** 地点に近い標準地を距離順（近い順。同じ距離は id 順）で n 地点。uses を渡すと、その用途だけに絞る。complete は4つそろう地点だけ */

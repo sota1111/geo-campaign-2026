@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { GENERATOR, SOURCE, extractPoint, recordsOf, indexOf, FIELDS } from './extract.mjs';
-import { groupParcels, extractKojiPoints, attachKoji, fillParcels, tilesOf, diagnoseXpt, MATCH_RADIUS_M } from './parcels.mjs';
+import { groupParcels, extractKojiPoints, attachKoji, fillParcels, tilesOf, diagnoseXpt, diagnoseUnmatched, MATCH_RADIUS_M } from './parcels.mjs';
 
 const here = import.meta.dirname;
 const args = process.argv.slice(2);
@@ -140,6 +140,7 @@ const { parcels, matched } = attachKoji(grouped, kojiPoints);
 const f = fillParcels(parcels);
 console.log(`  突き合わせ（位置 ${MATCH_RADIUS_M}m 以内・用途が同じ）: ${matched}/${parcels.length} 地点で公示価格を当てられました`);
 console.log('  値のある標準地数:', JSON.stringify(f));
+console.log('  突き合わせできなかった標準地の傾向（診断。区分は排他）:', JSON.stringify(diagnoseUnmatched(parcels, kojiPoints)));
 
 const data = {
   generator: GENERATOR, version: 2, source: SOURCE, fetchedAt: new Date().toISOString().slice(0, 10),

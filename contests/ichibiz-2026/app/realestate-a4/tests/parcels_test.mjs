@@ -1,7 +1,7 @@
 // 実行: lib_test.js の先頭の行を参照
 import test from 'node:test';
 import assert from 'node:assert';
-import { numLead, diagnoseXpt, groupParcels, extractKojiPoints, matchKoji, attachKoji, fillParcels, tilesOf, MATCH_RADIUS_M } from '../tools/parcels.mjs';
+import { lotNumberOf, diagnoseUnmatched, numLead, diagnoseXpt, groupParcels, extractKojiPoints, matchKoji, attachKoji, fillParcels, tilesOf, MATCH_RADIUS_M } from '../tools/parcels.mjs';
 
 const rec = (o) => ({ id: '133-福岡中央-商業地-9', lon: 130.4, lat: 33.59, use: '商業地', area: '福岡中央', lot: '天神1', addr: '', price: 111, change: 1, rosenka: null, rosenkaYear: '0', hikaku: 1000, shueki: null, rimawari: null, zone: '商業地域', kenpei: 80, yoseki: 800, chiseki: 100, genkyo: '', ...o });
 const feat = (lon, lat, p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { point_id: 1, u_current_years_price_ja: '12,100,000(円/㎡)', standard_lot_number_ja: '福岡中央5-9', use_category_name_ja: '商業地', land_price_type: 0, ...p } });
@@ -80,4 +80,24 @@ test('診断: 項目名・地価区分の件数・価格を読めた件数を出
   const e = diagnoseXpt([{ geometry: { type: 'Point' }, properties: { foo: 1 } }]);
   assert.ok(e.missingKeys.includes('u_current_years_price_ja') && e.priceReadable === 0);
   assert.deepStrictEqual(diagnoseXpt(undefined).keys, []);
+});
+
+test('国の標準地番号の形: 住宅地は地域名-連番、商業地は地域名5-連番。他は null', () => {
+  assert.strictEqual(lotNumberOf({ id: '1-福岡中央-商業地-9', area: '福岡中央', use: '商業地' }), '福岡中央5-9');
+  assert.strictEqual(lotNumberOf({ id: '1-築上-住宅地-2', area: '築上', use: '住宅地' }), '築上-2');
+  assert.strictEqual(lotNumberOf({ id: '1-X-工業地-2', area: 'X', use: '工業地' }), null);
+});
+test('突き合わせできなかった標準地の傾向: 条件ごとに排他で数える', () => {
+  const mk = (id, lon, lat, use = '商業地') => ({ ...groupParcels([rec({ id, lon, lat, use })])[0], koji: null });
+  const k = (id, lon, lat, extra = {}) => extractKojiPoints([feat(lon, lat, { point_id: id, ...extra })])[0];
+  const parcels = [
+    mk('1-福岡中央-商業地-1', 130.4, 33.59),                   // 近くに用途違いだけ
+    mk('1-福岡中央-商業地-2', 130.4, 33.5, '商業地'),          // 約300m に同じ用途
+    mk('1-福岡中央-商業地-3', 130.4, 33.0),                    // 2km 以内に何も無い
+    mk('1-福岡中央-商業地-4', 130.4, 32.8),                    // 番号は別の場所にある
+    { ...mk('1-福岡中央-商業地-5', 130.4, 33.59), koji: { price: 1 } }, // 当たっている → 数えない
+  ];
+  const pts = [k(1, 130.4, 33.59, { use_category_name_ja: '住宅地' }), k(2, 130.4, 33.5027, {}), k(3, 131.5, 33.9, { point_id: 3, standard_lot_number_ja: '福岡中央5-4' })];
+  const d = diagnoseUnmatched(parcels, pts);
+  assert.deepStrictEqual(d, { total: 4, sameUseWithin50mButAmbiguous: 0, differentUseWithin50m: 1, sameUse51to500m: 1, sameUse501to2000m: 0, lotNumberFoundElsewhere: 1, nothingWithin2km: 1 });
 });

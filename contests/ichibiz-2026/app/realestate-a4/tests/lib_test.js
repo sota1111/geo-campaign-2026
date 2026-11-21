@@ -94,7 +94,9 @@ test('4つそろう標準地だけに絞れる。カードにそろい具合を�
 });
 test('標準地番号: 公示のデータの番号があればそれ、無ければ作成者による表記', () => {
   assert.strictEqual(Lib.parcelNoLine(P({ id: '133-福岡中央-商業地-9', area: '福岡中央', use: '商業地', koji: { price: 1, lotNo: '福岡中央5-9' } })), '標準地番号: 福岡中央5-9');
-  assert.strictEqual(Lib.parcelNoLine(P({ id: '133-福岡中央-商業地-9', area: '福岡中央', use: '商業地' })), '標準地番号（作成者による表記）: 福岡中央 商業地 9');
+  assert.strictEqual(Lib.parcelNoLine(P({ id: '133-福岡中央-商業地-9', area: '福岡中央', use: '商業地' })), '標準地番号（作成者による表記）: 福岡中央5-9');
+  assert.strictEqual(Lib.parcelNoLine(P({ id: '101-北九州門司-住宅地-1', area: '北九州門司', use: '住宅地' })), '標準地番号（作成者による表記）: 北九州門司-1');
+  assert.strictEqual(Lib.parcelNoLine(P({ id: '1-X-工業地-3', area: 'X', use: '工業地' })), '標準地番号（作成者による表記）: X 工業地 3');
 });
 test('カードは1地点1枚で、記録2件の説明を添える（断定しない）', () => {
   const html = Lib.cardHtml({ point: P({ id: 'q', area: 'A', n: 2 }), distance: 100, parcel: 1 }, 1);
@@ -154,4 +156,8 @@ test('実データ（web/data/fukuoka.json があれば）: 形式・座標・�
   const r = d.parcels.flatMap((p) => p.rimawari).filter((v) => v !== null);
   assert.ok(r.length && r.every((v) => v >= 1 && v <= 15));
   assert.strictEqual(Lib.nearest(d.parcels, 130.3988, 33.5902).length, 5);
+  // 国の標準地番号の規則（住宅地「地域名-連番」、商業地「地域名5-連番」）が、突き合わせできた全地点で XPT002 の番号と一致する
+  const matched = d.parcels.filter((p) => p.koji);
+  assert.ok(matched.length > 0);
+  assert.ok(matched.every((p) => Lib.parcelNo(p) === p.koji.lotNo.replace(/\s/g, '')));
 });

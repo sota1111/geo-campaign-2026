@@ -48,8 +48,18 @@ for (const [name, w, h] of [['1280', 1280, 900], ['390', 390, 844]]) {
     mapVisible: (() => { const r = document.getElementById('map').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })(),
     rows: document.querySelectorAll('.card')[0]?.querySelectorAll('.pr').length })`);
   await shot(`shot-${name}-view.png`, false);   // 地点を選んだ直後の第一画面（自動スクロールしないこと）
-  await ev("window.scrollTo(0,0)");
+  const open_ = "document.getElementById('step2').style.maxHeight = 'none'; document.getElementById('step2').style.overflow = 'visible'; window.scrollTo(0,0)";
+  const close_ = "document.getElementById('step2').style.maxHeight = ''; document.getElementById('step2').style.overflow = ''";
+  await ev(open_); // 全体の撮影用（結果の内側スクロールを広げる）
   await shot(`shot-${name}.png`);
+  await ev(close_);
+  // 公示価格を照合できなかった地点の見え方
+  await ev("(() => { const p = App.state.data.parcels.find((q) => !q.koji); App.choose(p.lon, p.lat); })()");
+  await sleep(800);
+  await ev(open_);
+  report[name + '-unmatched'] = await ev("[...document.querySelectorAll('.card')].filter((c) => c.textContent.includes('照合できませんでした')).length + ' 枚が照合できず（全' + document.querySelectorAll('.card').length + '枚）'");
+  await shot(`shot-${name}-unmatched.png`);
+  await ev(close_);
   // 住所検索: 案内と印が第一画面にあるか
   await send('Page.navigate', { url });
   await sleep(1200);
