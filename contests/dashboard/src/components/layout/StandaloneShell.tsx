@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, PanelLeft } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { AppStepsProvider, useRegisteredSteps } from '@/components/shared/AppSteps'
@@ -31,7 +31,9 @@ export function StandaloneShell({ appId, children }: { appId: string; children: 
 }
 
 function ShellBody({ appId, children }: { appId: string; children: ReactNode }) {
-  const { layoutActive } = useRegisteredSteps()
+  const { layoutActive, steps } = useRegisteredSteps()
+  // 左の「進め方」は、ポータルのメニューと同じく既定では隠し、ボタン1つで出し入れする
+  const [stepsOpen, setStepsOpen] = useState(false)
   const [slot, setSlot] = useState<HTMLElement | null>(null)
   const app = getApp(appId)
   const contest = CONTESTS.find((c) => c.id === app?.contest)
@@ -48,6 +50,18 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
               <ArrowLeft className="size-4" />
               統合ダッシュボード
             </a>
+            {steps.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setStepsOpen((o) => !o)}
+                aria-expanded={stepsOpen}
+                data-testid="steps-toggle"
+                className="hidden min-h-8 shrink-0 items-center gap-1 rounded-md border-2 border-slate-900 bg-white px-2 text-xs font-bold text-slate-900 hover:bg-slate-100 md:inline-flex"
+              >
+                <PanelLeft className="size-4" aria-hidden />
+                {stepsOpen ? 'メニューを隠す' : 'メニューを出す'}
+              </button>
+            )}
             {contest && (
               <a
                 href={contestUrl(contest.id)}
@@ -111,7 +125,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
         {/* 帯は固定領域の外（スマホでは固定されずスクロールで消える）。デスクトップでは flex の残りを main が埋める */}
         <SampleBar appId={appId} />
         <div className={layoutActive ? 'flex md:min-h-0 md:flex-1' : 'flex'}>
-          <StepsSidebar appName={app?.name} />
+          <StepsSidebar appName={app?.name} open={stepsOpen} />
           <main
             className={
               layoutActive

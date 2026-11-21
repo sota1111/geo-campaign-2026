@@ -38,7 +38,7 @@ const out = []
 for (const id of ids) {
   await send('Page.navigate', { url: base + '#open=' + contestOf[id] })
   await sleep(1500)
-  await ev(`document.querySelector('a[data-app-card="${id}"]').click()`)
+  await ev(`document.querySelector('a[data-app-link="${id}"]').click()`)
   await sleep(2500)
   const url1 = await ev('location.pathname + location.hash')
   await ev(`document.querySelector('header a[href*="index.html"]').click()`)
@@ -51,7 +51,7 @@ const cout = []
 for (const c of contests) {
   await send('Page.navigate', { url: base })
   await sleep(1500)
-  await ev(`document.querySelector('[data-contest-card="${c}"]').click()`)
+  await ev(`document.querySelector('[data-testid=row-${c}]').click()`)
   await sleep(1500)
   const page = await ev('location.pathname')
   const apps = await ev("document.querySelectorAll('[data-app-card]').length")

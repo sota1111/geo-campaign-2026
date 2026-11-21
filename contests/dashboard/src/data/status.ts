@@ -22,8 +22,8 @@ export interface ContestStatus {
 
 export const CONTEST_STATUS: Record<ContestId, ContestStatus> = {
   'udc-2026': {
-    done: '概要登録（作品①②・11/9）／作品①のアプリ実装と説明の下書き／作品②のアイデア説明とデモ',
-    gap: '提出不可（本応募）。公開URL・記入が未了。概要登録は済（11/9）',
+    done: '概要登録（作品①②・完了。登録完了を総司令官が 11/21 に確認）／本応募時にテーマ変更可（総司令官 11/21）／作品①のアプリ実装と説明の下書き／作品②のアイデア説明とデモ',
+    gap: '提出不可（本応募）。公開URL・記入が未了。概要登録は完了（登録完了。総司令官 11/21 確認）。本応募時にテーマ変更可（総司令官 11/21）',
     next: [
       { text: '作品②: 本応募でアプリにするか', owner: '総司令官', decision: true },
       { text: '作品①: アプリの公開URL', owner: '総司令官' },
@@ -110,7 +110,7 @@ export function crossItems(): CrossItem[] {
 
 /** 一覧の「状況」の理由（1行。CONTEST_STATUS.gap の要約。事実は同じ） */
 export const STATUS_REASON: Record<ContestId, string> = {
-  'udc-2026': '本応募: 公開URL・記入が未了（概要登録は済）',
+  'udc-2026': '本応募: 公開URL・記入が未了（概要登録は完了。本応募時にテーマ変更可。総司令官 11/21）',
   'satellite-2026': '申請者欄・体制欄が未記入、B とα（と藪払い・スギ植え替え）が未決',
   'ichibiz-2026': '本人欄・背景欄が未記入、部門ごとの案が未決',
   'odpt-2026': 'アプリ未公開、診断マップの憲兵の監査は未実施、出す作品が未決',
@@ -157,7 +157,7 @@ export const STAGES: Record<ContestId, Stage[]> = {
     { label: '登録', mark: '□' },
   ],
   'udc-2026': [
-    { label: '概要登録', mark: '✓', note: '11/9' },
+    { label: '概要登録', mark: '✓', note: '完了。総司令官 11/21 確認' },
     { label: '説明・デモ', mark: '✓', note: '下書き' },
     { label: '作品②の形', mark: '？', note: 'アプリにするか' },
     { label: '公開URL', mark: '□' },

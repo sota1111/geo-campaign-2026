@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, PanelLeft } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
   SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail,
-  SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
@@ -32,6 +32,7 @@ function PendingTag({ a }: { a: AppMeta }) {
 }
 
 function PortalSidebar({ activeContest }: { activeContest?: string }) {
+  const { open, isMobile } = useSidebar()
   const [q, setQ] = useState('')
   const groups = contestsByDeadline()
     .map((i) => CONTESTS.find((c) => c.id === i.id)!)
@@ -46,7 +47,7 @@ function PortalSidebar({ activeContest }: { activeContest?: string }) {
   }, [activeContest])
   const hits = groups.reduce((n, g) => n + g.apps.length, 0)
   return (
-    <Sidebar>
+    <Sidebar id="portal-sidebar" inert={!open && !isMobile ? true : undefined}>
       <SidebarHeader className="border-b">
         <a href={portalUrl()} className="px-2 py-1 text-sm font-bold leading-tight">
           統合ダッシュボード
@@ -121,10 +122,29 @@ function PortalSidebar({ activeContest }: { activeContest?: string }) {
   )
 }
 
+/** 左のメニュー（コンペ・アプリの一覧）を出し入れするボタン。既定は隠れている */
+function MenuToggle() {
+  const { toggleSidebar, open, openMobile, isMobile } = useSidebar()
+  const shown = isMobile ? openMobile : open
+  return (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      aria-expanded={shown}
+      aria-controls="portal-sidebar"
+      data-testid="menu-toggle"
+      className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border-2 border-slate-900 bg-white px-2 text-xs font-bold text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+    >
+      <PanelLeft className="size-4" aria-hidden />
+      {shown ? 'メニューを隠す' : 'メニューを出す'}
+    </button>
+  )
+}
+
 export function AppShell({ children, activeContest }: { children: React.ReactNode; activeContest?: string }) {
   return (
     <TooltipProvider>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-slate-900 focus:px-3 focus:py-2 focus:text-sm focus:font-bold focus:text-white"
@@ -135,10 +155,10 @@ export function AppShell({ children, activeContest }: { children: React.ReactNod
         <PortalSidebar activeContest={activeContest} />
         <SidebarInset className="min-w-0">
           <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
-            <SidebarTrigger aria-label="メニューを開閉" />
+            <MenuToggle />
             <Separator orientation="vertical" className="h-5" />
-            <a href={portalUrl()} className="text-sm font-medium hover:underline">統合ダッシュボード</a>
-            <span className="text-xs text-muted-foreground">提出状況は {asOf} 時点の記録</span>
+            <a href={portalUrl()} className="whitespace-nowrap text-sm font-medium hover:underline">統合ダッシュボード</a>
+            <span className="hidden text-xs text-muted-foreground sm:inline">提出状況は {asOf} 時点の記録</span>
           </header>
           <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-3 outline-none md:p-6">{children}</main>
         </SidebarInset>

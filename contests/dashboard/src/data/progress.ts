@@ -76,7 +76,7 @@ const ODPT = { deadlineAt: '2027-01-11T23:59:00+09:00', deadlineLabel: '2027/1/1
 export const PLANS: PlanProgress[] = [
   {
     id: 'udc-1', short: '作品①', intent: '提出予定', contest: 'udc-2026', name: '作品① 生活アクセス診断マップ', kind: '今の案', ...UDC, appId: 'odpt',
-    done: ['概要登録（11/9、総司令官。reports/ops/udc-2026-registration-20261109.md）', 'アプリ実装（ODPT と共通）', '作品説明の下書き'],
+    done: ['概要登録（完了。登録完了を総司令官が 11/21 に確認。記録 reports/ops/udc-2026-registration-20261109.md）', '本応募時にテーマ変更可（総司令官 11/21）', 'アプリ実装（ODPT と共通）', '作品説明の下書き'],
     todo: [
       { text: 'アプリの公開URL（本応募に必要）', owner: '総司令官' },
       { text: '本応募フォームの案内を待つ（11月末、事務局から）', owner: '待ち' },
