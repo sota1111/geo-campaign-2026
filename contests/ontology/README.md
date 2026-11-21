@@ -84,6 +84,11 @@ python3 -m pytest contests/ontology/tests -q
 ```
 一連: 生成 → 検証 → `next_actions`。`next_actions.py` と `graph_json.py` は `reports/` に書かない（標準出力か `--out-md/--out-json/--out`。保存は参謀長）。基準日は `--now YYYY-MM-DD`（既定は今日）。
 
+## 図解ページ（図が主役の1枚の HTML。2026-11-21）
+`figures.py` が、型・提出を止めているもの・次の行動（締切順）・データ条件と影響・適合の5つの図を `contests/dashboard/public/ontology-figures/index.html` に書き出す（標準ライブラリのみ。rdflib 不要）。数値は `schema.jsonld`・`campaign.jsonld`・`graph.json`・`next-actions.json` から計算し、手で書き写さない。生成日と出典はページの末尾に出る。
+再生成の手順: オントロジーを再生成（上の「更新のしかた」2）→ `python3 contests/ontology/figures.py` → 生成された HTML をコミット → ダッシュボードを `npm run build`（`public/` がそのまま `dist/ontology-figures/` に入る）。`graph.json` と `next-actions.json` の基準日が違うと止まる。数の定義（案・応募・提出を止めるもの・部隊の作業と総司令官の作業）は `figures.py` の `Defs` に1か所で持ち、図どうしの同じ量が合わなければ assert で生成が失敗する。
+作り方は u-ichi/agent-plugins の **figure-docs**（MIT License, Copyright (c) 2026 u-ichi。事業の図の分類は Financial Times Visual Vocabulary〈MIT〉による。表示は同 plugin の LICENSES/ に従う）に沿った。ダッシュボードのヘッダーの「図解」と、つながり図のページから開く。
+
 ## 更新のしかた
 1. 正本（registry.json、brief.md、registry.ts、contests-info.ts、status-*.md、audit、escalations、command、各 README、gh）を普通に更新する。
 2. 再生成して、生成物をコミットする: `build_graph.py`（`campaign.jsonld`・`build-report.json`）→ `validate.py` → `graph_json.py --out graph.json` → `ui_json.py --out next-actions.json`。`build_graph.py --check` で「古いか」だけ調べられる。**ダッシュボードのビルドは Python を使わず、コミット済みの `graph.json`・`next-actions.json` を `public/ontology/` へ写すだけ**（rdflib が無い環境でも通る）。生成物を直さずに正本だけ更新すると、画面は古いままになる。

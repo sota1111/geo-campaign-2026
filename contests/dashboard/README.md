@@ -101,6 +101,9 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 - 確認: `npm run build && npm run typecheck && npm test`（`src/test/ontology.test.ts`）、`node scripts/ontology-shots.mjs <preview URL> docs/screenshots/ontology-20261121-r2`（既定・カード・次の行動・判断待ち・データの影響・近傍だけ・検索を 1280×800・1513×784・390×844 で撮影し、ノード名の実寸・切れ・ページの高さ・横スクロール・押した行の移動量・コンソールエラーを測る）、`node scripts/roundtrip.mjs`（ポータル→つながり図→ノード→次の行動→ポータル）。
 - 限界: グラフ表示の中は、ドラッグで動かし、左下の＋－ボタンか2本指で拡大縮小（ホイールではページがスクロールする）。グラフ内のノードはキーボードでは選べず（Tab の停止点を減らすため）、左の列の「ノード一覧・検索」から選ぶ。レーンのノードは Tab で選べる。長い名前（40 字超）は「…」で省き、全文はカード。
 
+## 図解ページ（オントロジーを図で読む。2026-11-21、`public/ontology-figures/index.html`）
+ヘッダーの「図解」（つながり図の隣）と、つながり図ページの先頭のリンクから入る静的ページ（Vite を通さず `public/` から `dist/ontology-figures/` へそのまま入る。相対パスなので base `./` で動く）。型の全体図、提出を止めているもの、締切順の次の行動、データ条件と影響、アプリ×コンペの適合の5つの図。**HTML は `python3 contests/ontology/figures.py` が生成する**（数値は contests/ontology の生成物から計算。手で直さない）。再生成: オントロジーを再生成 → `figures.py` → コミット → `npm run build`。作り方は u-ichi/agent-plugins の figure-docs（MIT）。確認: `node scripts/ontology-figures-shots.mjs <preview URL> docs/screenshots/ontology-figures-20261121`（1280×800・390×844 の全体撮影、横スクロール・SVG 内の実効文字サイズ・コンソールエラー）。
+
 ## 新しい案（比較用・未選定）の足し方
 
 総司令官が「今の案」と「新しい案」を見比べて選ぶため、新しい案は今の案と同じコンペ・部門の隣に並べます（ポータルのコンペタブ内で、今の案の右に破線の枠の「新しい案（比較用・未選定）」カード。サイドバーにも同じ表示）。今の案のアプリは変更しません。

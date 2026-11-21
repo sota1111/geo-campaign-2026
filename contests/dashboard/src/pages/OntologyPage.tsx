@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getApp } from '@/apps/registry'
-import { appUrl, contestUrl, ontologyDataUrl } from '@/lib/data'
+import { appUrl, contestUrl, ontologyDataUrl, ontologyFiguresUrl } from '@/lib/data'
 import { MARK_WORD } from '@/lib/fit'
 import {
   CAT, DEFAULT_SEVERITIES, DEFAULT_TYPES, GATE_TYPES, OPTIONAL_RELS, READINESS_MARK, SHAPE_CLASS, TYPE_STYLE,
@@ -170,6 +170,7 @@ export default function OntologyPage() {
           <p className="text-xs text-slate-800">
             {graph.asOf} 時点の記録（{graph.nodes.length} ノード・{graph.edges.length} つながり）。案の選定・提出・registry 変更・ページ削除は<strong>総司令官の判断</strong>で、この画面からは進めません。
           </p>
+          <a href={ontologyFiguresUrl()} className="text-xs font-bold text-blue-900 underline" data-testid="onto-figures-link">図解ページ（要約: 止めているもの・次の行動・データ条件・適合を図で読む）へ</a>
           <a href="#next-panel" className="sr-only focus:not-sr-only focus:rounded-md focus:bg-slate-900 focus:px-2 focus:py-1 focus:text-xs focus:font-bold focus:text-white">図の前の「次の行動」へ移動</a>
         </div>
         <details className="text-xs">
