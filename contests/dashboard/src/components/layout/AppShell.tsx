@@ -9,7 +9,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { useIsPending } from '@/lib/availability'
+import { pendingLabel, useIsPending } from '@/lib/availability'
 import { CONTESTS, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
 import { appUrl, contestUrl, portalUrl } from '@/lib/data'
 import { contestsByDeadline } from '@/apps/contests-info'
@@ -28,7 +28,7 @@ export function matchesAppQuery(a: AppMeta, q: string): boolean {
 function PendingTag({ a }: { a: AppMeta }) {
   const pending = useIsPending(a)
   if (!pending) return null
-  return <span className="rounded border border-amber-700 bg-amber-50 px-1.5 text-xs font-bold text-amber-950">審査待ち（{a.pendingPr}）・未収録</span>
+  return <span className="rounded border border-amber-700 bg-amber-50 px-1.5 text-xs font-bold text-amber-950">{pendingLabel(a)}</span>
 }
 
 function PortalSidebar({ activeContest }: { activeContest?: string }) {

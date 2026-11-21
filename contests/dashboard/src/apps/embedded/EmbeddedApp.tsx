@@ -85,12 +85,15 @@ export function EmbeddedApp({ appId }: { appId: string }) {
       {presence === 'unknown' ? (
         <div className="min-h-[420px] flex-1" aria-busy="true" />
       ) : pending ? (
-        <div className="min-h-[420px] flex-1 rounded-md border bg-white p-4">
+        <div className="rounded-md border bg-white p-4" data-testid="pending-empty">
           <PendingNote app={app} className="text-sm" />
-          <p className="mt-3 text-sm">
-            このアプリの目的: {app.purpose}
-          </p>
+          <p className="mt-3 text-sm">このアプリの目的: {app.purpose}</p>
           <p className="mt-2 text-xs text-muted-foreground">データ: {app.dataNote}</p>
+          {pair && (
+            <p className="mt-3 text-sm">
+              <a href={appUrl(pair.id)} className="font-medium text-primary underline underline-offset-2">今の案「{pair.name}」を開く</a>
+            </p>
+          )}
         </div>
       ) : (
       <iframe

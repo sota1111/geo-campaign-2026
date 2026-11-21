@@ -5,12 +5,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { APPS, CONTESTS, isNewPlan } from '@/apps/registry'
 import { CONTEST_INFO, contestsByDeadline, nextDeadline, type ContestInfo } from '@/apps/contests-info'
 import { EVAL3 } from '@/apps/eval3'
-import { ContestCard, MobileCard } from '@/pages/ContestCards'
+import { CardSummary, ContestCard, TabCard } from '@/pages/ContestCards'
 import { ContestPanel } from '@/pages/Overview'
 import { EvalSummary } from '@/pages/EvalPanels'
 import { asOf } from '@/pages/Progress'
 import { OVERALL, PROGRESS_SOURCE } from '@/data/progress'
-import { STATUS_LABEL, STATUS_REASON } from '@/data/status'
 
 const HASH_KEY = '#open='
 /**
@@ -23,8 +22,8 @@ const readOpen = (): string[] =>
     ? window.location.hash.slice(HASH_KEY.length).split(',').filter((id) => CONTEST_INFO.some((c) => c.id === id))
     : []
 
-/** スマホ幅（640px 未満）か。一覧を1行の帯に縮めるかの判断に使う */
-const NARROW = '(max-width: 639.98px)'
+/** 幅 1280px 未満か。一覧を細いタブ状にし、カードの残りの中身を詳細欄の先頭に出す（詳細欄がつぶれないように） */
+const NARROW = '(max-width: 1279.98px)'
 function useNarrow(): boolean {
   return useSyncExternalStore(
     (cb) => {
@@ -51,7 +50,7 @@ export default function Portal() {
   // 選んでいる行をもう一度押しても解除しない。別の行を1回押せば切り替わる
   const selectedId = open[0] ?? sorted[0].id
   const info = CONTEST_INFO.find((c) => c.id === selectedId)
-  const Card = narrow ? MobileCard : ContestCard
+  const Card = narrow ? TabCard : ContestCard
   const select = (id: string) => write([id])
   const onRowKey = (e: React.KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
@@ -73,24 +72,22 @@ export default function Portal() {
     // ページ全体を画面の高さに収める（上部バー 3rem と main の余白を引く）。詳細欄が残りを使い、中だけスクロールする
     <div className="mx-auto flex h-[calc(100dvh-3rem-1.5rem)] min-h-[32rem] max-w-6xl flex-col gap-1.5 md:-my-4 md:h-[calc(100dvh-3rem-1rem)]">
       <h1 className="sr-only">統合ダッシュボード</h1>
-      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-3 lg:hidden">
-        <span className="text-xs text-muted-foreground">
-          {asOf} 時点・締切順<span className="hidden sm:inline">。カードを押すと下の欄に詳細が出ます</span>　<span aria-hidden>✓</span> 済　<span aria-hidden>□</span> 残り　<span aria-hidden>？</span> 判断待ち
-        </span>
+      <header className="shrink-0 text-xs text-muted-foreground" data-testid="portal-legend">
+        {asOf} 時点・締切順。カードを押すと下の欄に詳細が出ます　<span aria-hidden>✓</span> 済　<span aria-hidden>□</span> 残り　<span className="hidden sm:inline">要確認＝判断待ち・確認が要る項目　</span><span aria-hidden>？</span> 総司令官の判断待ち
       </header>
       <ul className="shrink-0 space-y-0.5 text-xs lg:flex lg:gap-x-5 lg:space-y-0" data-testid="progress-overall">
         <li className="flex gap-1.5">
           <span aria-hidden>▲</span>
           <span className="font-bold">どの案も提出不可: 本人欄<span className="hidden sm:inline">（氏名・所属・体制・経験）</span>が未記入</span>
         </li>
-        <li className="flex gap-1.5">
+        <li className="hidden gap-1.5 sm:flex">
           <span aria-hidden>▲</span>
           <span title={OVERALL[1]}>マージ保留（総司令官補佐が止めた PR）: PR #35・#36・#18・#19・#27</span>
         </li>
       </ul>
 
       {/* 進捗カード: 締切の近い順。スマホは1列の固定高のカード、タブレットは2列、デスクトップは4列。押しても画面は動かず、下の詳細欄が切り替わる */}
-      <section aria-label="コンペの進捗カード" data-testid="contest-list" className="grid shrink-0 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="コンペの進捗カード" data-testid="contest-list" className={`grid shrink-0 gap-1.5 ${narrow ? 'min-[640px]:grid-cols-2' : 'grid-cols-4'}`}>
         {sorted.map((c) => (
           <div key={c.id} className="rounded-lg border-2 border-slate-600 bg-card" data-testid={`contest-${c.id}`}>
             <Card info={c} selected={c.id === selectedId} onSelect={() => select(c.id)} onKey={onRowKey} />
@@ -104,16 +101,16 @@ export default function Portal() {
         className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-2 border-slate-600 bg-card"
         data-testid="detail-pane"
       >
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b-2 border-slate-600 px-3 py-1.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-0.5 border-b-2 border-slate-600 px-3 py-1">
           <h2 className="min-w-0 text-sm font-bold sm:text-base" data-testid="detail-title">{info ? `${info.tabName}の詳細` : '詳細（上のカードを押す）'}</h2>
           <div className="flex min-w-0 items-center gap-1.5">
             {info && (
-              <Button variant="outline" size="sm" className="min-h-9 border-2 border-slate-700 font-bold" onClick={jumpToEval3} data-testid="jump-eval3" title="この詳細の中の、第3回AI評価（今の案と新しい案の採点の形）の節へ移ります">
+              <Button variant="outline" size="sm" className="min-h-8 border-2 border-slate-700 font-bold" onClick={jumpToEval3} data-testid="jump-eval3" title="この詳細の中の、第3回AI評価（今の案と新しい案の採点の形）の節へ移ります">
                 <ChartRadar className="size-4" aria-hidden />
                 第3回の比較へ
               </Button>
             )}
-            <Button variant="outline" size="sm" className="min-h-9" onClick={() => setEvalOpen(true)} title="AI評価（模擬）。最新は第3回（GPT-6.1 sol low 10名）。第1・2回（Sonnet 4名）も同じ画面で見られます。" data-testid="open-eval">
+            <Button variant="outline" size="sm" className="min-h-8" onClick={() => setEvalOpen(true)} title="AI評価（模擬）。最新は第3回（GPT-6.1 sol low 10名）。第1・2回（Sonnet 4名）も同じ画面で見られます。" data-testid="open-eval">
               <span className="sm:hidden">AI評価を見る</span>
               <span className="hidden sm:inline">AI評価（模擬・第3回 {EVAL3.date.slice(5).replace('-', '/')}）を見る</span>
             </Button>
@@ -128,14 +125,9 @@ export default function Portal() {
           aria-label={info ? `${info.tabName}の詳細` : '詳細'}
           tabIndex={0}
         >
-          {info && (
-            <p className="mb-2 text-xs" data-testid="detail-reason">
-              <span className="font-bold"><span aria-hidden>▲ </span>提出不可（{STATUS_LABEL[info.id]}）: </span>
-              {STATUS_REASON[info.id]}
-            </p>
-          )}
+          {info && narrow && <CardSummary info={info} />}
           {info ? (
-            <ContestPanel info={info} onOpenEval={() => setEvalOpen(true)} />
+            <ContestPanel info={info} onOpenEval={() => setEvalOpen(true)} hideGap={narrow} />
           ) : (
             <p className="py-6 text-center text-sm text-muted-foreground">上のカードを選ぶと、そのコンペの詳細がここに出ます。</p>
           )}

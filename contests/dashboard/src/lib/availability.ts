@@ -42,3 +42,22 @@ export function useIsPending(app: Pick<AppMeta, 'id' | 'pendingPr'> | undefined)
 export function pendingText(app: Pick<AppMeta, 'pendingPr'>): string {
   return `元のアプリは ${app.pendingPr} で審査待ちのため、このビルドには含まれていません。${app.pendingPr} がマージされれば、次のビルドで自動的に表示されます。`
 }
+
+/** 審査待ちの案の目印の言葉（サイドバー・カード・ページで共通） */
+export function pendingLabel(app: Pick<AppMeta, 'pendingPr'>): string {
+  return `審査待ち（${app.pendingPr}）・未収録`
+}
+
+/** 渡した案のうち、審査待ちで、このビルドに含まれていない案の PR 番号（重複なし）。無ければ空 */
+export function useMissingPrs(ids: { id: string; pendingPr?: string }[]): string[] {
+  const [map, setMap] = useState<Record<string, boolean> | null>(null)
+  const has = ids.some((a) => a.pendingPr)
+  useEffect(() => {
+    if (!has) return
+    let live = true
+    load().then((m) => live && setMap(m))
+    return () => { live = false }
+  }, [has])
+  if (!map) return []
+  return [...new Set(ids.filter((a) => a.pendingPr && map[a.id] === false).map((a) => a.pendingPr as string))]
+}

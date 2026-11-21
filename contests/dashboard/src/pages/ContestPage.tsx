@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { DataBadge } from '@/components/shared/DataBadge'
 import { Remaining } from '@/components/shared/Remaining'
 import { PendingNote } from '@/components/shared/PendingNote'
+import { useIsPending } from '@/lib/availability'
 import { CONTESTS, NEW_PLAN_LABEL, getApp, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
 import { CONTEST_INFO } from '@/apps/contests-info'
 import { appUrl, portalOpenUrl, portalUrl } from '@/lib/data'
@@ -32,6 +33,7 @@ function Bullets({ items }: { items: string[] }) {
 
 function AppLinkCard({ a }: { a: AppMeta }) {
   const isNew = isNewPlan(a)
+  const missing = useIsPending(a)
   return (
     <Card data-app-card={a.id} className={`flex flex-col gap-2 py-3 ${isNew ? 'border-2 border-dashed border-slate-500 bg-slate-50' : ''}`}>
       <CardHeader className="gap-1 px-4">
@@ -58,11 +60,17 @@ function AppLinkCard({ a }: { a: AppMeta }) {
         <PendingNote app={a} className="mt-1.5" />
       </CardContent>
       <CardFooter className="px-4">
-        <Button asChild size="sm">
-          <a href={appUrl(a.id)} data-app-link={a.id}>
-            このアプリを開く <ArrowRight className="size-4" aria-hidden />
-          </a>
-        </Button>
+        {missing ? (
+          <Button asChild size="sm" variant="outline" className="border-dashed border-amber-700">
+            <a href={appUrl(a.id)} data-app-link={a.id}>概要だけ見る（未収録）</a>
+          </Button>
+        ) : (
+          <Button asChild size="sm">
+            <a href={appUrl(a.id)} data-app-link={a.id}>
+              開く <ArrowRight className="size-4" aria-hidden />
+            </a>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   )

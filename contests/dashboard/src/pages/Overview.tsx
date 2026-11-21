@@ -7,6 +7,7 @@ import { normalUrl, sampleUrl } from '@/components/layout/SampleBar'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { PendingNote } from '@/components/shared/PendingNote'
+import { useIsPending } from '@/lib/availability'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
 import { appUrl, siteRoot } from '@/lib/data'
 import { ContestProgress } from '@/pages/Progress'
@@ -79,6 +80,7 @@ function CardOnlyCard({ c }: { c: CardOnly }) {
 
 function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; contestId: ContestId; note?: string; onOpenEval: () => void; paired?: boolean }) {
   const isNew = isNewPlan(a)
+  const missing = useIsPending(a)
   const contest = CONTESTS.find((c) => c.id === a.contest)
   // 概要登録が要るコンペ（UDC）は、カードの締切が本応募の締切であることを示す（済んだ概要登録は出さない）
   const pre = CONTEST_INFO.find((c) => c.id === a.contest)?.deadlines.some((d) => d.label === '概要登録')
@@ -127,7 +129,7 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
           </p>
         )}
         <PendingNote app={a} className="mt-1.5" />
-        {isNew && (
+        {isNew && !missing && (
           <p className="mt-1.5 text-muted-foreground">AI模擬評価はまだありません。元の静的版をそのまま表示します（実行サンプルなし）。</p>
         )}
         {note && (
@@ -152,11 +154,19 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
               <a href={sampleUrl(a.id)}>実行サンプル</a>
             </Button>
           )}
-          <Button asChild size="sm">
-            <a href={normalUrl(a.id)}>
-              開く <ArrowRight className="size-4" />
-            </a>
-          </Button>
+          {missing ? (
+            <Button asChild size="sm" variant="outline" className="border-dashed border-amber-700">
+              <a href={normalUrl(a.id)} data-testid={`pending-open-${a.id}`}>
+                概要だけ見る（未収録）
+              </a>
+            </Button>
+          ) : (
+            <Button asChild size="sm">
+              <a href={normalUrl(a.id)}>
+                開く <ArrowRight className="size-4" />
+              </a>
+            </Button>
+          )}
         </span>
       </CardFooter>
     </Card>
@@ -184,7 +194,7 @@ function FoldSection({ title, className = '', children }: { title: React.ReactNo
   )
 }
 
-export function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEval: () => void }) {
+export function ContestPanel({ info, onOpenEval, hideGap }: { info: ContestInfo; onOpenEval: () => void; hideGap?: boolean }) {
   const contest = CONTESTS.find((c) => c.id === info.id)!
   const apps = appsByContest(info.id)
   const current = apps.filter((a) => !isNewPlan(a))
@@ -202,7 +212,7 @@ export function ContestPanel({ info, onOpenEval }: { info: ContestInfo; onOpenEv
   const hasNew = newCount > 0
   return (
     <div className="space-y-3">
-      <ContestProgress contest={info.id} />
+      <ContestProgress contest={info.id} hideGap={hideGap} />
         {/* アプリ */}
         <section aria-label={`${contest.short}向けのアプリ`} className="space-y-2">
           <h3 className="text-sm font-bold">

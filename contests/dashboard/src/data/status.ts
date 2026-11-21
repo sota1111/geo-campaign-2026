@@ -193,6 +193,8 @@ export interface CardPlan {
   asks: number
   /** 総司令官の作業の件数 */
   mine: number
+  /** この案のデモ（registry の id）。審査待ちの目印を出すのに使う */
+  appIds: string[]
 }
 
 export function cardPlans(contest: ContestId): CardPlan[] {
@@ -205,6 +207,7 @@ export function cardPlans(contest: ContestId): CardPlan[] {
     left: p.todo.length + (p.decisions?.length ?? 0),
     asks: p.todo.filter((t) => t.tag).length + (p.decisions?.length ?? 0),
     mine: p.todo.filter((t) => t.owner === '総司令官').length,
+    appIds: p.appIds ?? (p.appId ? [p.appId] : []),
   }))
 }
 

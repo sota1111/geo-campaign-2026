@@ -77,14 +77,14 @@ function DecisionList({ contest }: { contest: ContestId }) {
 }
 
 /** 各コンペの詳細の最上段: 提出までの状況 */
-export function ContestStatusBox({ contest }: { contest: ContestId }) {
+export function ContestStatusBox({ contest, hideGap }: { contest: ContestId; hideGap?: boolean }) {
   const info = CONTEST_INFO.find((c) => c.id === contest)
   const st = CONTEST_STATUS[contest]
   if (!info || !st) return null
   return (
     <section
       aria-label="提出までの状況"
-      className="rounded-lg border-2 border-slate-700 bg-card p-3"
+      className="rounded-lg bg-card p-1"
       data-testid={`contest-status-${contest}`}
     >
       <h3 className="text-base font-bold">
@@ -102,11 +102,12 @@ export function ContestStatusBox({ contest }: { contest: ContestId }) {
           <span aria-hidden>✓ </span>
           {st.done}
         </dd>
-        <dt className="font-bold">提出可能か</dt>
-        <dd className="font-bold" data-testid="contest-gap">
-          <span aria-hidden>▲ </span>
-          {st.gap}
-        </dd>
+        {!hideGap && (
+          <>
+            <dt className="font-bold">提出可能か</dt>
+            <dd className="font-bold" data-testid="contest-gap">{st.gap}</dd>
+          </>
+        )}
         <dt className="font-bold">判断待ち</dt>
         <dd>
           <DecisionList contest={contest} />
@@ -224,14 +225,14 @@ function PlanCard({ p }: { p: PlanProgress }) {
 }
 
 /** コンペのタブ: 提出までの状況、その下に案ごとの要約（詳細は開いて見る） */
-export function ContestProgress({ contest }: { contest: ContestId }) {
+export function ContestProgress({ contest, hideGap }: { contest: ContestId; hideGap?: boolean }) {
   const plans = plansByContest(contest)
   if (plans.length === 0) return null
   const active = plans.filter((p) => p.intent !== '出さない')
   const out = plans.filter((p) => p.intent === '出さない')
   return (
     <div className="space-y-2">
-      <ContestStatusBox contest={contest} />
+      <ContestStatusBox contest={contest} hideGap={hideGap} />
       <section aria-label="案ごとのチェックリスト" className="space-y-1.5" data-testid={`contest-progress-${contest}`}>
         <h3 className="text-sm font-bold">
           案ごとの進み具合
