@@ -154,3 +154,15 @@ test('データの大きさ: ブラウザで重くならない範囲（初回読
   assert.ok(first < 1024 * 1024, 'first ' + first);
   for (const w of D.wards) assert.ok(size('detail/' + w.code + '.json') < 100 * 1024, w.code);
 });
+
+test('提出文（problem.md）の数値を同梱データから再計算して一致する', () => {
+  // 条件: 間取り「すべて」・最終年（2026）の窓（windowLabel の表示どおり 2022年〜2026年6月）・件数10件以上（state=ok）の地区
+  const yi = D.price.years.length - 1;
+  assert.equal(L.windowLabel(D.price, yi), '2022年〜2026年6月');
+  const rows = L.ranking(D, 0, yi); // 値の大きい順
+  const top = rows[0], bottom = rows.at(-1);
+  assert.deepEqual([top.d.name, top.d.code, top.value], ['紀尾井町', '13101', 591]); // 千代田区
+  assert.deepEqual([bottom.d.name, bottom.d.code, bottom.value], ['東水元', '13122', 30]); // 葛飾区
+  const minato = rows.filter((r) => r.d.code === '13103'); // 港区（件数10件以上の地区のみ）
+  assert.deepEqual([minato.at(-1).value, minato[0].value], [130, 415]);
+});
