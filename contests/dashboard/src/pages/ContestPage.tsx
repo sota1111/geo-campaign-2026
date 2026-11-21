@@ -3,7 +3,6 @@ import { ArrowLeft, ArrowRight, ExternalLink, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { Remaining } from '@/components/shared/Remaining'
 import { PendingNote } from '@/components/shared/PendingNote'
 import { useIsPending } from '@/lib/availability'
 import { CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, getApp, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
@@ -14,11 +13,11 @@ import { EVAL3 } from '@/apps/eval3'
 import { ContestEval3 } from '@/pages/Eval3Panels'
 import { AppScoreLine, EvalSummary } from '@/pages/EvalPanels'
 import { CardOnlyCard } from '@/pages/CardOnlyCard'
+import { Src } from '@/pages/ContestCards'
 import { ContestProgress } from '@/pages/Progress'
 import { contestColor } from '@/data/colors'
 import { CONTEST_INFO } from '@/apps/contests-info'
 import { appUrl, portalUrl } from '@/lib/data'
-import { nextDeadline } from '@/apps/contests-info'
 import { asOf } from '@/pages/Progress'
 
 const NO_DESC = '要項に説明の記載なし。'
@@ -105,7 +104,6 @@ export default function ContestPage({ contestId }: { contestId: string }) {
   const hasNew = apps.some(isNewPlan)
   const [evalOpen, setEvalOpen] = useState(false)
   const color = contestColor(meta.id)
-  const next = nextDeadline(info)
   // 今の案の直後に対になる新しい案を置く組。組ごとに囲んで見せる
   const groups = apps.filter((a) => !isNewPlan(a)).map((cur) => ({ cur, items: [cur, ...apps.filter((x) => isNewPlan(x) && x.pairWith === cur.id)] }))
   const grouped = new Set(groups.flatMap((g) => g.items.map((x) => x.id)))
@@ -126,13 +124,6 @@ export default function ContestPage({ contestId }: { contestId: string }) {
         <p className="text-sm" data-testid="contest-summary">{info.summary}</p>
         <p className="text-sm text-muted-foreground">{implementation}</p>
       </Section>
-
-      {/* 次の締切（残り日数は今日から数える） */}
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm" data-testid="next-deadline">
-        <span className="font-bold">次の締切</span>
-        <span>{next.label} {next.text}</span>
-        <Remaining at={next.at} />
-      </p>
 
       {/* 提出までの状況・判断待ち・次にやること・案ごとのチェックリスト（トップ画面の詳細欄から移した） */}
       <section aria-label="進捗" className="space-y-2" data-testid="contest-status">
@@ -171,19 +162,23 @@ export default function ContestPage({ contestId }: { contestId: string }) {
           </Button>
           <span className="text-xs text-muted-foreground">すべて AI による模擬評価で、実際の審査結果ではありません。</span>
         </div>
-        <ContestEval3 contest={meta.id} />
+        <details data-testid="eval3-details">
+          <summary className="cursor-pointer text-sm font-bold">第3回の比較図（今の案と新しい案）を開く</summary>
+          <ContestEval3 contest={meta.id} />
+        </details>
       </Section>
 
-      <Section id="contest-deadlines" title="締切">
-        <ul className="space-y-1 text-sm">
-          {info.deadlines.map((d) => (
-            <li key={d.label} className="flex flex-wrap items-center gap-x-2">
-              <span className="font-medium">{d.label}</span>
-              <span>{d.text}</span>
-              {d.doneAt ? <span className="font-bold">✓ {d.doneLabel ?? '済'}</span> : <Remaining at={d.at} />}
+      <Section id="contest-limits" title="提出可能数（1人・1チームが出せる件数）">
+        <ul className="list-disc space-y-1 pl-5 text-sm">
+          {info.limits.map((r) => (
+            <li key={r.text} className="break-words" data-testid="limit-item">
+              {r.unconfirmed && <span className="font-bold">（未確認）</span>}
+              {r.text}
+              <Src>{r.src}</Src>
             </li>
           ))}
         </ul>
+        <p className="text-xs text-muted-foreground">要項に書かれていない事項は「要項に記載なし」「未確認」のまま載せています。推測で数字は入れていません。</p>
       </Section>
 
       <Section id="contest-criteria" title={info.criteriaTitle.includes('審査基準') ? info.criteriaTitle : '審査基準'}>
@@ -200,7 +195,7 @@ export default function ContestPage({ contestId }: { contestId: string }) {
         <p className="text-xs text-muted-foreground">{info.criteria.some((c) => c.desc === NO_DESC) && '各項目の説明は要項に記載なし。'}{info.criteriaNote}</p>
       </Section>
 
-      <Section id="contest-conditions" title="主な応募条件・注意点">
+      <Section id="contest-conditions" title="主なルール・応募条件・注意点">
         <h3 className="text-sm font-medium">提出のしかた</h3>
         <Bullets items={info.submission} />
         <h3 className="text-sm font-medium">失格・無効につながりうる条件</h3>

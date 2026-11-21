@@ -35,7 +35,7 @@ for (const [w, h] of [[1280, 800], [1024, 768], [390, 844]]) {
   for (const [name, route] of [['top', ''], ['contest-ichibiz', 'contest/ichibiz-2026/'], ['contest-satellite', 'contest/satellite-2026/']]) {
     await send('Page.navigate', { url: base + route })
     await sleep(2500)
-    const m = await ev(`(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, minMini: Math.min(...[...document.querySelectorAll('[data-app-card]')].map((e) => Math.round(e.getBoundingClientRect().width))), bigCards: document.querySelectorAll('[data-contest-card]').length, miniCards: document.querySelectorAll('a[data-app-card]').length }))()`)
+    const m = await ev(`(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, minMini: Math.min(...[...document.querySelectorAll('[data-app-card]')].map((e) => Math.round(e.getBoundingClientRect().width))), bigCards: document.querySelectorAll('[data-contest-card]').length, bandsInView: [...document.querySelectorAll('[data-contest-card]')].filter((e) => e.firstElementChild.getBoundingClientRect().bottom <= innerHeight).length, firstBandsBottoms: [...document.querySelectorAll('[data-contest-card]')].map((e) => Math.round(e.firstElementChild.getBoundingClientRect().bottom)), pageH: document.documentElement.scrollHeight, miniCards: document.querySelectorAll('a[data-app-card]').length }))()`)
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
     fs.writeFileSync(path.join(outDir, `${w}x${h}-${name}.png`), Buffer.from(shot.result.data, 'base64'))
     out.push({ size: `${w}x${h}`, page: name, ...m })

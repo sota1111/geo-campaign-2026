@@ -1,5 +1,6 @@
 import { DeadlineChip, Remaining } from '@/components/shared/Remaining'
-import { type ContestId } from '@/apps/registry'
+import { getApp, type ContestId } from '@/apps/registry'
+import { appUrl } from '@/lib/data'
 import { CONTEST_INFO } from '@/apps/contests-info'
 import { PROGRESS_AS_OF, plansByContest, type Owner, type PlanProgress, type TodoItem } from '@/data/progress'
 import { CONTEST_STATUS, crossItems } from '@/data/status'
@@ -155,6 +156,16 @@ function PlanCard({ p }: { p: PlanProgress }) {
     <article className="rounded-lg border bg-card p-3" data-testid={`plan-progress-${p.id}`}>
       <header className="space-y-0.5">
         <h4 className="text-sm font-bold">{p.name}</h4>
+        {(p.appIds ?? (p.appId ? [p.appId] : [])).length > 0 && (
+          <p className="text-xs">
+            アプリ:{' '}
+            {(p.appIds ?? (p.appId ? [p.appId] : [])).map((id) => (
+              <a key={id} href={appUrl(id)} className="mr-2 font-medium text-primary underline underline-offset-2">
+                {getApp(id)?.name}
+              </a>
+            ))}
+          </p>
+        )}
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
           <span className={`rounded px-1.5 py-0.5 font-bold ${plan === '新しい案' ? 'border border-dashed border-slate-600' : 'border border-slate-600'}`} data-testid="plan-kind">{plan}</span>
           <span className={`rounded px-1.5 py-0.5 font-bold ${INTENT_CLS[p.intent]}`} data-testid="plan-intent">
@@ -233,11 +244,11 @@ export function ContestProgress({ contest, hideGap }: { contest: ContestId; hide
   return (
     <div className="space-y-2">
       <ContestStatusBox contest={contest} hideGap={hideGap} />
-      <section aria-label="案ごとのチェックリスト" className="space-y-1.5" data-testid={`contest-progress-${contest}`}>
-        <h3 className="text-sm font-bold">
-          案ごとの進み具合
-          <span className="ml-2 text-xs font-normal text-muted-foreground">✓ 済　□ 残り　？ 判断待ち・要確認（各案の「開いて詳細を見る」で一覧）</span>
-        </h3>
+      <details className="space-y-1.5" data-testid={`contest-progress-${contest}`}>
+        <summary className="cursor-pointer text-sm font-bold">
+          案ごとの進み具合・チェックリスト（{active.length}案）
+          <span className="ml-2 text-xs font-normal text-muted-foreground">✓ 済　□ 残り　？ 判断待ち・要確認</span>
+        </summary>
         <div className="grid gap-2 lg:grid-cols-2">
           {active.map((p) => (
             <PlanCard key={p.id} p={p} />
@@ -246,7 +257,7 @@ export function ContestProgress({ contest, hideGap }: { contest: ContestId; hide
         {out.map((p) => (
           <DecidedOutRow key={p.id} p={p} />
         ))}
-      </section>
+      </details>
     </div>
   )
 }

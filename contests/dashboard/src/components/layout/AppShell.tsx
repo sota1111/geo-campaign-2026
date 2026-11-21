@@ -125,6 +125,13 @@ export function AppShell({ children, activeContest }: { children: React.ReactNod
   return (
     <TooltipProvider>
       <SidebarProvider>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-slate-900 focus:px-3 focus:py-2 focus:text-sm focus:font-bold focus:text-white"
+          data-testid="skip-link"
+        >
+          本文へ移動
+        </a>
         <PortalSidebar activeContest={activeContest} />
         <SidebarInset className="min-w-0">
           <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
@@ -133,7 +140,7 @@ export function AppShell({ children, activeContest }: { children: React.ReactNod
             <a href={portalUrl()} className="text-sm font-medium hover:underline">統合ダッシュボード</a>
             <span className="text-xs text-muted-foreground">提出状況は {asOf} 時点の記録</span>
           </header>
-          <main className="min-w-0 flex-1 p-3 md:p-6">{children}</main>
+          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-3 outline-none md:p-6">{children}</main>
         </SidebarInset>
         <Toaster />
       </SidebarProvider>

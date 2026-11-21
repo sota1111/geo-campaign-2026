@@ -44,6 +44,16 @@ describe('トップ画面（コンペの大カードの中にアプリの小カ�
       for (const id of ids) expect(box).toContain(`href="./apps/${id}/index.html"`)
     }
   })
+  it('大カードに概要・審査基準・主なルール・提出可能数があり、未確認の項目は「未確認」と出る（推測の数字は入れない）', () => {
+    for (const c of CONTESTS) {
+      const box = html.split(`data-testid="facts-${c.id}"`)[1].split('</dl>')[0]
+      for (const k of ['概要', '審査基準', '主なルール', '提出可能数', '出典']) expect(box, `${c.id}:${k}`).toContain(k)
+    }
+    const sat = html.split('data-testid="facts-satellite-2026"')[1].split('</dl>')[0]
+    expect(sat).toContain('各テーマへの応募は1提案まで')
+    expect(sat).toContain('（未確認）')
+    expect(html.split('data-testid="facts-ichibiz-2026"')[1]).toContain('要項に明記なし（未確認）')
+  })
   it('詳細欄・細いタブ状の一覧は無い', () => {
     expect(html).not.toContain('detail-pane')
     expect(html).not.toContain('data-tab-card')
