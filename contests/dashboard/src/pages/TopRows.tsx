@@ -3,6 +3,7 @@ import { Popover as PopoverPrimitive } from 'radix-ui'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { NEW_PLAN_LABEL, isNewPlan, getApp, CONTESTS, type AppMeta, type ContestId } from '@/apps/registry'
 import { CONTEST_INFO, nextDeadline, type ContestInfo } from '@/apps/contests-info'
+import { PrizeBreakdown } from '@/components/shared/PrizeBreakdown'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { Remaining } from '@/components/shared/Remaining'
 import { CONTEST_STATUS, STATUS_LABEL, contestDecisionTexts, otherNextCount } from '@/data/status'
@@ -158,6 +159,7 @@ export function ContestTopCard({
           </span>
           {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
         </p>
+        <PrizeLine info={info} />
         <p className="flex flex-wrap items-center gap-x-2">
           <span className="font-bold" data-testid="row-status" title={st.gap}>
             <span aria-hidden>▲ </span>
@@ -489,6 +491,45 @@ export function AppFitCard({
 }
 
 /** 「提出先を選ぶ」ボタンと、開く小さなポップオーバー（画面は暗くしない。Esc・外を押すと閉じる） */
+/** 見出し帯の賞金の要約（常に表示）。「内訳」を押すと、賞の名前・金額・件数と出典が小さな表示で開く */
+function PrizeLine({ info }: { info: ContestInfo }) {
+  const pr = info.prize
+  return (
+    <p className="flex flex-wrap items-center gap-x-2" data-testid="row-prize">
+      <span className="min-w-0">
+        <span className="font-bold">賞金 </span>
+        <span data-testid="prize-summary">{pr.summary}</span>
+      </span>
+      <PopoverPrimitive.Root>
+        <PopoverPrimitive.Trigger asChild>
+          <button
+            type="button"
+            data-testid="prize-open"
+            className="min-h-6 shrink-0 rounded border-2 border-slate-900 bg-white px-1.5 text-xs font-bold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          >
+            内訳
+          </button>
+        </PopoverPrimitive.Trigger>
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Content
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            collisionPadding={8}
+            data-testid="prize-popover"
+            className="z-50 max-h-[70vh] w-[22rem] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-md border-2 border-slate-900 bg-white p-2 text-xs leading-snug text-slate-900 shadow-lg"
+          >
+            <PrizeBreakdown prize={pr} />
+            <PopoverPrimitive.Close className="mt-1 min-h-8 rounded-md border-2 border-slate-900 bg-white px-2 text-xs font-bold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-slate-900">
+              閉じる
+            </PopoverPrimitive.Close>
+          </PopoverPrimitive.Content>
+        </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
+    </p>
+  )
+}
+
 function FitPopover({
   a, contest, chosen, onToggle, cautions,
 }: { a: AppMeta; contest: ContestId | null; chosen: string[]; onToggle: (appId: string, columnId: string) => void; cautions: ActiveCaution[] }) {

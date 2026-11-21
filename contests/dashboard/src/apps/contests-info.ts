@@ -32,6 +32,28 @@ export interface SourcedItem {
   unconfirmed?: boolean
 }
 
+export interface PrizeItem {
+  /** 賞の名前（部門ごとに分かれる場合は部門名を含める） */
+  name: string
+  /** 金額（円・副賞は物品など）。出典に無ければ「金額は要項に記載なし」「未確認」 */
+  amount: string
+  /** 件数（出典にあれば） */
+  count?: string
+  note?: string
+  /** 金額が未確認・記載なしなら true */
+  unconfirmed?: boolean
+}
+
+export interface PrizeInfo {
+  /** 見出し帯に常時出す1行の要約（例「最高50万円（総額200万円）」） */
+  summary: string
+  /** 総額（出典の記載のまま） */
+  total?: string
+  items: PrizeItem[]
+  /** 出典 */
+  source: string
+}
+
 export interface ContestInfo {
   id: ContestId
   /** 主なルール（失格・応募条件のうち重要なもの数点。cautions の要点） */
@@ -47,8 +69,8 @@ export interface ContestInfo {
   implementation: string
   /** 提出物・提出方法 */
   submission: string[]
-  /** 賞 */
-  prize: string
+  /** 賞（金額は出典にある値だけ。要項に無い・未確認の額は amount に「金額は要項に記載なし」「未確認」と書く。推測しない） */
+  prize: PrizeInfo
   criteriaTitle: string
   criteria: CriterionInfo[]
   /** 審査基準についての但し書き（例示・版の違いなど） */
@@ -93,7 +115,21 @@ export const CONTEST_INFO: ContestInfo[] = [
       '概要登録者に11月末までに事務局が本応募フォームを案内。本応募がなければ辞退扱い。',
       '最終審査は 2027/2/20（東京大学駒場）。オンライン登壇可・旅費は出ない。',
     ],
-    prize: '賞金総額200万円。一般部門は金50万・銀20万・銅5万（表の読み取り）。特別賞あり。',
+    prize: {
+      summary: '最高50万円（総額200万円）',
+      total: '賞金総額200万円（応募状況で変更の可能性、該当なしもあり）',
+      items: [
+        { name: '一般部門 金賞', amount: '50万円', note: '公式の表が崩れており読み取り' },
+        { name: '一般部門 銀賞', amount: '20万円', note: '同上' },
+        { name: '一般部門 銅賞', amount: '5万円', note: '同上' },
+        { name: 'ビジネス・プロフェッショナル部門', amount: '総額最大20万円', note: '賞名・内訳の記載なし' },
+        { name: 'GTFS賞', amount: '副賞総額10万円', count: '若干数（該当なしもあり）' },
+        { name: 'BODIK賞', amount: '10万円分のAmazonギフト', count: '上位作品で山分け' },
+        { name: 'DATAKIDS賞', amount: '10万円＋Tシャツ', count: '1件' },
+        { name: '実行委員会特別賞・学生奨励賞', amount: '金額は要項に記載なし', unconfirmed: true },
+      ],
+      source: 'reports/intel/udc-2026-20261109.md §2（UDC2026 公式ページ）',
+    },
     criteriaTitle: '一次審査の3項目（公式）',
     criteria: [
       { name: '実用度', desc: '課題と、手法・価値が合っているか。' },
@@ -142,7 +178,14 @@ export const CONTEST_INFO: ContestInfo[] = [
       '指定の様式・期間以外の応募は認められない。早期に出せば不備の指摘・再提出が可能。',
       '一次結果は12月上旬、最終選考は2027年5〜6月頃にオンラインでプレゼン。',
     ],
-    prize: 'カナン・ジオリサーチ賞 300万円、審査委員特別賞 10万円。',
+    prize: {
+      summary: '最高300万円（ほか特別賞10万円）',
+      items: [
+        { name: 'カナン・ジオリサーチ賞', amount: '300万円', note: '協賛企業テーマまたは共通テーマから1つ。件数は要項に明記なし（文面上は1件と読める）' },
+        { name: '審査委員特別賞', amount: '10万円', note: '同上' },
+      ],
+      source: '要項 p8／reports/intel/satellite-2026-20261109.md §1-2（賞金は2種類のみ）',
+    },
     criteriaTitle: '審査項目（要項p8）',
     criteria: [
       { name: '募集テーマ合致性', desc: 'テーマの趣旨を正しく読み、内容が合っているか。', tag: '一次のみ' },
@@ -194,7 +237,16 @@ export const CONTEST_INFO: ContestInfo[] = [
       '不動産情報活用部門だけ、活用する不動産情報ライブラリの情報を書く（字数は未確認）。',
       'デモアプリの現状: 不動産情報ライブラリの API から徳島市の取引価格（XIT001）・地価公示/地価調査（XPT002）・区域区分（XKT001）を事前に取得して同梱し、手順3と1枚シートに「ライブラリ由来」の印つきで出す（2026-11-12 取得）。',
     ],
-    prize: '賞金総額200万円（予定）。受賞数・個別の額は未定。協賛企業の副賞が出ることもある。',
+    prize: {
+      summary: '総額200万円（予定）・内訳は未定',
+      total: '賞金総額200万円（予定）。受賞アイデアが対象',
+      items: [
+        { name: '各賞（賞名・受賞数・個別の額）', amount: '金額は要項に記載なし（受賞数・個別の額は未定）', unconfirmed: true },
+        { name: '部門ごとの配分（ビジネス／アイデア／不動産）', amount: '未確認（記載なし）', unconfirmed: true },
+        { name: '協賛企業の副賞', amount: '協賛企業から独自の副賞が出る場合がある（内容は未確認）', unconfirmed: true },
+      ],
+      source: 'reports/intel/ichibiz-2026-20261109.md §2（公式PDF）',
+    },
     criteriaTitle: '審査員が重視しうる点（例示）',
     criteria: [
       { name: '独創性', desc: '全部門共通の例示。語の定義は公式に記載なし。' },
@@ -245,7 +297,15 @@ export const CONTEST_INFO: ContestInfo[] = [
       '専用サイトに開発者と作品の情報を登録し、ストアまたは任意のWebサイトで公開。',
       '一次審査のヒアリングは 2027/1/23〜24（オンライン）。選ばれた作品の応募者は出席必須。表彰式は 2/20。',
     ],
-    prize: '賞金総額は最大300万円。賞ごとの金額・件数は未公表（審査会で決定）。',
+    prize: {
+      summary: '総額最大300万円・内訳は未公表',
+      total: '賞金総額 最大300万円',
+      items: [
+        { name: '各賞の金額・件数', amount: '金額は要項に記載なし（審査会で決定・未公表）', unconfirmed: true },
+        { name: '協賛組織の特別賞', amount: '設置予定。金額は未確認', unconfirmed: true },
+      ],
+      source: 'reports/intel/odpt-2026-20261109.md（要項 [S1][S2]）',
+    },
     criteriaTitle: '審査基準（2025版の記載）',
     criteria: [
       { name: '社会課題解決への寄与', desc: '要項に説明の記載なし。' },
