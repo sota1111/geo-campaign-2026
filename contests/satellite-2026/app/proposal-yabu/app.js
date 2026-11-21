@@ -10,7 +10,7 @@
 
   function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 保存できない環境でも画面は使える */ } }
-  const state = { results: L.sanitizeResults(load(KEY_R, [])), weights: L.normalizeWeights(load(KEY_W, null)), sel: null, satOnly: false, map: null, mapReady: false };
+  const state = { results: L.sanitizeResults(load(KEY_R, [])), weights: L.normalizeWeights(load(KEY_W, null)), sel: null, sheet: false, who: '', satOnly: false, markers: [], map: null, mapReady: false };
 
   function recompute() { state.ranked = L.rank(D.cells, state.weights, state.results, state.satOnly); state.byId = {}; state.ranked.forEach((c) => (state.byId[c.id] = c)); }
   function download(name, text) {
@@ -31,8 +31,8 @@
   function show(view) {
     document.querySelectorAll('.view').forEach((v) => (v.hidden = v.id !== 'v-' + view));
     document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === view)));
-    if (view === 'rank' && state.map) setTimeout(() => state.map.resize(), 0);
-    if (view === 'record') renderRecords();
+    if (view === 'rank') { state.sheet = false; renderDetail(); if (state.map) setTimeout(() => state.map.resize(), 0); }
+    if (view === 'record') { renderRecords(); const v = $('#r-cell').value; $('#r-sel').textContent = state.byId[v] ? '選択中：' + v + '（⑴で選んだ区画）' : '⑴で区画を選ぶと自動で入ります'; }
     if (view === 'plan') renderPlan();
   }
 
@@ -73,6 +73,7 @@
   }
   function renderValidation() {
     const el = $('#validation-body');
+    if (HB) { const a = HB.val['all|near500'].auc; $('#validation-sum').textContent = 'この判定は当たっているか：人里（建物500m以内）では、出やすさの判定は人家からの距離だけの基準' + (Math.abs(a.S - a.base) < 0.02 ? 'とほぼ同じ' : a.S > a.base ? 'をやや上回る' : 'を下回る') + '（AUC ' + a.S.toFixed(2) + ' 対 ' + a.base.toFixed(2) + '）'; }
     if (!HB) { el.innerHTML = '<p>検証データを読み込めませんでした。</p>'; return; }
     const m = HB.meta;
     el.innerHTML = '<p>判定のうち、林縁・川の部分は論文の数値、集落・市街地の係数（各0.5）は<b>仮置き</b>です。どちらも<b>目撃データで調整していません</b>（目撃は当てはめではなく答え合わせにだけ使用）。検証範囲は、地図の範囲より広い丹後〜福知山の一部（東経 ' + m.val_bbox[0] + '〜' + m.val_bbox[2] + '、北緯 ' + m.val_bbox[1] + '〜' + m.val_bbox[3] + '）で、100m四方の ' + m.n_cells_val.toLocaleString() + ' 区画、目撃 ' + m.n_sights_val.toLocaleString() + ' 件（2009〜2018年度）。区画ごとに「目撃があったか」と判定値を比べます。</p>' +
@@ -115,51 +116,84 @@
 
   // ---- 出没しやすさ（論文ベース）----
   const habOf = (id) => { const v = HB && HB.cand[id]; return v ? { tier: v[0], s: v[1], edge: v[2], river: v[3], house: v[4] } : { tier: 0, s: 0, edge: null, river: 0, house: null }; };
-  const habCell = (id) => { const h = habOf(id); return '<b>' + TN[h.tier] + '</b><br><small>S ' + h.s + '</small>'; };
-  const habText = (h) => TN[h.tier] + '（判定値 S＝' + h.s + '。' + (h.edge == null ? '' : '区画内で最も林縁に近い所 ' + h.edge + ' m。') + '川に接する林縁：' + (h.river ? 'あり' : 'なし') + '。建物から ' + h.house + ' m' + (h.house <= L.HAB.SETTLE_M ? '（500m圏内）' : '（500m圏外）') + '）';
+  const habShort = (h) => TN[h.tier] + (h.edge == null ? '' : '（林縁から' + h.edge + 'm・建物から' + h.house + 'm）');
   function renderTable() {
     const rows = filtered();
-    $('#ranktable thead').innerHTML = '<tr><th>順位</th><th>区画</th><th>点数<br><small>衛星 / 重ねたデータ</small></th><th>500m以内の目撃</th><th>最寄り建物</th><th>学校・園まで</th><th>衛星だけで<br>並べた順位</th><th>クマの出没しやすさ<br><small>論文ベース</small></th><th>現地確認</th></tr>';
+    $('#ranktable thead').innerHTML = '<tr><th>順位</th><th>区画</th><th>点数</th><th>理由（点数の大きい順）</th><th>クマの出没しやすさ<br><small>点数とは別の目安</small></th><th>現地確認</th></tr>';
     const pfv = $('#f-place') ? $('#f-place').value : '';
     $('#ranktable tbody').innerHTML = rows.map((c) => {
       const lt = c.latest ? '<span class="tag ' + resClass(c.latest.result) + '">' + esc(c.latest.result) + '</span> ' + esc(c.latest.date) : '未確認';
-      return '<tr data-id="' + c.id + '" tabindex="0"' + (c.id === state.sel ? ' class="sel"' : '') + '><td>' + (pfv ? '<b>' + (state.ranked.filter((x) => placeOf(x.id) === pfv).indexOf(c) + 1) + '</b><br><small>全体 ' + c.rank + '</small>' : c.rank) + '</td><td>' + c.id + (placeOf(c.id) ? '<br><small>' + esc(placeOf(c.id)) + '</small>' : '') + '</td><td>' + (state.satOnly ? c.score + '<br><small>目撃・建物・学校の ' + Math.round((c.totalScore - c.satScore) * 10) / 10 + ' 点は加えていない</small>' : c.score + '（' + c.satScore + ' / ' + Math.round((c.totalScore - c.satScore) * 10) / 10 + '）') + '</td><td>' + c.n_sight500 + '件</td><td>' + c.d_house + ' m</td><td>' + (c.d_school == null ? '不明' : c.d_school + ' m') + '</td><td>' + c.satRank + '位</td><td>' + habCell(c.id) + '</td><td>' + lt + '</td></tr>';
-    }).join('') || '<tr><td colspan="9">該当なし</td></tr>';
-    $('#count').textContent = '候補 ' + state.ranked.length + ' 区画（100m四方・約1ha）のうち ' + rows.length + ' 区画を、' + (state.satOnly ? '衛星だけの点数' : '目撃履歴・建物・学校を重ねた点数') + 'の高い順に表示。「衛星だけで並べた順位」は目撃・建物・学校を重ねない場合の順位。';
-    const mode = document.getElementById('mode-pill');
-    if (mode) { const so = $('#f-sort').value !== 'score' ? '・表は「' + $('#f-sort').selectedOptions[0].textContent + '」' : ''; mode.textContent = (state.satOnly ? 'いまの点数: 衛星だけ（枠線の色と順位）' : 'いまの点数: 衛星＋目撃・建物・学校（枠線の色と順位）') + so; mode.className = 'mode-pill' + (state.satOnly ? ' sat' : ''); }
-    if (pfv) $('#count').insertAdjacentHTML('beforeend', ' 「' + esc(pfv) + '」に絞っています。順位の列は、太字がこの地区の中での点数の順位、小さな字が全体での順位です。');
-    $('#count').insertAdjacentHTML('beforeend', ' <b class="old">目撃履歴は2009〜2018年度の記録で、最新ではありません。</b>');
-    const top = state.ranked[0]; if ($('#f-sort').value !== 'score') $('#count').insertAdjacentHTML('afterbegin', '<b>表は「' + $('#f-sort').selectedOptions[0].textContent + '」で、全候補から並べています。左端の「順位」の列は点数での順位です。刈り払い計画（⑶）は常に点数の高い順です。</b> '); if (top) $('#count').insertAdjacentHTML('afterbegin', '<b>いまの1位: ' + top.id + '（' + (state.satOnly ? '衛星だけの点数' : '重ねた点数') + ' ' + top.score + '点）</b> ');
+      const h = habOf(c.id);
+      return '<tr data-id="' + c.id + '" tabindex="0"' + (c.id === state.sel ? ' class="sel"' : '') + '><td data-k="順位">' + (pfv ? '<b>' + (state.ranked.filter((x) => placeOf(x.id) === pfv).indexOf(c) + 1) + '</b> <small>全体 ' + c.rank + '</small>' : c.rank) + '</td><td data-k="区画">' + c.id + (placeOf(c.id) ? ' <small>' + esc(placeOf(c.id)) + '</small>' : '') + '</td><td data-k="点数">' + c.score + '</td><td data-k="理由">' + esc(L.shortReason(c, state.weights, state.satOnly)) + '</td><td data-k="出やすさ">' + TN[h.tier] + '</td><td data-k="現地確認">' + lt + '</td></tr>';
+    }).join('') || '<tr><td colspan="6">該当なし</td></tr>';
+    $('#count').textContent = (state.satOnly ? '衛星だけの点数' : '目撃・建物・学校を重ねた点数') + 'で、候補 ' + state.ranked.length + ' 区画のうち ' + rows.length + ' 区画を表示。出没しやすさ（論文ベース）は点数に入れていない別の目安で、「低」でも目撃や建物の近さで上位になります。';
+    if (pfv) $('#count').insertAdjacentHTML('beforeend', ' 「' + esc(pfv) + '」に絞り込み中（太字＝地区内の順位）。');
+    if ($('#f-sort').value !== 'score') $('#count').insertAdjacentHTML('beforeend', ' <b>表は「' + esc($('#f-sort').selectedOptions[0].textContent) + '」。左端は点数の順位、⑶の計画は常に点数順。</b>');
+    $('#allrank-sum').textContent = 'すべての順位を表で見る（候補 ' + state.ranked.length + ' 区画・絞り込み・並び替え）';
+    renderTop5(); renderSatline();
+  }
+  function renderSatline() {
+    const W = state.weights, sat = L.SAT_KEYS.reduce((a, k) => a + W[k], 0), all = L.KEYS.reduce((a, k) => a + W[k], 0);
+    $('#satline').innerHTML = '<span class="step">衛星<span class="long">（Sentinel-2）</span>で <b>' + D.meta.n_cells_all.toLocaleString() + '区画 → 候補 ' + D.cells.length + '区画</b>に絞り込み</span><span class="arrow">→</span><span class="step">目撃・建物<span class="long">・学校</span>を重ねて順位付け</span>' +
+      '<label class="toggle"><input type="checkbox" id="f-sat"' + (state.satOnly ? ' checked' : '') + '> 衛星だけで並べる</label>' +
+      '<small class="snote">候補の条件（植生の濃さ・林縁度）は衛星由来。配点は衛星 ' + sat + '／' + all + '（仮置き）。</small>';
+    $('#f-sat').addEventListener('change', (e) => { state.satOnly = e.target.checked; refresh(); });
+  }
+  function renderTop5() {
+    const top = state.ranked.slice(0, 5);
+    $('#top5').innerHTML = '<h2>藪払いの優先上位5 <small>' + (state.satOnly ? '衛星だけの点数' : '重ねた点数') + '・押すと根拠</small></h2><ol>' + top.map((c) =>
+      '<li><button type="button" data-top="' + c.id + '"' + (c.id === state.sel ? ' aria-pressed="true"' : '') + '><b class="rk">' + c.rank + '</b><span class="tid">' + c.id + ' <small>' + esc(placeOf(c.id)) + '</small></span><span class="tsc">' + c.score + '点</span><span class="trs">' + esc(L.shortReason(c, state.weights, state.satOnly)) + '</span></button></li>').join('') + '</ol>';
+    document.querySelectorAll('#top5 [data-top]').forEach((b) => (b.onclick = () => select(b.dataset.top, true)));
+  }
+  const isMobile = () => window.innerWidth <= 800;
+  function addRecord(r) {
+    if (!state.byId[r.cellId]) return { ok: false, msg: '区画ID「' + r.cellId + '」は候補にありません。⑴の表で確認してください。' };
+    if (!r.result) return { ok: false, msg: '「結果」を選んでください（現地で見た状態）。', focus: 'result' };
+    const ok = L.sanitizeResults([r])[0];
+    if (!ok || !ok.who) return { ok: false, msg: '日付・確認者・結果を確かめてください。' };
+    state.results.push(ok); save(KEY_R, state.results); state.who = ok.who;
+    const pr = planRanked(), pos = pr.findIndex((c) => c.id === ok.cellId), cap = Math.max(1, Math.min(100, Math.floor(+$('#cap').value) || 10));
+    const eff = ok.result === L.EXCLUDE_RESULT ? '⑶の計画から外れます。' : (pos >= 0 && pos < cap ? '⑶の計画（上位' + cap + '）の ' + (pos + 1) + ' 番目に入っています。' : '点数 ' + (pos + 1) + ' 位のため、⑶の計画（上位' + cap + '）には入っていません。');
+    return { ok: true, rec: ok, msg: ok.cellId + ' を記録しました（' + ok.result + '）。' + eff };
   }
   function renderDetail() {
     const c = state.byId[state.sel], el = $('#detail');
-    if (!c) { el.innerHTML = '<h2>根拠の表示</h2><p>地図の区画か表の行を選ぶと、<b>なぜ優先か</b>（点数の内訳と元の数値）が出ます。</p><p class="note">上位の区画から、現地確認に回す順番の案です。</p>'; return; }
-    const rs = L.reasons(c, state.weights);
+    el.classList.toggle('sheet', isMobile() && !!c && state.sheet);
+    el.classList.toggle('empty', !c);
+    if (!c) { el.innerHTML = '<p class="note">地図の区画・番号か、上の上位5を押すと、<b>なぜ優先か</b>がここに出ます。</p>'; return; }
+    const rs = L.reasons(c, state.weights), h = habOf(c.id);
     const hist = state.results.filter((r) => r.cellId === c.id).slice().reverse();
-    const top2 = rs.slice().filter((r) => !state.satOnly || r.src === 'sat').sort((a, b) => b.pts - a.pts).filter((r) => r.pts > 0).slice(0, 3);
-    el.innerHTML = '<h2>' + c.id + '（順位 ' + c.rank + '／点数 ' + c.score + '）</h2>' +
-      '<p class="saved"><b>ひとことで：</b>' + (top2.length ? top2.map((r) => esc(r.text)).join('。') + '。' : '') + ' 点数の大きい観点から順に挙げています。</p><dl>' +
-      '<dt>位置</dt><dd>' + (placeOf(c.id) ? esc(placeOf(c.id)) + '（区画の中心点）／' : '') + '北緯 ' + c.lat + '、東経 ' + c.lon + '（100m四方）</dd>' +
-      (HB ? '<dt>クマの出没しやすさ（論文ベース）</dt><dd>' + esc(habText(habOf(c.id))) + '<br><small>林縁・川の近さは Takahata ほか 2014 の選択オッズ、人家500m圏は Takahata 2017。出没の予測ではありません。この値は上の点数には入れていません。</small></dd>' : '') +
-      '<dt>なぜ優先か（点数の内訳）</dt><dd>' + rs.map((r) => '<div' + (state.satOnly && r.src !== 'sat' ? ' class="unused"' : '') + '><span class="src src-' + r.src + '">' + L.SRC_LABEL[r.src] + '</span><b>' + esc(r.label) + '</b> ' + r.pts + ' / ' + r.max + '点<span class="bar" style="width:' + Math.round(r.max ? (r.pts / r.max) * 60 : 0) + 'px"></span><br><small>' + esc(r.text) + (state.satOnly && r.src !== 'sat' ? '（いまの「衛星だけで並べる」では点数に入れていません）' : '') + '</small></div>').join('') + '</dd>' +
-      '<dt>衛星だけで並べた場合</dt><dd>' + c.satRank + '位（衛星由来 ' + c.satScore + '点）。重ねたデータで ' + c.fullRank + '位になっている。</dd>' +
-      '<dt>現地確認</dt><dd>' + (hist.length ? hist.map((r) => esc(r.date) + ' ' + esc(r.result) + (r.memo ? '（' + esc(r.memo) + '）' : '')).join('<br>') : 'まだ記録なし') + '</dd></dl>' +
-      '<p class="note">藪・耕作放棄地かどうかは衛星だけでは確定できません。配点の重みは仮置きです。</p>' +
-      '<p><button type="button" id="btn-to-rec">この区画の現地確認を記録する</button></p>';
+    const top2 = rs.slice().filter((r) => !state.satOnly || r.src === 'sat').sort((a, b) => b.pts - a.pts).filter((r) => r.pts > 0).slice(0, 2);
+    el.innerHTML = '<div class="dhead"><h2>' + c.id + ' <small>' + esc(placeOf(c.id)) + '</small> ' + c.rank + '位・' + c.score + '点</h2><button type="button" id="btn-sheet-close" class="close" aria-label="根拠を閉じて地図に戻る">地図に戻る ✕</button></div>' +
+      '<p class="saved"><b>ひとことで：</b>' + (top2.length ? top2.map((r) => esc(r.text)).join('。') + '。' : '') + '</p>' +
+      '<p class="satnote"><span class="chip src-sat">衛星</span>林縁度 ' + Math.round(c.edge * 100) + '%・5月NDVI ' + c.ndvi_g.toFixed(2) + 'で候補に入った区画。衛星だけなら <b>' + c.satRank + '位</b>、重ねて <b>' + c.fullRank + '位</b>。</p>' +
+      (HB ? '<p class="habnote">クマの出没しやすさ：<b>' + esc(habShort(h)) + '</b> <small>論文ベースの別の目安（点数には入れていない）</small></p>' : '') +
+      '<div class="why">' + rs.map((r, i) => '<details' + (state.satOnly && r.src !== 'sat' ? ' class="unused"' : '') + '><summary title="' + esc(r.label) + '"><span class="src src-' + r.src + '">' + L.SRC_LABEL[r.src] + '</span><span class="wl">' + esc(L.SHORT[L.KEYS[i]]) + '</span><span class="barbox"><span class="bar" style="width:' + Math.round(r.max ? (r.pts / r.max) * 100 : 0) + '%"></span></span><span class="wp">' + r.pts + '/' + r.max + '</span></summary><small>' + esc(r.text) + (state.satOnly && r.src !== 'sat' ? '（いまは点数に入れていない）' : '') + '</small></details>').join('') + '</div>' +
+      '<form id="q-form" class="qform"><b>現地確認を記録</b><span class="demo-badge">デモ入力</span><span class="qrow"><select id="q-result" aria-label="現地で見た結果"><option value="">結果を選ぶ</option>' + L.RESULTS.map((r) => '<option>' + esc(r) + '</option>').join('') + '</select><input id="q-who" maxlength="40" placeholder="確認者（係名）" aria-label="確認者（係名）" value="' + esc(state.who) + '"><button type="submit">記録</button></span><button type="button" id="btn-to-rec" class="link">メモ・日付も入れて記録する</button>' +
+      '<small id="q-msg" role="status">' + (hist.length ? '記録：' + hist.map((r) => esc(r.date) + ' ' + esc(r.result)).join('／') : 'まだ記録なし') + '</small></form>' +
+      '<p class="note">藪かどうかは現地で確認。配点は仮置き。</p>';
     $('#btn-to-rec').onclick = () => { $('#r-cell').value = c.id; show('record'); $('#r-who').focus(); };
+    $('#btn-sheet-close').onclick = () => { state.sheet = false; renderDetail(); };
+    $('#q-form').onsubmit = (e) => {
+      e.preventDefault();
+      const res = addRecord({ cellId: c.id, date: today(), who: $('#q-who').value.trim(), result: $('#q-result').value, memo: '' });
+      if (!res.ok) { $('#q-msg').textContent = res.msg; return; }
+      refresh(); $('#q-msg').textContent = res.msg;
+    };
   }
 
   function select(id, fly) {
-    state.sel = id;
+    state.sel = id; state.sheet = true;
     renderTable(); renderDetail(); updateSel();
     const c = state.byId[id];
+    // 根拠が画面の外にあるときは見える位置へ動かす（スマホは下からのシートで出る）
+    if (!isMobile()) { const r = $('#detail').getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight - 120) $('.sidepane').scrollIntoView({ block: 'start' }); }
     if (fly && c && state.map) state.map.easeTo({ center: [c.lon, c.lat], zoom: Math.max(state.map.getZoom(), 15), duration: 400 });
   }
 
   // ---- 地図 ----
   function cellsFC() {
-    return { type: 'FeatureCollection', features: state.ranked.map((c) => ({ type: 'Feature', properties: { id: c.id, rank: c.rank, tier: c.rank <= 20 ? 0 : c.rank <= 100 ? 1 : 2 }, geometry: { type: 'Polygon', coordinates: [c.ring] } })) };
+    return { type: 'FeatureCollection', features: state.ranked.map((c) => ({ type: 'Feature', properties: { id: c.id, rank: c.rank, ndvi: c.ndvi_g, tier: c.rank <= 20 ? 0 : c.rank <= 100 ? 1 : 2 }, geometry: { type: 'Polygon', coordinates: [c.ring] } })) };
   }
   // 出没しやすい範囲（高・中）の区画。100m 格子（UTM）の中心から、緯度経度の小さな矩形にする（約100m）
   function habFC() {
@@ -177,7 +211,19 @@
     if (!state.mapReady) return;
     state.map.setFilter('cells-sel', ['==', ['get', 'id'], state.sel || '']);
   }
-  function refreshMap() { if (state.mapReady) state.map.getSource('cells').setData(cellsFC()); }
+  // 上位20区画に番号の札を立てる（地図の縮尺が小さくても位置が分かるように）
+  function refreshMarkers() {
+    if (!state.mapReady) return;
+    state.markers.forEach((m) => m.remove()); state.markers = [];
+    if (!$('#l-cells').checked) return;
+    state.ranked.slice(0, 20).forEach((c) => {
+      const el = document.createElement('button'); el.type = 'button'; el.className = 'mk' + (c.rank <= 5 ? ' top' : ''); el.textContent = c.rank;
+      el.setAttribute('aria-label', c.rank + '位 ' + c.id + ' の根拠を見る');
+      el.onclick = (e) => { e.stopPropagation(); select(c.id, false); };
+      state.markers.push(new maplibregl.Marker({ element: el }).setLngLat([c.lon, c.lat]).addTo(state.map));
+    });
+  }
+  function refreshMap() { if (state.mapReady) { state.map.getSource('cells').setData(cellsFC()); refreshMarkers(); } }
   function initMap() {
     const b = D.meta.bbox;
     if (typeof maplibregl === 'undefined') { $('#map').innerHTML = '<p class="note">地図ライブラリを読み込めませんでした。表と根拠は使えます。</p>'; return; }
@@ -202,11 +248,12 @@
       if (HB) {
         map.addSource('hab', { type: 'geojson', data: habFC() });
         map.addImage('hatch', hatchImage(), { pixelRatio: 1 });
-        map.addLayer({ id: 'hab-mid', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 1], paint: { 'fill-pattern': 'hatch', 'fill-opacity': 0.9 } });
-        map.addLayer({ id: 'hab-high', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 2], paint: { 'fill-color': '#7b3294', 'fill-opacity': 0.5 } });
+        map.addLayer({ id: 'hab-mid', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 1], paint: { 'fill-pattern': 'hatch', 'fill-opacity': 0.55 } });
+        map.addLayer({ id: 'hab-high', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 2], paint: { 'fill-color': '#7b3294', 'fill-opacity': 0.32 } });
       }
-      map.addLayer({ id: 'cells', type: 'fill', source: 'cells', paint: { 'fill-color': ['match', ['get', 'tier'], 0, '#d95f02', 1, '#fdb863', '#7fa6cf'], 'fill-opacity': 0.12 } });
-      map.addLayer({ id: 'cells-line', type: 'line', source: 'cells', paint: { 'line-color': ['match', ['get', 'tier'], 0, '#c24a00', 1, '#e08a1e', '#2f6db0'], 'line-width': ['match', ['get', 'tier'], 0, 2.5, 1, 1.5, 1] } });
+      map.addLayer({ id: 'cells-ndvi', type: 'fill', source: 'cells', layout: { visibility: 'none' }, paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'ndvi'], 0.5, '#e5f5e0', 0.7, '#74c476', 0.85, '#00441b'], 'fill-opacity': 0.85 } });
+      map.addLayer({ id: 'cells', type: 'fill', source: 'cells', paint: { 'fill-color': ['match', ['get', 'tier'], 0, '#d95f02', 1, '#fdb863', '#7fa6cf'], 'fill-opacity': ['match', ['get', 'tier'], 0, 0.55, 0.08] } });
+      map.addLayer({ id: 'cells-line', type: 'line', source: 'cells', paint: { 'line-color': ['match', ['get', 'tier'], 0, '#c24a00', 1, '#e08a1e', '#2f6db0'], 'line-width': ['match', ['get', 'tier'], 0, 3, 1, 1, 0.6], 'line-opacity': ['match', ['get', 'tier'], 0, 1, 0.5] } });
       map.addLayer({ id: 'cells-sel', type: 'line', source: 'cells', filter: ['==', ['get', 'id'], ''], paint: { 'line-color': '#000', 'line-width': 3 } });
       map.addLayer({ id: 'houses', type: 'circle', source: 'houses', layout: { visibility: 'none' }, paint: { 'circle-radius': 2.5, 'circle-color': '#333', 'circle-opacity': 0.8 } });
       map.addLayer({ id: 'sights', type: 'circle', source: 'sights', layout: { visibility: 'none' }, paint: { 'circle-radius': 3.5, 'circle-color': '#6a3d9a', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1, 'circle-opacity': 0.75 } });
@@ -220,7 +267,10 @@
       });
       map.on('mouseenter', 'cells', () => (map.getCanvas().style.cursor = 'pointer'));
       map.on('mouseleave', 'cells', () => (map.getCanvas().style.cursor = ''));
-      state.mapReady = true; updateSel();
+      state.mapReady = true; updateSel(); refreshMarkers();
+      // 最初の画面で上位20区画が収まるように合わせる
+      const t20 = state.ranked.slice(0, 20), lo = t20.map((c) => c.lon), la = t20.map((c) => c.lat);
+      if (t20.length) map.fitBounds([[Math.min(...lo), Math.min(...la)], [Math.max(...lo), Math.max(...la)]], { padding: { top: 60, bottom: 30, left: 30, right: 30 }, maxZoom: 14.5, duration: 0 });
     });
   }
   function setLayer(id, on) { if (state.mapReady) state.map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'); }
@@ -257,11 +307,15 @@
   }
 
   function refresh() { recompute(); refreshMap(); renderTable(); renderDetail(); }
+  function planCsv() {
+    const n = Math.max(1, Math.min(100, Math.floor(+$('#cap').value) || 10));
+    download('yabu_plan_' + today() + '.csv', L.toCsv(L.PLAN_HEADER, L.planRows(planRanked(), n)));
+  }
 
   function init() {
     recompute();
-    $('#footer').innerHTML = '出典：クマ目撃＝京都府「クマ目撃情報」（BODIK、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>。取得したCSVから範囲内を抽出・集計して加工、' + D.meta.sight_years[0] + '〜' + D.meta.sight_years[1] + '年度、対象範囲内 ' + D.meta.n_sights + ' 件）／建物・学校＝© OpenStreetMap contributors（ODbL、' + esc(D.meta.osm_timestamp.slice(0, 10)) + ' 取得、建物 ' + D.meta.n_houses + ' 棟。<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">ライセンス</a>。OSMの建物・河川から範囲内を抽出・集計して加工し、この加工データも ODbL で提供します）／衛星＝Contains modified Copernicus Sentinel data（2026）。Sentinel-2 L2A（' + D.meta.scenes.green.id + '・' + D.meta.scenes.winter.id + '。AWS Open Data）／土地利用＝国土数値情報 土地利用細分メッシュ L03-b（令和3年。国土交通省。加工して作成）／背景地図＝国土地理院 地理院タイル／地図＝MapLibre GL JS（BSD-3-Clause）。';
-    $('#map-note').textContent = '地図の区画は ' + D.meta.area + ' の ' + D.meta.n_cells_all + ' 区画（100m四方）から、条件に合う ' + D.cells.length + ' 区画を候補にしたもの。条件：' + D.meta.rule.replace(/^候補 = /, '');
+    $('#footer').innerHTML = '出典：京都府「クマ目撃情報」（BODIK、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>）／© OpenStreetMap contributors（<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">ODbL</a>）／Contains modified Copernicus Sentinel data（2026）／国土数値情報 L03-b（国土交通省）／地理院タイル／MapLibre GL JS（BSD-3-Clause）' +
+      '<details class="more"><summary>出典の詳細</summary>クマ目撃＝取得したCSVから範囲内を抽出・集計して加工、' + D.meta.sight_years[0] + '〜' + D.meta.sight_years[1] + '年度、対象範囲内 ' + D.meta.n_sights + ' 件。建物・学校＝OSM（' + esc(D.meta.osm_timestamp.slice(0, 10)) + ' 取得、建物 ' + D.meta.n_houses + ' 棟。範囲内を抽出・集計して加工し、この加工データも ODbL で提供）。衛星＝Sentinel-2 L2A（' + D.meta.scenes.green.id + '・' + D.meta.scenes.winter.id + '。AWS Open Data）。土地利用＝国土数値情報 土地利用細分メッシュ L03-b（令和3年。加工して作成）。候補の条件：' + esc(D.meta.rule.replace(/^候補 = /, '')) + '（' + esc(D.meta.area) + '）。</details>';
     $('#r-result').innerHTML = '<option value="">（現地で見た結果を選ぶ）</option>' + L.RESULTS.map((r) => '<option>' + esc(r) + '</option>').join('');
     $('#cell-list').innerHTML = D.cells.map((c) => '<option value="' + c.id + '">').join('');
     $('#r-date').value = today();
@@ -269,45 +323,34 @@
     document.querySelectorAll('#tabs button').forEach((b) => (b.onclick = () => show(b.dataset.view)));
     $('#ranktable tbody').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) select(tr.dataset.id, true); });
     $('#ranktable tbody').addEventListener('keydown', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); select(tr.dataset.id, true); } });
-    $('#f-sat').onchange = (e) => { state.satOnly = e.target.checked; refresh(); };
     $('#f-unvisited').onchange = renderTable;
-    $('#btn-to-weights').onclick = () => { const d = document.querySelector('details.weights'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     $('#f-n').onchange = renderTable;
     $('#f-sort').onchange = renderTable;
     const places = {}; D.cells.forEach((c) => { const p = placeOf(c.id); if (p) places[p] = (places[p] || 0) + 1; });
     $('#f-place').innerHTML = '<option value="">すべての地区</option>' + Object.keys(places).sort((a, b) => a.localeCompare(b, 'ja')).map((p) => '<option value="' + esc(p) + '">' + esc(p) + '（' + places[p] + '区画）</option>').join('');
     $('#f-place').onchange = renderTable;
-    $('#l-cells').onchange = (e) => { setLayers(['cells', 'cells-line'], e.target.checked); };
+    $('#l-cells').onchange = (e) => { setLayers(['cells', 'cells-line'], e.target.checked); refreshMarkers(); };
+    $('#l-ndvi').onchange = (e) => { setLayers(['cells-ndvi'], e.target.checked); $('#leg-ndvi').hidden = !e.target.checked; };
     $('#l-hab').onchange = (e) => setLayers(['hab-high', 'hab-mid'], e.target.checked);
-    $('#l-sights').onchange = (e) => setLayer('sights', e.target.checked);
+    $('#l-sights').onchange = (e) => { setLayer('sights', e.target.checked); $('#leg-sights').hidden = !e.target.checked; };
     $('#l-houses').onchange = (e) => setLayer('houses', e.target.checked);
     $('#l-schools').onchange = (e) => setLayer('schools', e.target.checked);
     $('#btn-w-reset').onclick = () => { state.weights = L.normalizeWeights(null); save(KEY_W, state.weights); renderWeights(); refresh(); };
     $('#rec-form').onsubmit = (e) => {
       e.preventDefault();
-      const r = { cellId: $('#r-cell').value.trim().toUpperCase(), date: $('#r-date').value, who: $('#r-who').value.trim(), result: $('#r-result').value, memo: $('#r-memo').value.trim() };
-      const msg = $('#rec-msg');
-      if (!state.byId[r.cellId]) { $('#rec-msg-text').textContent = '区画ID「' + r.cellId + '」は候補にありません。⑴の表で確認してください。'; msg.hidden = false; $('#btn-rec-to-plan').hidden = true; return; }
-      if (!r.result) { $('#rec-msg-text').textContent = '「結果」を選んでください（現地で見た状態）。'; msg.hidden = false; $('#btn-rec-to-plan').hidden = true; $('#r-result').focus(); return; }
-      const ok = L.sanitizeResults([r])[0];
-      if (!ok || !ok.who) { $('#rec-msg-text').textContent = '日付・確認者・結果を確かめてください。'; msg.hidden = false; $('#btn-rec-to-plan').hidden = true; return; }
-      state.results.push(ok); save(KEY_R, state.results);
-      const pr = planRanked(), pos = pr.findIndex((c) => c.id === ok.cellId), cap = Math.max(1, Math.min(100, Math.floor(+$('#cap').value) || 10));
-      const eff = ok.result === L.EXCLUDE_RESULT ? 'この区画は⑶の刈り払い計画から外れます。' : (pos >= 0 && pos < cap ? 'この区画は⑶の刈り払い計画（上位' + cap + '）の ' + (pos + 1) + ' 番目に入っており、計画の「現地確認」欄に結果が出ます。' + (ok.result !== L.RESULTS[0] ? '計画から外れるのは「藪ではない」だけで、この結果では計画に残ります（実施するかは担当者が判断）。' : '') : 'この区画は点数 ' + (pos + 1) + ' 位のため、⑶の刈り払い計画（上位' + cap + '）には入っていません（計画の対象数を増やすと入ります）。');
-      $('#rec-msg-text').textContent = ok.cellId + ' を記録しました（' + ok.result + '）。' + eff;
-      $('#btn-rec-to-plan').hidden = false; msg.hidden = false;
+      const res = addRecord({ cellId: $('#r-cell').value.trim().toUpperCase(), date: $('#r-date').value, who: $('#r-who').value.trim(), result: $('#r-result').value, memo: $('#r-memo').value.trim() });
+      $('#rec-msg-text').textContent = res.msg; $('#rec-msg').hidden = false; $('#btn-rec-to-plan').hidden = !res.ok;
+      if (!res.ok) { if (res.focus === 'result') $('#r-result').focus(); return; }
       $('#r-memo').value = ''; $('#r-result').value = ''; refresh(); renderRecords();
     };
+    $('#r-cell').oninput = () => { const v = $('#r-cell').value.trim().toUpperCase(); $('#r-sel').textContent = state.byId[v] ? '選択中：' + v + '（' + state.byId[v].rank + '位）' : ''; };
     $('#btn-rec-to-plan').onclick = () => show('plan');
     $('#btn-reset').onclick = () => { if (!confirm('現地確認の記録をすべて消します。よろしいですか？')) return; state.results = []; save(KEY_R, state.results); refresh(); renderRecords(); $('#rec-msg').hidden = true; };
     $('#btn-rec-csv').onclick = () => download('yabu_records_' + today() + '.csv', L.toCsv(L.RECORD_HEADER, L.recordRows(state.results)));
     $('#cap').oninput = renderPlan;
-    $('#btn-plan-csv').onclick = () => {
-      const n = Math.max(1, Math.min(100, Math.floor(+$('#cap').value) || 10));
-      download('yabu_plan_' + today() + '.csv', L.toCsv(L.PLAN_HEADER, L.planRows(planRanked(), n)));
-    };
+    $('#btn-plan-csv').onclick = planCsv;
+    $('#btn-plan-quick').onclick = planCsv;
   }
-  if (window.innerWidth <= 800) { const bw = document.getElementById('bannerwrap'); if (bw) bw.open = false; }
   init();
   window.YabuApp = { state, select };   // 画面テスト用（読み取りと選択のみ）
 })();

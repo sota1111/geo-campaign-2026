@@ -16,6 +16,8 @@
     houses_n: '300m以内の建物数',
     school: '最寄りの学校・園までの近さ',
   };
+  // 根拠の棒グラフ用の短い名前
+  const SHORT = { edge: '林縁度', veg: '5月の緑の濃さ', drop: '冬との緑の差', sight: '目撃（500m内）', house: '建物までの近さ', houses_n: '周りの建物数', school: '学校・園の近さ' };
   const SRC = { edge: 'sat', veg: 'sat', drop: 'sat', sight: 'hist', house: 'osm', houses_n: 'osm', school: 'osm' };
   const SRC_LABEL = { sat: '衛星', hist: '目撃履歴', osm: '建物・学校' };
   // 各要素を 0〜1 にする基準（仮置き）
@@ -100,6 +102,12 @@
     ];
   }
 
+  // 理由の一言（点数の大きい観点を2つ、実測値で）。例「目撃52件・建物10m」
+  function shortReason(c, weights, satOnly) {
+    const word = { edge: '林縁' + Math.round(c.edge * 100) + '%', veg: '5月NDVI ' + c.ndvi_g.toFixed(2), drop: '冬との差 ' + (c.ndvi_g - c.ndvi_w).toFixed(2), sight: '目撃' + c.n_sight500 + '件', house: '建物' + c.d_house + 'm', houses_n: '建物' + c.n_house300 + '棟', school: c.d_school == null ? '' : '学校・園' + c.d_school + 'm' };
+    return parts(c, weights).filter((x) => x.pts > 0 && (!satOnly || x.src === 'sat') && word[x.key]).sort((a, b) => b.pts - a.pts).slice(0, 2).map((x) => word[x.key]).join('・');
+  }
+
   // ---- 出没しやすさ（論文ベース）。式は README と tools/build_habitat.py に同じ ----
   // 数値は Takahata ほか 2014 PLoS ONE 9(1): e86181 の選択オッズ（雌、原文の値）。G_* は論文に数値がない仮の係数
   const HAB = { ODDS_EDGE_20: 3.74, ODDS_EDGE_100: 1.81, ODDS_RIVEREDGE_20: 21.45, TIER_HIGH: 3.74, TIER_MID: 1.81, G_FAR: 0.5, G_URBAN: 0.5, SETTLE_M: 500 };
@@ -136,13 +144,15 @@
     return '﻿' + [header].concat(rows).map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
   }
 
-  const PLAN_HEADER = ['順位', '区画ID', '緯度', '経度', '面積(ha・約)', '点数', '衛星由来の点', '目撃・建物・学校由来の点', '500m以内の目撃(件・2009-2018年度)', '最寄り建物まで(m)', '最寄り学校・園', '学校・園まで(m)', '現地確認の結果', '確認日', '確認メモ', '刈り払い実施主体(記入)', '実施予定時期(記入)', '注記'];
+  const PLAN_HEADER = ['順位', '区画ID', '緯度', '経度', '地図(地理院地図)', '点数', '衛星由来の点', '目撃・建物・学校由来の点', '500m以内の目撃(件・2009-2018年度)', '最寄り建物まで(m)', '最寄り学校・園', '学校・園まで(m)', '現地確認の結果', '確認日', '確認メモ', '刈り払い実施主体(記入)', '実施予定時期(記入)', '注記'];
   const PLAN_NOTE = '衛星の植生指数と京都府の目撃履歴・OSM建物による机上の順位。藪の有無・刈り払いの要否は現地確認で判断すること';
 
+  // 現地に向かう人向けの地理院地図リンク（区画の中心）
+  const gsiUrl = (c) => 'https://maps.gsi.go.jp/#17/' + c.lat + '/' + c.lon + '/';
   // 計画対象: 現地で「藪ではない」とされた区画を除く上位 n 区画
   function planRows(ranked, n) {
     const rows = ranked.filter((c) => !(c.latest && c.latest.result === EXCLUDE_RESULT)).slice(0, n);
-    return rows.map((c, i) => [i + 1, c.id, c.lat, c.lon, 1.0, c.totalScore, c.satScore, Math.round((c.totalScore - c.satScore) * 10) / 10, c.n_sight500, c.d_house, c.school || '', c.d_school == null ? '' : c.d_school,
+    return rows.map((c, i) => [i + 1, c.id, c.lat, c.lon, gsiUrl(c), c.totalScore, c.satScore, Math.round((c.totalScore - c.satScore) * 10) / 10, c.n_sight500, c.d_house, c.school || '', c.d_school == null ? '' : c.d_school,
       c.latest ? c.latest.result : '未確認', c.latest ? c.latest.date : '', c.latest ? c.latest.memo : '', '', '', PLAN_NOTE]);
   }
 
@@ -151,6 +161,6 @@
     return results.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)).map((r) => [r.date, r.cellId, r.who, r.result, r.memo, 'デモ画面での入力（実際の現地確認とは限らない）']);
   }
 
-  const api = { HAB, HAB_TIER_NAMES, habSelect, habScore, habTier, DEFAULT_WEIGHTS, SAT_KEYS, OVERLAY_KEYS, KEYS, LABELS, SRC, SRC_LABEL, CAPS, RESULTS, EXCLUDE_RESULT, normalizeWeights, unit, parts, scoreOf, rank, reasons, latestResults, isDate, sanitizeResults, cell, toCsv, PLAN_HEADER, planRows, RECORD_HEADER, recordRows };
+  const api = { SHORT, shortReason, gsiUrl, HAB, HAB_TIER_NAMES, habSelect, habScore, habTier, DEFAULT_WEIGHTS, SAT_KEYS, OVERLAY_KEYS, KEYS, LABELS, SRC, SRC_LABEL, CAPS, RESULTS, EXCLUDE_RESULT, normalizeWeights, unit, parts, scoreOf, rank, reasons, latestResults, isDate, sanitizeResults, cell, toCsv, PLAN_HEADER, planRows, RECORD_HEADER, recordRows };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.YabuLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);
