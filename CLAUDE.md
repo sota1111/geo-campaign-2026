@@ -60,7 +60,7 @@
 1. `claude/<部隊>-<contest-id>-<YYYYMMDD>` ブランチを作ってコミット（例: `claude/intel-udc-2026-20261110`）
 2. `git push -u origin HEAD`
 3. `gh pr create` で PR を作成し、本文は `.github/pull_request_template.md` の書式で報告する
-4. 参謀長は自分ではマージしない。PR を作ったら commander-aide に委任する（総司令官の指示は不要。補佐が CI・憲兵・デザイン審査・registry 承認を確かめ、満たさなければマージしない）。**ページを削除する PR は総司令官の許可が必要**で、補佐は許可待ちとして止める
+4. 参謀長は自分ではマージしない。PR を作ったら**総司令官の承認を待たずに、ただちに** commander-aide に代理マージを委任する（2026-11-21 総司令官の指示「代理マージは承認なしで行うこと」。毎回「マージしてよいか」を聞かない。補佐が CI・憲兵・デザイン審査・registry 承認を確かめ、満たさなければマージしない）。**ページを削除する PR は総司令官の許可が必要**で、補佐は許可待ちとして止める
 
 クラウド（Claude Code on the web / Routines）の設定は routines/README.md を参照。
 
