@@ -57,6 +57,10 @@
    "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
   },
   {
+   "node": "id:audit/satellite-2026-proposal-a-realdata-20261121",
+   "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
+  },
+  {
    "node": "id:task/5",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
@@ -103,7 +107,7 @@
   "selection_decisions": 7,
   "unfilled_placeholders": 44,
   "unconfirmed_data_conditions": 7,
-  "audits": 17,
+  "audits": 18,
   "findings": 122,
   "findings_by_severity": {
    "sev-disqualifying": 16,
@@ -114,7 +118,7 @@
   "open_tasks": 43,
   "decisions_from_status": 11,
   "escalations": 18,
-  "pull_requests": 47
+  "pull_requests": 50
  },
  "notes": [],
  "apps_without_dataset_rows": [
@@ -123,11 +127,11 @@
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
- "triples": 10283,
+ "triples": 10421,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
   "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
  },
- "gap_count": 23
+ "gap_count": 24
 }

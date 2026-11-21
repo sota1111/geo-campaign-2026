@@ -2446,9 +2446,9 @@
  {
   "baseRefName": "claude/ops-campaign-20261109",
   "headRefName": "claude/ops-aide-autonomous-merge-20261121",
-  "mergedAt": null,
+  "mergedAt": "2026-11-21T13:41:25Z",
   "number": 46,
-  "state": "OPEN",
+  "state": "MERGED",
   "title": "参謀長: 代理マージを指示なしで行う仕組みに（失格級・重大は記録のみ、マージは止めない）",
   "url": "https://github.com/sota1111/geo-campaign-2026/pull/46",
   "files": [
@@ -2461,9 +2461,9 @@
  {
   "baseRefName": "claude/ops-campaign-20261109",
   "headRefName": "claude/engineer-ontology-ui-20261121",
-  "mergedAt": null,
+  "mergedAt": "2026-11-21T13:23:38Z",
   "number": 47,
-  "state": "OPEN",
+  "state": "MERGED",
   "title": "工兵: オントロジー第2段（つながり図・figure-docs の図解ページ・代理マージ規則）",
   "url": "https://github.com/sota1111/geo-campaign-2026/pull/47",
   "files": [
@@ -2567,6 +2567,75 @@
    "contests/dashboard/docs/screenshots/ontology-20261121/desktop-3-next-sub.png",
    "contests/dashboard/docs/screenshots/ontology-20261121/desktop-4-gate.png",
    "contests/dashboard/docs/screenshots/ontology-20261121/desktop-5-impact.png"
+  ]
+ },
+ {
+  "baseRefName": "claude/ops-campaign-20261109",
+  "headRefName": "claude/engineer-satellite-2026-a-realdata-20261121",
+  "mergedAt": "2026-11-21T13:27:06Z",
+  "number": 48,
+  "state": "MERGED",
+  "title": "工兵: 衛星 提案A デモを実データ化（国土地理院 干渉SAR・OSM・豊中市下水道。レーダ結果のみ架空）",
+  "url": "https://github.com/sota1111/geo-campaign-2026/pull/48",
+  "files": [
+   "contests/satellite-2026/app/proposal-a/.gitignore",
+   "contests/satellite-2026/app/proposal-a/README.md",
+   "contests/satellite-2026/app/proposal-a/app.js",
+   "contests/satellite-2026/app/proposal-a/data/toyonaka.json",
+   "contests/satellite-2026/app/proposal-a/index.html",
+   "contests/satellite-2026/app/proposal-a/logic.js",
+   "contests/satellite-2026/app/proposal-a/style.css",
+   "contests/satellite-2026/app/proposal-a/tests/logic.test.mjs",
+   "contests/satellite-2026/app/proposal-a/tests/test_tools.py",
+   "contests/satellite-2026/app/proposal-a/tests/ui_check.mjs",
+   "contests/satellite-2026/app/proposal-a/tools/build_data.py",
+   "contests/satellite-2026/app/proposal-a/tools/fetch_insar.py",
+   "contests/satellite-2026/app/proposal-a/tools/fetch_osm.py",
+   "contests/satellite-2026/app/proposal-a/tools/insar_cells.py",
+   "contests/satellite-2026/app/proposal-a/tools/shp.py",
+   "reports/audit/satellite-2026-proposal-a-realdata-20261121.md",
+   "reports/design/satellite-2026-proposal-a-realdata-20261121.md",
+   "reports/design/satellite-2026-proposal-a-realdata-recheck-20261121.md",
+   "reports/recon/satellite-2026-proposal-a-real-data-20261121.md"
+  ]
+ },
+ {
+  "baseRefName": "claude/ops-campaign-20261109",
+  "headRefName": "claude/engineer-dashboard-bigcards-20261121",
+  "mergedAt": null,
+  "number": 49,
+  "state": "OPEN",
+  "title": "工兵: 統合ダッシュボード コンペカード・アプリカードを画面いっぱいに拡大し表示内容を増やす",
+  "url": "https://github.com/sota1111/geo-campaign-2026/pull/49",
+  "files": [
+   "contests/dashboard/README.md",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/smoke/desktop-portal.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/smoke/mobile-portal.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1024x768.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1280x800.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1440x900.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1513x784-popover.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1513x784-selected.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1513x784.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-1920x1080.png",
+   "contests/dashboard/docs/screenshots/bigcards-20261121/top-390x844.png",
+   "contests/dashboard/scripts/bigcards.mjs",
+   "contests/dashboard/src/pages/Portal.tsx",
+   "contests/dashboard/src/pages/TopRows.tsx",
+   "contests/dashboard/src/test/portal-bigcards.test.tsx",
+   "reports/design/dashboard-bigcards-20261121.md"
+  ]
+ },
+ {
+  "baseRefName": "claude/ops-campaign-20261109",
+  "headRefName": "claude/ops-satellite-2026-a-publish-20261121",
+  "mergedAt": "2026-11-21T13:36:33Z",
+  "number": 50,
+  "state": "MERGED",
+  "title": "参謀長: 提案A デモの公開可否を総司令官の許可で更新",
+  "url": "https://github.com/sota1111/geo-campaign-2026/pull/50",
+  "files": [
+   "contests/satellite-2026/app/proposal-a/README.md"
   ]
  }
 ]
