@@ -30,6 +30,7 @@ classDiagram
   Contest --> Criterion : hasCriterion
   Contest --> Rule : hasRule
   Contest --> SubmissionLimit : hasSubmissionLimit
+  Contest --> PlannedSubmission : hasPlannedSubmission（総司令官が決めた提出予定数。要項の上限とは別）
   App --> Dataset : usesDataset
   Dataset --> License : hasLicense
   License --> Restriction : restricts（非商用など）

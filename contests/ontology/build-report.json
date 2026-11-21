@@ -5,6 +5,14 @@
    "what": "テーマ・作品タイプの一覧（要項の分類は contests-info.ts にない）"
   },
   {
+   "node": "id:contest/udc-2026",
+   "what": "提出予定数（総司令官の指示なし。未定）"
+  },
+  {
+   "node": "id:contest/odpt-2026",
+   "what": "提出予定数（総司令官の指示なし。未定）"
+  },
+  {
    "node": "id:app/odpt-kankou",
    "what": "audience・purpose（registry.ts に未登録）"
   },
@@ -99,13 +107,13 @@
  ],
  "counts": {
   "units": 10,
-  "apps": 20,
-  "fits": 114,
-  "datasets": 34,
-  "licenses": 29,
-  "submissions": 20,
+  "apps": 21,
+  "fits": 120,
+  "datasets": 39,
+  "licenses": 37,
+  "submissions": 21,
   "selection_decisions": 7,
-  "unfilled_placeholders": 44,
+  "unfilled_placeholders": 47,
   "unconfirmed_data_conditions": 7,
   "audits": 18,
   "findings": 122,
@@ -126,12 +134,12 @@
  ],
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
- "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
- "triples": 10421,
+ "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
+ "triples": 10849,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
-  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
+  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
  },
- "gap_count": 24
+ "gap_count": 26
 }

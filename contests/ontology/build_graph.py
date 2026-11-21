@@ -219,6 +219,7 @@ def build(offline=False):
 
     # ---- コンペ ----------------------------------------------------------------
     contests, divisions, themes = {}, {}, {}
+    reg_name = {c["id"]: c["name"] for c in reg["contests"]}
     for c in reg["contests"]:
         cid = c["id"]
         k = b.node(ID["contest/" + cid], "Contest", c["name"])
@@ -317,6 +318,31 @@ def build(offline=False):
             g.add((t, C.hasDeadline, dl))
     udc = contests["udc-2026"]
     b.gap(udc, "テーマ・作品タイプの一覧（要項の分類は contests-info.ts にない）")
+
+    # 提出予定数（総司令官の決定。要項の上限である SubmissionLimit とは別）。total が null のコンペは値を作らず「未定」の穴にする
+    for cid, inf in info_ts.items():
+        pl = inf.get("planned")
+        if pl is None or cid not in contests:
+            continue
+        k = contests[cid]
+        if pl["total"] is None:
+            b.gap(k, "提出予定数（総司令官の指示なし。未定）")
+            continue
+        top = b.node(ID[f"planned/{cid}"], "PlannedSubmission", f"{reg_name[cid]} 提出予定 {pl['total']}件")
+        b.add(top, C.plannedCount, pl["total"])
+        b.add(top, C.ofContest, k)
+        b.cite(top, INFO, f"{cid} planned.total（{pl['src']}）")
+        g.add((k, C.hasPlannedSubmission, top))
+        for n, part in enumerate(pl["parts"], 1):
+            pn = b.node(ID[f"planned/{cid}/{n}"], "PlannedSubmission", f"{reg_name[cid]} 提出予定 {part['label']} {part['count']}件")
+            b.add(pn, C.plannedCount, part["count"])
+            b.add(pn, C.plannedLabel, part["label"])
+            b.add(pn, C.ofContest, k)
+            if part.get("columnId"):
+                dk = part["columnId"].rsplit("-", 1)[-1]
+                b.add(pn, C.plannedFor, divisions.get(dk))
+            b.cite(pn, INFO, f"{cid} planned.parts[{n - 1}]（{pl['src']}）")
+            g.add((k, C.hasPlannedSubmission, pn))
 
     # 適合の注意（fit.cautions）→ Rule
     for c in fit["cautions"]:

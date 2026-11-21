@@ -8,7 +8,7 @@ import { asOf } from '@/pages/Progress'
 import { OVERALL, PROGRESS_SOURCE } from '@/data/progress'
 import { FIT_AS_OF, FIT_CAUTIONS, FIT_NOTE, FIT_SOURCE } from '@/data/app-fit'
 import { downloadText } from '@/components/shared/downloadText'
-import { MARK_WORD, activeCautions, loadTargets, saveTargets, sortApps, targetsJson, toggleTarget, type Targets } from '@/lib/fit'
+import { MARK_WORD, activeCautions, loadTargets, saveTargets, selectedCount, sortApps, targetsJson, toggleTarget, type Targets } from '@/lib/fit'
 
 /**
  * ポータル（統合ダッシュボード）。上にコンペのカード4枚（締切順・横一列）、下にアプリのカード（横一列）。
@@ -27,7 +27,7 @@ export default function Portal() {
   }, [targets])
 
   const sortedAll = useMemo(() => sortApps(APPS, contest, targets), [contest, targets])
-  const nChosen = Object.keys(targets).length
+  const nChosen = selectedCount(targets, contest)
   // 提出先を選んだ・外した直後に並びが変わる。操作したカードが見える位置へ横スクロールし、キーボードの焦点も戻す
   const touched = useRef<string | null>(null)
   const orderKey = sortedAll.map((a) => a.id).join(',')
@@ -72,7 +72,7 @@ export default function Portal() {
             <span className="ml-2 text-xs font-normal text-slate-700 lg:hidden">横にスクロールして4枚を見られます</span>
           </h2>
           <p className="text-slate-700">
-            {asOf} 時点。提出先を選んだアプリが左に並び、コンペを選ぶとそのコンペとの関連の強い順に並びます　<span aria-hidden>？</span> 総司令官の判断待ち
+            {asOf} 時点。提出先を選んだアプリが左に並び、コンペを選ぶとそのコンペの候補だけが先になります　<span aria-hidden>？</span> 総司令官の判断待ち
           </p>
           <ul data-testid="progress-overall">
             <li className="flex gap-1.5">
@@ -106,7 +106,7 @@ export default function Portal() {
               アプリ（{APPS.length}件・今の案{APPS.filter((a) => !isNewPlan(a)).length}＋新しい案{APPS.filter(isNewPlan).length}）
               <span className="ml-2 text-xs font-normal" data-testid="sort-note" role="status">
                 {(contestName
-                  ? `並び順: 選んだ候補（${nChosen}件）が先、各群は「${contestName}」との関連が強い順`
+                  ? `並び順: このコンペを提出先に選んだ候補（${nChosen}件）が先、各群は「${contestName}」との関連が強い順`
                   : `並び順: 選んだ候補（${nChosen}件）が先、各群は全コンペの関連の合計が高い順`)}
               </span>
             </h2>
