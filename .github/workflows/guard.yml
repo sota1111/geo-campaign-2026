@@ -54,3 +54,18 @@ jobs:
             echo "== $id"; python tools/check_limits.py "$id" || rc=1
           done
           exit $rc
+
+  ontology:
+    # オントロジーが最新か（生成物の再生成漏れ・mappings.py への未登録報告）と pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 依存の導入
+        run: pip install -r contests/ontology/requirements.txt
+      - name: オントロジーの検査（最新か）
+        run: python contests/ontology/build_graph.py --offline --check
+      - name: オントロジーの pytest
+        run: python -m pytest contests/ontology/tests -q

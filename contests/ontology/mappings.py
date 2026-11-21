@@ -105,6 +105,7 @@ AUDITS = {
     "ichibiz-2026-recheck-20261109": {"apps": ["biz-business", "biz-idea", "biz-realestate"], "supersedes": ["ichibiz-2026-20261109"]},
     "ichibiz-2026-business-nb-20261113": {"apps": ["biz-business-nb"], "supersedes": []},
     "ichibiz-2026-realestate-a4-20261121": {"apps": ["biz-realestate-a4"], "supersedes": []},
+    "ichibiz-2026-realestate-newplans-20261122": {"apps": ["biz-realestate-timeline", "biz-realestate-rn1"], "supersedes": []},
     "ichibiz-2026-realestate-rn1-20261113": {"apps": ["biz-realestate-rn1"], "supersedes": []},
     "ichibiz-2026-realestate-rn1-regions-20261114": {"apps": ["biz-realestate-rn1"], "supersedes": ["ichibiz-2026-realestate-rn1-20261113"]},
     "ichibiz-2026-solar-guard-20261113": {"apps": ["biz-solar-guard"], "supersedes": []},
@@ -113,6 +114,8 @@ AUDITS = {
     "odpt-2026-teiji-20261115": {"apps": ["odpt-teiji"], "supersedes": []},
     "satellite-2026-20261109": {"apps": ["sat-a", "sat-b"], "supersedes": []},
     "satellite-2026-proposal-a-realdata-20261121": {"apps": ["sat-a"], "supersedes": []},
+    "satellite-2026-a-realdata-20261122": {"apps": ["sat-a"], "supersedes": ["satellite-2026-proposal-a-realdata-20261121"]},
+    "satellite-2026-sugi-yabu-20261122": {"apps": ["sat-sugi", "sat-yabu"], "supersedes": []},
     "satellite-2026-alpha-20261113": {"apps": ["sat-alpha"], "supersedes": []},
     "udc-2026-20261109": {"apps": ["odpt", "udc-moritsuchi"], "supersedes": []},
     "udc-2026-aed-20261113": {"apps": ["udc-aed"], "supersedes": []},
@@ -226,6 +229,7 @@ ESCALATION_APPS = {
     "20261121-aide-gate-relaxation": [],
     "20261121-ichibiz-realestate-a4-honnin": ["biz-realestate-a4"],
     "20261121-ichibiz-a4-kouji-kakaku-niju": ["biz-realestate-a4"],
+    "20261122-ichibiz-realestate-newplans-honnin": ["biz-realestate-timeline", "biz-realestate-rn1"],
 }
 DECISION_APPS = {
     "decision-20261114-odpt-kodure": ["odpt-kodure"],

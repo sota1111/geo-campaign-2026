@@ -65,7 +65,15 @@
    "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
   },
   {
+   "node": "id:audit/satellite-2026-a-realdata-20261122",
+   "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
+  },
+  {
    "node": "id:audit/satellite-2026-proposal-a-realdata-20261121",
+   "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
+  },
+  {
+   "node": "id:audit/satellite-2026-sugi-yabu-20261122",
    "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
   },
   {
@@ -109,23 +117,23 @@
   "units": 10,
   "apps": 21,
   "fits": 120,
-  "datasets": 39,
-  "licenses": 37,
+  "datasets": 38,
+  "licenses": 36,
   "submissions": 21,
   "selection_decisions": 7,
   "unfilled_placeholders": 47,
   "unconfirmed_data_conditions": 7,
-  "audits": 18,
-  "findings": 122,
+  "audits": 21,
+  "findings": 128,
   "findings_by_severity": {
    "sev-disqualifying": 16,
-   "sev-fix": 77,
+   "sev-fix": 83,
    "sev-minor": 29
   },
   "tasks": 91,
   "open_tasks": 43,
   "decisions_from_status": 11,
-  "escalations": 18,
+  "escalations": 19,
   "pull_requests": 50
  },
  "notes": [],
@@ -135,11 +143,11 @@
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
- "triples": 10849,
+ "triples": 11009,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
   "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
  },
- "gap_count": 26
+ "gap_count": 28
 }
