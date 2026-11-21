@@ -45,11 +45,11 @@ export default function Portal() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="mx-auto max-w-[90rem] space-y-3">
+      <div className="mx-auto max-w-[90rem] space-y-1.5">
         <h1 className="sr-only">統合ダッシュボード</h1>
-        <header className="space-y-0.5 text-xs" data-testid="portal-legend">
+        <header className="text-xs" data-testid="portal-legend">
           <p className="text-slate-700">
-            {asOf} 時点。コンペのカードは締切順です。カードを選ぶと、下のアプリがそのコンペとの関連の強い順に並びます　<span aria-hidden>？</span> 総司令官の判断待ち
+            {asOf} 時点。コンペは締切順。カードを選ぶと、アプリがそのコンペとの関連の強い順に並びます　<span aria-hidden>？</span> 総司令官の判断待ち
           </p>
           <ul data-testid="progress-overall">
             <li className="flex gap-1.5">
@@ -62,14 +62,14 @@ export default function Portal() {
           </ul>
         </header>
 
-        <section aria-labelledby="h-contests" className="space-y-1" data-testid="contest-list">
-          <h2 id="h-contests" className="text-base font-bold">
+        <section aria-labelledby="h-contests" className="space-y-0.5" data-testid="contest-list">
+          <h2 id="h-contests" className="text-sm font-bold">
             コンペ（4件・締切順）
             <span className="ml-2 text-xs font-normal text-slate-700 lg:hidden">横にスクロールして4枚を見られます</span>
           </h2>
-          <div className="-mx-2 flex snap-x items-start gap-3 overflow-x-auto px-2 py-2 lg:grid lg:grid-cols-4 lg:overflow-visible" data-testid="contest-row">
+          <div className="-mx-2 flex snap-x items-stretch gap-2 overflow-x-auto px-2 py-1 lg:grid lg:grid-cols-4 lg:overflow-visible" data-testid="contest-row">
             {sorted.map((c) => (
-              <div key={c.id} className="w-72 shrink-0 snap-start lg:w-auto">
+              <div key={c.id} className="flex w-72 shrink-0 snap-start flex-col lg:w-auto">
                 <ContestTopCard
                   info={c}
                   selected={contest === c.id}
@@ -81,46 +81,18 @@ export default function Portal() {
           </div>
         </section>
 
-        <section aria-labelledby="h-apps" className="space-y-2" data-testid="app-section">
-          <h2 id="h-apps" className="text-base font-bold">
+        <section aria-labelledby="h-apps" className="space-y-0.5" data-testid="app-section">
+          <h2 id="h-apps" className="text-sm font-bold">
             アプリ（{APPS.length}件・今の案{APPS.filter((a) => !isNewPlan(a)).length}＋新しい案{APPS.filter(isNewPlan).length}）
+            <span className="ml-2 text-xs font-normal" data-testid="sort-note" role="status">
+              {contestName
+                ? `「${contestName}」との関連が強い順（1位: ${sortedAll[0].name}。◎→○→△→×・？の順、同じ強さは登録順。イチBiz は3部門のうち最も強い関連）`
+                : '並び順: 全コンペ（6列）の関連の強さの合計が高い順（同じなら登録順）'}
+            </span>
           </h2>
-          <p className="text-xs font-bold" data-testid="sort-note" role="status">
-            {contestName
-              ? `「${contestName}」との関連が強い順に並べ替えました（1位: ${sortedAll[0].name}。◎→○→△→×・？の順、同じ強さは登録順。イチBiz は3部門のうち最も強い関連）`
-              : '並び順: 全コンペ（6列）の関連の強さの合計が高い順（同じなら登録順）'}
+          <p className="text-xs font-bold" data-testid="mark-legend">
+            記号: ◎ このコンペ向け　○ 出せる　△ 条件付き　× 出せない　？ 要確認　／　✓ 選んだ提出先
           </p>
-          <div className="rounded border-2 border-slate-900 bg-slate-50 p-2 text-xs" data-testid="draft-note">
-            <p className="font-bold">この選択はこのブラウザだけの下書きです。正式な提出先は総司令官が参謀長に指示してください。</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <span data-testid="draft-count">選んだ組: {total}件{!saved && '（このブラウザでは保存できず、画面を閉じると消えます）'}</span>
-              <button type="button" onClick={copy} className={btn} data-testid="copy-json">選択を JSON でコピー</button>
-              <button
-                type="button"
-                onClick={() => downloadText('submit-targets-draft.json', targetsJson(targets), 'application/json;charset=utf-8')}
-                className={btn}
-                data-testid="download-json"
-              >
-                JSON をダウンロード
-              </button>
-              <button type="button" onClick={() => setTargets({})} disabled={!total} className={btn} data-testid="clear-targets">
-                選択をすべて外す
-              </button>
-              <span role="status" className="font-bold">{copied}</span>
-            </div>
-            <details className="mt-1">
-              <summary className="min-h-8 cursor-pointer py-1 font-bold">使い方と、関連の読み方（◎○△×？の意味・出典）</summary>
-              <p className="leading-snug">各カードの「提出先を選ぶ」で、出せるコンペ（◎○△。？は要確認つき）を複数選べます。× は選べません。選んだ内容はこのブラウザの localStorage に保存します。</p>
-              <ul className="space-y-0.5 pb-1 leading-snug">
-                {(['◎', '○', '△', '×', '？'] as const).map((m) => (
-                  <li key={m}><span className="font-bold">{m} {MARK_WORD[m]}</span></li>
-                ))}
-                <li>{FIT_NOTE}</li>
-                <li>{c12.text}</li>
-                <li className="text-slate-700">［出典: {FIT_SOURCE}（{FIT_AS_OF}）］</li>
-              </ul>
-            </details>
-          </div>
           <ScrollRow
             label="アプリのカード"
             resetKey={`${contest ?? 'none'}|${q}`}
@@ -134,7 +106,7 @@ export default function Portal() {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="例: 病院、AED、盛土、遅れ"
-                  className="h-9 w-56 max-w-full rounded-md border-2 border-slate-900 bg-white px-2 text-sm"
+                  className="h-9 w-48 max-w-full rounded-md border-2 border-slate-900 bg-white px-2 text-sm"
                   data-testid="top-app-filter"
                 />
                 {q.trim() && <span role="status" data-testid="top-filter-count">{apps.length ? `${apps.length}件に絞りました` : '該当するアプリはありません'}</span>}
@@ -156,17 +128,49 @@ export default function Portal() {
           <CautionSummary count={cautions.length} />
         </section>
 
-        <div className="border-t pt-2 text-xs" data-testid="progress-overall-full">
-          <p className="font-bold">全体（{PROGRESS_SOURCE}）</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
-            {OVERALL.map((t) => (
-              <li key={t} className="break-words">{t}</li>
+        {/* 凡例・下書きの注意・JSON 書き出し・全体の状況・出典は1行に畳む（開くと詳細） */}
+        <details className="rounded border-2 border-slate-900 bg-slate-50 px-2 text-xs" data-testid="draft-note">
+          <summary className="min-h-8 cursor-pointer py-1 font-bold">
+            下書き（このブラウザだけ）: 選んだ組 <span data-testid="draft-count">{total}件{!saved && '（このブラウザでは保存できず、画面を閉じると消えます）'}</span>
+            <span className="ml-2 font-normal">／ 開くと: 下書きの注意・JSON 書き出し・凡例（◎○△×？）・全体の状況・出典</span>
+          </summary>
+          <p className="font-bold">この選択はこのブラウザだけの下書きです。正式な提出先は総司令官が参謀長に指示してください。</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={copy} className={btn} data-testid="copy-json">選択を JSON でコピー</button>
+            <button
+              type="button"
+              onClick={() => downloadText('submit-targets-draft.json', targetsJson(targets), 'application/json;charset=utf-8')}
+              className={btn}
+              data-testid="download-json"
+            >
+              JSON をダウンロード
+            </button>
+            <button type="button" onClick={() => setTargets({})} disabled={!total} className={btn} data-testid="clear-targets">
+              選択をすべて外す
+            </button>
+            <span role="status" className="font-bold">{copied}</span>
+          </div>
+          <p className="mt-1 leading-snug">各カードの「提出先を選ぶ」で、出せるコンペ（◎○△。？は要確認つき）を複数選べます。× は選べません。選んだ内容はこのブラウザの localStorage に保存します。</p>
+          <ul className="space-y-0.5 pb-1 leading-snug">
+            {(['◎', '○', '△', '×', '？'] as const).map((m) => (
+              <li key={m}><span className="font-bold">{m} {MARK_WORD[m]}</span></li>
             ))}
+            <li>{FIT_NOTE}</li>
+            <li>{c12.text}</li>
+            <li className="text-slate-700">［出典: {FIT_SOURCE}（{FIT_AS_OF}）］</li>
           </ul>
-        </div>
-        <p className="border-t pt-2 text-xs text-slate-700" data-testid="portal-source">
-          出典: 各コンペの公式要項（取得日 2026-11-09）、進捗は {PROGRESS_SOURCE}（{asOf} 時点）、アプリとコンペの関連は {FIT_SOURCE}（{FIT_AS_OF}）。
-        </p>
+          <div className="border-t pt-1" data-testid="progress-overall-full">
+            <p className="font-bold">全体（{PROGRESS_SOURCE}）</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {OVERALL.map((t) => (
+                <li key={t} className="break-words">{t}</li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-1 border-t py-1 text-slate-700" data-testid="portal-source">
+            出典: 各コンペの公式要項（取得日 2026-11-09）、進捗は {PROGRESS_SOURCE}（{asOf} 時点）、アプリとコンペの関連は {FIT_SOURCE}（{FIT_AS_OF}）。
+          </p>
+        </details>
       </div>
     </MotionConfig>
   )
