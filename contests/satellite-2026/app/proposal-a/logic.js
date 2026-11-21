@@ -1,13 +1,17 @@
 // 二段階調査のロジック（純関数）。ブラウザ（ES module）と node --test の両方から読む。
-// 数値はすべてサンプル（架空）データに対する計算であり、実在の精度・効果を示さない。
+// 点数は「衛星の階級（国土地理院の干渉SAR成果）」と「下水道台帳の竣工年（豊中市）」から計算する。
+// ただし較正に使う空洞の有無（sim_cavity）は乱数による架空の結果なので、AUC などの数字は実在の精度・効果を示さない。
 
 export const NOW_YEAR = 2026;
 export const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
 /** 管の経過年数 → 0〜1（60年で1。この上限は画面上の便宜的な正規化で、標準耐用年数50年とは別） */
-export const ageNorm = (year, now = NOW_YEAR) => clamp01((now - year) / 60);
+/** 竣工年が台帳で不明（9999 等）・紐づかない管の古さの扱い。独立区分として中立の 0.5 を置く（画面では「不明」と表示）。 */
+export const AGE_UNKNOWN = 0.5;
+export const ageNorm = (year, now = NOW_YEAR) => (year == null ? AGE_UNKNOWN : clamp01((now - year) / 60));
 
-/** 地表変位（mm/年, 負=沈下）→ 0〜1（-8mm/年以下で1。サンプル上の正規化） */
+/** 地表変位（階級の中央値 mm/年, 負=沈下）→ 0〜1（-8mm/年以下で1。デモ上の便宜的な正規化）。
+ *  衛星の値は 3.75 mm/年幅の階級としてしか分からないので、入力は階級の中央値。 */
 export const satNorm = (dispMmYr) => clamp01(-dispMmYr / 8);
 
 /** 区間の点数。w は衛星指標の重み（0=台帳のみ, 1=衛星のみ）。cellSat は 区画ID→0〜1。 */
@@ -72,4 +76,12 @@ export function exclusionAccuracy(scanned, cellSat, w, minN = 5) {
   if (low.length < minN) return null;
   const ok = low.filter((x) => !x.hit).length;
   return { n: low.length, ok, rate: ok / low.length };
+}
+
+/** 重み w で並べたときの上位 n 区間（未調査の生活道路）のうち、台帳のみ（w=0）の上位 n 区間に無いものの数。
+ *  衛星の点数がどれだけ順位を動かしているかを見るための指標。 */
+export function topShift(segs, cellSat, w, n = 20) {
+  const top = (ww) => rank(segs, cellSat, ww).filter((s) => s.cls === 'life' && !s.surveyed).slice(0, n).map((s) => s.id);
+  const base = new Set(top(0));
+  return top(w).filter((id) => !base.has(id)).length;
 }

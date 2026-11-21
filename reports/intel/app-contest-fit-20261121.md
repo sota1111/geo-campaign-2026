@@ -144,3 +144,8 @@ JSON の cautions（C1〜C13）と同じ。
 - × のまま: udc-aed（11/13 の「UDC には登録しない」決定）、sat-a・sat-b（出さない方針・設計）。要項上の禁止ではない。
 - 注意 C2 に「UDC の枠は登録済みの2件（同時に出せるのは最大2件の想定。未確認）」を加えた。
 - 上の表の本文は更新前のまま残している。最新の判定は app-contest-fit-20261121.json（と contests/dashboard/src/data/app-fit.ts）が正。
+
+## 2026-11-21 追記: 新案 biz-realestate-a4（同じ土地、四つの値段）の行を追加（参謀長が反映）
+- イチBiz 不動産情報活用部門: ◎（score 3、このコンペ向けに作った。出典 contests/ichibiz-2026/app/realestate-a4/README.md）
+- 他の5列: ？（score 0、未判定。情報部の判定前）。判定は推測で足していない
+- 注意 C6・C8 の対象アプリには未追加（情報部の判定時に見直す）

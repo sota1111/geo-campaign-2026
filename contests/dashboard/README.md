@@ -39,6 +39,7 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 | `apps/sat-alpha/` | 配電線沿いの優先伐採地図（**新しい案・比較用・未選定**。sat-b の隣） |
 | `apps/biz-business-nb/` | 使用済み太陽光パネルの回収圏計画（新しい案。biz-business の隣） |
 | `apps/biz-realestate-rn1/` | 住む場所の先行き（新しい案。biz-realestate の隣） |
+| `apps/biz-realestate-a4/` | 同じ土地、四つの値段（新しい案。biz-realestate の隣） |
 | `apps/odpt-teiji/` | バス定時性カルテ（新しい案。odpt の隣） |
 
 仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
@@ -88,6 +89,23 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 - 外した要素: 大カードの中の入れ子のアプリ配置・「比べる組」の囲み・`BigCard`/`MiniCard`。コンペごとのアプリ一覧（組ごと）・進捗・チェックリスト・AI評価は概要ページに残っている。
 - 使った OSS: `motion` 14.14.0 は `MotionConfig` のみ（reducedMotion 対応）。
 - 確認: `node scripts/allapps-rows-shots.mjs <preview URL> docs/screenshots/allapps-20261121/rows`（未選択・コンペ選択・提出先選択の3状態×3サイズ）、`node scripts/roundtrip.mjs <preview URL>`。
+
+## つながり図（オントロジーのグラフ＋カード。2026-11-21、`ontology/index.html`）
+
+ポータル・コンペ概要ページのヘッダーの「つながり図（オントロジー）」から入る独立ページ（`ontology/index.html`。base `./`・ルーターなし・`data-root="../"`）。総司令官が「何が何を止めているか」「次に誰が何をするか」「このデータが使えなければどこに響くか」をつながりで見て、次の一手を選ぶための画面。トップ画面の構成は変えていない。
+
+- 正本: `contests/ontology/`（RDF/OWL の JSON-LD）。この画面は、そこから生成してコミットした `graph.json`（ノード・エッジ）と `next-actions.json`（次の行動＋全データの「使えなければ」の影響）だけを読む。**ビルドは Python を使わない**: `npm run copy-data` が `contests/ontology/*.json` を `public/ontology/`（生成物・git 管理外）へ写す。再生成は `contests/ontology/README.md` の手順（`build_graph.py` → `validate.py` → `graph_json.py` → `ui_json.py`）で行い、生成物をコミットする。
+- グラフ: React Flow（`@xyflow/react` 13.0.2、MIT。React 製で、ノードを自作の React コンポーネント〈`<button>`〉にでき、色・形・記号・言葉・キーボード操作・aria を自分で付けられるため。Cytoscape.js は canvas 描画でノードをキーボードで選べない）。配置は `src/lib/ontology.ts` の `layout`（種類ごとの列・列内はつながる相手の位置の平均順・縦に長い列は折り返し。外部のレイアウト部品なし）。
+- ノードの区別: 色（種類のまとまり6つ）＋形（楕円・四角・破線・二重線・角丸の太枠）＋記号（◆コンペ ▣応募 ●アプリ ! 指摘 ★総司令官の判断 ▤データ など）＋種類の言葉。凡例は「図に出す種類」のチェックリストを兼ねる。
+- 既定の表示（2026-11-21 のデザイン審査で改定）: **応募ごとのレーン**（`src/pages/ontology/Lanes.tsx`。普通の HTML なので実寸 12px 以上で読め、スマホ幅では上から下に並ぶ）。コンペ → 応募（状態を「× 提出不可」「△ 要修正あり」と文字で、失格級・要修正の数、締切、次が総司令官の判断か）→ 止めているもの（失格級の指摘・未確認のデータ条件・提出物の欠落。各応募の上位 2 件、残りは「ほか n 件」）。アプリは応募のノードの中に名前で出す（ノードとしては既定で出さない）。既定のコンペは締切がいちばん近いもの、「全コンペ」とコンペ別の切り替えあり。「つながり（グラフ）」に切り替えると、React Flow の自由配置（種類のチェック・近傍の展開・近傍だけ表示・影響のノード全部へ寄せる）。未記入欄・総司令官の判断・アプリ・部門・データ・作業・PR・部隊などは「図に出す種類」で足す。fit（◎○△×？）と「出せるコンペ」「競合」の線は多いので既定では引かない。
+- カード: 左の列の上に高さ固定の領域（押した一覧は動かない）。スマホ幅では画面下のシート（選んだ結果が必ず画面内に出る）。一覧・次の行動から選ぶと、カードの見出しへフォーカスが移る。ラベル・種類・状態・（応募なら内訳・締切・流れの次、アプリなら目的・出せるコンペ）・出典・つながっている相手。アプリは `apps/<id>/`、コンペは `contest/<id>/`、PR は GitHub へのリンク。「止めているもの」の数: 次の行動は失格級・未記入欄・データ条件・提出物の欠落（要修正・軽微は除く）、カードの「指摘・欠落」は要修正・軽微を含む全件（画面にも書く）。
+- 左の列のタブ（DOM の順どおり左の列が先。スキップリンクは「次の行動」へ）: 応募ごと（提出可否・止めているもの）／部隊ごと（総司令官補佐の代理マージ判断を含む）／総司令官の判断待ち／データが使えなければ／図に出す種類／ノード一覧・検索。押すと図で該当ノードを選ぶ。人間の関門（案の選定・提出・registry 変更・ページ削除）は「★ 総司令官の判断」と明記し、画面から進める操作はない。PR のマージは総司令官補佐が承認なしで行う委任の作業で、判断待ちには入れない。
+- もしこのデータが使えなければ: データを選ぶと、使うアプリ・応募・コンペを「影響」の札と紫の枠で強調（他は薄く）。`next_actions.py --unusable` と同じ計算を `ui_json.py` が全データ分ビルド前に済ませる。
+- 確認: `npm run build && npm run typecheck && npm test`（`src/test/ontology.test.ts`）、`node scripts/ontology-shots.mjs <preview URL> docs/screenshots/ontology-20261121-r2`（既定・カード・次の行動・判断待ち・データの影響・近傍だけ・検索を 1280×800・1513×784・390×844 で撮影し、ノード名の実寸・切れ・ページの高さ・横スクロール・押した行の移動量・コンソールエラーを測る）、`node scripts/roundtrip.mjs`（ポータル→つながり図→ノード→次の行動→ポータル）。
+- 限界: グラフ表示の中は、ドラッグで動かし、左下の＋－ボタンか2本指で拡大縮小（ホイールではページがスクロールする）。グラフ内のノードはキーボードでは選べず（Tab の停止点を減らすため）、左の列の「ノード一覧・検索」から選ぶ。レーンのノードは Tab で選べる。長い名前（40 字超）は「…」で省き、全文はカード。
+
+## 図解ページ（オントロジーを図で読む。2026-11-21、`public/ontology-figures/index.html`）
+ヘッダーの「図解」（つながり図の隣）と、つながり図ページの先頭のリンクから入る静的ページ（Vite を通さず `public/` から `dist/ontology-figures/` へそのまま入る。相対パスなので base `./` で動く）。型の全体図、提出を止めているもの、締切順の次の行動、データ条件と影響、アプリ×コンペの適合の5つの図。**HTML は `python3 contests/ontology/figures.py` が生成する**（数値は contests/ontology の生成物から計算。手で直さない）。再生成: オントロジーを再生成 → `figures.py` → コミット → `npm run build`。作り方は u-ichi/agent-plugins の figure-docs（MIT）。確認: `node scripts/ontology-figures-shots.mjs <preview URL> docs/screenshots/ontology-figures-20261121`（1280×800・390×844 の全体撮影、横スクロール・SVG 内の実効文字サイズ・コンソールエラー）。
 
 ## 新しい案（比較用・未選定）の足し方
 

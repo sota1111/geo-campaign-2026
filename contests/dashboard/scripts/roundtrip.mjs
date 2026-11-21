@@ -8,11 +8,11 @@ import path from 'node:path'
 const base = process.argv[2]
 const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed',
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'biz-realestate-a4', 'odpt-teiji', 'udc-aed',
   // 審査待ちだった案（ソースが無いビルドでは「審査待ち」の案内ページ。ある checkout を CONTESTS_ROOT で指したビルドでは実物）
   'sat-yabu', 'sat-sugi', 'odpt-kankou', 'odpt-kansui', 'odpt-kodure', 'biz-solar-guard']
 // ポータルは選んだ1コンペの詳細だけを出す。アプリのカードがあるコンペを開いて始める
-const contestOf = { odpt: 'odpt-2026', 'udc-moritsuchi': 'udc-2026', 'sat-a': 'satellite-2026', 'sat-b': 'satellite-2026', 'biz-business': 'ichibiz-2026', 'biz-idea': 'ichibiz-2026', 'biz-realestate': 'ichibiz-2026', 'sat-alpha': 'satellite-2026', 'biz-business-nb': 'ichibiz-2026', 'biz-realestate-rn1': 'ichibiz-2026', 'odpt-teiji': 'odpt-2026', 'udc-aed': 'ichibiz-2026', 'sat-yabu': 'satellite-2026', 'sat-sugi': 'satellite-2026', 'odpt-kankou': 'odpt-2026', 'odpt-kansui': 'odpt-2026', 'odpt-kodure': 'odpt-2026', 'biz-solar-guard': 'ichibiz-2026' }
+const contestOf = { odpt: 'odpt-2026', 'udc-moritsuchi': 'udc-2026', 'sat-a': 'satellite-2026', 'sat-b': 'satellite-2026', 'biz-business': 'ichibiz-2026', 'biz-idea': 'ichibiz-2026', 'biz-realestate': 'ichibiz-2026', 'sat-alpha': 'satellite-2026', 'biz-business-nb': 'ichibiz-2026', 'biz-realestate-rn1': 'ichibiz-2026', 'biz-realestate-a4': 'ichibiz-2026', 'odpt-teiji': 'odpt-2026', 'udc-aed': 'ichibiz-2026', 'sat-yabu': 'satellite-2026', 'sat-sugi': 'satellite-2026', 'odpt-kankou': 'odpt-2026', 'odpt-kansui': 'odpt-2026', 'odpt-kodure': 'odpt-2026', 'biz-solar-guard': 'ichibiz-2026' }
 const contests = ['udc-2026', 'satellite-2026', 'ichibiz-2026', 'odpt-2026']
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)
@@ -69,6 +69,27 @@ for (const c of contests) {
   const sw = await ev('document.documentElement.scrollWidth <= window.innerWidth')
   cout.push({ c, page, apps, sidebar, first, appPage, back, portal, noHScroll: sw, errs: errs.splice(0) })
 }
+// つながり図: ポータルのヘッダーのリンク → 図が出る → ノードを押すとカード → 次の行動から選ぶ → 統合ダッシュボードへ戻る
+const onto = { id: 'ontology' }
+await send('Page.navigate', { url: base })
+await sleep(1500)
+await ev(`document.querySelector('[data-testid=ontology-link]').click()`)
+await sleep(3500)
+onto.page = await ev('location.pathname')
+onto.nodes = await ev(`document.querySelectorAll('[data-node-id]').length`)
+await ev(`document.querySelector('[data-node-type=Submission]').click()`)
+await sleep(500)
+onto.cardTitle = await ev(`document.querySelector('[data-testid=node-card-title]')?.textContent ?? null`)
+await ev(`document.querySelector('[data-testid=sub-item] button').click()`)
+await sleep(800)
+onto.cardAfterAction = await ev(`document.querySelector('[data-testid=node-card-title]')?.textContent ?? null`)
+onto.selectedInGraph = await ev(`document.querySelectorAll('[data-node-id][aria-pressed=true]').length`)
+onto.noHScroll = await ev('document.documentElement.scrollWidth <= window.innerWidth')
+await ev(`document.querySelector('header a[href$="/index.html"]:not([data-testid])').click()`)
+await sleep(1500)
+onto.back = await ev('location.pathname')
+onto.errs = errs.splice(0)
+out.push(onto)
 console.log(JSON.stringify({ out, cout, errs }, null, 2))
 ws.close(); chrome.kill()
 try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }) } catch { /* ignore */ }
