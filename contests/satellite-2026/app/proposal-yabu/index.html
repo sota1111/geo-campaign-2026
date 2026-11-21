@@ -11,7 +11,7 @@
 <body>
 <header>
   <h1>クマ対策：藪払いの優先地図 <small>人里に近づく藪・林縁を衛星で絞り、刈り払いの順番を決める（コンセプトデモ）</small></h1>
-  <p class="banner" id="banner" role="note"><b>架空のデータは使っていません（すべて公開データ）。</b>対象は京都府与謝野町周辺。衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃履歴＝京都府の公開データ（<b>2009〜2018年度分で、最新ではありません</b>）、建物・学校＝OpenStreetMap（未登録の建物があります）。<b>点数の重みは説明用の仮置き</b>で、出没の予測や刈り払いの効果を示すものではありません。⑵の記録は利用者が入れるもので、デモ中の入力は実際の確認ではありません。</p>
+  <details id="bannerwrap" class="bannerwrap" open><summary>データと限界の注意（必ず読む）</summary><p class="banner" id="banner" role="note"><b>架空のデータは使っていません（すべて公開データ）。</b>対象は京都府与謝野町周辺。衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃履歴＝京都府の公開データ（<b>2009〜2018年度分で、最新ではありません</b>）、建物・学校＝OpenStreetMap（未登録の建物があります）。<b>点数の重みは説明用の仮置き</b>で、刈り払いの効果を示すものではありません。地図の紫の塗り（クマが出やすい範囲）は論文の数値に基づく判定で、<b>目撃データは通報のため人の多い所に偏ります</b>（当たり具合は「この判定は当たっているか」に出しています）。⑵の記録は利用者が入れるもので、デモ中の入力は実際の確認ではありません。</p></details>
   <details class="can">
     <summary>衛星で言えること／言えないこと</summary>
     <div class="cols">
@@ -27,29 +27,41 @@
 </header>
 <main>
   <section id="v-rank" class="view">
-    <p id="flow" class="note">流れ：<b>衛星で候補を絞る</b>（地図の橙・青の区画が候補）→ <b>出没履歴と人家の近さで順位付け</b>（表）→ ⑵現地確認の記録 → ⑶刈り払い計画のCSV出力</p>
+    <p id="flow" class="note">流れ：<b>衛星で候補を絞る</b>（地図の橙・青の枠の区画が候補）→ <b>出没履歴と人家の近さで順位付け</b>（表）→ ⑵現地確認の記録 → ⑶刈り払い計画のCSV出力</p>
     <div class="split">
-      <div class="pane">
-        <div id="map" role="application" aria-label="与謝野町周辺の地図。候補区画を順位に応じた色で表示。区画をクリックすると根拠が表示される"></div>
+      <div class="pane mappane">
+        <div id="map" role="application" aria-label="与謝野町周辺の地図。クマが出やすい範囲を高・中の2段階で塗り分け、候補区画を枠線で表示。区画をクリックすると根拠が表示される"></div>
+        <p class="legend" id="map-note"></p>
+      </div>
+      <div class="pane sidepane">
+        <section id="hab-legend" class="hab" aria-label="クマが出やすい範囲の凡例">
+          <h2>クマが出やすい範囲（論文ベース）</h2>
+          <ul class="hl">
+            <li><span class="sw sw-high" aria-hidden="true"></span><b>高</b>（塗りつぶし）：森林の縁（林縁）から20m以内で人家から500m圏内、または川に接する林縁。<small>選択オッズ 3.74／川に接する林縁 21.45（Takahata ほか 2014）</small></li>
+            <li><span class="sw sw-mid" aria-hidden="true"></span><b>中</b>（斜線）：林縁から100m以内で人家から500m圏内、または林縁20m以内で人家から遠い所。<small>選択オッズ 1.81</small></li>
+            <li><span class="sw sw-low" aria-hidden="true"></span><b>低</b>（塗りなし）：上記以外、および人口の多い市街地（弱い根拠）。</li>
+          </ul>
+          <p class="note">区画の枠線：橙の太線＝藪払い順位の上位20、橙の細線＝21〜100位、青の細線＝それ以外の候補。<b>これは論文の数値に基づく「出没しやすさ」で、出没の予測ではありません。</b>目撃データは通報で人の多い所に偏ります。</p>
+        </section>
         <fieldset class="layers"><legend>地図に重ねるもの</legend>
-          <label><input type="checkbox" id="l-cells" checked> 候補区画（橙＝上位20、淡い橙＝21〜100位、青＝それ以外）</label>
+          <label><input type="checkbox" id="l-hab" checked> クマが出やすい範囲（高・中）</label>
+          <label><input type="checkbox" id="l-cells" checked> 候補区画の枠（藪払い順位）</label>
           <label><input type="checkbox" id="l-sights"> クマ目撃（2009〜2018年度）</label>
           <label><input type="checkbox" id="l-houses"> 建物（OSM）</label>
           <label><input type="checkbox" id="l-schools" checked> 学校・園（OSM）</label>
         </fieldset>
-        <p class="legend" id="map-note"></p>
-      </div>
-      <div class="pane">
         <div id="detail" aria-live="polite"></div>
       </div>
     </div>
+    <details id="validation" class="validation"><summary>この判定は当たっているか（京都府の目撃データでの検証）</summary><div id="validation-body"></div></details>
+    <details id="hab-method" class="validation"><summary>出没しやすさの式と各要因の出典</summary><div id="hab-method-body"></div></details>
     <div class="filters">
       <label><input type="checkbox" id="f-sat"> 衛星だけの点数で並べる（目撃・建物・学校を重ねない）</label>
       <button type="button" id="btn-to-weights">観点の重みを変える</button>
       <span id="mode-pill" class="mode-pill" role="status"></span>
       <label><input type="checkbox" id="f-unvisited"> 現地未確認のみ</label>
       <label>地区で絞る <select id="f-place"></select></label>
-      <label>表の並び <select id="f-sort"><option value="score">点数の高い順</option><option value="sight">500m以内の目撃が多い順</option><option value="house">建物に近い順</option><option value="school">学校・園に近い順</option></select></label>
+      <label>表の並び <select id="f-sort"><option value="score">点数の高い順</option><option value="sight">500m以内の目撃が多い順</option><option value="house">建物に近い順</option><option value="school">学校・園に近い順</option><option value="hab">クマの出没しやすさが高い順</option></select></label>
       <label>表示 <select id="f-n"><option value="20">20件</option><option value="50" selected>50件</option><option value="100">100件</option><option value="9999">すべて</option></select></label>
     </div>
     <p id="count" class="note"></p>
@@ -97,6 +109,7 @@
 <script src="vendor/maplibre-gl.js"></script>
 <script src="data/yabu.js"></script>
 <script src="data/place.js"></script>
+<script src="data/habitat.js"></script>
 <script src="lib.js"></script>
 <script src="app.js"></script>
 </body>
