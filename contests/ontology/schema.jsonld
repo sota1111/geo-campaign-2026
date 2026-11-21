@@ -8,313 +8,17 @@
   },
   "@graph": [
     {
-      "@id": "c:conditionStatus",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:License"
-      },
+      "@id": "c:ofContest",
+      "@type": [
+        "owl:ObjectProperty",
+        "owl:FunctionalProperty"
+      ],
       "rdfs:label": {
         "@language": "ja",
-        "@value": "条件の状態（記載あり・未確認）"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:atStage",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:StageRecord"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "段階"
-      },
-      "rdfs:range": {
-        "@id": "c:Stage"
-      }
-    },
-    {
-      "@id": "c:hasSource",
-      "@type": "owl:ObjectProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "出典"
-      },
-      "rdfs:range": {
-        "@id": "c:Source"
-      }
-    },
-    {
-      "@id": "c:slotKey",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Submission"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "競合を判定する枠"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:appliesToApp",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Rule"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象のアプリ"
-      },
-      "rdfs:range": {
-        "@id": "c:App"
-      }
-    },
-    {
-      "@id": "c:sourceId",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "元データの識別子"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:hasDeadline",
-      "@type": "owl:ObjectProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "締切"
-      },
-      "rdfs:range": {
-        "@id": "c:Deadline"
-      }
-    },
-    {
-      "@id": "c:dsev-medium",
-      "@type": "c:Severity",
-      "c:description": "design",
-      "c:rank": 2,
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "中（デザイン）"
-      }
-    },
-    {
-      "@id": "c:doneAt",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Deadline"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "済んだ日"
-      },
-      "rdfs:range": {
-        "@id": "xsd:date"
-      }
-    },
-    {
-      "@id": "c:Decision",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "誰かが決めること・決めたこと"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "判断"
-      }
-    },
-    {
-      "@id": "c:status",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "状態"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:auditDate",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Audit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "監査日"
-      },
-      "rdfs:range": {
-        "@id": "xsd:date"
-      }
-    },
-    {
-      "@id": "c:Source",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "ファイルパスと節・行、または URL"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "出典"
-      }
-    },
-    {
-      "@id": "c:fitsContest",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:App"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "出せるコンペ（◎○△）"
+        "@value": "所属コンペ"
       },
       "rdfs:range": {
         "@id": "c:Contest"
-      }
-    },
-    {
-      "@id": "c:Stage",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "情報部→偵察→[総司令官]→工兵→アグレッサー→作戦研究班→憲兵→[総司令官]"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "標準の流れの段階"
-      }
-    },
-    {
-      "@id": "c:limitMax",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:SubmissionLimit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "上限"
-      },
-      "rdfs:range": {
-        "@id": "xsd:integer"
-      }
-    },
-    {
-      "@id": "c:MissingDeliverable",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "提出文など、あるべき物が無い"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "未作成の提出物"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:Blocker"
-      }
-    },
-    {
-      "@id": "c:reason",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "理由"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:toContest",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Submission"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "出すコンペ"
-      },
-      "rdfs:range": {
-        "@id": "c:Contest"
-      }
-    },
-    {
-      "@id": "c:mergeRecord",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "マージ記録"
-      },
-      "rdfs:range": {
-        "@id": "c:MergeRecord"
-      }
-    },
-    {
-      "@id": "c:mergedAt",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "マージ日時"
-      },
-      "rdfs:range": {
-        "@id": "xsd:dateTime"
-      }
-    },
-    {
-      "@id": "c:dataKind",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:App"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "データ種別（実データ・架空・一部架空）"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:Criterion",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "審査項目"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "審査基準"
-      }
-    },
-    {
-      "@id": "c:headRef",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ブランチ"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
       }
     },
     {
@@ -332,55 +36,15 @@
       }
     },
     {
-      "@id": "c:competesWith",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:App"
+      "@id": "c:SubmissionLimit",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "1提案まで、欄ごとの字数など"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "同じ枠で競合する案"
-      },
-      "rdfs:range": {
-        "@id": "c:App"
-      }
-    },
-    {
-      "@id": "c:ruleKind",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Rule"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ルールの種類"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:appDir",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:App"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "アプリのディレクトリ"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:sev-disqualifying",
-      "@type": "c:Severity",
-      "c:description": "audit",
-      "c:rank": 3,
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "失格級"
+        "@value": "提出可能数・字数の上限"
       }
     },
     {
@@ -395,388 +59,57 @@
       }
     },
     {
-      "@id": "c:stageOrder",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Stage"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "順序"
-      },
-      "rdfs:range": {
-        "@id": "xsd:integer"
-      }
-    },
-    {
-      "@id": "c:verdict",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:MergeRecord"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "判定"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:recordedOn",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "記録日"
-      },
-      "rdfs:range": {
-        "@id": "xsd:date"
-      }
-    },
-    {
-      "@id": "c:PageDeletion",
+      "@id": "c:Severity",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "総司令官の許可が必要（補佐も不可）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ページ削除"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:HumanGate"
-      }
-    },
-    {
-      "@id": "c:AttributionRequired",
-      "@type": "c:Restriction",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "出典明記"
-      }
-    },
-    {
-      "@id": "c:ofSubmission",
-      "@type": "owl:ObjectProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "応募"
-      },
-      "rdfs:range": {
-        "@id": "c:Submission"
-      }
-    },
-    {
-      "@id": "c:awaitsDecision",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Submission"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "判断待ち"
-      },
-      "rdfs:range": {
-        "@id": "c:Decision"
-      }
-    },
-    {
-      "@id": "c:NonCommercial",
-      "@type": "c:Restriction",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "非商用"
-      }
-    },
-    {
-      "@id": "c:blockedBy",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Submission"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "止めているもの"
-      },
-      "rdfs:range": {
-        "@id": "c:Blocker"
-      }
-    },
-    {
-      "@id": "c:License",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "データの利用条件"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ライセンス・利用条件"
-      }
-    },
-    {
-      "@id": "c:severity",
-      "@type": [
-        "owl:ObjectProperty",
-        "owl:FunctionalProperty"
-      ],
-      "rdfs:domain": {
-        "@id": "c:Finding"
+        "@value": "監査: 失格級・要修正・軽微 ／ デザイン: 重大・中・軽微"
       },
       "rdfs:label": {
         "@language": "ja",
         "@value": "重大度"
-      },
-      "rdfs:range": {
-        "@id": "c:Severity"
       }
     },
     {
-      "@id": "c:sev-minor",
-      "@type": "c:Severity",
-      "c:description": "audit",
-      "c:rank": 1,
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "軽微"
-      }
-    },
-    {
-      "@id": "c:hasCriterion",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Contest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "審査基準"
-      },
-      "rdfs:range": {
-        "@id": "c:Criterion"
-      }
-    },
-    {
-      "@id": "c:hasLicense",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Dataset"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ライセンス"
-      },
-      "rdfs:range": {
-        "@id": "c:License"
-      }
-    },
-    {
-      "@id": "c:raisedIn",
-      "@type": [
-        "owl:ObjectProperty",
-        "owl:FunctionalProperty"
-      ],
-      "rdfs:domain": {
-        "@id": "c:Finding"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "指摘された監査"
-      },
-      "rdfs:range": {
-        "@id": "c:Audit"
-      }
-    },
-    {
-      "@id": "c:Blocker",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "応募の提出可能を妨げるものの上位クラス"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "止めているもの"
-      }
-    },
-    {
-      "@id": "c:delegatedTo",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:DelegationRule"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "委任先"
-      },
-      "rdfs:range": {
-        "@id": "c:Unit"
-      }
-    },
-    {
-      "@id": "c:DelegationRule",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "総司令官が部隊に委ねた作業の規則（委任先・承認の要否・実行の条件）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "委任の規則"
-      }
-    },
-    {
-      "@id": "c:planKind",
+      "@id": "c:locator",
       "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
-        "@id": "c:App"
+        "@id": "c:Source"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "現行案・新案・提出文のみ"
+        "@value": "節・行"
       },
       "rdfs:range": {
         "@id": "xsd:string"
       }
     },
     {
-      "@id": "c:MergeRecord",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "reports/command/merge-*.md の 1 行"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "マージ記録"
-      }
-    },
-    {
-      "@id": "c:implementationRequired",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Contest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "実装必須"
-      },
-      "rdfs:range": {
-        "@id": "xsd:boolean"
-      }
-    },
-    {
-      "@id": "c:dsev-minor",
-      "@type": "c:Severity",
-      "c:description": "design",
-      "c:rank": 1,
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "軽微（デザイン）"
-      }
-    },
-    {
-      "@id": "c:Division",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "コンペ内の部門（イチBiz のビジネス・アイデア・不動産情報活用）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "部門"
-      }
-    },
-    {
-      "@id": "c:delegationRule",
+      "@id": "c:toDivision",
       "@type": "owl:ObjectProperty",
       "rdfs:domain": {
-        "@id": "c:MergeDelegation"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "根拠の規則"
-      },
-      "rdfs:range": {
-        "@id": "c:DelegationRule"
-      }
-    },
-    {
-      "@id": "c:Restriction",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "非商用・出典明記・再配布不可など"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "制約の種類"
-      }
-    },
-    {
-      "@id": "c:produces",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Unit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "産出物"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:Contest",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "応募先の大会（registry.json の contests）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "コンペ"
-      }
-    },
-    {
-      "@id": "c:decidedBy",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Decision"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "決めた人"
-      },
-      "rdfs:range": {
-        "@id": "c:Agent"
-      }
-    },
-    {
-      "@id": "c:SubmissionDecision",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "応募フォームへの送信・登録"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "提出の判断"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:HumanGate"
-      }
-    },
-    {
-      "@id": "c:forSubmission",
-      "@type": "owl:ObjectProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象の応募"
-      },
-      "rdfs:range": {
         "@id": "c:Submission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出す部門"
+      },
+      "rdfs:range": {
+        "@id": "c:Division"
+      }
+    },
+    {
+      "@id": "c:plannedCount",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:PlannedSubmission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "提出予定の件数"
+      },
+      "rdfs:range": {
+        "@id": "xsd:integer"
       }
     },
     {
@@ -797,15 +130,830 @@
       }
     },
     {
-      "@id": "c:Fit",
+      "@id": "c:AttributionRequired",
+      "@type": "c:Restriction",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出典明記"
+      }
+    },
+    {
+      "@id": "c:HumanGate",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "アプリ×コンペの適合（◎○△×？とスコア）"
+        "@value": "総司令官だけが決める。自動では進めない（doctrine/roe.md）"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "適合判定"
+        "@value": "人間の関門"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:Decision"
+      }
+    },
+    {
+      "@id": "c:hasRule",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Contest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ルール"
+      },
+      "rdfs:range": {
+        "@id": "c:Rule"
+      }
+    },
+    {
+      "@id": "c:assignedTo",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Task"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "担当"
+      },
+      "rdfs:range": {
+        "@id": "c:Agent"
+      }
+    },
+    {
+      "@id": "c:declaredDisqualifying",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Audit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "報告が宣言する失格級の件数"
+      },
+      "rdfs:range": {
+        "@id": "xsd:integer"
+      }
+    },
+    {
+      "@id": "c:RegistryChange",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "承認後のみ"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "registry.json の変更"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:HumanGate"
+      }
+    },
+    {
+      "@id": "c:PlannedSubmission",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "総司令官が決めた、出すつもりの件数。要項の上限（SubmissionLimit）とは別。コンペ全体の件数と、区分（スポンサー・一般、部門）ごとの件数"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "提出予定数"
+      }
+    },
+    {
+      "@id": "c:hasSource",
+      "@type": "owl:ObjectProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出典"
+      },
+      "rdfs:range": {
+        "@id": "c:Source"
+      }
+    },
+    {
+      "@id": "c:CommercialUseAllowed",
+      "@type": "c:Restriction",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "商用可"
+      }
+    },
+    {
+      "@id": "c:sev-minor",
+      "@type": "c:Severity",
+      "c:description": "audit",
+      "c:rank": 1,
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "軽微"
+      }
+    },
+    {
+      "@id": "c:auditsApp",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Audit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象アプリ"
+      },
+      "rdfs:range": {
+        "@id": "c:App"
+      }
+    },
+    {
+      "@id": "c:planKind",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:App"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "現行案・新案・提出文のみ"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:score",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Fit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "スコア（◎3 ○2 △1 ×0 ？0）"
+      },
+      "rdfs:range": {
+        "@id": "xsd:integer"
+      }
+    },
+    {
+      "@id": "c:approvalRequired",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:DelegationRule"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "総司令官の承認が要るか"
+      },
+      "rdfs:range": {
+        "@id": "xsd:boolean"
+      }
+    },
+    {
+      "@id": "c:ruleKind",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Rule"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ルールの種類"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:StageRecord",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "ある応募のある段階が済んでいる証拠"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "段階の完了記録"
+      }
+    },
+    {
+      "@id": "c:License",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "データの利用条件"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ライセンス・利用条件"
+      }
+    },
+    {
+      "@id": "c:Finding",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "監査の指摘。重大度つき"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "指摘"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:Blocker"
+      }
+    },
+    {
+      "@id": "c:auditDate",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Audit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "監査日"
+      },
+      "rdfs:range": {
+        "@id": "xsd:date"
+      }
+    },
+    {
+      "@id": "c:NonCommercial",
+      "@type": "c:Restriction",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "非商用"
+      }
+    },
+    {
+      "@id": "c:Audit",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "憲兵の監査報告（reports/audit/）"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "監査"
+      }
+    },
+    {
+      "@id": "c:headRef",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:PullRequest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ブランチ"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:Restriction",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "非商用・出典明記・再配布不可など"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "制約の種類"
+      }
+    },
+    {
+      "@id": "c:stageOrder",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Stage"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "順序"
+      },
+      "rdfs:range": {
+        "@id": "xsd:integer"
+      }
+    },
+    {
+      "@id": "c:MergeDelegation",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "PR のマージは HumanGate ではなく、総司令官補佐（commander-aide）が行う委任の作業。総司令官の承認は不要（2026-11-21 の指示）。ページ削除を含む PR だけは PageDeletion（HumanGate）"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "代理マージ"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:Task"
+      }
+    },
+    {
+      "@id": "c:Task",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "進捗一覧にある完了・残作業"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "作業"
+      }
+    },
+    {
+      "@id": "c:blockedBy",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Submission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "止めているもの"
+      },
+      "rdfs:range": {
+        "@id": "c:Blocker"
+      }
+    },
+    {
+      "@id": "c:hasPlannedSubmission",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Contest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "提出予定数（総司令官の決定。要項の上限とは別）"
+      },
+      "rdfs:range": {
+        "@id": "c:PlannedSubmission"
+      }
+    },
+    {
+      "@id": "c:dsev-medium",
+      "@type": "c:Severity",
+      "c:description": "design",
+      "c:rank": 2,
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "中（デザイン）"
+      }
+    },
+    {
+      "@id": "c:NoRedistribution",
+      "@type": "c:Restriction",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "再配布不可"
+      }
+    },
+    {
+      "@id": "c:Blocker",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "応募の提出可能を妨げるものの上位クラス"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "止めているもの"
+      }
+    },
+    {
+      "@id": "c:Theme",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "コンペ内のテーマ枠（衛星アワードの協賛企業・共通テーマ1・2）"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "テーマ"
+      }
+    },
+    {
+      "@id": "c:rawSeverity",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Finding"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "報告の見出しにある語（重大・減点級など）"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:licenseText",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:License"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "表の文言"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:baseRef",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:PullRequest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ベース"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:prState",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:PullRequest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "PR の状態"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:sourceId",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "元データの識別子"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:url",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "URL"
+      },
+      "rdfs:range": {
+        "@id": "xsd:anyURI"
+      }
+    },
+    {
+      "@id": "c:appDir",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:App"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "アプリのディレクトリ"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:delegationRule",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:MergeDelegation"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "根拠の規則"
+      },
+      "rdfs:range": {
+        "@id": "c:DelegationRule"
+      }
+    },
+    {
+      "@id": "c:appliesToApp",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Rule"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象のアプリ"
+      },
+      "rdfs:range": {
+        "@id": "c:App"
+      }
+    },
+    {
+      "@id": "c:affects",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Blocker"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "影響を受けるアプリ"
+      },
+      "rdfs:range": {
+        "@id": "c:App"
+      }
+    },
+    {
+      "@id": "c:mark",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Fit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "◎○△×？"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:agentName",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Agent"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "agent 名"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:condition",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:DelegationRule"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "実行の条件"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:competesWith",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:App"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "同じ枠で競合する案"
+      },
+      "rdfs:range": {
+        "@id": "c:App"
+      }
+    },
+    {
+      "@id": "c:PageDeletion",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "総司令官の許可が必要（補佐も不可）"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ページ削除"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:HumanGate"
+      }
+    },
+    {
+      "@id": "c:sev-disqualifying",
+      "@type": "c:Severity",
+      "c:description": "audit",
+      "c:rank": 3,
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "失格級"
+      }
+    },
+    {
+      "@id": "c:forSubmission",
+      "@type": "owl:ObjectProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象の応募"
+      },
+      "rdfs:range": {
+        "@id": "c:Submission"
+      }
+    },
+    {
+      "@id": "c:Commander",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "人間。案の選定・提出・registry 変更・ページ削除を決める"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "総司令官"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:Agent"
+      }
+    },
+    {
+      "@id": "c:ShareAlike",
+      "@type": "c:Restriction",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "継承（ODbL）"
+      }
+    },
+    {
+      "@id": "c:dsev-major",
+      "@type": "c:Severity",
+      "c:description": "design",
+      "c:rank": 3,
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "重大（デザイン）"
+      }
+    },
+    {
+      "@id": "c:fitTarget",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Fit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象のコンペまたは部門"
+      }
+    },
+    {
+      "@id": "c:rank",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Severity"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "重さ"
+      },
+      "rdfs:range": {
+        "@id": "xsd:integer"
+      }
+    },
+    {
+      "@id": "c:produces",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Unit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "産出物"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:conditionStatus",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:License"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "条件の状態（記載あり・未確認）"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:hasCriterion",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Contest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "審査基準"
+      },
+      "rdfs:range": {
+        "@id": "c:Criterion"
+      }
+    },
+    {
+      "@id": "c:slotKey",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Submission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "競合を判定する枠"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:Submission",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "ある案を、あるコンペ・部門・テーマに出す組み合わせ"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "応募"
+      }
+    },
+    {
+      "@id": "c:extracted",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "未抽出の印（値が取り出せなかった）"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:ofSubmission",
+      "@type": "owl:ObjectProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "応募"
+      },
+      "rdfs:range": {
+        "@id": "c:Submission"
+      }
+    },
+    {
+      "@id": "c:verdict",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:MergeRecord"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "判定"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:usesDataset",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:App"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "使うデータ"
+      },
+      "rdfs:range": {
+        "@id": "c:Dataset"
+      }
+    },
+    {
+      "@id": "c:Criterion",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "審査項目"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "審査基準"
+      }
+    },
+    {
+      "@id": "c:DelegationRule",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "総司令官が部隊に委ねた作業の規則（委任先・承認の要否・実行の条件）"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "委任の規則"
       }
     },
     {
@@ -827,163 +975,35 @@
       }
     },
     {
-      "@id": "c:extracted",
+      "@id": "c:dueAt",
       "@type": "owl:DatatypeProperty",
       "rdfs:label": {
         "@language": "ja",
-        "@value": "未抽出の印（値が取り出せなかった）"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
+        "@value": "期限・日時（時刻の記載がなければ日付だけ）"
       }
     },
     {
-      "@id": "c:Agent",
+      "@id": "c:Decision",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "部隊または総司令官"
+        "@value": "誰かが決めること・決めたこと"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "担い手"
+        "@value": "判断"
       }
     },
     {
-      "@id": "c:CommercialUseAllowed",
-      "@type": "c:Restriction",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "商用可"
-      }
-    },
-    {
-      "@id": "c:hasRule",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Contest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ルール"
-      },
-      "rdfs:range": {
-        "@id": "c:Rule"
-      }
-    },
-    {
-      "@id": "c:prNumber",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "PR 番号"
-      },
-      "rdfs:range": {
-        "@id": "xsd:integer"
-      }
-    },
-    {
-      "@id": "c:fitTarget",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Fit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象のコンペまたは部門"
-      }
-    },
-    {
-      "@id": "c:rawSeverity",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Finding"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "報告の見出しにある語（重大・減点級など）"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:SubmissionLimit",
+      "@id": "c:App",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "1提案まで、欄ごとの字数など"
+        "@value": "開発物（デモ）と、それに対応する案（Plan）。提出文だけの案も含む"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "提出可能数・字数の上限"
-      }
-    },
-    {
-      "@id": "c:Audit",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "憲兵の監査報告（reports/audit/）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "監査"
-      }
-    },
-    {
-      "@id": "c:limitField",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:SubmissionLimit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象の欄"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:PullRequest",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "GitHub の pull request"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "PR"
-      }
-    },
-    {
-      "@id": "c:Theme",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "コンペ内のテーマ枠（衛星アワードの協賛企業・共通テーマ1・2）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "テーマ"
-      }
-    },
-    {
-      "@id": "c:toDivision",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Submission"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "出す部門"
-      },
-      "rdfs:range": {
-        "@id": "c:Division"
+        "@value": "アプリ・案"
       }
     },
     {
@@ -1002,46 +1022,106 @@
       }
     },
     {
-      "@id": "c:UnfilledField",
+      "@id": "c:draftFile",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Submission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "提出文のファイル"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:delegatedTo",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:DelegationRule"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "委任先"
+      },
+      "rdfs:range": {
+        "@id": "c:Unit"
+      }
+    },
+    {
+      "@id": "c:fitApp",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Fit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象アプリ"
+      },
+      "rdfs:range": {
+        "@id": "c:App"
+      }
+    },
+    {
+      "@id": "c:Division",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "提出文に残る【本人加筆】【提出時に記入】などの穴"
+        "@value": "コンペ内の部門（イチBiz のビジネス・アイデア・不動産情報活用）"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "未記入欄"
+        "@value": "部門"
+      }
+    },
+    {
+      "@id": "c:dsev-minor",
+      "@type": "c:Severity",
+      "c:description": "design",
+      "c:rank": 1,
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "軽微（デザイン）"
+      }
+    },
+    {
+      "@id": "c:PullRequest",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "GitHub の pull request"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "PR"
+      }
+    },
+    {
+      "@id": "c:Source",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "ファイルパスと節・行、または URL"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出典"
+      }
+    },
+    {
+      "@id": "c:MissingDeliverable",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "提出文など、あるべき物が無い"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "未作成の提出物"
       },
       "rdfs:subClassOf": {
         "@id": "c:Blocker"
-      }
-    },
-    {
-      "@id": "c:baseRef",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ベース"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:agentName",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Agent"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "agent 名"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
       }
     },
     {
@@ -1059,178 +1139,75 @@
       }
     },
     {
-      "@id": "c:mark",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Fit"
+      "@id": "c:Contest",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "応募先の大会（registry.json の contests）"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "◎○△×？"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
+        "@value": "コンペ"
       }
     },
     {
-      "@id": "c:forApp",
-      "@type": "owl:ObjectProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象のアプリ"
-      },
-      "rdfs:range": {
-        "@id": "c:App"
-      }
-    },
-    {
-      "@id": "c:score",
+      "@id": "c:prNumber",
       "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
-        "@id": "c:Fit"
+        "@id": "c:PullRequest"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "スコア（◎3 ○2 △1 ×0 ？0）"
+        "@value": "PR 番号"
       },
       "rdfs:range": {
         "@id": "xsd:integer"
       }
     },
     {
-      "@id": "c:dsev-major",
-      "@type": "c:Severity",
-      "c:description": "design",
-      "c:rank": 3,
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "重大（デザイン）"
-      }
-    },
-    {
-      "@id": "c:rank",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Severity"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "重さ"
-      },
-      "rdfs:range": {
-        "@id": "xsd:integer"
-      }
-    },
-    {
-      "@id": "c:hasTheme",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Contest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "テーマ"
-      },
-      "rdfs:range": {
-        "@id": "c:Theme"
-      }
-    },
-    {
-      "@id": "c:SelectionDecision",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "同じ枠に複数の案があるとき、どれを出すか"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "案の選定"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:HumanGate"
-      }
-    },
-    {
-      "@id": "c:HumanGate",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "総司令官だけが決める。自動では進めない（doctrine/roe.md）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "人間の関門"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:Decision"
-      }
-    },
-    {
-      "@id": "c:Commander",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "人間。案の選定・提出・registry 変更・ページ削除を決める"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "総司令官"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:Agent"
-      }
-    },
-    {
-      "@id": "c:locator",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Source"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "節・行"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:declaredDisqualifying",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Audit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "報告が宣言する失格級の件数"
-      },
-      "rdfs:range": {
-        "@id": "xsd:integer"
-      }
-    },
-    {
-      "@id": "c:licenseText",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:License"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "表の文言"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:purpose",
+      "@id": "c:audience",
       "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
         "@id": "c:App"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "使用目的"
+        "@value": "誰向けか"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:Rule",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "失格・無効・注意・未確認など、要項上の条件"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ルール"
+      }
+    },
+    {
+      "@id": "c:Deadline",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "コンペまたは部門の期限"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "締切"
+      }
+    },
+    {
+      "@id": "c:status",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "状態"
       },
       "rdfs:range": {
         "@id": "xsd:string"
@@ -1249,211 +1226,62 @@
       }
     },
     {
-      "@id": "c:writeScope",
+      "@id": "c:plannedLabel",
       "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
-        "@id": "c:Unit"
+        "@id": "c:PlannedSubmission"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "書き込み範囲"
+        "@value": "区分の名前（スポンサー・一般・部門名。コンペ全体は付けない）"
       },
       "rdfs:range": {
         "@id": "xsd:string"
       }
     },
     {
-      "@id": "c:hasSubmission",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:App"
-      },
+      "@id": "c:reason",
+      "@type": "owl:DatatypeProperty",
       "rdfs:label": {
         "@language": "ja",
-        "@value": "応募"
+        "@value": "理由"
       },
       "rdfs:range": {
-        "@id": "c:Submission"
+        "@id": "xsd:string"
       }
     },
     {
-      "@id": "c:Submission",
+      "@id": "c:Fit",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "ある案を、あるコンペ・部門・テーマに出す組み合わせ"
+        "@value": "アプリ×コンペの適合（◎○△×？とスコア）"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "応募"
+        "@value": "適合判定"
       }
     },
     {
-      "@id": "c:usesDataset",
+      "@id": "c:awaitsDecision",
       "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:App"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "使うデータ"
-      },
-      "rdfs:range": {
-        "@id": "c:Dataset"
-      }
-    },
-    {
-      "@id": "c:assignedTo",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Task"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "担当"
-      },
-      "rdfs:range": {
-        "@id": "c:Agent"
-      }
-    },
-    {
-      "@id": "c:approvalRequired",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:DelegationRule"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "総司令官の承認が要るか"
-      },
-      "rdfs:range": {
-        "@id": "xsd:boolean"
-      }
-    },
-    {
-      "@id": "c:draftFile",
-      "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
         "@id": "c:Submission"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "提出文のファイル"
+        "@value": "判断待ち"
       },
       "rdfs:range": {
-        "@id": "xsd:string"
+        "@id": "c:Decision"
       }
     },
     {
-      "@id": "c:StageRecord",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "ある応募のある段階が済んでいる証拠"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "段階の完了記録"
-      }
-    },
-    {
-      "@id": "c:prState",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "PR の状態"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:Severity",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "監査: 失格級・要修正・軽微 ／ デザイン: 重大・中・軽微"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "重大度"
-      }
-    },
-    {
-      "@id": "c:MergeDelegation",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "PR のマージは HumanGate ではなく、総司令官補佐（commander-aide）が行う委任の作業。総司令官の承認は不要（2026-11-21 の指示）。ページ削除を含む PR だけは PageDeletion（HumanGate）"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "代理マージ"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:Task"
-      }
-    },
-    {
-      "@id": "c:sev-fix",
-      "@type": "c:Severity",
-      "c:description": "audit",
-      "c:rank": 2,
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "要修正"
-      }
-    },
-    {
-      "@id": "c:Rule",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "失格・無効・注意・未確認など、要項上の条件"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "ルール"
-      }
-    },
-    {
-      "@id": "c:App",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "開発物（デモ）と、それに対応する案（Plan）。提出文だけの案も含む"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "アプリ・案"
-      }
-    },
-    {
-      "@id": "c:hasSubmissionLimit",
+      "@id": "c:forApp",
       "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Contest"
-      },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "提出可能数・字数"
-      },
-      "rdfs:range": {
-        "@id": "c:SubmissionLimit"
-      }
-    },
-    {
-      "@id": "c:fitApp",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Fit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象アプリ"
+        "@value": "対象のアプリ"
       },
       "rdfs:range": {
         "@id": "c:App"
@@ -1474,66 +1302,452 @@
       }
     },
     {
-      "@id": "c:NoRedistribution",
-      "@type": "c:Restriction",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "再配布不可"
-      }
-    },
-    {
-      "@id": "c:overDataset",
+      "@id": "c:hasSubmission",
       "@type": "owl:ObjectProperty",
       "rdfs:domain": {
-        "@id": "c:UnconfirmedDataCondition"
+        "@id": "c:App"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "対象のデータ"
+        "@value": "応募"
       },
       "rdfs:range": {
-        "@id": "c:Dataset"
+        "@id": "c:Submission"
       }
     },
     {
-      "@id": "c:Deadline",
+      "@id": "c:hasLicense",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Dataset"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "ライセンス"
+      },
+      "rdfs:range": {
+        "@id": "c:License"
+      }
+    },
+    {
+      "@id": "c:sev-fix",
+      "@type": "c:Severity",
+      "c:description": "audit",
+      "c:rank": 2,
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "要修正"
+      }
+    },
+    {
+      "@id": "c:fitsContest",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:App"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出せるコンペ（◎○△）"
+      },
+      "rdfs:range": {
+        "@id": "c:Contest"
+      }
+    },
+    {
+      "@id": "c:severity",
+      "@type": [
+        "owl:ObjectProperty",
+        "owl:FunctionalProperty"
+      ],
+      "rdfs:domain": {
+        "@id": "c:Finding"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "重大度"
+      },
+      "rdfs:range": {
+        "@id": "c:Severity"
+      }
+    },
+    {
+      "@id": "c:mergeRecord",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:PullRequest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "マージ記録"
+      },
+      "rdfs:range": {
+        "@id": "c:MergeRecord"
+      }
+    },
+    {
+      "@id": "id:ontology",
+      "@type": "owl:Ontology",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "4コンペの応募を自動で進めるための正本スキーマ。人間の関門（HumanGate）は自動で進めない。"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "geo-campaign-2026 オントロジー"
+      }
+    },
+    {
+      "@id": "c:limitMax",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:SubmissionLimit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "上限"
+      },
+      "rdfs:range": {
+        "@id": "xsd:integer"
+      }
+    },
+    {
+      "@id": "c:raisedIn",
+      "@type": [
+        "owl:ObjectProperty",
+        "owl:FunctionalProperty"
+      ],
+      "rdfs:domain": {
+        "@id": "c:Finding"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "指摘された監査"
+      },
+      "rdfs:range": {
+        "@id": "c:Audit"
+      }
+    },
+    {
+      "@id": "c:writeScope",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Unit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "書き込み範囲"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:dataKind",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:App"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "データ種別（実データ・架空・一部架空）"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:SubmissionDecision",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "コンペまたは部門の期限"
+        "@value": "応募フォームへの送信・登録"
       },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "提出の判断"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:HumanGate"
+      }
+    },
+    {
+      "@id": "c:hasTheme",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Contest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "テーマ"
+      },
+      "rdfs:range": {
+        "@id": "c:Theme"
+      }
+    },
+    {
+      "@id": "c:decidedBy",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Decision"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "決めた人"
+      },
+      "rdfs:range": {
+        "@id": "c:Agent"
+      }
+    },
+    {
+      "@id": "c:Agent",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "部隊または総司令官"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "担い手"
+      }
+    },
+    {
+      "@id": "c:hasDeadline",
+      "@type": "owl:ObjectProperty",
       "rdfs:label": {
         "@language": "ja",
         "@value": "締切"
+      },
+      "rdfs:range": {
+        "@id": "c:Deadline"
       }
     },
     {
-      "@id": "c:forPullRequest",
+      "@id": "c:hasDivision",
       "@type": "owl:ObjectProperty",
       "rdfs:domain": {
-        "@id": "c:MergeDelegation"
+        "@id": "c:Contest"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "対象の PR"
+        "@value": "部門"
       },
       "rdfs:range": {
-        "@id": "c:PullRequest"
+        "@id": "c:Division"
       }
     },
     {
-      "@id": "c:Finding",
+      "@id": "c:limitField",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:SubmissionLimit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象の欄"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:MergeRecord",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "監査の指摘。重大度つき"
+        "@value": "reports/command/merge-*.md の 1 行"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "指摘"
+        "@value": "マージ記録"
+      }
+    },
+    {
+      "@id": "c:mergedAt",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:PullRequest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "マージ日時"
+      },
+      "rdfs:range": {
+        "@id": "xsd:dateTime"
+      }
+    },
+    {
+      "@id": "c:note",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "補足"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:supersedes",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Audit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "置き換える旧版"
+      },
+      "rdfs:range": {
+        "@id": "c:Audit"
+      }
+    },
+    {
+      "@id": "c:toContest",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Submission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出すコンペ"
+      },
+      "rdfs:range": {
+        "@id": "c:Contest"
+      }
+    },
+    {
+      "@id": "c:Stage",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "情報部→偵察→[総司令官]→工兵→アグレッサー→作戦研究班→憲兵→[総司令官]"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "標準の流れの段階"
+      }
+    },
+    {
+      "@id": "c:contains",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:PullRequest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "含むアプリ"
+      },
+      "rdfs:range": {
+        "@id": "c:App"
+      }
+    },
+    {
+      "@id": "c:UnfilledField",
+      "@type": "owl:Class",
+      "rdfs:comment": {
+        "@language": "ja",
+        "@value": "提出文に残る【本人加筆】【提出時に記入】などの穴"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "未記入欄"
       },
       "rdfs:subClassOf": {
         "@id": "c:Blocker"
+      }
+    },
+    {
+      "@id": "c:restricts",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:License"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "課す制約"
+      },
+      "rdfs:range": {
+        "@id": "c:Restriction"
+      }
+    },
+    {
+      "@id": "c:plannedFor",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:PlannedSubmission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "対象の部門（部門ごとの件数のとき）"
+      },
+      "rdfs:range": {
+        "@id": "c:Division"
+      }
+    },
+    {
+      "@id": "c:hasSubmissionLimit",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Contest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "提出可能数・字数"
+      },
+      "rdfs:range": {
+        "@id": "c:SubmissionLimit"
+      }
+    },
+    {
+      "@id": "c:certainty",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Finding"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "確定・要確認（候補）"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:implementationRequired",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:Contest"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "実装必須"
+      },
+      "rdfs:range": {
+        "@id": "xsd:boolean"
+      }
+    },
+    {
+      "@id": "c:limitKind",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:domain": {
+        "@id": "c:SubmissionLimit"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "上限の種類"
+      },
+      "rdfs:range": {
+        "@id": "xsd:string"
+      }
+    },
+    {
+      "@id": "c:recordedOn",
+      "@type": "owl:DatatypeProperty",
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "記録日"
+      },
+      "rdfs:range": {
+        "@id": "xsd:date"
       }
     },
     {
@@ -1552,94 +1766,17 @@
       }
     },
     {
-      "@id": "c:toTheme",
+      "@id": "c:overDataset",
       "@type": "owl:ObjectProperty",
       "rdfs:domain": {
-        "@id": "c:Submission"
+        "@id": "c:UnconfirmedDataCondition"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "出すテーマ"
+        "@value": "対象のデータ"
       },
       "rdfs:range": {
-        "@id": "c:Theme"
-      }
-    },
-    {
-      "@id": "c:limitKind",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:SubmissionLimit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "上限の種類"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:RegistryChange",
-      "@type": "owl:Class",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "承認後のみ"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "registry.json の変更"
-      },
-      "rdfs:subClassOf": {
-        "@id": "c:HumanGate"
-      }
-    },
-    {
-      "@id": "c:ofContest",
-      "@type": [
-        "owl:ObjectProperty",
-        "owl:FunctionalProperty"
-      ],
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "所属コンペ"
-      },
-      "rdfs:range": {
-        "@id": "c:Contest"
-      }
-    },
-    {
-      "@id": "id:ontology",
-      "@type": "owl:Ontology",
-      "rdfs:comment": {
-        "@language": "ja",
-        "@value": "4コンペの応募を自動で進めるための正本スキーマ。人間の関門（HumanGate）は自動で進めない。"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "geo-campaign-2026 オントロジー"
-      }
-    },
-    {
-      "@id": "c:contains",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:PullRequest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "含むアプリ"
-      },
-      "rdfs:range": {
-        "@id": "c:App"
-      }
-    },
-    {
-      "@id": "c:dueAt",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "期限・日時（時刻の記載がなければ日付だけ）"
+        "@id": "c:Dataset"
       }
     },
     {
@@ -1657,157 +1794,88 @@
       }
     },
     {
-      "@id": "c:supersedes",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Audit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "置き換える旧版"
-      },
-      "rdfs:range": {
-        "@id": "c:Audit"
-      }
-    },
-    {
-      "@id": "c:hasDivision",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Contest"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "部門"
-      },
-      "rdfs:range": {
-        "@id": "c:Division"
-      }
-    },
-    {
-      "@id": "c:audience",
+      "@id": "c:purpose",
       "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
         "@id": "c:App"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "誰向けか"
+        "@value": "使用目的"
       },
       "rdfs:range": {
         "@id": "xsd:string"
       }
     },
     {
-      "@id": "c:auditsApp",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Audit"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "対象アプリ"
-      },
-      "rdfs:range": {
-        "@id": "c:App"
-      }
-    },
-    {
-      "@id": "c:affects",
-      "@type": "owl:ObjectProperty",
-      "rdfs:domain": {
-        "@id": "c:Blocker"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "影響を受けるアプリ"
-      },
-      "rdfs:range": {
-        "@id": "c:App"
-      }
-    },
-    {
-      "@id": "c:ShareAlike",
-      "@type": "c:Restriction",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "継承（ODbL）"
-      }
-    },
-    {
-      "@id": "c:condition",
+      "@id": "c:doneAt",
       "@type": "owl:DatatypeProperty",
       "rdfs:domain": {
-        "@id": "c:DelegationRule"
+        "@id": "c:Deadline"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "実行の条件"
+        "@value": "済んだ日"
       },
       "rdfs:range": {
-        "@id": "xsd:string"
+        "@id": "xsd:date"
       }
     },
     {
-      "@id": "c:Task",
+      "@id": "c:SelectionDecision",
       "@type": "owl:Class",
       "rdfs:comment": {
         "@language": "ja",
-        "@value": "進捗一覧にある完了・残作業"
+        "@value": "同じ枠に複数の案があるとき、どれを出すか"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "作業"
+        "@value": "案の選定"
+      },
+      "rdfs:subClassOf": {
+        "@id": "c:HumanGate"
       }
     },
     {
-      "@id": "c:certainty",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:domain": {
-        "@id": "c:Finding"
-      },
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "確定・要確認（候補）"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:url",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "URL"
-      },
-      "rdfs:range": {
-        "@id": "xsd:anyURI"
-      }
-    },
-    {
-      "@id": "c:note",
-      "@type": "owl:DatatypeProperty",
-      "rdfs:label": {
-        "@language": "ja",
-        "@value": "補足"
-      },
-      "rdfs:range": {
-        "@id": "xsd:string"
-      }
-    },
-    {
-      "@id": "c:restricts",
+      "@id": "c:forPullRequest",
       "@type": "owl:ObjectProperty",
       "rdfs:domain": {
-        "@id": "c:License"
+        "@id": "c:MergeDelegation"
       },
       "rdfs:label": {
         "@language": "ja",
-        "@value": "課す制約"
+        "@value": "対象の PR"
       },
       "rdfs:range": {
-        "@id": "c:Restriction"
+        "@id": "c:PullRequest"
+      }
+    },
+    {
+      "@id": "c:toTheme",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:Submission"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "出すテーマ"
+      },
+      "rdfs:range": {
+        "@id": "c:Theme"
+      }
+    },
+    {
+      "@id": "c:atStage",
+      "@type": "owl:ObjectProperty",
+      "rdfs:domain": {
+        "@id": "c:StageRecord"
+      },
+      "rdfs:label": {
+        "@language": "ja",
+        "@value": "段階"
+      },
+      "rdfs:range": {
+        "@id": "c:Stage"
       }
     }
   ]

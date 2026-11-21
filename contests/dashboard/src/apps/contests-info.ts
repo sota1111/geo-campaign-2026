@@ -54,8 +54,30 @@ export interface PrizeInfo {
   source: string
 }
 
+/** 提出予定の1区分（衛星のスポンサー向け／一般、イチBiz の部門） */
+export interface PlannedPart {
+  /** 画面に出す短い名前 */
+  label: string
+  count: number
+  /** 下書き（loadTargets）の列 id。あれば、その列に選んだ件数と区分ごとに比べる。無ければ合計だけで比べる */
+  columnId?: string
+}
+
+/**
+ * 提出予定数（総司令官が決めた、出すつもりの件数）。要項の上限である limits（提出可能数）とは別の項目。
+ * total が null のコンペは「未定」と表示する（数を作らない）。
+ */
+export interface PlannedCount {
+  total: number | null
+  parts: PlannedPart[]
+  /** 出典 */
+  src: string
+}
+
 export interface ContestInfo {
   id: ContestId
+  /** 提出予定数（総司令官の決定）。要項の上限（limits）ではない */
+  planned: PlannedCount
   /** 主なルール（失格・応募条件のうち重要なもの数点。cautions の要点） */
   keyRules: SourcedItem[]
   /** 提出可能数（1人・1チームが出せる件数、テーマ・部門ごとの上限）。要項に書かれていないものは「要項に記載なし」「未確認」とそのまま書く。推測で数字を入れない */
@@ -92,6 +114,7 @@ export interface ContestInfo {
 export const CONTEST_INFO: ContestInfo[] = [
   {
     id: 'udc-2026',
+    planned: { total: null, parts: [], src: '総司令官の指示なし（未定）' },
     tabName: 'UDC',
     summary:
       '都市・地域のオープンデータを使ったアプリ・データ・アイデア・アクティビティの4タイプを募集。一般部門とビジネス・プロフェッショナル部門がある。',
@@ -158,6 +181,7 @@ export const CONTEST_INFO: ContestInfo[] = [
   },
   {
     id: 'satellite-2026',
+    planned: { total: 2, parts: [{ label: 'スポンサー', count: 1 }, { label: '一般', count: 1 }], src: '2026-11-21 総司令官の指示' },
     tabName: '衛星アワード',
     summary:
       '衛星データを使った、インフラのリスク可視化・防災・都市課題解決の「事業アイデア」を募集。協賛企業テーマ＋共通テーマ1・2から選ぶ。',
@@ -213,6 +237,15 @@ export const CONTEST_INFO: ContestInfo[] = [
   },
   {
     id: 'ichibiz-2026',
+    planned: {
+      total: 3,
+      parts: [
+        { label: 'ビジネス', count: 1, columnId: 'ichibiz-2026-business' },
+        { label: 'アイデア', count: 1, columnId: 'ichibiz-2026-idea' },
+        { label: '不動産', count: 1, columnId: 'ichibiz-2026-realestate' },
+      ],
+      src: '2026-11-21 総司令官の指示',
+    },
     tabName: 'イチBiz',
     summary:
       '地理空間情報を活用した事業・サービスのアイデアを募集。ビジネス／アイデア／不動産情報活用の3部門。アイデア部門は実装不要。',
@@ -278,6 +311,7 @@ export const CONTEST_INFO: ContestInfo[] = [
   },
   {
     id: 'odpt-2026',
+    planned: { total: null, parts: [], src: '総司令官の指示なし（未定）' },
     tabName: 'ODPT',
     summary:
       '公共交通オープンデータを使った、実際に動作するアプリ・サービスを募集。応募前に開発者登録とエントリーが必要。',
