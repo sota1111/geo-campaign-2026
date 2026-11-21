@@ -39,6 +39,35 @@ def blocked_command(cmd: str) -> str | None:
     return None
 
 
+# 例外（2026-11-21 総司令官の許可: 「.env は読まないが、名前を使って API を実行するのは許可」）。
+# .env の中身を読む・表示するのではなく、node に環境変数として渡してデータ取得スクリプトを動かす形だけを通す。
+#   [cd <このリポジトリ> && ] node --env-file=.env <contests/ 配下の tools/fetch*.mjs> [--オプション …]
+# パイプ・リダイレクト・コマンド置換・複数コマンドは不可。スクリプトはリポジトリ内（worktree を含む）の
+# contests/**/tools/fetch*.mjs に限る（取得スクリプトはキーを出力しないことをレビューしてから使う）。
+REPO = os.path.realpath(os.environ.get("CLAUDE_PROJECT_DIR") or os.path.join(os.path.dirname(__file__), "..", ".."))
+FETCH_CMD = re.compile(
+    r"""^\s*(?:cd\s+(?P<cd>\S+)\s*&&\s*)?node\s+--env-file=\.env\s+(?P<script>[\w./-]+\.mjs)(?P<args>(?:\s+--?[\w-]+(?:=[\w.:/-]+)?|\s+[\w.:/-]+)*)\s*$"""
+)
+FETCH_SCRIPT = re.compile(r"""(?:^|/)contests/(?:[\w.-]+/)+tools/fetch[\w-]*\.mjs$""")
+
+
+def allowed_fetch(cmd: str) -> bool:
+    m = FETCH_CMD.match(cmd)
+    if not m:
+        return False
+    base = REPO
+    if m.group("cd"):
+        cd = os.path.realpath(m.group("cd"))
+        if cd != REPO:
+            return False
+        base = cd
+    script = os.path.realpath(os.path.join(base, m.group("script")))
+    if not (script == REPO or script.startswith(REPO + os.sep)):
+        return False
+    rel = os.path.relpath(script, REPO).replace(os.sep, "/")
+    return bool(FETCH_SCRIPT.search(rel)) and os.path.isfile(script)
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
@@ -48,7 +77,10 @@ def main() -> int:
     tool = data.get("tool_name", "")
     ti = data.get("tool_input", {}) or {}
     if tool == "Bash":
-        hit = blocked_command(ti.get("command", "") or "")
+        cmd = ti.get("command", "") or ""
+        hit = blocked_command(cmd)
+        if hit and allowed_fetch(cmd):
+            return 0
         if hit:
             print(f"交戦規定違反: 秘密情報（{hit}）に触れるコマンドは禁止です。.env.example は読めます。", file=sys.stderr)
             return 2
