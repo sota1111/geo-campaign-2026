@@ -16,6 +16,7 @@ npm test             # 共通部品の単体テスト（vitest）
 npm run copy-data    # 元アプリのデータを public/data/<id>/ にコピー
 node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots '' apps/odpt/   # 撮影＋コンソールエラー確認（要 preview 起動。'' はポータル）
 node scripts/fit.mjs http://127.0.0.1:8840/ docs/screenshots/fit                 # トップが縦スクロールなしで画面に収まるか（1513×784 ほか6サイズ）を測って撮影
+node scripts/bigcards.mjs http://127.0.0.1:8840/ docs/screenshots/bigcards-20261121       # 大きなカード版: 縦スクロールなし・下の空白・カード内で切れた中身・同時に見えるアプリカード数を測って撮影
 node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # ポータル→各アプリ→「← 統合ダッシュボード」の往復確認
 ```
 
