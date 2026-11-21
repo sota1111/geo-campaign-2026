@@ -30,7 +30,7 @@ await ev('localStorage.clear()'); await open();
 // UI-2 別タブでの記録が、このタブの記録で消えない（同時アクセス）
 await ev('App.show("record")');
 await ev('localStorage.setItem("alpha-results-v1", JSON.stringify([{siteId:"F2-01",date:"2026-11-12",who:"別タブ",result:"問題なし",memo:""}]))');
-await ev('document.querySelector("#r-who").value="このタブ"; document.querySelector("#rec-form").requestSubmit()');
+await ev('document.querySelector("#r-who").value="このタブ"; document.querySelector("#r-result").value="要伐採"; document.querySelector("#rec-form").requestSubmit()');
 const n = await ev('JSON.parse(localStorage.getItem("alpha-results-v1")).length');
 ok('UI-2 別タブで追加された記録が残る（後勝ちで消えない）', n === 2, `保存件数=${n}`);
 await ev('localStorage.clear()');
