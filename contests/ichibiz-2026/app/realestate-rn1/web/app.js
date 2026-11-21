@@ -513,7 +513,7 @@
   }
   function renderAssump() {
     $('assump').innerHTML = [
-      '<strong>徒歩</strong>: 直線距離×' + Life.DETOUR + '（道路距離の見積り。出典のある統計ではなく、本リポジトリの公共交通診断（odpt-2026）と同じ仮定）÷分速' + Life.WALK_M_PER_MIN + 'm（「不動産の表示に関する公正競争規約施行規則」が徒歩の所要時間の表示に使う、道路距離80mにつき1分）。坂・信号・横断・屋内は含みません。',
+      '<strong>徒歩</strong>: 直線距離×' + Life.DETOUR + '（道路距離の見積り。出典のない見積りで、実際の道路・坂・横断は考えていません）÷分速' + Life.WALK_M_PER_MIN + 'm（「不動産の表示に関する公正競争規約施行規則」が徒歩の所要時間の表示に使う、道路距離80mにつき1分）。坂・信号・横断・屋内は含みません。',
       '<strong>鉄道＋徒歩</strong>: 家から最寄駅まで徒歩（上の式）＋乗車＋勤務先の最寄駅から徒歩。乗車＝駅間の直線距離×' + Life.RAIL_DETOUR + '÷表定速度＋待ち' + Life.RAIL_WAIT_MIN + '分。表定速度<input id="railSpeed" type="number" min="10" max="120" step="1" value="' + state.places.speedKmh + '" aria-label="鉄道の表定速度（km/h）">km/h は出典のない仮定（初期値' + Life.RAIL_SPEED_KMH + '）で、変えられます。<strong>路線のつながり・乗換・運行本数・時刻は見ていません</strong>（その2駅が直通・乗換で行けるとは限りません）。駅は OpenStreetMap の登録（漏れあり）。最寄駅まで直線' + Life.MAX_STATION_M + 'mを超えるときは出しません。',
       '時刻表（GTFS）による経路探索・自転車・車は、この版では計算していません。いずれの数値も、実際の所要時間の保証ではなく、物件どうしを比べるための目安です。',
     ].map((x) => '<li>' + x + '</li>').join('');

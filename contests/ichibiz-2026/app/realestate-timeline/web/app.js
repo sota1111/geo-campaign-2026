@@ -212,7 +212,7 @@
       b.setAttribute('aria-pressed', String(!rent && Number(b.dataset.pi) === state.pi));
       b.disabled = rent; b.setAttribute('aria-disabled', String(rent));
     });
-    $('planbar').setAttribute('aria-label', rent ? '間取り（家賃は間取りで分けられないため選べません）' : '間取り');
+    $('planbar').setAttribute('aria-label', rent ? '間取り（家賃は間取り別の公的なデータが見つからないため選べません）' : '間取り');
   }
   function setPlan(i) { state.pi = i; syncPlanBar(); update(); }
   function setMode(mode) {
@@ -221,7 +221,7 @@
     $('modeRent').setAttribute('aria-pressed', String(mode === 'rent'));
     const M = L.MODES[mode];
     $('modeNote').hidden = mode === 'price';
-    $('modeNote').textContent = mode === 'price' ? '' : '家賃は区ごとの値です。間取り・町丁目には分けられません（5年ごとの調査。間の年は直前の値）';
+    $('modeNote').textContent = mode === 'price' ? '' : '家賃は区ごとの値です。間取り別・地区（町名）別の公的なデータは見つかりませんでした（5年ごとの調査。間の年は直前の値）';
     $('legUnit').textContent = M.unit + (mode === 'price' ? '・㎡単価の中央値' : '・1畳当たり家賃（区）');
     syncPlanBar(); buildLegend(); update();
   }
@@ -434,9 +434,9 @@
     let h;
     if (rent) {
       const code = state.selWard;
-      if (!code) h = '<p class="rd">地図の区を押すと、その区の家賃の推移が出ます。家賃は区ごとの調査で、間取り・町丁目には分けられません。</p>' + rankingHtml(true);
+      if (!code) h = '<p class="rd">地図の区を押すと、その区の家賃の推移が出ます。家賃は区ごとの調査で、間取り別・地区（町名）別の公的なデータは見つかりませんでした。</p>' + rankingHtml(true);
       else h = '<div class="ward"><h3>' + L.esc(wardName(code)) + ' <button type="button" class="clr" id="clr">選択をやめる</button></h3>' + readoutRent(code)
-        + '<p class="cap">家賃（円/畳。5年ごとの調査・区ごと。間取り・地区では分けられません）</p>' + rentChart(code)
+        + '<p class="cap">家賃（円/畳。5年ごとの調査・区ごと。間取り別・地区別の公的なデータは見つかりませんでした）</p>' + rentChart(code)
         + '<p class="minor">グラフを押すと、その年に移ります。点線は今の年です。</p>' + rankingHtml(false) + '</div>';
     } else if (!d) {
       h = findHtml() + '<p class="rd">地図の地区を押すと、その地区の推移（折れ線）と件数が出ます。</p>' + rankingHtml(true);

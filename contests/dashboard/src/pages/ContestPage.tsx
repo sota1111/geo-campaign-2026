@@ -129,6 +129,24 @@ export default function ContestPage({ contestId }: { contestId: string }) {
         <p className="text-sm text-muted-foreground">{implementation}</p>
       </Section>
 
+      <Section id="contest-criteria" title={info.criteriaTitle.includes('審査基準') ? info.criteriaTitle : '審査基準'}>
+        {!info.criteriaTitle.includes('審査基準') && <p className="text-xs text-muted-foreground">{info.criteriaTitle}</p>}
+        <ul className="space-y-1.5 text-sm">
+          {info.criteria.map((c) => (
+            <li key={c.name}>
+              <span className="font-medium">{c.name}</span>
+              {c.tag && <span className="ml-1.5 rounded border px-1 py-px text-xs">{c.tag}</span>}
+              {c.desc !== NO_DESC && <span className="block text-muted-foreground">{c.desc}</span>}
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-muted-foreground">{info.criteria.some((c) => c.desc === NO_DESC) && '各項目の説明は要項に記載なし。'}{info.criteriaNote}</p>
+      </Section>
+
+      <Section id="contest-prize" title="賞金・賞の内訳">
+        <PrizeBreakdown prize={info.prize} />
+      </Section>
+
       <Section id="contest-planned" title="提出予定数（総司令官が決めた、出すつもりの件数）">
         <div className="text-sm">
           <PlanLine view={plan} contestId={meta.id} />
@@ -142,7 +160,8 @@ export default function ContestPage({ contestId }: { contestId: string }) {
         </p>
       </Section>
 
-      {/* 提出までの状況・判断待ち・次にやること・案ごとのチェックリスト（トップ画面の詳細欄から移した） */}
+      {/* 並びはトップのカードと同じ優先順位（概要 → 審査基準 → 賞金 → 提出予定 → 進捗 …）。
+          提出までの状況・判断待ち・次にやること・案ごとのチェックリスト（トップ画面の詳細欄から移した） */}
       <section aria-label="進捗" className="space-y-2" data-testid="contest-status">
         <h2 className="border-b pb-1 text-base font-bold">進捗（{asOf} 時点の記録）</h2>
         <ContestProgress contest={meta.id} />
@@ -198,20 +217,6 @@ export default function ContestPage({ contestId }: { contestId: string }) {
         <p className="text-xs text-muted-foreground">要項に書かれていない事項は「要項に記載なし」「未確認」のまま載せています。推測で数字は入れていません。</p>
       </Section>
 
-      <Section id="contest-criteria" title={info.criteriaTitle.includes('審査基準') ? info.criteriaTitle : '審査基準'}>
-        {!info.criteriaTitle.includes('審査基準') && <p className="text-xs text-muted-foreground">{info.criteriaTitle}</p>}
-        <ul className="space-y-1.5 text-sm">
-          {info.criteria.map((c) => (
-            <li key={c.name}>
-              <span className="font-medium">{c.name}</span>
-              {c.tag && <span className="ml-1.5 rounded border px-1 py-px text-xs">{c.tag}</span>}
-              {c.desc !== NO_DESC && <span className="block text-muted-foreground">{c.desc}</span>}
-            </li>
-          ))}
-        </ul>
-        <p className="text-xs text-muted-foreground">{info.criteria.some((c) => c.desc === NO_DESC) && '各項目の説明は要項に記載なし。'}{info.criteriaNote}</p>
-      </Section>
-
       <Section id="contest-conditions" title="主なルール・応募条件・注意点">
         <h3 className="text-sm font-medium">提出のしかた</h3>
         <Bullets items={info.submission} />
@@ -223,8 +228,6 @@ export default function ContestPage({ contestId }: { contestId: string }) {
             <Bullets items={info.afterAward} />
           </>
         )}
-        <h3 className="text-sm font-medium" id="contest-prize">賞金・賞の内訳</h3>
-        <PrizeBreakdown prize={info.prize} />
       </Section>
 
       <Section id="contest-unconfirmed" title="未確認の事項">
