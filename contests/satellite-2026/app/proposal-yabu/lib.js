@@ -104,7 +104,7 @@
 
   // 理由の一言（点数の大きい観点を2つ、実測値で）。例「目撃52件・建物10m」
   function shortReason(c, weights, satOnly) {
-    const word = { edge: '林縁' + Math.round(c.edge * 100) + '%', veg: '緑の濃さ ' + c.ndvi_g.toFixed(2), drop: '冬との差 ' + (c.ndvi_g - c.ndvi_w).toFixed(2), sight: '目撃' + c.n_sight500 + '件（〜2018年度）', house: '建物' + c.d_house + 'm', houses_n: '建物' + c.n_house300 + '棟', school: c.d_school == null ? '' : '学校・園' + c.d_school + 'm' };
+    const word = { edge: '林縁' + Math.round(c.edge * 100) + '%', veg: '緑の濃さ ' + c.ndvi_g.toFixed(2), drop: '冬との差 ' + (c.ndvi_g - c.ndvi_w).toFixed(2), sight: '目撃' + c.n_sight500 + '件', house: '建物' + c.d_house + 'm', houses_n: '建物' + c.n_house300 + '棟', school: c.d_school == null ? '' : '学校・園' + c.d_school + 'm' };
     return parts(c, weights).filter((x) => x.pts > 0 && (!satOnly || x.src === 'sat') && word[x.key]).sort((a, b) => b.pts - a.pts).slice(0, 2).map((x) => word[x.key]).join('・');
   }
 
