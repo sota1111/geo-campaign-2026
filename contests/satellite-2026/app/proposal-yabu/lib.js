@@ -100,6 +100,22 @@
     ];
   }
 
+  // ---- 出没しやすさ（論文ベース）。式は README と tools/build_habitat.py に同じ ----
+  // 数値は Takahata ほか 2014 PLoS ONE 9(1): e86181 の選択オッズ（雌、原文の値）。G_* は論文に数値がない仮の係数
+  const HAB = { ODDS_EDGE_20: 3.74, ODDS_EDGE_100: 1.81, ODDS_RIVEREDGE_20: 21.45, TIER_HIGH: 3.74, TIER_MID: 1.81, G_FAR: 0.5, G_URBAN: 0.5, SETTLE_M: 500 };
+  HAB.BETA = Math.log(HAB.ODDS_EDGE_20) / Math.exp(-0.2);
+  const HAB_TIER_NAMES = ['低', '中', '高'];
+  // 林縁から d m の画素の選択度（河川に接する林縁は 21.45）
+  function habSelect(dEdge, riverEdge) {
+    if (riverEdge && dEdge <= 20) return HAB.ODDS_RIVEREDGE_20;
+    return Math.exp(HAB.BETA * Math.exp(-0.01 * dEdge));
+  }
+  // 区画の判定値 S = R（区画内の最大）x 集落係数 x 市街地係数
+  function habScore(rMax, dHouse, urban) {
+    return rMax * (dHouse <= HAB.SETTLE_M ? 1 : HAB.G_FAR) * (urban ? HAB.G_URBAN : 1);
+  }
+  function habTier(s) { return s >= HAB.TIER_HIGH ? 2 : s >= HAB.TIER_MID ? 1 : 0; }
+
   // ---- 現地確認の記録 ----
   const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
   function sanitizeResults(arr) {
@@ -135,6 +151,6 @@
     return results.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)).map((r) => [r.date, r.cellId, r.who, r.result, r.memo, 'デモ画面での入力（実際の現地確認とは限らない）']);
   }
 
-  const api = { DEFAULT_WEIGHTS, SAT_KEYS, OVERLAY_KEYS, KEYS, LABELS, SRC, SRC_LABEL, CAPS, RESULTS, EXCLUDE_RESULT, normalizeWeights, unit, parts, scoreOf, rank, reasons, latestResults, isDate, sanitizeResults, cell, toCsv, PLAN_HEADER, planRows, RECORD_HEADER, recordRows };
+  const api = { HAB, HAB_TIER_NAMES, habSelect, habScore, habTier, DEFAULT_WEIGHTS, SAT_KEYS, OVERLAY_KEYS, KEYS, LABELS, SRC, SRC_LABEL, CAPS, RESULTS, EXCLUDE_RESULT, normalizeWeights, unit, parts, scoreOf, rank, reasons, latestResults, isDate, sanitizeResults, cell, toCsv, PLAN_HEADER, planRows, RECORD_HEADER, recordRows };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.YabuLib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

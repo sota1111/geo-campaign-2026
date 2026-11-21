@@ -13,9 +13,9 @@ nav{display:flex;gap:4px;flex-wrap:wrap}
 nav button{border:1px solid var(--line);background:#fff;padding:6px 12px;cursor:pointer;border-radius:4px 4px 0 0}
 nav button[aria-selected=true]{background:var(--accent);color:#fff}
 main{padding:12px 16px}
-.split{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-bottom:10px}
+.split{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:16px;margin-bottom:10px;align-items:start}
 .pane{min-width:0}
-#map{width:100%;height:460px;border:1px solid var(--line);background:#e9eef3}
+#map{width:100%;height:68vh;min-height:480px;border:1px solid var(--line);background:#e9eef3}
 .layers{margin:6px 0;border:1px solid var(--line);background:#fff;padding:4px 10px}
 .layers legend{font-size:12px;padding:0 4px}
 .layers label{display:block;font-size:13px}
@@ -52,7 +52,7 @@ footer{padding:10px 16px;font-size:12px;color:#44505e;border-top:1px solid var(-
 @media(max-width:800px){
   .split{grid-template-columns:minmax(0,1fr)}
   .can .cols{grid-template-columns:minmax(0,1fr)}
-  #map{height:340px}
+  #map{height:60vh;min-height:360px}
   main{padding:8px}
   header{padding:8px}
 }
@@ -63,3 +63,26 @@ footer{padding:10px 16px;font-size:12px;color:#44505e;border-top:1px solid var(-
 .mode-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e8eef6; border: 1px solid #1b4f8a; font-size: 13px; font-weight: bold; }
 .mode-pill.sat { background: #fde9d6; border-color: #b45309; }
 .unused { opacity: .55; }
+
+/* 出没しやすさ（論文ベース）の凡例・検証 */
+.hab{background:#fff;border:1px solid var(--line);padding:6px 10px;margin-bottom:6px}
+.hab h2{margin:0 0 4px}
+.hl{list-style:none;margin:0;padding:0;font-size:13px}
+.hl li{margin:3px 0;line-height:1.45}
+.hl small{display:block;color:#44505e;margin-left:30px}
+.sw{display:inline-block;width:22px;height:14px;vertical-align:middle;margin-right:6px;border:1px solid #4b2a63}
+.sw-high{background:#7b3294}
+.sw-mid{background:repeating-linear-gradient(45deg,#7b3294 0,#7b3294 2px,#fff 2px,#fff 5px)}
+.sw-low{background:#fff;border-style:dashed}
+.sidepane .layers{margin:0 0 6px}
+.validation{margin:8px 0;background:#fff;border:1px solid var(--line);padding:4px 10px}
+.validation summary{cursor:pointer;font-weight:700}
+.validation table{width:auto;max-width:100%;margin:4px 0 8px;font-size:13px}
+.validation td.num{text-align:right}
+.validation h3{font-size:14px;margin:10px 0 2px}
+.validation .tablewrap{margin-bottom:4px}
+.better{font-weight:700}
+@media(max-width:800px){.hl small{margin-left:0}}
+
+.bannerwrap{margin:6px 0}.bannerwrap summary{cursor:pointer;font-weight:700;font-size:13px}
+@media(max-width:800px){h1{font-size:17px}h1 small{display:none}nav button{padding:4px 8px;font-size:13px}#flow{display:none}}

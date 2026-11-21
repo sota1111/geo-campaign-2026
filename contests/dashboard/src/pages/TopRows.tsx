@@ -29,20 +29,27 @@ function useViewport() {
   }, [])
   return v
 }
-/** 利用できる高さの段階（0: 〜829px、1: 830〜959px、2: 960px〜。1280px 未満は全部出す = 3） */
-export function useTier(): 0 | 1 | 2 | 3 {
-  const { w, h } = useViewport()
-  if (w < 1280) return 3
-  return h < 830 ? 0 : h < 960 ? 1 : 2
+/** 幅 1024px 以上は「画面の高さに合わせて詰める」（4枚を横に並べ、縦スクロールなし）。未満は全部出して縦に積む */
+export function useFit(): boolean {
+  return useViewport().w >= 1024
 }
 /**
- * 可変部分（判断待ち・次にやること・ルールなど）が入れ物より高いとき、段階（lv）を上げて行数・件数を減らしていく。
+ * 各カードを最大の表示（lv 0）から始め、可変部分が入れ物より高いとき、段階（lv）を上げて行数・件数を減らしていく（入るところで止まるので、ボタンの上に空白が残らない）。
  * フォントや描画の違いがあっても、行の途中で切れず、下端のボタンが必ず見える。画面の大きさ・中身・Web フォント読み込みが変わると 0 からやり直す。
  */
-function useFitLevel(deps: string, max = 9) {
+function useFitLevel(deps: string, max: number) {
   const ref = useRef<HTMLDivElement>(null)
   const { w, h } = useViewport()
   const [fontTick, setFontTick] = useState(0)
+  const [, setRz] = useState(0)
+  // 入れ物の高さが（隣のカードの段階が変わって）変わったときにも、はみ出しを確かめ直す
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setRz((n) => n + 1))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   useEffect(() => {
     document.fonts?.ready.then(() => setFontTick((n) => n + 1))
   }, [])
@@ -52,12 +59,47 @@ function useFitLevel(deps: string, max = 9) {
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    if (el.scrollHeight > el.clientHeight + 0.5 && lv < max) setSt({ key, lv: lv + 1 })
+    // 端数のはみ出し（1px 未満）も見逃さないよう、最後の子の下端でも確かめる
+    const last = el.lastElementChild as HTMLElement | null
+    const over = el.scrollHeight > el.clientHeight || (!!last && last.getBoundingClientRect().bottom > el.getBoundingClientRect().bottom + 0.1)
+    if (over && lv < max) setSt({ key, lv: lv + 1 })
   })
   return { ref, lv }
 }
 
-const pick = <T,>(tier: number, a: T, b: T, c: T, all: T): T => (tier === 0 ? a : tier === 1 ? b : tier === 2 ? c : all)
+/**
+ * コンペカードの表示の優先順位（残す順）: 見出し帯（名前・次の締切・提出可否）→ 概要 → 審査基準 → 総司令官の判断待ち → 次にやること → 主なルール → 提出可能数 → このコンペに出すアプリの件数。
+ * 入りきらないときは下位から削る（行数 → 「ほか n 件」 → 非表示）。概要と審査基準は最後まで残し、削るのは最終手段（概要 3→2→1 行、審査基準 全項目→2→1 行）。
+ * lv: -1 = 全項目・全文（幅 1024px 未満で縦に積むとき）、0 = 全項目（各2行まで）、1 以上 = 下位から削る。
+ */
+export const CARD_MAX_LV = 19
+export function cardPlan(lv: number) {
+  const c2 = 'line-clamp-2'
+  const all = lv < 0
+  return {
+    c2,
+    // 下位から: 件数の行(1) → 提出可能数(2〜4) → 主なルール(5〜7) → 次にやること(8〜10) → 判断待ち(11〜14) → 審査基準・概要の行数(15〜19)
+    hideTargets: lv >= 1,
+    nLimits: all ? 99 : lv >= 2 ? 1 : 2,
+    limitsClamp: lv >= 3 ? 'line-clamp-1' : c2,
+    hideLimits: lv >= 4,
+    nRules: all ? 99 : lv >= 5 ? 1 : 2,
+    rulesClamp: lv >= 6 ? 'line-clamp-1' : c2,
+    hideRules: lv >= 7,
+    nNext: all ? 99 : lv >= 8 ? 1 : 2,
+    hideNext: lv >= 10,
+    nextClamp: lv >= 9 ? 'line-clamp-1' : c2,
+    nAsks: all ? 99 : lv >= 12 ? 1 : lv >= 11 ? 2 : 3,
+    hideAsks: lv >= 14,
+    cl: lv >= 13 ? 'line-clamp-1' : c2,
+    // 概要は最大3行（最後の手段でだけ2行）、審査基準は全項目（最後の手段でだけ1行ずつ省略）
+    sumClamp: all ? '' : lv >= 16 ? 'line-clamp-2' : 'line-clamp-3',
+    hideSummary: false,
+    critClamp: all ? '' : lv >= 19 ? 'line-clamp-1' : lv >= 15 ? 'line-clamp-2' : 'line-clamp-3',
+    hideCrit: false,
+  }
+}
+
 const SHORT_WORD: Record<string, string> = { '◎': 'このコンペ向け', '○': '出せる', '△': '条件付き', '×': '出せない', '？': '要確認' }
 
 /** 押した先がボタン・リンク・折りたたみのときは、カード本体の「選択」を起こさない */
@@ -80,19 +122,11 @@ export function ContestTopCard({
   const asks = contestDecisionTexts(info.id)
   const nexts = st.next.filter((n) => !n.decision)
   const next = nexts[0] ?? st.next[0]
-  const tier = useTier()
-  const { ref: regRef, lv } = useFitLevel(`${info.id}|${tier}|${selected}|${appsForContest(targets, info.id).length}`)
-  const dec = (n: number) => (n >= 99 ? n : Math.max(1, n - Math.min(lv, 2)))
-  const nAsks = dec(pick(tier, 1, 2, 3, 99))
-  const nNext = dec(pick(tier, 1, 1, 2, 99))
-  const nRules = dec(pick(tier, 1, 1, 2, 99))
-  const nLimits = dec(pick(tier, 1, 1, 2, 99))
-  const nCrit = tier < 3 && lv >= 3 ? 1 : pick(tier, 1, 2, 2, 2)
-  const cl = tier <= 1 || (tier < 3 && lv >= 3) ? 'line-clamp-1' : 'line-clamp-2'
-  const hideSummary = tier < 3 && lv >= 7
-  const hideLimits = tier < 3 && lv >= 5
-  const hideRules = tier < 3 && lv >= 6
-  const hideCrit = tier < 3 && lv >= 8
+  const fit = useFit()
+  const { ref: regRef, lv: lv0 } = useFitLevel(`${info.id}|${fit}|${selected}|${appsForContest(targets, info.id).length}`, CARD_MAX_LV + 1)
+  const pl = cardPlan(fit ? lv0 - 1 : -1)
+  const { hideSummary, sumClamp, hideCrit, critClamp, hideRules, nRules, rulesClamp, hideLimits, nLimits, limitsClamp, hideTargets, nAsks, nNext, cl, hideNext, nextClamp, hideAsks } = pl
+  const hideDiv = hideTargets
   const more = otherNextCount(info.id)
   const cols = columnsOf(info.id)
   const chosen = appsForContest(targets, info.id)
@@ -116,24 +150,14 @@ export function ContestTopCard({
         {selected && <span className="shrink-0 rounded bg-white px-1.5 text-xs text-slate-900" data-testid="selected-tag"><span aria-hidden>✓ </span>選択中</span>}
       </h3>
       <div className="flex min-h-0 flex-1 flex-col bg-white/70 px-2.5 py-1 text-[0.8125rem] leading-snug">
-      <div ref={regRef} className={`flex min-h-0 flex-1 flex-col ${tier === 0 ? 'gap-0.5' : 'gap-1'} overflow-hidden`}>
+      <div ref={regRef} className={`flex min-h-0 flex-1 flex-col justify-between gap-1 overflow-hidden`}>
         <p className="flex flex-wrap items-center gap-x-2" data-testid="row-deadline">
-          <span>
+          <span className="whitespace-nowrap">
             次の締切 <span className="font-bold">{nd.text}</span>
-            {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
+            <Remaining at={nd.at} />
           </span>
-          <Remaining at={nd.at} />
+          {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
         </p>
-        {info.id === 'ichibiz-2026' && (
-          <p className="text-xs text-slate-800" data-testid="ichibiz-divisions" aria-label="3つの部門">
-            {cols.map((c, i) => (
-              <span key={c.id}>
-                {i > 0 && '／'}
-                <span className="font-bold">{c.division}</span> {c.deadline.replace('2026-', '').replace('-', '/')}・{appsForColumn(targets, c.id).length}件
-              </span>
-            ))}
-          </p>
-        )}
         <p className="flex flex-wrap items-center gap-x-2">
           <span className="font-bold" data-testid="row-status" title={st.gap}>
             <span aria-hidden>▲ </span>
@@ -141,6 +165,11 @@ export function ContestTopCard({
             <span className="font-normal">（提出不可）</span>
           </span>
         </p>
+        {!hideSummary && <p className={`shrink-0 ${sumClamp}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>}
+        {!hideCrit && <p className={`shrink-0 ${critClamp}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
+          <span className="font-bold">審査基準 </span>{info.criteria.map((c) => c.name).join('・')}
+        </p>}
+        {!hideAsks && (
         <Sec
           testid="row-asks"
           title={asks.join(' ／ ')}
@@ -149,6 +178,8 @@ export function ContestTopCard({
           items={asks.slice(0, nAsks).map((t) => ({ key: t, node: t, text: t }))}
           clamp={cl}
         />
+        )}
+        {!hideNext && (
         <Sec
           testid="card-next"
           label={<span className="font-bold">次にやること</span>}
@@ -158,30 +189,39 @@ export function ContestTopCard({
             text: n.text,
             node: <>{n === next ? <span data-testid="row-next">{n.text}</span> : n.text}<span className="text-slate-700">（{n.owner}）</span></>,
           }))}
-          clamp={cl}
+          clamp={nextClamp}
         />
-        <p className="shrink-0 truncate" data-testid={`targets-${info.id}`} aria-live="polite" title={chosen.map(appName).join('、')}>
-          <span className="font-bold">このコンペに出すアプリ {chosen.length}件</span>
-          <span className="text-slate-800">{chosen.length ? `：${chosen.map(appName).join('、')}` : '（未選択）'}</span>
-        </p>
-        {!hideSummary && <p className={`shrink-0 ${tier === 0 || (tier < 3 && lv >= 4) ? 'line-clamp-1' : 'line-clamp-2'}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>}
-        {!hideCrit && <p className={`shrink-0 ${nCrit === 1 ? 'line-clamp-1' : 'line-clamp-2'}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
-          <span className="font-bold">審査基準 </span>{info.criteria.map((c) => c.name).join('・')}
-        </p>}
+        )}
         {!hideRules && <Sec
           testid="card-rules"
           label={<span className="font-bold">主なルール</span>}
           extra={info.keyRules.length > nRules ? `（ほか${info.keyRules.length - nRules}件）` : ''}
           items={info.keyRules.slice(0, nRules).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（要確認）'}{r.text}</> }))}
-          clamp={cl}
+          clamp={rulesClamp}
         />}
         {!hideLimits && <Sec
           testid="card-limits"
           label={<span className="font-bold">提出可能数</span>}
           extra={info.limits.length > nLimits ? `（ほか${info.limits.length - nLimits}件）` : ''}
           items={info.limits.slice(0, nLimits).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（未確認）'}{r.text}</> }))}
-          clamp={cl}
+          clamp={limitsClamp}
         />}
+        {info.id === 'ichibiz-2026' && !hideDiv && (
+          <p className="text-xs text-slate-800" data-testid="ichibiz-divisions" aria-label="3つの部門" title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')}>
+            {cols.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && '／'}
+                <span className="font-bold">{c.division}</span> {c.deadline.replace('2026-', '').replace('-', '/')}・{appsForColumn(targets, c.id).length}件
+              </span>
+            ))}
+          </p>
+        )}
+        {!hideTargets && (
+        <p className="shrink-0 truncate" data-testid={`targets-${info.id}`} aria-live="polite" title={chosen.map(appName).join('、')}>
+          <span className="font-bold">このコンペに出すアプリ {chosen.length}件</span>
+          <span className="text-slate-800">{chosen.length ? `：${chosen.map(appName).join('、')}` : '（未選択）'}</span>
+        </p>
+        )}
       </div>
         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 pt-1">
           <button
@@ -342,20 +382,23 @@ export function AppFitCard({
   const missing = useIsPending(a)
   const color = contestColor(a.contest)
   const chosen = targets[a.id] ?? []
-  const tier = useTier()
+  const fit = useFit()
   const plan = planOf(a)
   const info = CONTEST_INFO.find((c) => c.id === a.contest)!
   const nd = plan ? { at: plan.deadlineAt, text: plan.deadlineLabel } : nextDeadline(info)
   const left = plan ? [...plan.todo.map((t) => t.text), ...(plan.decisions ?? [])] : []
-  const { ref: regRef, lv } = useFitLevel(`${a.id}|${tier}|${chosen.length}|${contest}`)
-  const nLeft = tier < 3 && lv >= 5 ? 0 : (() => { const n = pick(tier, 1, 2, 3, 99); return n >= 99 ? n : Math.max(1, n - Math.min(lv, 2)) })()
-  const tight = tier < 3 && lv >= 3
+  const { ref: regRef, lv: lv0 } = useFitLevel(`${a.id}|${fit}|${chosen.length}|${contest}`, 12)
+  // 最大（残りの作業 5件・目的 3行）から始め、入るところまで減らす
+  const lv = fit ? lv0 : -1
+  const nLeft = lv < 0 ? 99 : lv >= 8 ? 0 : Math.max(1, 5 - lv)
+  const purposeClamp = lv < 0 ? '' : lv >= 4 ? 'line-clamp-1' : lv >= 2 ? 'line-clamp-2' : 'line-clamp-3'
+  const tight = lv >= 5
   const chosenCols = FIT_COLUMNS.filter((c) => chosen.includes(c.id))
   return (
     <li
       data-app-card={a.id}
       data-rank={rank}
-      className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col ${tier === 0 ? 'gap-0.5 p-1.5' : 'gap-1 p-2'} overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${isNew ? 'border-slate-500' : 'border-slate-300'}`}
+      className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${isNew ? 'border-slate-500' : 'border-slate-300'}`}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 text-xs">
         <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title="いまの並びでの順位">{rank}位</span>
@@ -370,8 +413,8 @@ export function AppFitCard({
         )}
         {plan && <span className={`rounded border px-1 ${plan.intent === '提出予定' ? 'border-slate-700 font-bold' : 'border-dashed border-slate-500'}`}>{plan.intent}</span>}
       </div>
-      <div ref={regRef} className={`flex min-h-0 flex-1 flex-col overflow-hidden ${tier === 0 ? 'gap-0.5' : 'gap-1'}`}>
-      <h3 className="line-clamp-2 shrink-0 text-base font-bold leading-tight text-slate-900">
+      <div ref={regRef} className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden`}>
+      <h3 className={`${lv >= 10 ? 'line-clamp-1' : 'line-clamp-2'} shrink-0 text-base font-bold leading-tight text-slate-900`}>
         <a
           href={appUrl(a.id)}
           data-app-link={a.id}
@@ -382,10 +425,10 @@ export function AppFitCard({
           {missing && <span className="sr-only">（未収録の案内）</span>}
         </a>
       </h3>
-      <p className={`shrink-0 ${tight ? 'line-clamp-1' : pick(tier, 'line-clamp-2', 'line-clamp-2', 'line-clamp-3', '')} text-slate-800`} title={a.purpose} data-testid="card-purpose">
+      {lv < 9 && <p className={`shrink-0 ${purposeClamp} text-slate-800`} title={a.purpose} data-testid="card-purpose">
         <span className="font-bold">目的 </span>{a.purpose}
-      </p>
-      <ul className="grid shrink-0 grid-cols-1 gap-y-0.5 min-[1100px]:grid-cols-2 min-[1100px]:gap-x-1" aria-label="出せるコンペ（◎このコンペ向け ○出せる △条件付き ×出せない ？要確認）">
+      </p>}
+      <ul className={`grid shrink-0 gap-y-0.5 min-[1100px]:grid-cols-2 min-[1100px]:gap-x-1 ${lv >= 6 ? 'grid-cols-2 gap-x-1' : 'grid-cols-1'}`} aria-label="出せるコンペ（◎このコンペ向け ○出せる △条件付き ×出せない ？要確認）">
         {MINI.map((m) => {
           const cell = bestCell(a.id, m.id)
           const emph = contest === m.id
@@ -416,15 +459,14 @@ export function AppFitCard({
           {plan && (
             <span className="font-bold tabular-nums" title="案の進み具合（reports/ops の進捗一覧）">
               済{plan.done.length}・残{left.length}
-              {left.length > 0 && <span className="font-normal text-slate-700">（先頭{Math.min(nLeft, left.length)}件{left.length > nLeft ? `・ほか${left.length - nLeft}件` : ''}）</span>}
+              {left.length > 0 && <span className="font-normal text-slate-700">{nLeft > 0 && `（先頭${Math.min(nLeft, left.length)}件${left.length > nLeft ? `・ほか${left.length - nLeft}件` : ''}）`}</span>}
             </span>
           )}
-          <span>締切 <span className="font-bold">{nd.text}</span></span>
-          <Remaining at={nd.at} />
+          <span className="whitespace-nowrap">締切 <span className="font-bold">{nd.text}</span> <Remaining at={nd.at} /></span>
         </p>
         {left.length > 0 && (
           <ul className="list-disc pl-4">
-            {left.slice(0, nLeft).map((t) => <li key={t} className={tier === 0 ? 'line-clamp-1' : 'line-clamp-2'} title={t}>{t}</li>)}
+            {left.slice(0, nLeft).map((t) => <li key={t} className={lv >= 3 ? 'line-clamp-1' : 'line-clamp-2'} title={t}>{t}</li>)}
           </ul>
         )}
       </div>
@@ -433,9 +475,9 @@ export function AppFitCard({
         <a
           href={appUrl(a.id)}
           data-testid={`open-app-${a.id}`}
-          className="inline-flex min-h-11 flex-1 items-center justify-center gap-0.5 rounded-md border-2 border-slate-900 bg-slate-900 px-1.5 text-xs font-bold text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 md:min-h-8"
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-0.5 whitespace-nowrap rounded-md border-2 border-slate-900 bg-slate-900 px-1.5 text-xs font-bold text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 md:min-h-8"
         >
-          アプリを開く<ArrowRight className="size-4" aria-hidden />
+          アプリを開く<ArrowRight className="size-4 max-xl:hidden" aria-hidden />
         </a>
         <FitPopover a={a} contest={contest} chosen={chosen} onToggle={onToggle} cautions={cautions} />
         {cautions.length > 0 && (
@@ -470,10 +512,10 @@ function FitPopover({
         <button
           type="button"
           data-testid={`pick-targets-${a.id}`}
-          className="min-h-11 flex-1 rounded-md md:min-h-8 border-2 border-slate-900 bg-white px-1.5 text-xs font-bold text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          className="min-h-11 flex-1 whitespace-nowrap rounded-md md:min-h-8 border-2 border-slate-900 bg-white px-1.5 text-xs font-bold text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
           aria-label={`${a.name}の提出先を選ぶ（${chosen.length}件選択中）`}
         >
-          提出先を選ぶ<span data-testid={`chosen-count-${a.id}`}>（{chosen.length}件）</span>
+          提出先<span className="max-xl:hidden">を選ぶ</span><span data-testid={`chosen-count-${a.id}`}>（{chosen.length}件）</span>
         </button>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
@@ -577,7 +619,7 @@ function FitPopover({
 }
 
 /** 横一列に並べた、その行の中だけ横スクロールする入れ物。左右の送りボタンと「n件中 m〜k件目」つき */
-export function ScrollRow({ label, children, resetKey, total, toolbar }: { label: string; children: React.ReactNode; resetKey?: string; total: number; toolbar?: React.ReactNode }) {
+export function ScrollRow({ label, children, resetKey, total, toolbar, empty }: { label: string; children: React.ReactNode; resetKey?: string; total: number; toolbar?: React.ReactNode; empty?: React.ReactNode }) {
   const ref = useRef<HTMLUListElement>(null)
   const [edge, setEdge] = useState({ left: true, right: false })
   const [range, setRange] = useState({ from: 1, to: 1 })
@@ -587,7 +629,10 @@ export function ScrollRow({ label, children, resetKey, total, toolbar }: { label
     setEdge({ left: el.scrollLeft <= 2, right: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2 })
     const box = el.getBoundingClientRect()
     const kids = [...el.children] as HTMLElement[]
-    const vis = kids.map((k, i) => ({ i, r: k.getBoundingClientRect() })).filter(({ r }) => r.right > box.left + 8 && r.left < box.right - 8)
+    const all = kids.map((k, i) => ({ i, r: k.getBoundingClientRect() }))
+    // 全部見えているカードの数で数える（一部だけ見えているカードは数えない。1枚も全部見えないときだけ一部見えを使う）
+    const full = all.filter(({ r }) => r.left >= box.left - 2 && r.right <= box.right + 2)
+    const vis = full.length ? full : all.filter(({ r }) => r.right > box.left + 8 && r.left < box.right - 8)
     if (vis.length) setRange({ from: vis[0].i + 1, to: vis[vis.length - 1].i + 1 })
   }
   useEffect(() => {
@@ -621,13 +666,14 @@ export function ScrollRow({ label, children, resetKey, total, toolbar }: { label
         <span className="hidden 2xl:inline">ボタン・スワイプ・左右の矢印キーで横に送れます</span>
         {toolbar}
       </div>
+      {total === 0 && empty && <div className="flex min-h-0 flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-500 bg-white p-4 text-center" data-testid="app-empty">{empty}</div>}
       <ul
         ref={ref}
         onScroll={update}
         tabIndex={0}
         aria-label={label}
         data-testid="app-row"
-        className="flex min-h-0 flex-1 snap-x items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        className={`${total === 0 && empty ? 'hidden' : 'flex'} min-h-0 flex-1 snap-x items-stretch gap-2 overflow-x-auto overscroll-x-contain pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900`}
       >
         {children}
       </ul>

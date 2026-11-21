@@ -85,7 +85,8 @@ td.l, th.l { text-align: left; }
   body[data-tab=diag] #box-pos { order: 2; }
   body[data-tab=diag] #mapwrap { order: 3; height: 260px; margin-top: 10px; }
   body[data-tab=diag] #box-result { order: 4; }
-  body[data-tab=diag] #box-check { order: 5; margin-bottom: 10px; }
+  body[data-tab=diag] #box-cond { order: 5; }
+  body[data-tab=diag] #box-check { order: 6; margin-bottom: 10px; }
   body[data-tab=diag] .lead { display: none; }
   /* 表をカードにする（見出しは各セルの data-label） */
   table.cards, table.cards tbody, table.cards tr, table.cards td { display: block; width: 100%; }
@@ -96,3 +97,12 @@ td.l, th.l { text-align: left; }
   table.cards td:first-child { font-size: 14px; font-weight: bold; padding-bottom: 4px; }
 }
 #muni-table td.l { white-space: nowrap; }
+#trend { font-size: 13px; background: #fffaf0; border-left: 4px solid #D55E00; }
+.riskbox { background: #fff; border: 2px solid #555; border-radius: 4px; padding: 8px 10px; margin: 6px 0; font-size: 14px; }
+.riskbox .band { font-size: 14px; font-weight: bold; padding: 2px 10px; margin: 0 2px; }
+table.cond .why { font-size: 12px; max-width: 520px; }
+table.cond .by { font-size: 11px; color: #555; }
+.st { font-weight: bold; white-space: nowrap; }
+.st-risk { color: #980043; }
+.st-ok { color: #1b5e20; }
+.st-unknown { color: #555; font-weight: normal; }

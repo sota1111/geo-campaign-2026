@@ -30,7 +30,7 @@ const send = (method, params = {}) => new Promise((r) => { const i = ++id; pendi
 const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnByValue: true, awaitPromise: true })).result?.result?.value
 const shot = async (name) => fs.writeFileSync(path.join(outDir, name), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
 
-const sizes = [[1513, 784], [1280, 800], [1440, 900], [1920, 1080], [1024, 768], [390, 844]]
+const sizes = [[1513, 784], [1280, 800], [1440, 900], [1920, 1080], [1024, 768], [1100, 800], [1200, 800], [390, 844]]
 const out = []
 const measure = `(() => {
   // カードの中で、カードの下端より下にはみ出して切れている子要素（ボタン・見出し・段落）を数える
@@ -40,6 +40,7 @@ const measure = `(() => {
     let n = 0
     for (const el of card.querySelectorAll('*')) {
       if (el.closest('details') || el.closest('svg')) continue
+      if (el.parentElement.closest('[class*=line-clamp]')) continue // line-clamp で意図して省略した行の中身は数えない
       const r = el.getBoundingClientRect()
       if (r.height === 0 || r.width === 0) continue
       if (r.bottom > cb) { n++; if (window.__dbg) console.log('x'); (window.__why ||= []).push(card.dataset.contestCard + ':' + el.tagName + ':' + (el.textContent||'').slice(0,20) + ':' + Math.round(r.bottom - cb)); continue }
@@ -58,6 +59,12 @@ const measure = `(() => {
     return n
   }
   const cc = [...document.querySelectorAll('[data-contest-card]')]
+  // ボタンの上の空白（px）: ボタン行の上端 − 本文の最後の要素の下端。1行（約20px）未満が目標
+  // 本文の入れ物の余り = 入れ物の高さ − 子の高さの合計 − 子の間の標準の隙間（4px）。均等配置（justify-between）で隙間に散っても余りとして数える
+  const gapAbove = cc.map((c) => { const reg = c.querySelector('[data-testid^=pick-]').parentElement.previousElementSibling; const kids = [...reg.children].filter((k) => k.getBoundingClientRect().height > 0); const used = kids.reduce((a, k) => a + k.getBoundingClientRect().height, 0) + 4 * (kids.length - 1); return Math.round(reg.getBoundingClientRect().height - used) })
+  // 横に切れている子（カードの右端より右）
+  const xClip = (card) => { const cr = card.getBoundingClientRect().right + 1; let n = 0; for (const el of card.querySelectorAll('*')) { if (el.closest('details') || el.closest('svg')) continue; const r = el.getBoundingClientRect(); if (r.width && r.right > cr) n++ } return n }
+  const pickWrap = [...document.querySelectorAll('[data-testid^=pick-targets-]')].filter((b) => b.getBoundingClientRect().height > 0).some((b) => b.getBoundingClientRect().height > 40 && b.textContent.length < 30 && false)
   const ac = [...document.querySelector('[data-testid=app-row]').children]
   const row = document.querySelector('[data-testid=app-row]'), box = row.getBoundingClientRect()
   const vis = ac.filter((c) => { const r = c.getBoundingClientRect(); return r.left >= box.left - 1 && r.right <= box.right + 1 })
@@ -66,6 +73,7 @@ const measure = `(() => {
   return {
     scrollHeight: document.documentElement.scrollHeight, innerHeight, scrollWidth: document.documentElement.scrollWidth, innerWidth,
     lowestBottom: Math.round(lowest), gapBelow: Math.round(innerHeight - lowest),
+    gapAbove, contestXClip: cc.map(xClip), btnsInView: cc.every((c) => c.querySelector('[data-testid^=pick-]').getBoundingClientRect().bottom <= innerHeight), appBtnLines: [...document.querySelectorAll('[data-testid^=pick-targets-]')].slice(0, 4).map((b) => Math.round(b.getBoundingClientRect().height)),
     contestCardH: cc.map((c) => Math.round(c.getBoundingClientRect().height)), contestClipped: cc.map(clipped),
     appCardH: Math.round(ac[0].getBoundingClientRect().height), appCardW: Math.round(ac[0].getBoundingClientRect().width), appClipped: ac.map(clipped).reduce((a, b) => a + b, 0),
     appsFullyVisible: vis.length, appsVisibleIncludingPartial: partial.length, totalApps: ac.length,
@@ -98,6 +106,14 @@ for (const [w, h] of sizes) {
     await ev(`document.querySelector('[data-testid=pick-satellite-2026]').click()`)
     await sleep(500)
     await shot(`top-${w}x${h}-selected.png`)
+    // 絞り込みで 0 件のとき、アプリ欄に理由と解除ボタンが出る
+    await ev(`(() => { const i = document.querySelector('[data-testid=top-app-filter]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'zzzz'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+    await sleep(400)
+    console.log('empty-state:', await ev(`document.querySelector('[data-testid=app-empty]')?.textContent`), '| position:', await ev(`document.querySelector('[data-testid=row-position]').textContent`))
+    await shot(`top-${w}x${h}-empty.png`)
+    await ev(`document.querySelector('[data-testid=clear-filter]').click()`)
+    await sleep(400)
+    console.log('position after clear:', await ev(`document.querySelector('[data-testid=row-position]').textContent`))
   }
 }
 console.log(JSON.stringify(out))

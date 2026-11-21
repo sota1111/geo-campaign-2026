@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MotionConfig } from 'motion/react'
 import { APPS, CONTESTS, isNewPlan, type ContestId } from '@/apps/registry'
 import { contestsByDeadline } from '@/apps/contests-info'
-import { AppFitCard, CautionSummary, ContestTopCard, ScrollRow, useTier } from '@/pages/TopRows'
+import { AppFitCard, CautionSummary, ContestTopCard, ScrollRow } from '@/pages/TopRows'
 import { matchesAppQuery } from '@/components/layout/AppShell'
 import { asOf } from '@/pages/Progress'
 import { OVERALL, PROGRESS_SOURCE } from '@/data/progress'
@@ -15,10 +15,7 @@ import { MARK_WORD, activeCautions, loadTargets, saveTargets, sortApps, targetsJ
  * コンペを選ぶと、アプリが「そのコンペとの関連が強い順」に並び替わる。各アプリの提出先（出せるコンペ）はカードで選べる。
  * 選択はこのブラウザの localStorage だけに保存する下書きで、正式な提出先は総司令官が決める。
  */
-const GROW: Record<number, [number, number]> = { 0: [47, 53], 1: [50, 50], 2: [60, 40], 3: [1, 1] }
-
 export default function Portal() {
-  const tier = useTier()
   const sorted = contestsByDeadline()
   const [contest, setContest] = useState<ContestId | null>(null)
   const [targets, setTargets] = useState<Targets>(() => loadTargets())
@@ -48,7 +45,7 @@ export default function Portal() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="mx-auto flex max-w-[120rem] flex-col gap-1 xl:-mb-4 xl:-mt-5 xl:h-[calc(100dvh-3.75rem)] xl:min-h-[38rem]">
+      <div className="mx-auto flex max-w-[120rem] flex-col gap-1 lg:-mb-4 lg:-mt-5 lg:h-[calc(100dvh-3.75rem)] lg:min-h-[34rem]">
         <h1 className="sr-only">統合ダッシュボード</h1>
         <header className="flex flex-wrap items-baseline gap-x-4 text-xs" data-testid="portal-legend">
           <h2 id="h-contests" className="text-sm font-bold">
@@ -69,8 +66,8 @@ export default function Portal() {
           </ul>
         </header>
 
-        <section aria-labelledby="h-contests" className="flex min-h-0 flex-col gap-0.5 xl:basis-0" style={{ flexGrow: GROW[tier][0] }} data-testid="contest-list">
-          <div className="-mx-2 flex min-h-0 snap-x items-stretch gap-2 overflow-x-auto px-2 py-1 lg:grid lg:flex-1 lg:grid-cols-4 lg:overflow-visible" data-testid="contest-row">
+        <section aria-labelledby="h-contests" className="flex min-h-0 flex-col gap-0.5 lg:max-h-[50dvh] lg:flex-none lg:shrink" data-testid="contest-list">
+          <div className="-mx-2 flex min-h-0 snap-x items-stretch gap-2 overflow-x-auto px-2 py-1 lg:grid lg:grid-cols-4 lg:grid-rows-[minmax(0,1fr)] lg:overflow-visible" data-testid="contest-row">
             {sorted.map((c) => (
               <div key={c.id} className="flex min-h-0 w-72 shrink-0 snap-start flex-col lg:w-auto">
                 <ContestTopCard
@@ -84,7 +81,7 @@ export default function Portal() {
           </div>
         </section>
 
-        <section aria-labelledby="h-apps" className="flex min-h-0 flex-col gap-0.5 xl:basis-0" style={{ flexGrow: GROW[tier][1] }} data-testid="app-section">
+        <section aria-labelledby="h-apps" className="flex min-h-0 flex-col gap-0.5 lg:min-h-[24rem] xl:min-h-[23rem] lg:flex-1 lg:basis-0" data-testid="app-section">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h2 id="h-apps" className="text-sm font-bold">
               アプリ（{APPS.length}件・今の案{APPS.filter((a) => !isNewPlan(a)).length}＋新しい案{APPS.filter(isNewPlan).length}）
@@ -144,6 +141,12 @@ export default function Portal() {
             label="アプリのカード"
             resetKey={`${contest ?? 'none'}|${q}`}
             total={apps.length}
+            empty={
+              <div>
+                <p className="text-base font-bold">「{q.trim()}」に該当するアプリはありません</p>
+                <button type="button" onClick={() => setQ('')} className={`${btn} mt-2`} data-testid="clear-filter">絞り込みを解除</button>
+              </div>
+            }
             toolbar={
               <>
               <span className="font-bold text-slate-900" data-testid="mark-legend">
@@ -160,7 +163,7 @@ export default function Portal() {
                   className="h-9 w-48 max-w-full rounded-md border-2 border-slate-900 bg-white px-2 text-sm"
                   data-testid="top-app-filter"
                 />
-                {q.trim() && <span role="status" data-testid="top-filter-count">{apps.length ? `${apps.length}件に絞りました` : '該当するアプリはありません'}</span>}
+                {q.trim() && <span role="status" data-testid="top-filter-count">{apps.length ? `${apps.length}件に絞りました` : `「${q.trim()}」に該当するアプリはありません`}</span>}
               </span>
               </>
             }
