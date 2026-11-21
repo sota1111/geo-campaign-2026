@@ -85,7 +85,7 @@ python3 -m pytest contests/ontology/tests -q
 
 ## 図解ページ（図が主役の1枚の HTML。2026-11-21）
 `figures.py` が、型・提出を止めているもの・次の行動（締切順）・データ条件と影響・適合の5つの図を `contests/dashboard/public/ontology-figures/index.html` に書き出す（標準ライブラリのみ。rdflib 不要）。数値は `schema.jsonld`・`campaign.jsonld`・`graph.json`・`next-actions.json` から計算し、手で書き写さない。生成日と出典はページの末尾に出る。
-再生成の手順: オントロジーを再生成（上の「更新のしかた」2）→ `python3 contests/ontology/figures.py` → 生成された HTML をコミット → ダッシュボードを `npm run build`（`public/` がそのまま `dist/ontology-figures/` に入る）。`graph.json` と `next-actions.json` の基準日が違うと止まる。
+再生成の手順: オントロジーを再生成（上の「更新のしかた」2）→ `python3 contests/ontology/figures.py` → 生成された HTML をコミット → ダッシュボードを `npm run build`（`public/` がそのまま `dist/ontology-figures/` に入る）。`graph.json` と `next-actions.json` の基準日が違うと止まる。数の定義（案・応募・提出を止めるもの・部隊の作業と総司令官の作業）は `figures.py` の `Defs` に1か所で持ち、図どうしの同じ量が合わなければ assert で生成が失敗する。
 作り方は u-ichi/agent-plugins の **figure-docs**（MIT License, Copyright (c) 2026 u-ichi。事業の図の分類は Financial Times Visual Vocabulary〈MIT〉による。表示は同 plugin の LICENSES/ に従う）に沿った。ダッシュボードのヘッダーの「図解」と、つながり図のページから開く。
 
 ## 更新のしかた

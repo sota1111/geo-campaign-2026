@@ -31,7 +31,7 @@ await send('Runtime.enable'); await send('Page.enable'); await send('Log.enable'
 const shot = async (name) => fs.writeFileSync(path.join(outDir, name), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).result.data, 'base64'))
 const click = (sel) => ev(`document.querySelector(${JSON.stringify(sel)}).click()`)
 const result = []
-for (const [label, w, h, mobile] of [['desktop', 1280, 800, false], ['mobile', 390, 844, true]]) {
+for (const [label, w, h, mobile] of [['desktop', 1280, 800, false], ['wide', 1513, 784, false], ['mobile', 390, 844, true], ['narrow', 360, 780, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
   await send('Page.navigate', { url: base + 'ontology-figures/' })
   await sleep(2500)
@@ -44,6 +44,11 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 800, false], ['mobile', 3
   const data = (await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: w, height: hgt, scale: 1 } })).result.data
   fs.writeFileSync(path.join(outDir, `${label}-full.png`), Buffer.from(data, 'base64'))
   r.height = hgt
+  // ダッシュボードのヘッダー: 「図解」リンクが画面内に収まるか
+  await send('Page.navigate', { url: base })
+  await sleep(2500)
+  r.headerLink = await ev(`(() => { const a = document.querySelector('[data-testid=ontology-figures-link]'); const b = a.getBoundingClientRect(); const hd = document.querySelector('header').getBoundingClientRect(); return { kids: [...document.querySelector('header').children].map(c => { const q = c.getBoundingClientRect(); return [c.tagName, Math.round(q.top), Math.round(q.height), Math.round(q.left)].join(':') }), cs: getComputedStyle(document.querySelector('header')).height + '|' + getComputedStyle(document.querySelector('header')).flexWrap, headerH: Math.round(hd.height), top: Math.round(b.top), right: Math.round(b.right), height: Math.round(b.height), vw: window.innerWidth } })()`)
+  await shot(`${label}-dash-header.png`)
   result.push(r)
 }
 console.log(JSON.stringify(result, null, 1))
