@@ -64,6 +64,7 @@ for (const [lab, w, h] of [['d', 1513, 784], ['m', 390, 844]]) {
   need((await c.ev(`document.getElementById('s3').innerText`)).includes('過去の調査'), 'デモ中に「過去の調査」の説明が無い');
   need((await c.ev(`document.getElementById('panel-body').scrollTop`)) === 0, 'デモ切替後にパネルが先頭に戻らない');
   await c.ev(`document.getElementById('scan').click()`); await shot(c, lab + '-3-scanned');
+  need((await c.ev(`!!document.querySelector('[data-testid=scan-done]') && !document.querySelector('[data-testid=scan-hint]')`)) === true, 'R5: 走査直後に成功の文が出ない／失敗のような文が残る');
   await c.ev(`document.getElementById('apply').click()`); await sleep(500); await shot(c, lab + '-4-round2');
   const r2 = await c.ev(`document.getElementById('round').textContent+' | '+App.STATE.msg`); log('round2', r2); need(r2.startsWith('第2回'), '第2回に進まない');
   need(r2.includes('架空'), '第2回の注記に「架空」が無い');
@@ -78,6 +79,13 @@ for (const [lab, w, h] of [['d', 1513, 784], ['m', 390, 844]]) {
     await c.ev(`document.getElementById('apply').click()`); await sleep(400);
     const af = await c.ev(`document.getElementById('round').textContent+' | '+App.STATE.msg`); log('after', af); need(af.startsWith('第2回'), f + ': 第2回に進まない');
   }
+  // R3: 第2回の帯と較正の文が、第1段階の固定バーに隠れない（見本 CSV で較正した直後）
+  await c.ev('App.setStep(1)'); await sleep(300);
+  const band = JSON.parse(await c.ev(`(()=>{const e=document.querySelector('[data-testid=round2-fake]'); const sb=document.querySelector('#s1 .stickybar'); if(!e) return JSON.stringify({none:true}); const r=e.getBoundingClientRect(); return JSON.stringify({bottom:r.bottom, lim: sb?sb.getBoundingClientRect().top:innerHeight})})()`));
+  await shot(c, lab + '-7-r3'); log('r3 band', band); need(!band.none && band.bottom <= band.lim, 'R3: 第2回の帯が固定バーに隠れる');
+  // R2: 結果を消したら、重み・回も初めに戻る
+  await c.ev('App.setStep(3)'); await c.ev(`document.getElementById('clear-res').click()`); await sleep(300);
+  need((await c.ev('App.STATE.round')) === 1 && (await c.ev('App.STATE.w')) === 0.1 && (await c.ev('App.STATE.results.size')) === 0, 'R2: 結果を消しても重み・回が残る');
   await c.ev('App.setStep(4)'); need((await c.ev(`document.getElementById('panel-body').scrollTop`)) === 0, '検証タブがパネル先頭から始まらない'); await shot(c, lab + '-6-verify');
   need((await c.ev('document.documentElement.scrollWidth')) <= w, '横スクロール');
   log('errs', c.errs); need(c.errs.length === 0, 'コンソールエラー');
