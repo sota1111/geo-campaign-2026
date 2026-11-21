@@ -56,7 +56,7 @@ test('スピアマン', () => {
   assert.equal(K.spearman([1, 2], [1, 2]), null);
 });
 test('画面の表示規約: 実データ・仮の明示、外部送信なし、効果の数値なし', () => {
-  const html = read('index.html'), app = read('kanto.js');
+  const html = read('kanto.html'), app = read('kanto.js');
   assert.ok(html.includes('実データ') && html.includes('仮の基準'));
   assert.ok(!/<script[^>]+src="https?:/.test(html));
   assert.ok(!/XMLHttpRequest|sendBeacon|method:\s*'POST'/.test(app));
@@ -115,7 +115,7 @@ test('東京都12地点9年分の原表の読み取り: 12地点×9年、青梅�
   assert.ok(Math.abs(o.mean9 - 11149.2) < 0.1);
 });
 test('画面の表示規約（順位）: 「効果」「花粉量」と書かない。仮・出典・限界を出す', () => {
-  const t = read('index.html') + read('kanto.js');
+  const t = read('kanto.html') + read('kanto.js');
   assert.ok(!/効果|花粉量/.test(t));
   assert.ok(t.includes('人に届きやすい発生源の順位') && t.includes('作成者の式') && t.includes('選び直していません'));
   assert.ok(t.includes('林齢では順位を付けていない'));

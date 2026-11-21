@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スギ花粉の発生源対策マップ｜関東1都6県（公的資料・論文に基づく区分）</title>
+<meta name="description" content="林野庁の全国森林資源メッシュ（スギ人工林・林齢）と政府の推進方針（50km圏・伐採重点区域）をもとに、関東1都6県のスギ人工林を、場所ごとに「どの対策を優先するか」で塗り分けた地図です。">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="kanto.css">
+</head>
+<body>
+<div id="app">
+  <main id="mapwrap" aria-label="関東1都6県のスギ人工林を対策の区分で塗り分けた地図">
+    <div id="map"></div>
+    <div id="badge" role="note">公開データを加工した実データ（架空データなし）／一部に<b>仮の基準</b>あり</div>
+    <div id="mini" role="group" aria-label="地図の凡例（要約）"></div>
+    <div id="hint" role="note">地図をクリックすると、その場所の対策と理由が出ます</div>
+  </main>
+  <aside id="panel">
+    <header id="head">
+      <h1>スギ花粉の発生源対策マップ <span class="area">関東1都6県</span></h1>
+      <p class="sub">地図の色が「そこで優先する対策」です。公的資料・論文で決まる所と、仮の基準の所を分けて示します。</p>
+    </header>
+    <div id="panel-body">
+      <section id="legend" aria-labelledby="h-legend"><h2 id="h-legend">凡例：どこで何をするか</h2><div id="legend-rows"></div>
+        <p class="note">色は対策。区分1は<b>濃さと斜線の太さが「区分1の中の順位」</b>（濃いほど先に着手）、区分2〜4は<b>濃さがスギ人工林の多さ</b>（5ha で薄く、20ha 以上で濃い）。色に加えて<b>模様</b>でも区別できます。太い黒の輪郭は林野庁の「伐採重点区域」がある市町村、黒の破線は50km圏の外縁、●は50km圏の起点の都市です。</p>
+      </section>
+      <section id="rank" aria-labelledby="h-rank"><h2 id="h-rank">区分1の中の順位：どこから手を付けるか</h2>
+        <fieldset class="row"><legend>人口を数える半径 R <span class="chip prov">仮</span>（初期値20 km）</legend>
+          <label><input type="radio" name="rk" value="10"> 10 km</label><label><input type="radio" name="rk" value="20" checked> 20 km</label><label><input type="radio" name="rk" value="30"> 30 km</label></fieldset>
+        <div id="rank-body"></div>
+        <div class="row"><label for="r-pref">市町村の表の都県</label><select id="r-pref"></select></div>
+        <details class="fold"><summary>式と根拠の強さ</summary>
+          <p><b>点数 S ＝ 26年生以上のスギ人工林の面積（ha）× 半径 R km 以内の人口</b>。区分1の中を面積で数えた百分位で4つの帯にします。「人に届きやすい発生源の順位（作成者の式）」で、花粉の量や対策の成果ではありません。</p>
+          <ul class="note"><li><b>根拠あり</b>: 26年生以上を発生源とする（森林総研）／発生源の量×住む人口の形（森林総研が首都圏で人口を考慮）。</li><li><b>方向のみ</b>: 近いほど影響が大きい（東京都12地点の回帰係数 青梅2.91〜大田0.39）。</li><li><b>仮置き</b>: 距離の減り方（半径内=1、外=0）と R。</li><li><b>順位に入れない</b>: 林齢（26年生以上で雄花量は頭打ち。林齢では順位が分かれない）、風、傾斜（別の軸）、まとまり、県別の雄花調査値、ヒノキ。</li></ul>
+        </details>
+        <details class="fold" id="rank-check"><summary>順位の検証と感度（東京都12地点・9年分、R 10/20/30 km）</summary><div id="rank-check-body"></div></details>
+      </section>
+      <section id="sat" aria-labelledby="h-sat"><h2 id="h-sat">衛星で確かめる：森林簿とのずれ・伐採の進み具合</h2>
+        <div class="row toggles"><label><input type="checkbox" id="t-chk" checked> 要確認（赤紫の輪）</label><label><input type="checkbox" id="t-cut" checked> 伐採・植え替えの候補（紺の点）</label></div>
+        <div class="row"><label for="p-wmin">要確認とする冬の NDVI <span class="chip prov">仮</span></label><span class="ctl"><input id="p-wmin" type="range" min="20" max="70" step="5"><output id="o-wmin"></output>未満</span></div>
+        <div class="row"><label for="p-cut">伐採候補とする面積 <span class="chip prov">仮</span></label><span class="ctl"><input id="p-cut" type="range" min="1" max="10" step="1"><output id="o-cut"></output>ha以上／メッシュ</span></div>
+        <div id="sat-body"></div>
+      </section>
+      <section id="sel" aria-labelledby="h-sel" hidden><h2 id="h-sel">選んだ場所</h2><div id="sel-body"></div></section>
+      <section id="params" aria-labelledby="h-params"><h2 id="h-params">仮の基準を変えて見る</h2>
+        <p class="note">公的資料に数値がない基準は<span class="chip prov">仮</span>と表示します（参謀長判断）。動かすと地図と面積が変わります。</p>
+        <div class="row"><label for="p-slope">条件不利地とみなす平均傾斜 <span class="chip prov">仮</span></label><span class="ctl"><input id="p-slope" type="range" min="15" max="40" step="1"><output id="o-slope"></output>度以上</span></div>
+        <div class="row"><label for="p-ha">まとまった林とみなす面積 <span class="chip prov">仮</span></label><span class="ctl"><input id="p-ha" type="range" min="1" max="15" step="1"><output id="o-ha"></output>ha以上／500m四方</span></div>
+        <fieldset class="row"><legend>雄花をよくつける林齢（出典で割れている）</legend>
+          <label><input type="radio" name="age" value="26" checked> 26年生以上（森林総研 2000・2009。主流）</label>
+          <label><input type="radio" name="age" value="21"> 21年生以上（政府資料の定義とされる。国民森林会議の指摘）</label>
+        </fieldset>
+        <div class="row toggles"><label><input type="checkbox" id="t-ring" checked> 50km圏の外縁</label><label><input type="checkbox" id="t-zone" checked> 重点区域の市町村の輪郭</label><label><input type="checkbox" id="t-muni" checked> 市町村境界</label><label><input type="checkbox" id="t-org" checked> 起点の都市</label></div>
+        <button type="button" class="btn" id="p-reset">基準を初期値に戻す</button>
+      </section>
+      <section id="totals" aria-labelledby="h-tot"><h2 id="h-tot">区分ごとの面積（関東全域）</h2><div id="tot-body"></div></section>
+      <section id="places" aria-labelledby="h-places"><h2 id="h-places">市町村・都県で探す</h2>
+        <div class="row"><label for="f-pref">都県</label><select id="f-pref"></select><label for="f-q">市町村名</label><input id="f-q" type="search" placeholder="例：青梅" autocomplete="off"></div>
+        <div id="places-body"></div>
+      </section>
+      <section id="verify" aria-labelledby="h-verify"><h2 id="h-verify">観測との照合（参考）</h2><div id="verify-body"></div></section>
+      <p class="foot"><button id="btn-about" type="button">出典・計算方法・限界</button> ／ <a href="ome.html">【参考・仮置き】青梅周辺の風下人口×面積（旧版）</a></p>
+    </div>
+  </aside>
+</div>
+
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <h2 id="modal-title">出典・計算方法・限界</h2>
+    <div id="about-body"></div>
+    <button id="btn-close" type="button">閉じる</button>
+  </div>
+</div>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="data/kanto.js"></script>
+<script src="data/pop.js"></script>
+<script src="data/verify9.js"></script>
+<script src="data/sat.js"></script>
+<script src="kanto-lib.js"></script>
+<script src="kanto.js"></script>
+</body>
+</html>
