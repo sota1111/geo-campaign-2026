@@ -65,6 +65,22 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 
 `udc-aed`（夜も使えるAED診断マップ）は 11/13 の決定で UDC には登録せず、イチBiz アイデア部門 IN1 のデモとして `biz-idea` の隣に置いています。UDC タブの進捗には「作品③ UDC には登録しない」と決定を残しています。
 
+## 審査待ちの案（PR にだけソースがある案）とトップ画面の進捗カード（2026-11-21）
+
+### 審査待ちの案 6件
+`sat-yabu`（藪払い）・`sat-sugi`（スギ植え替え）・`odpt-kankou`（観光系統）・`odpt-kansui`（冠水）＝PR #36、`odpt-kodure`（子連れお出かけ診断。行き先データはブランチから外してある）＝PR #19、`biz-solar-guard`（太陽光 盗難対策マップ）＝PR #18。いずれも新しい案（`plan: 'new'`）として registry・独立ページ（`apps/<id>/`）・`vite.config.ts`・`roundtrip.mjs` に登録済み。憲兵監査前のため、**ソースはこの PR に含めない**。
+
+- `scripts/copy-data.mjs` の `EMBEDS` に `pending: 'PR #xx'` を付けてある。元のソース（`contests/…/app…`）が無いビルドでは失敗せず、その案を含めずに `public/embedded/availability.json`（id→含まれているか）を書く。ページ・カード・サイドバーは、これを読んで「審査待ち（PR #xx）: 元のアプリは PR #xx で審査待ちのため、このビルドには含まれていません」と出す（`src/lib/availability.ts`、`PendingNote`）。registry の `pendingPr` と EMBEDS の `pending` は同じ値（テストで検査）。
+- PR がマージされて main にソースが入れば、次のビルドで自動的に含まれ、案内は消える（コード変更は不要）。
+- ソースのある checkout で見る: `CONTESTS_ROOT=<ソースを重ねた contests/> npm run build`（複数ブランチにまたがるときは、contests/ を一時ディレクトリに複写して該当フォルダを重ねる）。
+
+### トップ画面の進捗カード
+ポータルのトップは、締切の近い順にコンペごとの進捗カード（`src/pages/ContestCards.tsx`）を上に固定し、下の全幅の詳細欄に選んだコンペの詳細を出す（動きは従来どおり。重ねない・暗くしない・画面は飛ばない・詳細欄だけ内部スクロール）。カードは、コンペ名と状況の札、次の締切と残り日数、提出可否の1行、案ごとの完了（✓）・残り（□）・判断待ち（？）の数と提出予定／比較中、総司令官の判断待ちの数と先頭の1件、次にやること。デスクトップは4列、幅 640px 以上は2列、スマホは1列の固定高（6rem）のカード。従来の「提出までの段階」の印の列は、カードでは案ごとの数に置き換えた（詳細欄の「提出までの状況」は従来どおり）。
+
+進捗の更新は、正本（`reports/ops/status-<日付>.md`）→ `src/data/progress.ts`（`PROGRESS_AS_OF`・`PLANS`・`DECISIONS`・`OVERALL`）→ `src/data/status.ts`（`CONTEST_STATUS`・`STATUS_REASON`・`STATUS_LABEL`・`STAGES`）の順。カードの数は `PLANS` から自動で数える（`cardPlans`・`contestDecisionTexts`）。正本が1つの見出しにまとめた複数のデモは1件の `PLANS`（`appIds`）にしてある。`DECISIONS` の `covers` は、案ごとの判断待ちがその判断の文に含まれていて二重に数えない印。
+
+今の案に新しい案が2件以上あるとき、独立ページのヘッダーのリンクは「新案N件と見比べる」1つ（コンペ概要ページのアプリ一覧へ）にまとめた。
+
 ## 新しい案（比較用・未選定）の足し方
 
 総司令官が「今の案」と「新しい案」を見比べて選ぶため、新しい案は今の案と同じコンペ・部門の隣に並べます（ポータルのコンペタブ内で、今の案の右に破線の枠の「新しい案（比較用・未選定）」カード。サイドバーにも同じ表示）。今の案のアプリは変更しません。

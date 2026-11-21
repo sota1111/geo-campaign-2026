@@ -1,6 +1,8 @@
 import { ExternalLink } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SourceDialog } from '@/components/shared/SourceDialog'
+import { PendingNote } from '@/components/shared/PendingNote'
+import { usePresence } from '@/lib/availability'
 import { NEW_PLAN_LABEL, getApp } from '@/apps/registry'
 import { appUrl, fromContest, siteRoot } from '@/lib/data'
 
@@ -11,6 +13,8 @@ import { appUrl, fromContest, siteRoot } from '@/lib/data'
  */
 export function EmbeddedApp({ appId }: { appId: string }) {
   const app = getApp(appId)
+  const presence = usePresence(app)
+  const pending = presence === 'missing'
   if (!app?.embed) return null
   const pair = app.pairWith ? getApp(app.pairWith) : undefined
   const also = (app.alsoCompare ?? []).map((id) => getApp(id)).filter((a): a is NonNullable<typeof a> => !!a)
@@ -45,7 +49,7 @@ export function EmbeddedApp({ appId }: { appId: string }) {
             今の案「{pair.name}」と見比べる
           </a>
         )}
-        <a
+        {!pending && <a
           href={src}
           target="_blank"
           rel="noreferrer"
@@ -55,7 +59,7 @@ export function EmbeddedApp({ appId }: { appId: string }) {
           この案だけ別タブで開く
           <ExternalLink className="size-3" aria-hidden />
           <span className="sr-only">（新しいタブで開く）</span>
-        </a>
+        </a>}
         {also.map((a) => (
           <a key={a.id} href={appUrl(a.id)} className="font-medium text-primary underline underline-offset-2" data-testid={`also-link-${a.id}`}>
             作品①「{a.name}」と見比べる
@@ -67,7 +71,7 @@ export function EmbeddedApp({ appId }: { appId: string }) {
           </p>
         )}
         {app.pairNote && <p className="basis-full font-medium">{app.pairNote}</p>}
-        {app.stateNote && (
+        {app.stateNote && !pending && (
           <p className="basis-full font-medium" data-testid="band-state-note">
             いまの状態: {app.stateNote}
           </p>
@@ -78,12 +82,24 @@ export function EmbeddedApp({ appId }: { appId: string }) {
           </p>
         )}
       </div>
+      {presence === 'unknown' ? (
+        <div className="min-h-[420px] flex-1" aria-busy="true" />
+      ) : pending ? (
+        <div className="min-h-[420px] flex-1 rounded-md border bg-white p-4">
+          <PendingNote app={app} className="text-sm" />
+          <p className="mt-3 text-sm">
+            このアプリの目的: {app.purpose}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">データ: {app.dataNote}</p>
+        </div>
+      ) : (
       <iframe
         title={`${app.name}（${NEW_PLAN_LABEL}）`}
         src={src}
         className="min-h-[420px] w-full flex-1 rounded-md border bg-white"
         data-testid="embedded-frame"
       />
+      )}
     </div>
   )
 }

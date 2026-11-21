@@ -6,6 +6,7 @@ import { getSample } from '@/apps/_samples'
 import { normalUrl, sampleUrl } from '@/components/layout/SampleBar'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
+import { PendingNote } from '@/components/shared/PendingNote'
 import { APPS, CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, appsByContest, getApp, isNewPlan, type AppMeta, type CardOnly, type ContestId } from '@/apps/registry'
 import { appUrl, siteRoot } from '@/lib/data'
 import { ContestProgress } from '@/pages/Progress'
@@ -125,6 +126,7 @@ function AppCard({ a, contestId, note, onOpenEval, paired }: { a: AppMeta; conte
             いまの状態: {a.stateNote}
           </p>
         )}
+        <PendingNote app={a} className="mt-1.5" />
         {isNew && (
           <p className="mt-1.5 text-muted-foreground">AI模擬評価はまだありません。元の静的版をそのまま表示します（実行サンプルなし）。</p>
         )}

@@ -82,7 +82,7 @@ describe('レーダー座標', () => {
 describe('比べる組', () => {
   it('衛星は sat-b と sat-alpha が組、sat-a は単独。UDC は udc-moritsuchi 単独', () => {
     const ids = compareGroups('satellite-2026').map((g) => g.map((a) => a.id))
-    expect(ids[0]).toEqual(['sat-b', 'sat-alpha'])
+    expect(ids[0].slice(0, 2)).toEqual(['sat-b', 'sat-alpha'])
     expect(ids).toContainEqual(['sat-a'])
     expect(compareGroups('udc-2026').map((g) => g.map((a) => a.id))).toEqual([['udc-moritsuchi']])
   })

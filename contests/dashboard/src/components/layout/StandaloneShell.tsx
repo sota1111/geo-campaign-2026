@@ -72,7 +72,18 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 実行サンプルを見る
               </a>
             )}
-            {newPlansOf(appId).map((n) => (
+            {/* 新しい案が2件以上ある今の案は、ヘッダーが埋まらないよう、コンペ概要ページのアプリ一覧（組ごとに並ぶ）へ1つのリンクで案内する */}
+            {newPlansOf(appId).length > 1 && contest && (
+              <a
+                href={`${contestUrl(contest.id)}#contest-apps`}
+                data-testid="compare-new-link"
+                title={newPlansOf(appId).map((n) => `「${n.name}」`).join('・')}
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
+              >
+                新案{newPlansOf(appId).length}件と見比べる
+              </a>
+            )}
+            {newPlansOf(appId).length === 1 && newPlansOf(appId).map((n) => (
               <a
                 key={n.id}
                 href={appUrl(n.id)}

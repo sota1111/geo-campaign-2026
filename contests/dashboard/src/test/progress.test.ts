@@ -8,6 +8,7 @@ describe('進捗データ（参謀長が更新する表）', () => {
     expect(new Set(PLANS.map((p) => p.id)).size).toBe(PLANS.length)
     for (const p of PLANS) {
       if (p.appId) expect(getApp(p.appId), p.id).toBeTruthy()
+      for (const id of p.appIds ?? []) expect(getApp(id), `${p.id}:${id}`).toBeTruthy()
       expect(CONTESTS.some((c) => c.id === p.contest), p.id).toBe(true)
       expect(p.done.length).toBeGreaterThan(0)
       // 出さないと決めた案は作業を持たない（残作業は IN1 の側）

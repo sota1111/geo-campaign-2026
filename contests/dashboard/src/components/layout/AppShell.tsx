@@ -9,6 +9,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
+import { useIsPending } from '@/lib/availability'
 import { CONTESTS, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
 import { appUrl, contestUrl, portalUrl } from '@/lib/data'
 import { contestsByDeadline } from '@/apps/contests-info'
@@ -21,6 +22,13 @@ export function matchesAppQuery(a: AppMeta, q: string): boolean {
   if (!words.length) return true
   const hay = [a.name, a.audience, a.purpose, a.division, a.dataNote, a.demoTitle ?? ''].join(' ')
   return words.every((w) => hay.includes(w))
+}
+
+/** 審査待ちでこのビルドに含まれていない案の目印（サイドバー） */
+function PendingTag({ a }: { a: AppMeta }) {
+  const pending = useIsPending(a)
+  if (!pending) return null
+  return <span className="rounded border border-amber-700 bg-amber-50 px-1.5 text-xs font-bold text-amber-950">審査待ち（{a.pendingPr}）・未収録</span>
 }
 
 function PortalSidebar({ activeContest }: { activeContest?: string }) {
@@ -93,6 +101,7 @@ function PortalSidebar({ activeContest }: { activeContest?: string }) {
                           {isNewPlan(a) && (
                             <span className="rounded bg-slate-800 px-1.5 py-0 text-xs font-bold text-white">新しい案（比較用・未選定）</span>
                           )}
+                          <PendingTag a={a} />
                           <span className="flex flex-wrap items-center gap-1">
                             <DataBadge kind={a.dataKind} className="px-1.5 py-0 text-xs" />
                             <span className="text-xs text-muted-foreground">{a.audience}</span>

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { toCsv } from '@/components/shared/downloadText'
@@ -56,9 +57,9 @@ describe('mapStyle / registry', () => {
     }
     expect(GSI_BASEMAPS.photo.url).toContain('seamlessphoto')
   })
-  it('今の案7件と新しい案5件が登録され id が一意', () => {
+  it('今の案7件と新しい案11件が登録され id が一意', () => {
     expect(CURRENT_APPS).toHaveLength(7)
-    expect(APPS.filter(isNewPlan)).toHaveLength(5)
+    expect(APPS.filter(isNewPlan)).toHaveLength(11)
     expect(new Set(APPS.map((a) => a.id)).size).toBe(APPS.length)
     expect(getApp('sat-a')?.dataKind).toBe('fictional')
     expect(appsByContest('ichibiz-2026').filter((a) => !isNewPlan(a))).toHaveLength(3)
@@ -76,11 +77,19 @@ describe('mapStyle / registry', () => {
       expect(c.docs.length).toBeGreaterThan(0)
     }
   })
+  it('審査待ちの PR にだけソースがある6案は pendingPr を持ち、copy-data の EMBEDS.pending と同じ PR 番号', () => {
+    const pending = APPS.filter((a) => a.pendingPr)
+    expect(pending.map((a) => a.id).sort()).toEqual(['biz-solar-guard', 'odpt-kankou', 'odpt-kansui', 'odpt-kodure', 'sat-sugi', 'sat-yabu'])
+    expect(pending.every((a) => isNewPlan(a))).toBe(true)
+    const copy = readFileSync('scripts/copy-data.mjs', 'utf8')
+    for (const a of pending) expect(copy, a.id).toContain(`'${a.id}': { pending: '${a.pendingPr}'`)
+  })
   it('今の案から新しい案を引ける（見比べるリンク用）。ODPT 定時性カルテの状態が取得済みデータを説明する', () => {
-    expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha'])
+    expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha', 'sat-yabu', 'sat-sugi'])
     expect(newPlansOf('sat-a')).toEqual([])
     expect(newPlansOf('udc-moritsuchi')).toEqual([])
-    expect(newPlansOf('biz-idea').map((a) => a.id)).toEqual(['udc-aed'])
+    expect(newPlansOf('biz-idea').map((a) => a.id)).toEqual(['udc-aed', 'biz-solar-guard'])
+    expect(newPlansOf('odpt').map((a) => a.id)).toEqual(['odpt-teiji', 'odpt-kankou', 'odpt-kansui', 'odpt-kodure'])
     expect(getApp('odpt-teiji')?.stateNote).toMatch(/路線別集計を表示できます/)
     expect(getApp('odpt-teiji')?.stateNote).not.toMatch(/\d+\s*(便|件|%|％)/)
   })

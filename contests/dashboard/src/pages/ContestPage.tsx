@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { Remaining } from '@/components/shared/Remaining'
+import { PendingNote } from '@/components/shared/PendingNote'
 import { CONTESTS, NEW_PLAN_LABEL, getApp, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
 import { CONTEST_INFO } from '@/apps/contests-info'
 import { appUrl, portalOpenUrl, portalUrl } from '@/lib/data'
@@ -54,6 +55,7 @@ function AppLinkCard({ a }: { a: AppMeta }) {
         <p>{a.purpose}</p>
         {isNew && a.pairNote && <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium">{a.pairNote}</p>}
         {isNew && a.stateNote && <p className="mt-1.5 border-l-2 border-slate-500 pl-2 font-medium">いまの状態: {a.stateNote}</p>}
+        <PendingNote app={a} className="mt-1.5" />
       </CardContent>
       <CardFooter className="px-4">
         <Button asChild size="sm">
