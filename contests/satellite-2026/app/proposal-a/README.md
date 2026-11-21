@@ -41,7 +41,7 @@ node tests/ui_check.mjs http://127.0.0.1:8822/ screenshots   # 画面の通し�
 | 道路 | © OpenStreetMap contributors（<https://www.openstreetmap.org/copyright>）。OpenStreetMap（Overpass、`highway` が trunk〜living_street。取得日 2026-11-21）。交差点・長さ150m・曲がり（弦から6m）で区間に分割。**幹線 = trunk/primary/secondary/tertiary、生活道路 = unclassified/residential/living_street**。`data/toyonaka.json` の道路形状は OSM の派生データベースであり、**Open Database License（ODbL）で提供する** | 実データ（加工）。ODbL |
 | 下水道台帳 | 豊中市「下水道」管渠（BODIK `272035_gesuido`、シェープ、EPSG:6674）。竣工日（`SYUNKOU_BI`）と管径（`HYOUJI_KEI`）。市全体 46,037 本、竣工日不明（9999）3,074 本 | 実データ（加工）。[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja)（データセット: <https://data.bodik.jp/dataset/272035_gesuido>） |
 | 突き合わせ | 道路区間上の約10mごとの点のうち半数以上が 15m 以内に管渠のある区間に紐づけ。区間の竣工年は紐づいた管渠の中央値（不明な管渠は除く）、管径は最大 | 実データからの計算 |
-| 地中レーダ結果 | 乱数シミュレーション（`sim_cavity`、seed 20261121。台帳の古さ・衛星階級・区間ごとの局所差から確率を作る）。過去の調査済み区間（幹線全部＋生活道路の約6%）の結果も同様 | **架空** |
+| 地中レーダ結果 | 乱数シミュレーション（`sim_cavity`、seed 20261121。**台帳の古さ・管径（250mm 以下で少し高く）・区間ごとの局所差だけから確率を作り、衛星の階級は使わない**。衛星と相関しない）。過去の調査済み区間（幹線全部＋生活道路の約6%）の結果も同様 | **架空** |
 
 ### 取得した件数（`data/toyonaka.json` の `stats`）
 - 範囲: 経度 135.470〜135.510、緯度 34.795〜34.825（豊中市北東部、千里地区周辺。約 3.6 km × 3.3 km）。**この範囲は、豊中市周辺（経度135.43〜135.51、緯度34.74〜34.83）を調べたうえで、階級が複数に分かれて見えた所**として選んだ。調べた範囲のタイル画素（約576万）の約 91% は 0〜+3.75 mm/年の1階級（-3.75〜0 が 5.9%、+3.75〜7.5 が 2.6%）。他の地区の下水道台帳・衛星の組合せは試していない。

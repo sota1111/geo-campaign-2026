@@ -163,13 +163,14 @@ function applyCalib() {
   setStep(1);
 }
 
-function setStep(n) { STATE.step = n; render(); syncDetail(); }
+function setStep(n) { STATE.step = n; STATE.focus = null; STATE.focusCell = null; render(); syncDetail(); }
 
 function renderLegend() {
   const pal = STATE.data.satellite.palette, used = [...new Set(STATE.data.cells.map((c) => c.k))].sort((x, y) => x - y);
   const chips = used.map((k) => { const c = STATE.data.cells.find((x) => x.k === k); return `<div class="lg"><span class="sw sq" style="background:${pal[k]};${STATE.data.cells.find((x) => x.k === k).range[1] <= 0 ? 'background-image:repeating-linear-gradient(45deg,#4d5c64 0 1px,transparent 1px 5px)' : ''}"></span>区画の${STATE.data.cells.find((x) => x.k === k).range[1] <= 0 ? '斜線' : '色'} ${fmtRange(c.range)} mm/年（階級の幅 ${c.dispW} mm/年）</div>`; }).join('');
   $('#legend').innerHTML = `<div><b>凡例</b></div>
     ${chips}
+    <div class="note">この地区の2階級の差は沈下の兆候ではありません（階級幅 3.75 mm/年以内）。</div>
     <div class="lg"><span class="sw" style="border-color:#59656d;border-top-style:dashed"></span>調査済み（幹線と一部の生活道路。架空）</div>
     <div class="lg"><span class="sw" style="border-color:#8a969d;border-top-width:2px;border-top-style:dotted"></span>台帳に管渠が紐づかない道路（点数の対象外）</div>
     <div>道路の点数（高いほど先に確かめたい）</div><div class="grad"></div><div class="lg" style="justify-content:space-between"><span>低</span><span>高</span></div>
@@ -196,7 +197,9 @@ function cellDetail(id) {
   return `<h3>衛星の区画 ${c.id}</h3><p>変位速度（準上下方向）の階級 <b>${fmtRange(c.range)} mm/年</b>（約90m、階級の幅 ${c.dispW} mm/年。小数の精度はありません）。国土地理院は「数百m四方より狭い変動の把握は困難」としており、生活道路単位の値ではありません。</p>`;
 }
 function syncDetail() {
-  $('#detail').innerHTML = STATE.focusCell ? cellDetail(STATE.focusCell) : STATE.focus ? segDetail(STATE.focus) : '';
+  const body = STATE.focusCell ? cellDetail(STATE.focusCell) : STATE.focus ? segDetail(STATE.focus) : '';
+  $('#detail').innerHTML = body ? body + '<button class="btn" id="detail-close" type="button">詳細を閉じる</button>' : '';
+  const dc = $('#detail-close'); if (dc) dc.onclick = () => { STATE.focus = null; STATE.focusCell = null; syncDetail(); };
   if (map && map.getLayer('seg-focus')) map.setFilter('seg-focus', ['==', ['get', 'id'], STATE.focusCell ? '' : STATE.focus || '']);
 }
 function focusSeg(id) {
@@ -300,7 +303,7 @@ async function init() {
     map.addLayer({ id: 'seg-none', type: 'line', source: 'segs', filter: ['==', ['get', 'none'], 1], paint: { 'line-color': '#8a969d', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.6, 14, 1, 17, 2], 'line-dasharray': [1.5, 2] } });
     map.addLayer({ id: 'seg-focus', type: 'line', source: 'segs', filter: ['==', ['get', 'id'], ''], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#000', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 5, 14, 9, 17, 18], 'line-opacity': 0.55 } });
     map.addLayer({ id: 'seg-case', type: 'line', source: 'segs', filter: ['all', ['==', ['get', 'done'], 0], ['==', ['get', 'none'], 0]], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#fff', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 2.2, 14, 4.5, 17, 8.5], 'line-opacity': 0.85 } });
-    map.addLayer({ id: 'seg-sel', type: 'line', source: 'segs', filter: ['==', ['get', 'sel'], 1], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#1a237e', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 14, 6, 17, 14], 'line-opacity': 0.85 } });
+    map.addLayer({ id: 'seg-sel', type: 'line', source: 'segs', filter: ['==', ['get', 'sel'], 1], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#1a237e', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 5, 14, 9, 17, 18], 'line-opacity': 0.85 } });
     map.addLayer({ id: 'seg-done', type: 'line', source: 'segs', filter: ['all', ['==', ['get', 'done'], 1], ['==', ['get', 'none'], 0]], paint: { 'line-color': '#59656d', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.6, 14, 1.2, 17, 3], 'line-dasharray': [2, 1.5] } });
     map.addLayer({ id: 'seg-todo', type: 'line', source: 'segs', filter: ['all', ['==', ['get', 'done'], 0], ['==', ['get', 'none'], 0]], layout: { 'line-cap': 'round' }, paint: { 'line-color': SCORE_COLOR, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1, 14, 2.5, 17, 6] } });
     map.addSource('res', { type: 'geojson', data: resFC() });

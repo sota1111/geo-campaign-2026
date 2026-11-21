@@ -217,7 +217,9 @@ def main():
         disp = ic.class_mid(k)
         age = 0.5 if sg['year'] is None else max(0.0, min(1.0, (2026 - sg['year']) / 60))
         local = rng.random()
-        p = 0.45 * (0.02 + 0.28 * age * age + 0.30 * max(0.0, min(1.0, -disp / 8)) * (0.4 + 0.9 * local) + 0.06 * local)
+        # 衛星の階級は使わない（この地区の衛星に意味のある差はなく、架空の結果を衛星と相関させると誤解を招くため）。台帳の古さ・管径・区間ごとの局所差だけで作る。
+        dia_term = 0.04 if (sg["dia"] or 9999) <= 250 else 0.0
+        p = 0.45 * (0.02 + 0.28 * age * age + dia_term + 0.06 * local)
         cav = rng.random() < p
         if sg['arterial']:
             cls_, surveyed = 'arterial', True
