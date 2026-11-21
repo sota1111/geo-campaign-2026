@@ -1,10 +1,10 @@
-// 進捗データ（参謀長が更新する）。元データ: reports/ops/status-20261113.md（正本）。
+// 進捗データ（参謀長が更新する）。元データ: reports/ops/status-20261121.md（正本）。
 // 更新するときは、まず正本の md を直し、この表を同じ文言に合わせる。構造は型で検査される（npm run typecheck）。
 // 文言は正本に忠実に。足し引きしない。担当は「総司令官」「部隊」「待ち」。判断待ちは総司令官。担当が不明な項目は owner を省く（札を付けない）。
 import type { ContestId } from '@/apps/registry'
 
-export const PROGRESS_AS_OF = '2026-11-13'
-export const PROGRESS_SOURCE = 'reports/ops/status-20261113.md'
+export const PROGRESS_AS_OF = '2026-11-21'
+export const PROGRESS_SOURCE = 'reports/ops/status-20261121.md'
 
 /** 担当。待ち＝事務局など外部の返事待ち */
 export type Owner = '総司令官' | '部隊' | '待ち'
@@ -35,6 +35,8 @@ export interface PlanProgress {
   deadlineLabel: string
   /** registry.ts の APPS の id（カードへのリンク用）。デモのない案は省く */
   appId?: string
+  /** 1つの記録に複数のデモがあるとき（正本が「藪払い・スギ植え替え」のようにまとめている）の、registry の id すべて */
+  appIds?: string[]
   /** 正本の「決定」の行 */
   decided?: string
   done: string[]
@@ -55,12 +57,14 @@ export interface Decision {
   deadlineLabel?: string
   /** この判断の結果しだいで要る作業を持つ案の id（比較中の案）。作業はこの判断の行の下に畳んで出す */
   plans?: string[]
+  /** 案の `decisions` が、この判断の文にすでに含まれている案の id（コンペのカードの判断待ちの数を二重に数えないため） */
+  covers?: string[]
 }
 
 /** 全体（正本の「全体」） */
 export const OVERALL: string[] = [
   '提出に必要な本人欄（氏名・所属・体制・本人の経験など）は、どの応募もまだ空。総司令官が書くまで、どの案も「提出可能」ではない。',
-  'マージ保留（総司令官補佐が SOP で止めた PR）: PR #18（太陽光発電所の盗難対策マップ。資源エネルギー庁への電話確認待ち・12/02）、PR #19（子連れお出かけ診断。国土数値情報 P13・P27 の非商用条件を事務局に問い合わせ中・12/11。データはブランチから外した）、PR #27（RN1 3地域版。#21 から solar-guard を除いて作り直し。本人欄が未記入）。判断は reports/command/decision-20261114-*.md',
+  'マージ保留（総司令官補佐が SOP で止めた PR。11/21 の判断は reports/command/merge-20261121.md）: PR #35（新案α。F-3 の未記入欄）、PR #36（新しい案4件。憲兵監査・デザイン審査なし）、PR #18（太陽光発電所の盗難対策マップ。資源エネルギー庁への電話確認待ち・12/02）、PR #19（子連れお出かけ診断。国土数値情報 P13・P27 の非商用条件を事務局に問い合わせ中・12/11。データはブランチから外した）、PR #27（RN1 3地域版。本人欄が未記入、base と競合）。判断は reports/command/decision-20261114-*.md',
 ]
 
 const UDC = { deadlineAt: '2026-12-27T23:59:00+09:00', deadlineLabel: '本応募 12/27 23:59' }
@@ -72,7 +76,7 @@ const ODPT = { deadlineAt: '2027-01-11T23:59:00+09:00', deadlineLabel: '2027/1/1
 export const PLANS: PlanProgress[] = [
   {
     id: 'udc-1', short: '作品①', intent: '提出予定', contest: 'udc-2026', name: '作品① 生活アクセス診断マップ', kind: '今の案', ...UDC, appId: 'odpt',
-    done: ['概要登録（11/9、総司令官。reports/ops/udc-2026-registration-20261109.md）', 'アプリ実装（ODPT と共通）', '作品説明の下書き'],
+    done: ['概要登録（完了。登録完了を総司令官が 11/21 に確認。記録 reports/ops/udc-2026-registration-20261109.md）', '本応募時にテーマ変更可（総司令官 11/21）', 'アプリ実装（ODPT と共通）', '作品説明の下書き'],
     todo: [
       { text: 'アプリの公開URL（本応募に必要）', owner: '総司令官' },
       { text: '本応募フォームの案内を待つ（11月末、事務局から）', owner: '待ち' },
@@ -112,6 +116,15 @@ export const PLANS: PlanProgress[] = [
       { text: 'SAR の変位と後方散乱の書き方を揃える小修正（B を選んだ場合）', owner: '部隊' },
       { text: '提出', owner: '総司令官' },
     ],
+  },
+  {
+    id: 'sat-yabu-sugi', short: '藪払い・スギ', intent: '比較中', contest: 'satellite-2026', name: '新案 藪払い・スギ植え替え', kind: '新しい案、PR #36', ...SAT, appId: 'sat-yabu', appIds: ['sat-yabu', 'sat-sugi'],
+    done: ['デモ（藪払い＝京都府与謝野町、スギ植え替え＝青梅市中心）'],
+    todo: [
+      { text: '提案書（docx）がない' },
+      { text: '憲兵・デザイン審査が未実施' },
+    ],
+    decisions: ['今回の応募候補に加えるか'],
   },
   {
     id: 'sat-alpha', short: '新案α', intent: '比較中', contest: 'satellite-2026', name: '新案α 配電線沿いの優先伐採地図', kind: '新しい案・共通テーマ2', ...SAT, appId: 'sat-alpha',
@@ -179,7 +192,7 @@ export const PLANS: PlanProgress[] = [
     ],
   },
   {
-    id: 'biz-solar-guard', short: '太陽光 盗難対策', intent: '比較中', intentNote: 'アイデア部門のみ', contest: 'ichibiz-2026', name: '太陽光発電所の盗難対策マップ', kind: '新しい案・アイデア部門のみ、PR #18', ...BIZ_OTHER,
+    id: 'biz-solar-guard', short: '太陽光 盗難対策', intent: '比較中', intentNote: 'アイデア部門のみ', contest: 'ichibiz-2026', name: '太陽光発電所の盗難対策マップ', kind: '新しい案・アイデア部門のみ、PR #18', ...BIZ_OTHER, appId: 'biz-solar-guard',
     done: ['デモ（茨城県、個別設備を出さない集計地図＋自己診断）', '憲兵の監査'],
     todo: [
       { text: '資源エネルギー庁への電話で利用ルールを確認（0570-057-333、台本は reports/command/decision-20261114-solar-guard.md。期限 12/02 18:00。確認できなければ 12/03 から認定情報を使わない版に作り替え、12/09 までに失格級0でなければ出さない）', owner: '総司令官' },
@@ -196,32 +209,40 @@ export const PLANS: PlanProgress[] = [
   },
   {
     id: 'odpt-teiji', short: 'N2 定時性', intent: '比較中', contest: 'odpt-2026', name: 'N2 バス定時性カルテ', kind: '新しい案', ...ODPT, appId: 'odpt-teiji',
-    done: ['アプリ第1版（テスト84件）', '昼間1時間の品質測定（24事業者中14通過。reports/ops/odpt-2026-teiji-daytime-quality-20261113.md）'],
+    done: ['アプリ第1版（テスト84件）', '昼間1時間の品質測定（24事業者中14通過。reports/ops/odpt-2026-teiji-daytime-quality-20261113.md）', 'Haiku 試験を受けた導線改修', '憲兵の監査（失格級0・要修正3・軽微4、要修正1・2は対応済み。PR #34 でマージ）'],
     todo: [
+      { text: '要修正3（必須データ「GTFSデータリポジトリ」の扱い）の要項確認', owner: '部隊' },
+      { text: '軽微4件', owner: '部隊' },
       { text: '数週間の連続収集（場所と担当）', tag: '判断待ち', owner: '総司令官' },
       { text: '実データでの精度確認' },
-      { text: '提出文の磨き込み・監査' },
     ],
     decisions: ['区間ごとの遅れを公開するか'],
   },
   {
-    id: 'odpt-kodure', short: '子連れ', intent: '比較中', contest: 'odpt-2026', name: '子連れお出かけ診断', kind: '新しい案、PR #19', ...ODPT,
+    id: 'odpt-kankou-kansui', short: '観光・冠水', intent: '比較中', contest: 'odpt-2026', name: '新案 観光系統を避ける生活ルート・冠水しやすい駅の出入口', kind: '新しい案、PR #36', ...ODPT, appId: 'odpt-kankou', appIds: ['odpt-kankou', 'odpt-kansui'],
+    done: ['デモ（観光系統＝浅草・上野・押上、冠水＝東京都区部中央〜東部）'],
+    todo: [
+      { text: '憲兵・デザイン審査が未実施（ODPT の2件だけ別 PR に分ければ衛星の監査と切り離して入れられる）' },
+    ],
+  },
+  {
+    id: 'odpt-kodure', short: '子連れ', intent: '比較中', contest: 'odpt-2026', name: '子連れお出かけ診断', kind: '新しい案、PR #19', ...ODPT, appId: 'odpt-kodure',
     done: ['アプリ第1版', 'アグレッサー', 'デザイン再審査（重大0）', '憲兵の監査（提出不可: 失格級候補＝P13・P27 の非商用条件）'],
     todo: [
       { text: '国土数値情報事務局へ P13・P27 の利用可否を問い合わせ（文案は reports/command/decision-20261114-odpt-kodure.md。期限 12/11 18:00。可がなければ 12/12 から商用可データに差し替え、12/25 までに失格級0でなければ候補から外す）', owner: '総司令官' },
       { text: '東京都「緑のオープンデータ」のライセンス欄をブラウザで確認（部隊からはカタログが 403）', owner: '総司令官' },
     ],
-    decisions: ['ODPT に出す作品（診断マップ・N2・子連れお出かけ診断）'],
+    decisions: ['ODPT に出す作品（診断マップ・N2・子連れお出かけ診断・観光系統・冠水）'],
   },
 ]
 
 /** 判断待ちの一覧（正本の「判断待ちの一覧（締切順）」） */
 export const DECISIONS: Decision[] = [
-  { no: 1, contest: 'satellite-2026', text: '衛星: B とαのどちらを出すか、FAQ7 の確認', deadlineAt: '2026-11-30T12:00:00+09:00', deadlineLabel: '11/30 12:00', plans: ['sat-b', 'sat-alpha'] },
+  { no: 1, contest: 'satellite-2026', text: '衛星: B とαのどちらを出すか、FAQ7 の確認、藪払い・スギ植え替えを候補に加えるか', deadlineAt: '2026-11-30T12:00:00+09:00', deadlineLabel: '11/30 12:00', plans: ['sat-b', 'sat-alpha', 'sat-yabu-sugi'], covers: ['sat-alpha', 'sat-yabu-sugi'] },
   { no: 2, contest: 'ichibiz-2026', text: 'イチBiz ビジネス部門: 今の案・NB・両方', deadlineAt: '2026-11-30T20:00:00+09:00', deadlineLabel: '11/30 20:00', plans: ['biz-business-nb'] },
   { no: 3, contest: 'ichibiz-2026', text: 'イチBiz アイデア・不動産部門: 今の案・新しい案・両方、RN1 の利用条件の問い合わせと同梱データ', deadlineAt: '2026-12-10T20:00:00+09:00', deadlineLabel: '12/10', plans: ['biz-idea-in1', 'biz-realestate-rn1'] },
   { no: 4, contest: 'udc-2026', text: 'UDC 作品②: 本応募でアプリケーションに変えるか', deadlineAt: '2026-12-27T23:59:00+09:00', deadlineLabel: '12/27' },
-  { no: 5, contest: 'odpt-2026', text: 'ODPT N2: 連続収集の場所と担当、区間ごとの遅れの公開', deadlineAt: '2027-01-11T23:59:00+09:00', deadlineLabel: '2027/1/11' },
+  { no: 5, contest: 'odpt-2026', text: 'ODPT N2: 連続収集の場所と担当、区間ごとの遅れの公開', deadlineAt: '2027-01-11T23:59:00+09:00', deadlineLabel: '2027/1/11', covers: ['odpt-teiji'] },
   { no: 6, contest: 'registry', text: 'registry.json: UDC の作品概要の上限 100字を登録するか' },
 ]
 

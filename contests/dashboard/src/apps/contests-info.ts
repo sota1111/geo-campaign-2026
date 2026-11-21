@@ -23,8 +23,21 @@ export interface CriterionInfo {
   tag?: string
 }
 
+/** 出典つきの1項目（トップの大カード・コンペ概要ページに出す） */
+export interface SourcedItem {
+  text: string
+  /** 出典（要項のページ・報告書名）。小さく添える */
+  src: string
+  /** 要項に書かれていない・確認中の項目なら true（画面で「未確認」の印を付ける） */
+  unconfirmed?: boolean
+}
+
 export interface ContestInfo {
   id: ContestId
+  /** 主なルール（失格・応募条件のうち重要なもの数点。cautions の要点） */
+  keyRules: SourcedItem[]
+  /** 提出可能数（1人・1チームが出せる件数、テーマ・部門ごとの上限）。要項に書かれていないものは「要項に記載なし」「未確認」とそのまま書く。推測で数字を入れない */
+  limits: SourcedItem[]
   /** タブに出す短い名前 */
   tabName: string
   /** 何を募集しているか（1〜2行） */
@@ -65,6 +78,16 @@ export const CONTEST_INFO: ContestInfo[] = [
       { label: '本応募', at: '2026-12-27T23:59:00+09:00', text: '12/27 23:59' },
     ],
     implementation: '実装は必須ではない（タイプにアイデアもある）。',
+    keyRules: [
+      { text: '1作品は1タイプ・1テーマのみ。', src: 'UDC2026 募集要項／reports/intel/udc-2026-20261109.md' },
+      { text: '同一主体の同一・類似作品、同一作品を別タイプ／テーマで出すと、審査対象外になることがある。', src: 'reports/intel/udc-2026-20261109.md／contests/registry.json（同一・類似作品の重複応募は無効の可能性）' },
+      { text: '作品は原則公開できること。', src: 'contests/registry.json' },
+    ],
+    limits: [
+      { text: '複数応募は可。応募数に上限なし（1主体が出せる件数の上限は要項に記載なし。情報部の整理は「上限なし」）。', src: 'reports/intel/udc-2026-20261109.md §4' },
+      { text: 'タイプ・テーマごと: 1作品につき1タイプ・1テーマ。同じ作品を別のタイプ／テーマで出すのは不可（審査対象外の恐れ）。', src: 'reports/intel/udc-2026-20261109.md §4' },
+      { text: 'ODPT との併願: UDC 側は他コンテストで発表済み・公開済みの作品も応募可。ODPT 側の併願規定は検索で確認できていない。', src: 'reports/intel/udc-2026-20261109.md', unconfirmed: true },
+    ],
     submission: [
       '概要登録（Google フォーム）で、応募主体・作品タイプ1つ・テーマ1つ・特別賞の該当を入力。',
       '概要登録者に11月末までに事務局が本応募フォームを案内。本応募がなければ辞退扱い。',
@@ -104,6 +127,16 @@ export const CONTEST_INFO: ContestInfo[] = [
       '衛星データを使った、インフラのリスク可視化・防災・都市課題解決の「事業アイデア」を募集。協賛企業テーマ＋共通テーマ1・2から選ぶ。',
     deadlines: [{ label: '応募締切（必着）', at: '2026-11-30T12:00:00+09:00', text: '11/30 正午' }],
     implementation: '実装は不要。初期応募でプロトタイプは要らない（作れば最終のみ加点）。',
+    keyRules: [
+      { text: '明らかに事業化の意思がない案（学術・研究色が強い案）は選考対象外。', src: '要項 p4／reports/escalations/20261113-satellite-alpha-slot.md' },
+      { text: '応募資格は、日本国に籍を有する個人・グループ、日本の法人格を持つ企業・大学・公的研究機関等。代表者の日本国籍はNEDO向けFAQの記載で、本アワードへの適用は要確認。', src: '要項 p3／reports/intel/satellite-2026-20261109.md', unconfirmed: true },
+      { text: '実行委員会と同一の企業・団体（SSIL、カナン・ジオリサーチ）の所属者は代表者・メンバーになれない。', src: '要項 p3' },
+    ],
+    limits: [
+      { text: '1提案で、協賛企業テーマ＋共通テーマ1つ（1か2）に同時応募できる。複数提案も可だが、各テーマへの応募は1提案まで（例: 提案1＝協賛企業テーマ＋共通1、提案2＝共通2）。', src: '要項 p6／reports/intel/satellite-2026-20261109.md' },
+      { text: '共通テーマ2に出せるのは1提案だけ。提案Bと新案αは同時に出せない（出すと失格級）。', src: 'reports/escalations/20261113-satellite-alpha-slot.md（要項 p6）' },
+      { text: '同じ代表者が2提案を出してよいか（FAQ7「代表者の重複は重複応募」）: 本アワードに当てはまるか未確認。事務局に確認するか総司令官が判断する。', src: 'reports/escalations/20261109-satellite-duplicate.md', unconfirmed: true },
+    ],
     submission: [
       '公式サイトから「様式1 提案書（.docx）」をダウンロードし、公式の応募フォームから提出。',
       '指定の様式・期間以外の応募は認められない。早期に出せば不備の指摘・再提出が可能。',
@@ -145,6 +178,16 @@ export const CONTEST_INFO: ContestInfo[] = [
       { label: 'アイデア・不動産部門', at: '2026-12-10T20:00:00+09:00', text: '12/10 20:00' },
     ],
     implementation: '実装は不要。補足資料（PDF/PPT 10ページ以内・任意）は付けられる。',
+    keyRules: [
+      { text: '生成AIは補助利用なら可。出力をそのまま使ったもの、応募者の独自性が認められないものは応募を控える。', src: 'イチBizアワード2026 応募要項／reports/intel/ichibiz-2026-20261109.md' },
+      { text: '第三者の知財の盗用・侵害は禁止。所属機関の知財に関わるなら事前承諾が必要。', src: 'イチBizアワード2026 応募要項' },
+      { text: '応募内容は協賛企業・外部審査員に提供される（完全に秘密にしたい案は応募しない）。', src: 'イチBizアワード2026 応募要項' },
+    ],
+    limits: [
+      { text: '同一人物から複数のアイデアを応募できる。応募フォームで個別に登録する。', src: '応募要項 PDF p.3・FAQ／reports/intel/ichibiz-2026-20261109.md §4' },
+      { text: '同じ部門に複数件出せるか、部門ごとの件数の上限: 要項に明記なし（未確認）。', src: 'reports/ops/status-20261121.md', unconfirmed: true },
+      { text: '同一アイデアを複数部門（ビジネス・アイデア・不動産）に同時に出してよいか: 公式に明記なし（FAQにも記載なし）。', src: 'reports/intel/ichibiz-2026-20261109.md', unconfirmed: true },
+    ],
     submission: [
       '公式の応募フォームに入力。タイトル50字、課題400字、アイデア700字、背景300字。',
       'ビジネス部門だけ、市場・顧客ニーズ400字と事業化の課題400字が加わる。',
@@ -188,6 +231,15 @@ export const CONTEST_INFO: ContestInfo[] = [
       '公共交通オープンデータを使った、実際に動作するアプリ・サービスを募集。応募前に開発者登録とエントリーが必要。',
     deadlines: [{ label: '応募締切', at: '2027-01-11T23:59:00+09:00', text: '2027/1/11 23:59' }],
     implementation: '実装は必須。開催期間（〜2027/3/12）は誰でも無償で使える状態で公開する。',
+    keyRules: [
+      { text: '応募資格は、公共交通オープンデータセンターおよびGTFSデータリポジトリのデータの活用（「および」が両方必須かは未確認）。', src: 'ODPT チャレンジ 応募要項／reports/intel/odpt-2026-20261109.md', unconfirmed: true },
+      { text: '提出後は説明文・紹介文を編集できない（直すなら別作品として再提出）。', src: 'ODPT チャレンジ 応募要項' },
+      { text: '応募作品は開発者本人が考案・制作したものに限る。', src: 'ODPT チャレンジ 応募要項' },
+    ],
+    limits: [
+      { text: '1応募者（グループ・法人を含む）が複数の作品を応募できる。複数グループへの所属も可。件数の上限は、情報部の整理に記載がない。', src: 'reports/intel/odpt-2026-20261109.md §4（要項 [S2]）' },
+      { text: 'UDC 作品①との併願: 別コンテストの応募作品を応募するのは歓迎。本チャレンジの応募作品を別コンテストへ出すのも、使用データの利用規約を満たせば可。', src: 'reports/intel/odpt-2026-20261109.md §4' },
+    ],
     submission: [
       '開発者登録（確認に最大2営業日）→ チャレンジにエントリー → 開発 → 応募。',
       '専用サイトに開発者と作品の情報を登録し、ストアまたは任意のWebサイトで公開。',
