@@ -47,13 +47,15 @@ export function totalScore(appId: string): number {
 }
 
 /**
- * アプリの並び。コンペを選んだらそのコンペとの score の高い順、未選択なら全列の score 合計の高い順。
- * 同点は registry の並び（APPS の順）。
+ * アプリの並び。提出先を1件以上選んだアプリが先、選んでいないアプリが後。
+ * それぞれの中は、コンペを選んだらそのコンペとの score の高い順、未選択なら全列の score 合計の高い順。
+ * 同点は registry の並び（APPS の順）。targets を渡さなければ（選択なしとして）関連の強さだけで並べる。
  */
-export function sortApps(apps: AppMeta[], contest: ContestId | null): AppMeta[] {
+export function sortApps(apps: AppMeta[], contest: ContestId | null, targets: Targets = {}): AppMeta[] {
   const idx = (a: AppMeta) => APPS.findIndex((x) => x.id === a.id)
   const key = (a: AppMeta) => (contest ? contestScore(a.id, contest) : totalScore(a.id))
-  return [...apps].sort((a, b) => key(b) - key(a) || idx(a) - idx(b))
+  const chosen = (a: AppMeta) => ((targets[a.id]?.length ?? 0) > 0 ? 1 : 0)
+  return [...apps].sort((a, b) => chosen(b) - chosen(a) || key(b) - key(a) || idx(a) - idx(b))
 }
 
 /** 提出先の選択: アプリ id → 列 id の配列 */

@@ -403,7 +403,7 @@ export function AppFitCard({
       className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${isNew ? 'border-slate-500' : 'border-slate-300'}`}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 text-xs">
-        <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title="いまの並びでの順位">{rank}位</span>
+        <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title="いまの並びでの位置（提出先を選んだ候補が先）">{rank}位</span>
         {isNew ? (
           <span className="rounded bg-slate-800 px-1.5 font-bold text-white" data-testid="new-plan-tag" title={NEW_PLAN_LABEL}>新しい案</span>
         ) : (
