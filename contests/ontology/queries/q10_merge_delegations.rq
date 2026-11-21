@@ -1,0 +1,14 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q10 開いている PR の代理マージ（総司令官補佐が承認なしで判断する委任の作業）。総司令官の判断待ち（Q4）には入れない。
+SELECT ?task ?label ?pr ?prNumber ?app ?agentName ?condition
+WHERE {
+  ?task a c:MergeDelegation ; c:status "open" ; rdfs:label ?label ; c:forPullRequest ?pr ; c:assignedTo ?agent ; c:delegationRule ?rule .
+  ?pr c:prNumber ?prNumber .
+  ?agent c:agentName ?agentName .
+  ?rule c:condition ?condition .
+  OPTIONAL { ?pr c:contains ?app }
+}
+ORDER BY ?prNumber

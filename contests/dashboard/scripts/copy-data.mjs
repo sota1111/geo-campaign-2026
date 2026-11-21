@@ -73,6 +73,7 @@ const EMBEDS = {
   'sat-alpha': { src: 'satellite-2026/app/proposal-alpha', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'biz-business-nb': { src: 'ichibiz-2026/app/business-nb/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'biz-realestate-rn1': { src: 'ichibiz-2026/app/realestate-rn1/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'biz-realestate-a4': { src: 'ichibiz-2026/app/realestate-a4/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-teiji': { src: 'odpt-2026/app-teiji/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   // ---- 審査待ちの案（元のソースが、憲兵監査前の PR にだけある）。ソースが無いビルドでは含めず、画面に「PR #xx で審査待ち」と出す。
@@ -142,3 +143,17 @@ for (const [id, def] of Object.entries(DOCS)) {
   }
 }
 console.log(`copy-data: ${docCount} files -> public/submission/<id>/（提出文）`)
+
+// ---- オントロジー（つながり図）: contests/ontology/ の生成済み JSON を public/ontology/ に写す ----
+// Python（rdflib）が無い環境でもビルドが通るよう、ビルドでは生成せず、リポジトリにある JSON を読むだけにする。
+// 再生成は contests/ontology/ のコマンド（README 参照）で行い、graph.json・next-actions.json をコミットする。
+const ontoOut = path.join(root, 'public', 'ontology')
+fs.mkdirSync(ontoOut, { recursive: true })
+for (const f of ['graph.json', 'next-actions.json']) {
+  // CONTESTS_ROOT で別 checkout を指していても、オントロジーはこの checkout のものを使う（無ければ CONTESTS_ROOT 側）
+  const own = path.join(root, '..', 'ontology', f)
+  const from = fs.existsSync(own) ? own : path.join(contests, 'ontology', f)
+  if (!fs.existsSync(from)) throw new Error(`オントロジーの JSON が見つかりません: ${from}（python3 contests/ontology/graph_json.py / ui_json.py で生成）`)
+  fs.copyFileSync(from, path.join(ontoOut, f))
+}
+console.log('copy-data: ontology graph.json, next-actions.json -> public/ontology/')

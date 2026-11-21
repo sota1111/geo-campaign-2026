@@ -170,6 +170,16 @@ def compute(g, now):
             unit_actions["military-police"].append({"due": due, "app": item["app"], "submission": item["submission"],
                                                     "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
                                                     "why": "憲兵の SOP", "_k": key})
+    # 開いている PR の代理マージ: 総司令官補佐の作業（承認は不要。総司令官の判断待ちには入れない）
+    seen_pr = set()
+    for r in q(g, "q10_merge_delegations"):
+        if r["task"] in seen_pr:
+            continue
+        seen_pr.add(r["task"])
+        unit_actions[r["agentName"]].append({"due": None, "app": short(r["app"]) if r.get("app") else None, "submission": None,
+                                              "action": f"代理マージを判断: PR #{r['prNumber']}（承認不要。条件: {r['condition'][:60]}…）",
+                                              "why": "総司令官の指示（2026-11-21）による委任の作業", "source": "CLAUDE.md 成果の返し方 4",
+                                              "pr": short(r["pr"]), "_k": dt.datetime.max.replace(tzinfo=JST)})
     return subs, unit_actions, decisions, tasks, risky
 
 
@@ -181,8 +191,63 @@ def impact(g, dataset=None):
         d["label"] = r["datasetLabel"]
         d["apps"][short(r["app"])] = r["appLabel"]
         if r.get("sub"):
-            d["submissions"].append({"submission": short(r["sub"]), "contest": short(r["contest"]), "division": short(r["division"]) if r.get("division") else None})
+            item = {"submission": short(r["sub"]), "contest": short(r["contest"]), "division": short(r["division"]) if r.get("division") else None}
+            if item not in d["submissions"]:  # 同じ応募を重ねて数えない
+                d["submissions"].append(item)
     return out
+
+
+def _contest_of(g, did):
+    """判断（short id）が属するコンペ id。案の選定の関門は id から、進捗一覧の判断は結ばれた応募・コンペから。無ければ None"""
+    m = re.match(r"id:decision/select/([a-z]+-2026)", did)
+    if m:
+        return m.group(1)
+    from rdflib import Namespace
+
+    C = Namespace("https://geo-campaign-2026.example/ontology#")
+    ref = URIRef(ID + did[len("id:"):])
+    for o in list(g.objects(ref, C.forSubmission)) + list(g.objects(ref, C.ofContest)):
+        mm = re.match(r"id:(?:sub/[^/]+/|contest/)([a-z]+-2026)", short(o))
+        if mm:
+            return mm.group(1)
+    return None
+
+
+def merge_decisions(g, dec):
+    """同じコンペ・同じ判断を 1 件にまとめる。
+
+    ダッシュボードのトップの「判断待ち」（progress.ts の DECISIONS）の元は、進捗一覧（status-*.md）の
+    「判断待ちの一覧」の行。標準の流れ（CLAUDE.md）から作った「案の選定」の関門と、応募・コンペ別の判断
+    （status の個別の行）は、同じコンペの一覧の行（締切が同じ日のもの。無ければ締切が最も早いもの）の
+    「含む」に畳む。一覧の行に当たらないものは単独で残す。"""
+    def same(a, b):  # 時刻があれば時刻まで、日付だけなら日まで比べる
+        if not a or not b:
+            return False
+        n = 16 if len(a) > 10 and len(b) > 10 else 10
+        return a[:n] == b[:n]
+
+    anchors = [d for d in dec if d["decision"].startswith("id:decision/status/list-")]
+    by_contest = {}
+    for d in dec:  # 案の選定の関門が、一覧の行の所属コンペを教える（締切の日付が同じ）
+        if d["decision"].startswith("id:decision/select/") and d.get("due"):
+            for a in anchors:
+                if same(a.get("due"), d["due"]):
+                    by_contest.setdefault(_contest_of(g, d["decision"]), set()).add(a["decision"])
+    for c in by_contest:
+        by_contest[c] = sorted(by_contest[c], key=lambda i: next(a["due"] or "" for a in anchors if a["decision"] == i))
+    out = {a["decision"]: {**a, "includes": []} for a in anchors}
+    rest = []
+    for d in dec:
+        if d["decision"] in out:
+            continue
+        c = _contest_of(g, d["decision"])
+        cand = by_contest.get(c)
+        if cand:
+            same_day = [i for i in cand if same(out[i]["due"], d.get("due"))]
+            out[(same_day or cand)[0]]["includes"].append({"decision": d["decision"], "type": d["type"], "label": d["label"], "source": d["source"]})
+        else:
+            rest.append({**d, "includes": []})
+    return list(out.values()) + rest
 
 
 def build_report(g, now, datasets=None):
@@ -205,6 +270,7 @@ def build_report(g, now, datasets=None):
         {"decision": short(d["decision"]), "type": d["type"].split("#")[-1], "label": d["label"], "due": d.get("due"), "source": d.get("firstSource")}
         for d in decisions
     ]
+    dec = merge_decisions(g, dec)
     dec.sort(key=lambda x: (x["due"] is None, x["due"] or "", x["label"]))
     # 進捗一覧の残作業（担当別）
     t_by = defaultdict(list)
@@ -215,7 +281,7 @@ def build_report(g, now, datasets=None):
     for v in t_by.values():
         v.sort(key=lambda x: (x["due"] is None, x["due"] or ""))
     for ag in unit_actions:
-        unit_actions[ag].sort(key=lambda x: (x["_k"], x["app"], x["action"]))
+        unit_actions[ag].sort(key=lambda x: (x["_k"], x["app"] or "", x["action"]))
         for a in unit_actions[ag]:
             a.pop("_k", None)
     subs.sort(key=lambda s: (s["deadline"]["at"] is None, s["deadline"]["at"] or "", s["app"]))
@@ -229,6 +295,7 @@ def build_report(g, now, datasets=None):
             "『提出可能な状態』は憲兵の失格級・未記入欄・データ条件・提出文の欠落がなく、要修正が残らず、監査があり、案の選定が済んでいること。提出・案の選定は総司令官が決める（自動では進めない）。",
             "止めているものの担当は規則による割当（推定）。指摘の解消の記録は無いため、現行の監査に残る指摘は未解消として数える。",
             "進捗一覧（reports/ops/status-*.md）は作成日以降の変化を含まない。",
+            "PR のマージは総司令官補佐（commander-aide）が承認なしで行う委任の作業で、総司令官の判断待ちには入れない（総司令官 2026-11-21 の指示、CLAUDE.md 成果の返し方 4）。ページ削除を含む PR だけは総司令官の許可が要る。",
         ],
         "summary": dict(summary),
         "submissions": subs,
@@ -279,7 +346,7 @@ def to_md(rep, units_label):
         shown = acts[:12]
         for a in shown:
             due = (a["due"] or "締切未抽出")[:16].replace("T", " ")
-            w(f"- [{due}] {a['app'].replace('id:app/', '')}: {a['action'][:110]}")
+            w(f"- [{due}] {(a['app'] or '共通').replace('id:app/', '')}: {a['action'][:110]}")
         if len(acts) > len(shown):
             w(f"- …ほか {len(acts) - len(shown)} 件（JSON に全件）")
     w("")

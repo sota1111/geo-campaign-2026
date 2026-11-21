@@ -102,7 +102,7 @@ def test_every_source_path_exists(g):
     missing = []
     for s in g.subjects(RDF.type, C.Source):
         p = g.value(s, C.path)
-        if p is not None and not (ROOT / str(p)).exists():
+        if p is not None and not str(p).startswith("総司令官の指示") and not (ROOT / str(p)).exists():  # 口頭の指示はファイルではない
             missing.append(str(p))
     assert not missing, sorted(set(missing))
 
@@ -237,3 +237,88 @@ def test_graph_json_is_consistent(g):
     assert {"Contest", "App", "Submission", "Dataset", "Finding", "Task", "PullRequest", "Unit"} <= kinds
     marks = {e["props"]["mark"] for e in d["edges"] if e["rel"] == "fit"}
     assert marks <= {"◎", "○", "△", "×", "？"}
+
+
+# ---------------- 画面用 next-actions.json（ダッシュボードが読む）
+def test_ui_json_points_to_graph_nodes(g):
+    import ui_json
+
+    rep = ui_json.build(NOW)
+    ids = {n["id"] for n in graph_json.build(g, NOW)["nodes"]}
+    assert rep["submissions"] and rep["dataImpactAll"] and rep["unitLabels"]
+    for s in rep["submissions"]:
+        assert {s["submission"], s["app"], s["contest"]} <= ids
+    for d in rep["commanderDecisions"]:
+        assert d["decision"] in ids, d["decision"]  # HumanGate も画面のノードになる
+    for ds, v in rep["dataImpactAll"].items():
+        assert ds in ids and set(v["apps"]) <= ids
+    for acts in rep["unitActions"].values():
+        for a in acts:
+            assert a["app"] is None or a["app"] in ids  # 代理マージなど、アプリに結ばない作業は None
+
+
+# ---------------- 代理マージ（総司令官 2026-11-21 の指示）
+def test_merge_delegation_rule_in_graph(g):
+    rule = ID["rule/merge-delegation"]
+    assert (rule, RDF.type, C.DelegationRule) in g
+    assert (rule, C.delegatedTo, ID["unit/commander-aide"]) in g
+    assert next(g.objects(rule, C.approvalRequired)).toPython() is False
+    srcs = " ".join(str(g.value(s, C.path)) for s in g.objects(rule, C.hasSource))
+    assert "総司令官の指示" in srcs and "CLAUDE.md" in srcs
+    cond = str(g.value(rule, C.condition))
+    assert "CI" in cond and "registry" in cond and "競合" in cond and "秘密情報" in cond and "ページ削除" in cond
+    assert "最新の監査に失格級が残る" in cond and "最新のデザイン審査に重大が残る" in cond  # 現行の SOP
+    note = str(g.value(rule, C.note))
+    assert "PR #46" in note and "確認待ち" in note  # 「失格級・重大は止めない」は注記だけ
+    assert "止めない" not in cond and "マージできる" not in cond
+    assert len(list(g.objects(rule, C.hasSource))) >= 2
+
+
+def test_shacl_rejects_merge_delegation_assigned_to_other(tmp_path):
+    t = ID["mergedelegation/_bad"]
+    src = next(iter(Graph().parse(HERE / "campaign.jsonld", format="json-ld").subjects(RDF.type, C.Source)))
+    viol = _validate_with(
+        tmp_path,
+        [(t, RDF.type, C.MergeDelegation), (t, RDFS.label, Literal("代理マージ", lang="ja")), (t, C.status, Literal("open")), (t, C.hasSource, src),
+         (t, C.assignedTo, ID["unit/engineer"]), (t, C.forPullRequest, ID["pr/1"]), (t, C.delegationRule, ID["rule/merge-delegation"])],
+    )
+    assert any("総司令官補佐" in m for _, m in viol)
+
+
+def test_open_pr_becomes_aide_action_not_commander_decision():
+    t = ID["mergedelegation/999"]
+    pr = ID["pr/999"]
+    g2 = NA.load_graph()
+    src = next(iter(g2.subjects(RDF.type, C.Source)))
+    for tr in [(pr, RDF.type, C.PullRequest), (pr, RDFS.label, Literal("#999 テスト", lang="ja")), (pr, C.prNumber, Literal(999)), (pr, C.prState, Literal("OPEN")),
+               (t, RDF.type, C.MergeDelegation), (t, RDF.type, C.Task), (t, RDFS.label, Literal("代理マージの判断: #999", lang="ja")), (t, C.status, Literal("open")),
+               (t, C.description, Literal("x")), (t, C.hasSource, src), (t, C.assignedTo, ID["unit/commander-aide"]), (t, C.forPullRequest, pr),
+               (t, C.delegationRule, ID["rule/merge-delegation"])]:
+        g2.add(tr)
+    rep = NA.build_report(g2, NOW)
+    assert any("PR #999" in a["action"] for a in rep["unitActions"].get("commander-aide", []))
+    assert not any("999" in d["decision"] or "999" in d["label"] for d in rep["commanderDecisions"])
+    assert not any("999" in x["text"] for v in rep["statusTasksByAgent"].values() for x in v)
+
+
+def test_data_impact_has_no_duplicate_submissions():
+    import ui_json
+
+    rep = ui_json.build(NOW)
+    for v in rep["dataImpactAll"].values():
+        keys = [(s["submission"], s["contest"], s["division"]) for s in v["submissions"]]
+        assert len(keys) == len(set(keys))
+
+
+def test_decisions_are_merged_per_status_list_row(g):
+    """同じコンペ・同じ判断は 1 件（進捗一覧の「判断待ち」の行）。案の選定の関門・応募ごとの判断は includes に畳む"""
+    rep = NA.build_report(g, NOW)
+    ds = rep["commanderDecisions"]
+    rows = [d for d in ds if d["decision"].startswith("id:decision/status/list-")]
+    assert len(rows) == len(ds), "一覧の行に当たらない判断が単独で残っている"
+    folded = [i["decision"] for d in ds for i in d["includes"]]
+    assert len(folded) == len(set(folded))
+    assert any(i.startswith("id:decision/select/") for i in folded)
+    # 畳んだものも畳まないものも、元の未決の判断を取りこぼさない
+    q4 = {"id:" + r["decision"][len(str(ID)):] for r in NA.q(g, "q4_pending_decisions")}
+    assert q4 == {d["decision"] for d in ds} | set(folded)

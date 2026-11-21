@@ -6,6 +6,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 SELECT ?task ?text ?agentName ?app ?sub ?due (SAMPLE(?source) AS ?firstSource)
 WHERE {
   ?task a c:Task ; c:status "open" ; c:description ?text .
+  FILTER NOT EXISTS { ?task a c:MergeDelegation }  # 代理マージは q10 で別に出す
   OPTIONAL { ?task c:assignedTo ?agent . ?agent c:agentName ?agentName }
   OPTIONAL { ?task c:forApp ?app }
   OPTIONAL { ?task c:forSubmission ?sub }

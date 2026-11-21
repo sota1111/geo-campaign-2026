@@ -242,6 +242,28 @@ export const APPS: AppMeta[] = [
     ],
   },
   {
+    id: 'biz-realestate-a4',
+    plan: 'new',
+    pairWith: 'biz-realestate',
+    embed: 'biz-realestate-a4',
+    audience: '土地の価格の違いに戸惑う人・説明する専門職向け',
+    name: '同じ土地、四つの値段',
+    contest: 'ichibiz-2026',
+    division: '不動産情報活用部門（新案A4）',
+    deadline: '2026/12/10 20:00',
+    deadlineAt: '2026-12-10T20:00:00+09:00',
+    purpose:
+      '地図で場所を指すと、近くの標準地について、公示価格・相続税路線価・取引事例比較法比準価格・収益価格を同じ単位（円/㎡）で並べる。標準地の価格であり、指した土地の価格ではない。',
+    dataKind: 'real',
+    dataNote: '不動産情報ライブラリ（国土交通省）の鑑定評価書情報と地価公示のポイント（福岡県・2025年）。標準地の価格で、指した土地の価格ではない',
+    originalPath: 'contests/ichibiz-2026/app/realestate-a4/',
+    sources: [
+      { name: '鑑定評価書情報（取引事例比較法比準価格・収益価格・還元利回り・相続税路線価・標準地の位置と所在）', provider: '不動産情報ライブラリ（国土交通省）API（XCT001）', note: 'API で取得して同梱（ブラウザからは API を呼びません）。同じ標準地に記録が2件ある場合は、違う値を並べて示します。' },
+      { name: '地価公示の当年価格（公示価格として表示）', provider: '不動産情報ライブラリ（国土交通省）API（XPT002）', note: '標準地と位置・用途で突き合わせ。できない地点は「照合できませんでした」と表示します。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
+    ],
+  },
+  {
     id: 'udc-aed',
     plan: 'new',
     pairWith: 'biz-idea',

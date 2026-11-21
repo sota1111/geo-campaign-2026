@@ -960,6 +960,25 @@ def build(offline=False):
             if any(f.startswith(d + "/") for f in p.get("files", [])):
                 g.add((n, C.contains, apps[aid]))
     REPORT["counts"]["pull_requests"] = len(prs)
+    # ---- 代理マージ（総司令官 2026-11-21 の指示）: PR のマージは HumanGate ではなく、総司令官補佐が承認なしで行う委任の作業 ----
+    rule = b.node(ID["rule/merge-delegation"], "DelegationRule", "代理マージの規則（総司令官補佐が承認なしでマージ）")
+    g.add((rule, C.delegatedTo, agent("commander-aide")))
+    b.add(rule, C.approvalRequired, False)
+    b.add(rule, C.condition, "マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情報の混入・ページ削除を含む（PageDeletion は総司令官の判断）・提出物を含む PR でその戦域の最新の監査に失格級が残る・画面を含む PR で最新のデザイン審査に重大が残る。満たさなければマージしない")
+    b.add(rule, C.note, "注記: 「以降は指示なしでも代理でマージ」（総司令官 2026-11-21）を、失格級・重大が残っていてもマージできる意味にするかは、総司令官本人の確認待ち（PR #46）。確認が取れるまで、現行の SOP（失格級・重大が残ればマージしない）を規則とする")
+    b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「代理マージは承認なしで行うこと。Claude.mdやオントロジーに記載すること。」")
+    b.cite(rule, path="CLAUDE.md", locator="成果の返し方 4")
+    for p in prs:
+        if p["state"] != "OPEN":
+            continue
+        md = b.node(ID[f"mergedelegation/{p['number']}"], "MergeDelegation", f"代理マージの判断: #{p['number']} {p['title']}"[:100])
+        b.add(md, C.status, "open")
+        b.add(md, C.description, f"PR #{p['number']} を総司令官補佐が代理マージするか判断する（条件を満たさなければマージしない。総司令官の承認は不要）")
+        g.add((md, C.assignedTo, agent("commander-aide")))
+        g.add((md, C.forPullRequest, pr_nodes[p["number"]]))
+        g.add((md, C.delegationRule, rule))
+        b.cite(md, path="CLAUDE.md", locator="成果の返し方 4")
+        b.cite(md, url=p["url"])
     REPORT["pr_source"] = pr_src
     for p in sorted(glob.glob(str(ROOT / "reports/command/merge-*.md"))):
         name = Path(p).stem
