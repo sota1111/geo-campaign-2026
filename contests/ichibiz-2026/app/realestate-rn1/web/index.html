@@ -11,7 +11,7 @@
 <body>
 <header id="top">
   <h1>住む場所の先行き</h1>
-  <p class="lead">地図で場所を指すと、市の計画・将来人口（推計）・施設・災害の想定を1枚に並べます。物件の住所（10件まで）と勤務先（2か所）を入れると、生活に必要な場所への距離と通勤時間の目安が出ます。結論は出しません。<a href="#tab-info" id="aboutLink">動く最小限のデモです（注意と出典）</a></p>
+  <p class="lead"><span class="lfull">物件と勤務先を入れて、</span>通勤・生活施設・将来の見通しを1つの表で比べる（<a href="#tab-info" id="aboutLink">出典・注意</a>）</p>
 </header>
 
 <div id="app">
@@ -25,28 +25,30 @@
       <div id="marks"></div>
       <div id="popup" class="popup" role="dialog" aria-label="物件・勤務先の情報" hidden></div>
       <div id="maploading" class="maploading" hidden></div>
-      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button></div>
-      <div class="attr">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工／施設: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors（ODbL）</a>・国土数値情報</div>
+      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button><button type="button" id="fitAll" aria-label="物件と勤務先をすべて表示" title="物件と勤務先をすべて表示">全</button><button type="button" id="mapBig" class="mobonly" aria-pressed="false" aria-label="地図を大きくする" title="地図を大きく・小さく">⇕</button></div>
+      <div class="attr" id="attr" title="押すと全文">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工／施設: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors（ODbL）</a>・国土数値情報</div>
     </div>
   </div>
 
   <aside id="side">
+    <div class="sidetop">
+        <fieldset id="regionPick" class="row regions">
+        <legend>対象地域</legend>
+        <label><input type="radio" name="region" value="tokushima" checked> 徳島市</label>
+        <label><input type="radio" name="region" value="tokyo23"> 東京23区</label>
+        <label><input type="radio" name="region" value="osaka"> 大阪市</label>
+      </fieldset>
+      <div id="loadbar" class="loadbar" role="status" hidden><span id="loadtext"></span> <progress id="loadprog" max="100" value="0"></progress></div>
+    </div>
     <div class="tabs" role="tablist" aria-label="操作の切り替え">
-      <button type="button" role="tab" id="t-place" aria-controls="tab-place" aria-selected="true">場所・重ね表示</button>
-      <button type="button" role="tab" id="t-props" aria-controls="tab-props" aria-selected="false">物件・勤務先</button>
+      <button type="button" role="tab" id="t-props" aria-controls="tab-props" aria-selected="true">物件・通勤</button>
       <button type="button" role="tab" id="t-sheet" aria-controls="tab-sheet" aria-selected="false">先行きシート</button>
+      <button type="button" role="tab" id="t-place" aria-controls="tab-place" aria-selected="false">地図の表示</button>
       <button type="button" role="tab" id="t-info" aria-controls="tab-info" aria-selected="false">出典・注意</button>
     </div>
 
-    <div class="tabpanel" id="tab-place" role="tabpanel" aria-labelledby="t-place">
+    <div class="tabpanel" id="tab-place" role="tabpanel" aria-labelledby="t-place" hidden>
       <section id="step1" class="panel">
-        <fieldset id="regionPick" class="row regions">
-          <legend>対象地域（選んだ地域のデータだけ読み込みます）</legend>
-          <label><input type="radio" name="region" value="tokushima" checked> 徳島市</label>
-          <label><input type="radio" name="region" value="tokyo23"> 東京23区</label>
-          <label><input type="radio" name="region" value="osaka"> 大阪市</label>
-        </fieldset>
-        <div id="loadbar" class="loadbar" role="status" hidden><span id="loadtext"></span> <progress id="loadprog" max="100" value="0"></progress></div>
         <form id="search" class="row">
           <label class="sr" for="q">住所・目印を検索（地図を動かします）</label>
           <input id="q" type="search" placeholder="例: 徳島市役所、徳島市国府町府中" autocomplete="off">
@@ -59,7 +61,7 @@
         <fieldset class="legend" id="lifeLegend">
           <legend>生活に必要な場所（チェックで地図に表示）</legend>
           <div id="lifeToggles" class="opts"></div>
-          <p class="hint" id="lifeNote"></p>
+          <details class="note"><summary><span class="ic" aria-hidden="true">！</span>データの注意（学童・学区・登録漏れ）</summary><p class="hint" id="lifeNote"></p></details>
         </fieldset>
         <fieldset class="legend" id="hazLegend">
           <legend>区域・災害の想定（チェックで地図に重ねる）</legend>
@@ -73,49 +75,44 @@
             <label><input type="checkbox" id="tgLiq"> <span class="sw sw-liq"></span>液状化の発生傾向（しやすい区分を濃淡で塗る）<span class="nd" hidden></span></label>
           </div>
         </fieldset>
-        <p class="hint">地図をクリック（タップ）すると、その位置を土地として扱い、先行きシートを出します。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心の十字の位置を指定します。東京23区・大阪市では、灰色に覆った範囲は対象外です。実線の円は人口を集計する半径500m、破線の円は徒歩圏の半径800m（直線距離）です。</p>
+        <details class="note"><summary>地図の操作</summary><p class="hint">地図をクリック（タップ）すると、その位置の先行きシートを出します。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心の十字の位置を指定します。東京23区・大阪市では、灰色に覆った範囲は対象外です。実線の円は人口を集計する半径500m、破線の円は徒歩圏の半径800m（直線距離）です。</p></details>
       </section>
     </div>
 
-    <div class="tabpanel" id="tab-props" role="tabpanel" aria-labelledby="t-props" hidden>
+    <div class="tabpanel" id="tab-props" role="tabpanel" aria-labelledby="t-props">
       <section class="panel" id="stepP">
-        <h2>物件の住所（最大10件）</h2>
+        <div id="workForms"></div>
+        <p id="workMsg" class="msg" role="status"></p>
+
+        <h2><span class="stepn" aria-hidden="true">2</span>物件の住所（最大10件）<span id="propFull" class="hsub" hidden> 10件まで入りました（消すには地図の番号を押す）</span> <button type="button" id="exFill" class="mini" title="例の物件5件を入れます。勤務先は空いている欄だけ例で埋めます">例を入れる（勤務先も）</button><button type="button" id="clearTop" class="secondary mini" hidden>全部消す</button></h2>
         <form id="propForm" class="row">
           <label class="sr" for="propQ">物件の住所</label>
-          <input id="propQ" type="search" placeholder="例: 徳島市幸町2丁目" autocomplete="off">
+          <input id="propQ" type="search" placeholder="町丁まで（例: 徳島市幸町2丁目）" autocomplete="off">
           <button type="submit" id="propAdd">追加</button>
           <button type="button" id="propPick" class="secondary">地図で指定</button>
         </form>
         <p id="propMsg" class="msg" role="status"></p>
-        <ol id="propList" class="plist"></ol>
-
-        <h2>勤務先（2か所）</h2>
-        <div id="workForms"></div>
-        <p id="workMsg" class="msg" role="status"></p>
-
-        <h2>通勤時間の目安（物件×勤務先）</h2>
-        <div id="commuteBox"></div>
-        <details class="assump" open>
-          <summary>計算方法と前提（目安です）</summary>
+        <div id="propCands"></div>
+        <div id="propList"></div>
+        <details class="assump">
+          <summary>計算方法・データの注意</summary>
           <ul id="assump"></ul>
+          <p class="hint">入力はこの端末だけに保存（住所検索の文字列は国土地理院へ送信）。 <button type="button" id="clearAll" class="secondary mini">入力をすべて消す</button></p>
         </details>
-        <p class="hint">入力した住所・勤務先は、この端末のブラウザ内（localStorage）だけに保存します。国土地理院の住所検索へ、入力した文字列だけを送ります（それ以外は送りません）。</p>
-        <p><button type="button" id="clearAll" class="secondary">入力をすべて消す</button></p>
       </section>
     </div>
 
     <div class="tabpanel" id="tab-sheet" role="tabpanel" aria-labelledby="t-sheet" hidden>
       <section id="step2" class="panel">
-        <h2>先行きシート</h2>
-        <p id="status" role="status">地図で場所を指すか、例の場所を選ぶと、ここに状況が出ます。</p>
-        <p><button type="button" id="printBtn" disabled>印刷・PDFで保存する</button> <span class="hint">印刷画面で「PDFに保存」を選ぶとPDFになります（A4・1枚）。</span></p>
+        <p id="status" role="status">物件の「シート」を押すか、地図を押すと、ここにその場所のシートが出ます。</p>
+        <p class="row"><button type="button" id="backProps" class="secondary">← 物件の表</button><span id="propChips" class="chips" role="group" aria-label="物件を切り替える"></span><button type="button" id="printBtn" class="secondary" disabled>印刷・PDF</button></p>
         <div id="sheet" class="sheet" aria-live="polite"></div>
       </section>
     </div>
 
     <div class="tabpanel" id="tab-info" role="tabpanel" aria-labelledby="t-info" hidden>
       <section class="panel">
-        <p class="warn"><strong>動く最小限のデモです。</strong>対象は徳島市・東京23区・大阪市（地域を選びます）。将来人口は国の推計で、実際の人口ではありません。「住める・住めない」「価値が上がる・下がる」といった結論は出さず、市や不動産会社に聞くことを示します。国が作成・監修したものではありません。</p>
+        <p class="warn"><strong>試作版です（表示は国などの実データ。出典は下）。</strong>対象は徳島市・東京23区・大阪市（地域を選びます）。将来人口は国の推計で、実際の人口ではありません。「住める・住めない」「価値が上がる・下がる」といった結論は出さず、市や不動産会社に聞くことを示します。国が作成・監修したものではありません。</p>
       </section>
       <section id="step3" class="panel">
         <h2>取得データの状況</h2>
