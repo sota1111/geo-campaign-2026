@@ -22,7 +22,7 @@
   };
   // 出典が割れている林齢のしきい値。主流は26年生以上（森林総研 2000・2009）。20・21・25年の説もある。
   const AGES = [26, 21];
-  const DEFAULTS = { slopeMax: PROVISIONAL.slopeMax.value, minHa: PROVISIONAL.minHa.value, age: 26, radiusKm: 50, matureShare: 0.5, rankKm: 20 };
+  const DEFAULTS = { slopeMax: PROVISIONAL.slopeMax.value, minHa: PROVISIONAL.minHa.value, age: 26, radiusKm: 50, matureShare: 0.5, rankKm: 20, winterMin: 0.4, cutMinHa: 1 };
   // 区分1の中の順位（作成者の式。仮）。S_i = a_i × Σ_j Pop_j×K(d_ij)、K は半径 R km 以内なら1。R の初期値20km（仮）。
   const RANK_RADII = [10, 20, 30];
   const RANK_BANDS = [
@@ -138,7 +138,33 @@
   // 地点（lon, lat）の半径 R km 以内にある、区分1のメッシュの点数の合計。
   function siteScore(D, S, lon, lat, R) { return haWithin(D, lon, lat, R, (i) => S[i]); }
 
+  // ---- 衛星（Sentinel-2 の冬の NDVI。data/sat.js）。樹種・林齢・雄花の量は判別できない。しきい値は仮 ----
+  // 要確認: 冬の NDVI の500mメッシュ平均が winterMin 未満（常緑の林が今も残っているか疑わしい。伐採跡・森林簿とのずれ・広葉樹の混在・影などの可能性）。
+  // 伐採・植え替えの候補: 古い冬に緑だった40m画素のうち NDVI が大きく下がった画素の面積（ha）。cutMinHa 以上のメッシュを「進んだ」とする。
+  function satInfo(SAT, i, p) {
+    if (!SAT) return null;
+    const w = SAT.wNew[i], ok = w > -900, cutHa = SAT.nDrop[i] * SAT.meta.pixelHa;
+    return { ndvi: ok ? w / 100 : null, check: ok && w / 100 < p.winterMin, cutHa, cut: cutHa >= p.cutMinHa, both: SAT.nBoth[i] * SAT.meta.pixelHa };
+  }
+  // 区分1の帯（band 1..4）ごと・市町村ごとの 要確認 の面積（ha, スギ人工林の面積）と 伐採候補の面積（ha）、衛星で見えたメッシュ数。
+  function satSummary(D, SAT, p, cls, band) {
+    const c = D.cells, z = () => ({ check: 0, cut: 0, cutCells: 0, seen: 0, all: 0 });
+    const byBand = [0, 1, 2, 3, 4].map(z), byMuni = D.munis.map(z), tot = z();
+    if (!SAT) return { byBand, byMuni, tot };
+    for (let i = 0; i < cls.length; i++) {
+      if (cls[i] !== 1) continue;
+      const si = satInfo(SAT, i, p), ha = c.n[i] * CELL_HA, m = c.muni[i];
+      for (const o of [byBand[band[i]], byMuni[m], tot]) {
+        o.all += ha;
+        if (si.ndvi != null) o.seen += ha;
+        if (si.check) o.check += ha;
+        o.cut += si.cutHa; if (si.cut) o.cutCells++;
+      }
+    }
+    return { byBand, byMuni, tot };
+  }
+
   function cellLonLat(D, i) { return [(D.cells.ix[i] + 0.5) / 160, (D.cells.iy[i] + 0.5) / 240]; }
 
-  return { RANK_RADII, RANK_BANDS, exposure, scores, rankBands, bandSummary, siteScore, CELL_HA, CLASSES, PROVISIONAL, AGES, DEFAULTS, classify, classifyAll, summarize, spearman, haWithin, cellLonLat };
+  return { satInfo, satSummary, RANK_RADII, RANK_BANDS, exposure, scores, rankBands, bandSummary, siteScore, CELL_HA, CLASSES, PROVISIONAL, AGES, DEFAULTS, classify, classifyAll, summarize, spearman, haWithin, cellLonLat };
 });

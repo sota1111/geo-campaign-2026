@@ -1,12 +1,12 @@
 (function () {
   'use strict';
-  const K = window.KantoLib, D = window.SUGI_KANTO, C = D.cells, POP = window.SUGI_POP || null, V9 = window.SUGI_VERIFY9 || null;
+  const K = window.KantoLib, D = window.SUGI_KANTO, C = D.cells, POP = window.SUGI_POP || null, V9 = window.SUGI_VERIFY9 || null, SAT = window.SUGI_SAT || null;
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmt = (n) => Math.round(n).toLocaleString('ja-JP');
   const f1 = (n) => (Math.round(n * 10) / 10).toLocaleString('ja-JP');
   const N = C.n.length;
-  const state = { params: Object.assign({}, K.DEFAULTS), cls: null, sum: null, sel: null, muni: null, shown: 30, rshown: 15, mapReady: false, sc: null, rb: null, bs: null };
+  const state = { params: Object.assign({}, K.DEFAULTS), cls: null, sum: null, sel: null, muni: null, shown: 30, rshown: 15, mapReady: false, sc: null, rb: null, bs: null, ss: null };
   window.__kanto = state; // 画面確認・テスト用
 
   // ---- 色と模様（色だけに頼らない） ----
@@ -51,6 +51,7 @@
     state.sc = K.scores(D, POP, state.params, state.cls);
     state.rb = K.rankBands(D, state.cls, state.sc.S);
     state.bs = K.bandSummary(D, state.cls, state.rb.band);
+    state.ss = K.satSummary(D, SAT, state.params, state.cls, state.rb.band);
   }
   const BANDS = K.RANK_BANDS;
   const bandName = (b) => BANDS[b - 1].name;
@@ -89,12 +90,19 @@
       (sc.pop ? p.age + '年生以上のスギ ' + f1(a) + ' ha × 半径 ' + p.rankKm + ' km 内の人口 約' + fmt(x) + ' 人（令和2年国勢調査の250mメッシュ人口）' : '人口は使っていない。' + p.age + '年生以上のスギ ' + f1(a) + ' ha × 最寄りの起点までの近さ ' + f1(x) + '（1−距離/50）') +
       '<br><span class="note">「人に届きやすい発生源の順位」（作成者の式。半径は<span class="chip prov">仮</span>）。花粉の量や対策の成果を示すものではありません。</span></div>';
   }
+  function satLines(i) {
+    if (!SAT || state.cls[i] !== 1) return '';
+    const p = state.params, si = K.satInfo(SAT, i, p);
+    const a = si.ndvi == null ? '冬の NDVI は、雲・影・雪を除くと有効な画素が少なく、求められません。' : '冬（' + SAT.meta.new + '）の NDVI の平均 ' + si.ndvi.toFixed(2) + (si.check ? ' ＜ ' + p.winterMin + '（<span class="chip prov">仮</span>）→ <b>要確認</b>（伐採跡・森林簿とのずれ・広葉樹の混在・影などの可能性。原因は判別できない）' : ' ≧ ' + p.winterMin + '（<span class="chip prov">仮</span>）→ 冬も緑が保たれている。');
+    const b = si.cutHa > 0 ? SAT.meta.old + 'から' + SAT.meta.new + 'に NDVI が ' + SAT.meta.drop + ' 以上下がった所が約 ' + f1(si.cutHa) + ' ha' + (si.cut ? '（≧' + p.cutMinHa + ' ha＝<b>伐採・植え替えの候補</b>。<span class="chip prov">仮</span>）' : '（' + p.cutMinHa + ' ha 未満）') : SAT.meta.old + 'から' + SAT.meta.new + 'に NDVI が大きく下がった所は見つからない。';
+    return '<div class="fact sat"><b>衛星（Sentinel-2）で見ると</b><br>' + a + '<br>' + b + '<br><span class="note">メッシュ内のスギ以外の林・畑なども含む平均・面積。衛星は樹種・林齢・雄花の量を判別できない。</span></div>';
+  }
   function cellCard(i) {
     const k = state.cls[i], c = K.CLASSES[k], z = D.munis[C.muni[i]][2] === 1;
     return '<div class="sel-box"><h3>' + esc(muniName(i)) + '（' + esc(prefOf(i)) + '）' + (z ? ' <span class="chip zone">重点区域あり</span>' : '') + '</h3>' +
       '<p class="big"><span class="sw" style="' + swatch(k) + '"></span> ' + esc(c.name) + '</p><p>' + esc(c.todo) + '</p>' +
       '<ul style="margin:4px 0;padding-left:18px">' + explain(i).map((t) => '<li>' + t + '</li>').join('') + '</ul>' +
-      rankLines(i) + '<p class="note">根拠: ' + esc(c.basis) + '</p></div>';
+      rankLines(i) + satLines(i) + '<p class="note">根拠: ' + esc(c.basis) + '</p></div>';
   }
   function popupHtml(i) {
     const k = state.cls[i], b = state.rb.band[i];
@@ -108,7 +116,7 @@
       const c = K.CLASSES[k], prov = (k === 3 || k === 4) ? ' <span class="chip prov">基準は仮</span>' : '';
       return '<div class="lg-row"><span class="sw" style="' + swatch(k) + '"></span><div><b>' + k + ' ' + esc(c.name) + '</b>' + prov + ' <span class="ha">' + fmt(S.tot[k]) + ' ha</span><div class="todo">' + esc(c.todo) + '</div><div class="basis">根拠: ' + esc(c.basis) + '</div>' + (k === 1 ? '<div class="basis"><b>この中の着手順は、下の「区分1の中の順位」で濃淡と斜線の太さで示す。</b></div>' : '') + '</div></div>';
     }).join('');
-    $('#mini').innerHTML = '<div><span class="sws">' + BANDS.map((r) => '<span class="sw sm" style="' + bswatch(r.k) + '"></span>').join('') + '</span>' + esc(SHORT[1]) + '：濃いほど先に</div>' + [2, 3, 4].map((k) => '<div><span class="sw" style="' + swatch(k) + '"></span>' + esc(SHORT[k]) + '</div>').join('');
+    $('#mini').innerHTML = '<div><span class="sws">' + BANDS.map((r) => '<span class="sw sm" style="' + bswatch(r.k) + '"></span>').join('') + '</span>' + esc(SHORT[1]) + '：濃いほど先に</div>' + [2, 3, 4].map((k) => '<div><span class="sw" style="' + swatch(k) + '"></span>' + esc(SHORT[k]) + '</div>').join('') + (SAT ? '<div><span class="mk mk-check"></span> 衛星で要確認　<span class="mk mk-cut"></span> 伐採候補（区分1）</div>' : '');
   }
   function renderTotals() {
     const S = state.sum, A = D.zone.areasHa;
@@ -153,16 +161,16 @@
     if (pf !== '') list = list.filter((r) => r.m[1] === +pf);
     list.sort((a, b) => b.v[1] - a.v[1] || b.v[2] - a.v[2] || b.v[3] - a.v[3] || b.v[4] - a.v[4]);
     const shown = list.slice(0, state.rshown);
-    const trs = shown.map((r, n) => '<tr data-m="' + r.idx + '" tabindex="0" class="' + (state.muni === r.idx ? 'sel' : '') + '"><td class="n">' + (n + 1) + '</td><td>' + esc(r.m[0]) + '<br><span class="note">' + esc(D.meta.prefs[r.m[1]]) + '</span></td><td class="n">' + fmt(r.v[1]) + '</td><td class="n">' + fmt(r.v[1] + r.v[2]) + '</td><td class="n">' + fmt(r.v[1] + r.v[2] + r.v[3] + r.v[4]) + '</td><td>' + bandBar(r.v) + '</td></tr>').join('');
+    const trs = shown.map((r, n) => '<tr data-m="' + r.idx + '" tabindex="0" class="' + (state.muni === r.idx ? 'sel' : '') + '"><td class="n">' + (n + 1) + '</td><td>' + esc(r.m[0]) + '<br><span class="note">' + esc(D.meta.prefs[r.m[1]]) + '</span></td><td class="n">' + fmt(r.v[1]) + '</td><td class="n">' + fmt(r.v[1] + r.v[2]) + '</td><td class="n">' + fmt(r.v[1] + r.v[2] + r.v[3] + r.v[4]) + '</td>' + (SAT ? '<td class="n">' + fmt(state.ss.byMuni[r.idx].check) + '</td><td class="n">' + fmt(state.ss.byMuni[r.idx].cut) + '</td>' : '') + '<td>' + bandBar(r.v) + '</td></tr>').join('');
     const prefRows = D.meta.prefs.map((n, i) => '<tr><td>' + esc(n) + '</td>' + [1, 2, 3, 4].map((b) => '<td class="n">' + fmt(bs.byPref[i][b]) + '</td>').join('') + '</tr>').join('');
     $('#rank-body').innerHTML =
       (pop ? '' : '<div class="warn"><b>人口は使っていない。</b>人口データを読み込めなかったため、代わりに「最寄りの起点までの近さ（1−距離/50、0以上）」で点数を付けています。</div>') +
       '<p>区分1（' + fmt(tot) + ' ha）を、<b>人に届きやすい発生源の順位</b>（作成者の式。仮）で4つの帯に分けました。面積で数えた百分位で、<b>濃く太い斜線ほど先に手を付ける候補</b>です。</p>' + rows +
       '<table class="small"><thead><tr><th>都県</th>' + BANDS.map((r) => '<th class="n"><span class="sw sm" style="' + bswatch(r.k) + '"></span>' + esc(r.name.replace('上位', '').replace('（下位40%）', '')) + '</th>').join('') + '</tr></thead><tbody>' + prefRows + '</tbody></table><p class="note">単位は ha。林齢は ' + p.age + '年生以上、人口を数える半径は ' + p.rankKm + ' km（仮）の設定での値。</p>' +
       '<h3 class="h3">市町村の並び（上位10%の面積が大きい順）</h3>' +
-      (list.length ? '<table><thead><tr><th class="n">#</th><th>市町村</th><th class="n">上位10% ha</th><th class="n">上位30%まで ha</th><th class="n">区分1 ha</th><th>帯の内訳</th></tr></thead><tbody>' + trs + '</tbody></table>' : '<p class="note">該当する市町村がありません。</p>') +
+      (list.length ? '<table><thead><tr><th class="n">#</th><th>市町村</th><th class="n">上位10% ha</th><th class="n">上位30%まで ha</th><th class="n">区分1 ha</th>' + (SAT ? '<th class="n">要確認 ha</th><th class="n">伐採候補 ha</th>' : '') + '<th>帯の内訳</th></tr></thead><tbody>' + trs + '</tbody></table>' : '<p class="note">該当する市町村がありません。</p>') +
       (list.length > shown.length ? '<button type="button" class="btn" id="r-more">さらに表示（' + shown.length + ' / ' + list.length + '）</button>' : '') +
-      '<p class="note">行をクリックすると地図がその市町村に移ります。「上位30%まで」は上位10%と10〜30%の合計。市町村の並びは帯の面積で決めた目安で、市町村全体の優先度ではありません。</p>';
+      '<p class="note">行をクリックすると地図がその市町村に移ります。「上位30%まで」は上位10%と10〜30%の合計。「要確認」「伐採候補」は衛星（Sentinel-2）で見た区分1のメッシュの面積で、下の「衛星で確かめる」の仮のしきい値による。市町村の並びは帯の面積で決めた目安で、市町村全体の優先度ではありません。</p>';
     $('#rank-body').querySelectorAll('tr[data-m]').forEach((tr) => {
       const go = () => selectMuni(+tr.dataset.m, true);
       tr.addEventListener('click', go);
@@ -202,6 +210,27 @@
       '<p>R を変えたときの順位の安定（区分1の全メッシュ）</p>' +
       '<table class="small"><thead><tr><th>比べる R</th><th class="n">点数の順位相関 ρ</th><th class="n">上位10%の共通面積</th></tr></thead><tbody>' + pairs + '</tbody></table>' +
       '<p class="note">「上位10%の共通面積」＝片方の R で上位10%の帯に入る面積のうち、もう片方の R でも上位10%の帯に入る割合。数字が小さいほど、R の選び方で最優先の場所が入れ替わる。</p>';
+  }
+  function renderSat() {
+    const el = $('#sat-body');
+    if (!SAT) { el.innerHTML = '<p class="note">衛星データを読み込めませんでした。</p>'; return; }
+    const ss = state.ss, p = state.params, m = SAT.meta, pc = (a, b) => (b ? (a / b * 100).toFixed(0) : '0') + '%';
+    const rows = BANDS.map((r) => { const o = ss.byBand[r.k]; return '<tr><td><span class="sw sm" style="' + bswatch(r.k) + '"></span> ' + esc(r.name) + '</td><td class="n">' + fmt(o.all) + '</td><td class="n">' + fmt(o.check) + '（' + pc(o.check, o.seen) + '）</td><td class="n">' + fmt(o.cut) + '</td></tr>'; }).join('');
+    const t = ss.tot;
+    const cov = D.meta.prefs.map(() => [0, 0]);
+    for (let i = 0; i < N; i++) if (state.cls[i] === 1) { const q = cov[D.munis[C.muni[i]][1]]; q[0] += C.n[i] * K.CELL_HA; if (SAT.wNew[i] > -900) q[1] += C.n[i] * K.CELL_HA; }
+    const covTxt = D.meta.prefs.map((n, i) => n + ' ' + pc(cov[i][1], cov[i][0])).join('、');
+    const sc = Object.keys(m.scenes).map((k) => { const v = m.scenes[k]; return '<tr><td>' + esc(k.replace('MGRS-', '')) + '</td><td>' + esc(v.old.id) + '<br>' + esc(v.old.date) + '（雲量' + v.old.cloud + '%）</td><td>' + esc(v.new.id) + '<br>' + esc(v.new.date) + '（雲量' + v.new.cloud + '%）</td></tr>'; }).join('');
+    el.innerHTML =
+      '<p>森林簿（全国森林資源メッシュ）の答え合わせと、伐採の進み具合を、<b>衛星（Sentinel-2）の冬の NDVI</b>で見ます。常緑の針葉樹は冬も緑を保ち、落葉樹・裸地は緑が落ちる性質を使います。<b>衛星は樹種・林齢・雄花の量を判別できません</b>。メッシュ内のスギ以外の林・畑・道なども平均・面積に入ります。</p>' +
+      '<ul><li><span class="mk mk-check"></span> <b>要確認</b>（地図の赤紫の輪）＝' + m.new + 'の冬の NDVI の平均が ' + p.winterMin.toFixed(2) + ' 未満の区分1のメッシュ。伐採跡・森林簿とのずれ・広葉樹の混在・影などの可能性があり、原因は判別しない。</li>' +
+      '<li><span class="mk mk-cut"></span> <b>伐採・植え替えの候補</b>（地図の紺の点）＝' + m.old + 'の冬に緑（NDVI≧' + m.green + '）だった 40m の画素が、' + m.new + 'の冬に ' + m.drop + ' 以上下がった面積が ' + p.cutMinHa + ' ha 以上のメッシュ。2年以上離れた同じ季節の比較。</li></ul>' +
+      '<table class="small"><thead><tr><th>区分1の帯</th><th class="n">区分1 ha</th><th class="n">要確認 ha（見えた面積に対する割合）</th><th class="n">伐採候補 ha</th></tr></thead><tbody>' + rows +
+      '<tr><th>計</th><th class="n">' + fmt(t.all) + '</th><th class="n">' + fmt(t.check) + '（' + pc(t.check, t.seen) + '）</th><th class="n">' + fmt(t.cut) + '</th></tr></tbody></table>' +
+      '<p class="note">衛星で見えた区分1の面積 ' + fmt(t.seen) + ' ha（' + pc(t.seen, t.all) + '。雲・影・雪を除いた有効な画素が少ないメッシュは除く）。「伐採候補 ha」は NDVI が下がった画素の面積の合計で、しきい値 ' + p.cutMinHa + ' ha 以上のメッシュは ' + fmt(t.cutCells) + ' 個。区分1の中の、すでに伐採が進んだ場所を見つける目安です。</p>' +
+      '<div class="fact"><b>範囲（軽さのため、取得した衛星のタイルは8面）</b>: 区分1のうち衛星で見えた面積の割合は、' + esc(covTxt) + '。<b>栃木県は取得したタイルに入っておらず（未処理）、群馬県・茨城県は一部だけ</b>。埼玉・千葉・東京・神奈川は全域を見ています。見えない所は「要確認ではない」ではなく「未確認」です。</div>' +
+      '<div class="warn"><b>しきい値は仮置き</b>（冬の NDVI ' + p.winterMin.toFixed(2) + '、緑とみなす ' + m.green + '、下がった幅 ' + m.drop + '、候補とする面積 ' + p.cutMinHa + ' ha）で、現地で確かめた値ではありません。<b>森林簿の年は2019〜2024年と地域で異なり</b>、古い冬（' + m.old + '）より前に伐られた所は「下がった」に出ません。冬の影・積雪・撮影日の違い・畑の耕起・間伐でも NDVI は下がります。範囲は<b>関東1都6県の区分1のスギ人工林メッシュ</b>で、40m の画素で数えるため 0.16 ha より小さな伐採は見えません。</div>' +
+      '<details class="fold"><summary>使った衛星の場面（ID と日付）</summary><table class="small"><thead><tr><th>タイル</th><th>古い冬</th><th>新しい冬</th></tr></thead><tbody>' + sc + '</tbody></table><p class="note">Contains modified Copernicus Sentinel data（2022・2026）。Sentinel-2 L2A（ESA／Copernicus）を Element 84 Earth Search（STAC）の公開 COG から取得。雲量はタイル全体の値。雲・影・雪などはシーン分類（SCL）で除外。</p></details>';
   }
   function muniCard(idx) {
     const m = D.munis[idx], b = state.sum.byMuni[idx], k = mainMeasure(b), z = m[2] === 1;
@@ -264,12 +293,22 @@
   function applyToggles() {
     setVis('ring-casing', $('#t-ring').checked); setVis('ring-line', $('#t-ring').checked);
     setVis('zone-line', $('#t-zone').checked); setVis('muni-line', $('#t-muni').checked);
-    setVis('org-dot', $('#t-org').checked);
+    setVis('org-dot', $('#t-org').checked); setVis('sat-check', $('#t-chk').checked); setVis('sat-cut', $('#t-cut').checked);
   }
   function refreshMap() {
     if (!map || !state.mapReady) return;
     map.getSource('cells').setData(cellsGeo());
     map.setFilter('sel-cell', ['==', ['get', 'i'], state.sel == null ? -1 : state.sel]);
+    if (map.getSource('sat')) map.getSource('sat').setData(satGeo());
+  }
+  function satGeo() {
+    const f = [];
+    if (SAT) for (let i = 0; i < N; i++) {
+      if (state.cls[i] !== 1) continue;
+      const si = K.satInfo(SAT, i, state.params);
+      if (si.check || si.cut) f.push({ type: 'Feature', properties: { i, chk: si.check ? 1 : 0, cut: si.cut ? 1 : 0 }, geometry: { type: 'Point', coordinates: K.cellLonLat(D, i) } });
+    }
+    return { type: 'FeatureCollection', features: f };
   }
   function initMap() {
     map = new maplibregl.Map({
@@ -296,6 +335,9 @@
       map.addLayer({ id: 'sel-muni', type: 'line', source: 'muni', filter: ['==', ['get', 'm'], -1], paint: { 'line-color': '#0036ff', 'line-width': 3.5 } });
       map.addLayer({ id: 'ring-casing', type: 'line', source: 'ring', paint: { 'line-color': '#fff', 'line-width': 4.5 } });
       map.addLayer({ id: 'ring-line', type: 'line', source: 'ring', paint: { 'line-color': '#000', 'line-width': 2, 'line-dasharray': [3, 2] } });
+      map.addSource('sat', { type: 'geojson', data: satGeo() });
+      map.addLayer({ id: 'sat-check', type: 'circle', source: 'sat', filter: ['==', ['get', 'chk'], 1], paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 1.6, 10, 4, 13, 9], 'circle-color': 'rgba(255,255,255,0)', 'circle-stroke-color': '#c2185b', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7, 0.8, 11, 2] } });
+      map.addLayer({ id: 'sat-cut', type: 'circle', source: 'sat', filter: ['==', ['get', 'cut'], 1], paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 1.2, 10, 2.8, 13, 6], 'circle-color': '#0a2a8f', 'circle-stroke-color': '#fff', 'circle-stroke-width': 0.8 } });
       map.addLayer({ id: 'sel-cell', type: 'line', source: 'cells', filter: ['==', ['get', 'i'], -1], paint: { 'line-color': '#000', 'line-width': 3 } });
       map.addLayer({ id: 'org-dot', type: 'circle', source: 'org', paint: { 'circle-radius': 4.5, 'circle-color': '#000', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
       const tip = document.createElement('div'); tip.id = 'tip'; tip.style.cssText = 'position:absolute;z-index:4;pointer-events:none;background:#fff;border:1px solid #333;border-radius:4px;padding:2px 7px;font-size:12px;display:none;white-space:nowrap'; $('#mapwrap').appendChild(tip);
@@ -338,19 +380,23 @@
 
   // ---- 基準の操作 ----
   function refreshAll() {
-    recompute(); renderLegend(); renderRank(); renderRankCheck(); renderTotals(); renderPlaces(); renderVerify(); refreshMap();
+    recompute(); renderLegend(); renderRank(); renderSat(); renderRankCheck(); renderTotals(); renderPlaces(); renderVerify(); refreshMap();
     if (state.sel != null) showSel(cellCard(state.sel)); else if (state.muni != null) showSel(muniCard(state.muni));
   }
   function readParams() {
     state.params.slopeMax = +$('#p-slope').value; state.params.minHa = +$('#p-ha').value;
     state.params.age = +document.querySelector('input[name=age]:checked').value;
     state.params.rankKm = +document.querySelector('input[name=rk]:checked').value;
+    state.params.winterMin = +$('#p-wmin').value / 100; state.params.cutMinHa = +$('#p-cut').value;
+    $('#o-wmin').textContent = state.params.winterMin.toFixed(2); $('#o-cut').textContent = state.params.cutMinHa;
     $('#o-slope').textContent = state.params.slopeMax; $('#o-ha').textContent = state.params.minHa;
   }
   function writeParams() {
     $('#p-slope').value = state.params.slopeMax; $('#p-ha').value = state.params.minHa;
     document.querySelector('input[name=age][value="' + state.params.age + '"]').checked = true;
     document.querySelector('input[name=rk][value="' + state.params.rankKm + '"]').checked = true;
+    $('#p-wmin').value = Math.round(state.params.winterMin * 100); $('#p-cut').value = state.params.cutMinHa;
+    $('#o-wmin').textContent = state.params.winterMin.toFixed(2); $('#o-cut').textContent = state.params.cutMinHa;
     $('#o-slope').textContent = state.params.slopeMax; $('#o-ha').textContent = state.params.minHa;
   }
   function about() {
@@ -376,7 +422,8 @@
       '<li>林野庁 全国森林資源メッシュ（20m。G空間情報センター dataset mesh_9、公共データ利用規約 第1.0版。<b>出典：林野庁（https://www.geospatial.jp/ckan/dataset/mesh_9）、PDL1.0（https://www.digital.go.jp/resources/open_data/public_data_license_v1.0）をもとに、500mメッシュに集計・区分する加工を当方が行った</b>。林野庁が作成したものではない）。規約は2026-11-21に取得して確認。原典は都道府県・森林管理局の森林簿・森林調査簿（主に空中写真判読）で、現地・登記・課税と一致するとは限らず、整備時点の資源情報である。</li>' +
       '<li>国土数値情報 行政区域（2025年版、CC BY 4.0）、標高・傾斜度5次メッシュ（2011年度版、商用可。原典は国土地理院の基盤地図情報 数値標高モデル10m）。いずれも国土交通省の国土数値情報を加工して作成。</li>' +
       '<li>総務省 指定都市一覧・中核市一覧・施行時特例市一覧、林野庁 スギ人工林伐採重点区域（令和8年4月1日時点）、東京都 飛散花粉数データ、環境省・林野庁 令和6年度スギ雄花花芽調査結果。地図は地理院タイル（淡色地図）。</li>' +
-      '<li>国土数値情報 A13（森林地域）は非商用のため使っていない。</li></ul>' +
+      '<li>国土数値情報 A13（森林地域）は非商用のため使っていない。</li>' +
+      (SAT ? '<li>衛星: Sentinel-2 L2A（ESA／Copernicus。<b>Contains modified Copernicus Sentinel data 2022・2026</b>）。Element 84 Earth Search（STAC）の公開 COG を GET で読み、冬（' + esc(SAT.meta.old) + 'と' + esc(SAT.meta.new) + '）の NDVI を500mメッシュに集計した（tools/kanto_satellite.py）。場面の ID と日付は「衛星で確かめる」の折りたたみ。衛星は樹種・林齢・雄花の量を判別できません。使い方は「森林簿の答え合わせ（冬の緑が弱い所＝要確認）」と「冬どうしの NDVI の低下（伐採・植え替えの候補）」だけで、順位の点数には混ぜていない。しきい値は仮。森林簿の年は2019〜2024年と地域で異なる。</li>' : '') + '</ul>' +
       '<h3>限界</h3><ul>' +
       '<li>スギは「樹種1（面積歩合が最大の樹種）」のみ。ヒノキ人工林・天然林のスギは数えない。500mメッシュの中心点で市町村を決めるため、境界付近の面積は隣の市町村に入ることがある。</li>' +
       '<li>風向・飛距離は使っていない（根拠が確認できなかったため。旧版の「風下人口×面積」は参考・仮置きとして別ページに残した）。人口は、区分1の中の順位（下の節）にだけ使う。森林総研は気象モデルで首都圏の発生源別の影響を計算しており、「埼玉県や東京都西部の影響が高く、神奈川県西部や房総半島中北部も高い」としている（2008年の1シーズン。数年の集計が必要とも書いている）。この地図の区分はそれを再現するものではない。</li>' +
@@ -389,8 +436,8 @@
     $('#f-pref').innerHTML = '<option value="">関東すべて</option>' + D.meta.prefs.map((n, i) => '<option value="' + i + '">' + esc(n) + '</option>').join('');
     writeParams();
     $('#r-pref').innerHTML = '<option value="">関東すべて</option>' + D.meta.prefs.map((n, i) => '<option value="' + i + '">' + esc(n) + '</option>').join('');
-    renderLegend(); renderRank(); renderRankCheck(); renderTotals(); renderPlaces(); renderVerify(); about();
-    ['#p-slope', '#p-ha'].forEach((s) => $(s).addEventListener('input', () => { readParams(); refreshAll(); }));
+    renderLegend(); renderRank(); renderSat(); renderRankCheck(); renderTotals(); renderPlaces(); renderVerify(); about();
+    ['#p-slope', '#p-ha', '#p-wmin', '#p-cut'].forEach((s) => $(s).addEventListener('input', () => { readParams(); refreshAll(); }));
     document.querySelectorAll('input[name=age], input[name=rk]').forEach((r) => r.addEventListener('change', () => { readParams(); refreshAll(); }));
     $('#r-pref').addEventListener('change', () => { state.rshown = 15; renderRank(); });
     $('#p-reset').addEventListener('click', () => { state.params = Object.assign({}, K.DEFAULTS); writeParams(); refreshAll(); });

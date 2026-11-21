@@ -120,3 +120,24 @@ test('画面の表示規約（順位）: 「効果」「花粉量」と書かな
   assert.ok(t.includes('人に届きやすい発生源の順位') && t.includes('作成者の式') && t.includes('選び直していません'));
   assert.ok(t.includes('林齢では順位を付けていない'));
 });
+
+// ---- 衛星（Sentinel-2 の冬の NDVI） ----
+test('衛星: 要確認・伐採候補の判定（仮のしきい値）と、衛星は樹種・林齢・雄花を判別しないと明記', () => {
+  const SAT = { meta: { pixelHa: 0.16 }, wNew: [30, 60, -999], nDrop: [10, 3, 0], nBoth: [50, 50, 0] };
+  const p = Object.assign({}, P, { winterMin: 0.4, cutMinHa: 1 });
+  const a = K.satInfo(SAT, 0, p), b = K.satInfo(SAT, 1, p), c = K.satInfo(SAT, 2, p);
+  assert.equal(a.check, true); assert.equal(a.cut, true); assert.ok(Math.abs(a.cutHa - 1.6) < 1e-9);
+  assert.equal(b.check, false); assert.equal(b.cut, false);
+  assert.equal(c.ndvi, null); assert.equal(c.check, false);
+  assert.equal(K.satInfo(null, 0, p), null);
+  const t = read('kanto.js');
+  assert.ok(t.includes('樹種・林齢・雄花の量を判別できません') && t.includes('Copernicus') && t.includes('2019〜2024年'));
+});
+test('衛星データは kanto.js のメッシュと同じ件数で、場面（ID・日付）を持つ', () => {
+  const c2 = { window: {} }; vm.createContext(c2); vm.runInContext(read('data/sat.js'), c2);
+  const S = c2.window.SUGI_SAT, n = D.cells.n.length;
+  for (const k of ['wNew', 'wOld', 'nValid', 'nBoth', 'nDrop']) assert.equal(S[k].length, n);
+  const sc = Object.values(S.meta.scenes);
+  assert.ok(sc.length >= 5);
+  for (const v of sc) { assert.match(v.new.id, /^S2[AB]_54S/); assert.match(v.new.date, /^2026-/); assert.match(v.old.date, /^2022-/); }
+});

@@ -37,6 +37,12 @@
         </details>
         <details class="fold" id="rank-check"><summary>順位の検証と感度（東京都12地点・9年分、R 10/20/30 km）</summary><div id="rank-check-body"></div></details>
       </section>
+      <section id="sat" aria-labelledby="h-sat"><h2 id="h-sat">衛星で確かめる：森林簿とのずれ・伐採の進み具合</h2>
+        <div class="row toggles"><label><input type="checkbox" id="t-chk" checked> 要確認（赤紫の輪）</label><label><input type="checkbox" id="t-cut" checked> 伐採・植え替えの候補（紺の点）</label></div>
+        <div class="row"><label for="p-wmin">要確認とする冬の NDVI <span class="chip prov">仮</span></label><span class="ctl"><input id="p-wmin" type="range" min="20" max="70" step="5"><output id="o-wmin"></output>未満</span></div>
+        <div class="row"><label for="p-cut">伐採候補とする面積 <span class="chip prov">仮</span></label><span class="ctl"><input id="p-cut" type="range" min="1" max="10" step="1"><output id="o-cut"></output>ha以上／メッシュ</span></div>
+        <div id="sat-body"></div>
+      </section>
       <section id="sel" aria-labelledby="h-sel" hidden><h2 id="h-sel">選んだ場所</h2><div id="sel-body"></div></section>
       <section id="params" aria-labelledby="h-params"><h2 id="h-params">仮の基準を変えて見る</h2>
         <p class="note">公的資料に数値がない基準は<span class="chip prov">仮</span>と表示します（参謀長判断）。動かすと地図と面積が変わります。</p>
@@ -72,6 +78,7 @@
 <script src="data/kanto.js"></script>
 <script src="data/pop.js"></script>
 <script src="data/verify9.js"></script>
+<script src="data/sat.js"></script>
 <script src="kanto-lib.js"></script>
 <script src="kanto.js"></script>
 </body>

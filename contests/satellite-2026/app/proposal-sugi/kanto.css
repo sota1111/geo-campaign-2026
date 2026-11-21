@@ -91,3 +91,7 @@ details.fold{margin:8px 0;background:#fff;border:1px solid var(--line);border-ra
 details.fold summary{cursor:pointer;font-weight:700;font-size:13px;min-height:28px}
 tr.init{background:#fff3e0}
 #rank fieldset.row label{display:inline-block;margin-right:12px}
+.mk{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px}
+.mk-check{border:2px solid #c2185b;background:#fff}
+.mk-cut{background:#0a2a8f;border:1px solid #fff;box-shadow:0 0 0 1px #0a2a8f}
+.fact.sat{border-left-color:#c2185b;background:#fbeaf1}
