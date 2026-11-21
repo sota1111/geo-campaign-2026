@@ -917,6 +917,54 @@
       "score": 0,
       "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
       "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "udc-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "satellite-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "ichibiz-2026-business",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "ichibiz-2026-idea",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "◎",
+      "score": 3,
+      "reason": "このコンペ向けに作った（不動産情報活用部門向けの新案A4）",
+      "source": "contests/ichibiz-2026/app/realestate-a4/README.md"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "odpt-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
     }
   ],
   "cautions": [
