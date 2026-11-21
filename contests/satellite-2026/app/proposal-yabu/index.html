@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>クマ対策：藪払いの優先地図（コンセプトデモ）</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>クマ対策：藪払いの優先地図 <small>人里に近づく藪・林縁を衛星で絞り、刈り払いの順番を決める（コンセプトデモ）</small></h1>
+  <p class="banner" id="banner" role="note"><b>架空のデータは使っていません（すべて公開データ）。</b>対象は京都府与謝野町周辺。衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃履歴＝京都府の公開データ（<b>2009〜2018年度分で、最新ではありません</b>）、建物・学校＝OpenStreetMap（未登録の建物があります）。<b>点数の重みは説明用の仮置き</b>で、出没の予測や刈り払いの効果を示すものではありません。⑵の記録は利用者が入れるもので、デモ中の入力は実際の確認ではありません。</p>
+  <details class="can">
+    <summary>衛星で言えること／言えないこと</summary>
+    <div class="cols">
+      <div><b>言える</b><ul><li>集落のまわりで、開けた所（水田・畑・建物）に接する植生の帯を、100m四方の区画として絞る</li><li>夏に茂り冬に落葉する植生かどうかを、2時期の差で見分ける目安にする</li><li>絞った区画に、目撃履歴・建物・学校との近さを重ねて、現地確認の順番を決める</li></ul></div>
+      <div><b>言わない（言えない）</b><ul><li>その区画が藪・耕作放棄地であると確定すること（水田・畑・庭木との区別は現地確認が必要）</li><li>クマの出没の予測、刈り払いで出没が減る効果</li><li>通学路そのもの（データ未入手）。学校・園までの距離で代用している</li></ul></div>
+    </div>
+  </details>
+  <nav id="tabs" role="tablist" aria-label="画面の切り替え">
+    <button role="tab" data-view="rank" aria-selected="true">⑴ 優先地図（候補の順位）</button>
+    <button role="tab" data-view="record" aria-selected="false">⑵ 現地確認の記録</button>
+    <button role="tab" data-view="plan" aria-selected="false">⑶ 刈り払い計画（CSV）</button>
+  </nav>
+</header>
+<main>
+  <section id="v-rank" class="view">
+    <p id="flow" class="note">流れ：<b>衛星で候補を絞る</b>（地図の橙・青の区画が候補）→ <b>出没履歴と人家の近さで順位付け</b>（表）→ ⑵現地確認の記録 → ⑶刈り払い計画のCSV出力</p>
+    <div class="split">
+      <div class="pane">
+        <div id="map" role="application" aria-label="与謝野町周辺の地図。候補区画を順位に応じた色で表示。区画をクリックすると根拠が表示される"></div>
+        <fieldset class="layers"><legend>地図に重ねるもの</legend>
+          <label><input type="checkbox" id="l-cells" checked> 候補区画（橙＝上位20、淡い橙＝21〜100位、青＝それ以外）</label>
+          <label><input type="checkbox" id="l-sights"> クマ目撃（2009〜2018年度）</label>
+          <label><input type="checkbox" id="l-houses"> 建物（OSM）</label>
+          <label><input type="checkbox" id="l-schools" checked> 学校・園（OSM）</label>
+        </fieldset>
+        <p class="legend" id="map-note"></p>
+      </div>
+      <div class="pane">
+        <div id="detail" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="filters">
+      <label><input type="checkbox" id="f-sat"> 衛星だけの点数で並べる（目撃・建物・学校を重ねない）</label>
+      <button type="button" id="btn-to-weights">観点の重みを変える</button>
+      <span id="mode-pill" class="mode-pill" role="status"></span>
+      <label><input type="checkbox" id="f-unvisited"> 現地未確認のみ</label>
+      <label>地区で絞る <select id="f-place"></select></label>
+      <label>表の並び <select id="f-sort"><option value="score">点数の高い順</option><option value="sight">500m以内の目撃が多い順</option><option value="house">建物に近い順</option><option value="school">学校・園に近い順</option></select></label>
+      <label>表示 <select id="f-n"><option value="20">20件</option><option value="50" selected>50件</option><option value="100">100件</option><option value="9999">すべて</option></select></label>
+    </div>
+    <p id="count" class="note"></p>
+    <details class="terms"><summary>言葉の意味（林縁度・NDVI など）</summary><dl>
+      <dt>林縁度</dt><dd>林や藪のうち、田畑・道・家などの開けた所に接している部分の割合。クマは林縁の藪に身を隠しながら人里に近づくため、高いほど優先します。</dd>
+      <dt>NDVI</dt><dd>衛星で見た緑の濃さ（0〜1）。新緑期（5月）に高い所は植物が茂っています。落葉期（2月）との差が大きい所は、冬に葉が落ちる藪や落葉樹です。</dd>
+      <dt>点数のうち衛星／うち目撃・建物・学校</dt><dd>点数は、衛星から分かる植生の様子と、クマの目撃・家や学校の近さを足したものです。「衛星だけで並べる」にすると、目撃・建物・学校を足さない順位になります。</dd>
+    </dl></details>
+    <div class="tablewrap"><table id="ranktable"><thead></thead><tbody></tbody></table></div>
+    <details class="weights"><summary>点数の重みを変えてみる（初期値は説明用の仮置き）</summary>
+      <div id="weights"></div>
+      <p class="note">重みを変えると順位が変わります。どの観点を重く見るかは自治体の鳥獣担当が決めるもので、このデモが正解を示すものではありません。</p>
+      <button id="btn-w-reset" type="button">初期値に戻す</button>
+    </details>
+  </section>
+  <section id="v-record" class="view" hidden>
+    <form id="rec-form">
+      <label>区画ID（必須） <input type="text" id="r-cell" list="cell-list" placeholder="例 Y123" required pattern="Y[0-9]{3}"></label>
+      <datalist id="cell-list"></datalist>
+      <label>確認日 <input type="date" id="r-date" required></label>
+      <label>確認者（必須） <input type="text" id="r-who" maxlength="40" required placeholder="例: 鳥獣対策係（係名や役職。個人名は不要）"></label>
+      <label>結果 <select id="r-result" required></select></label>
+      <label class="wide">メモ <input type="text" id="r-memo" maxlength="200" placeholder="例: ササが背丈まで茂る。南側の畑に接する"></label>
+      <p class="note wide">結果の選び方: 刈り払いが必要な藪があった→「藪・要刈り払い」／草刈り済みなど→「すでに管理されている」／田畑・建物だった→「藪ではない」（⑶の計画から外れます）／入れなかった→「立ち入れず・要再確認」</p>
+      <button type="submit">記録する</button>
+    </form>
+    <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-plan" type="button">⑶ 刈り払い計画へ進む</button></p></div>
+    <p class="note">記録はこのブラウザの localStorage にだけ保存されます（外部へ送信しません）。氏名等の個人情報は入れないでください。「藪ではない」とした区画は、⑶の計画から外れます。</p>
+    <div class="filters"><button id="btn-rec-csv" type="button">記録をCSVで書き出す</button><button id="btn-reset" type="button">記録を全消去</button></div>
+    <p class="csvmsg saved" role="status" hidden></p>
+    <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区画</th><th>確認者</th><th>結果</th><th>メモ</th><th></th></tr></thead><tbody></tbody></table></div>
+  </section>
+  <section id="v-plan" class="view" hidden>
+    <div class="filters">
+      <label>刈り払い計画の対象にする区画数 <input type="number" id="cap" min="1" max="100" value="10"></label>
+      <button id="btn-plan-csv" type="button">刈り払い計画をCSVで書き出す</button>
+    </div>
+    <p class="csvmsg saved" role="status" hidden></p>
+    <p id="plan-note" class="note"></p>
+    <div class="tablewrap"><table id="plan-table"><thead><tr><th>順位</th><th>区画</th><th>点数</th><th>現地確認</th><th>最寄り建物</th><th>500m以内の目撃</th></tr></thead><tbody></tbody></table></div>
+    <p class="note">CSVには、実施主体と実施予定時期の記入欄（空欄）があります。刈り払いの可否・費用・土地の権利関係の確認は、自治体と地権者が行います。</p>
+  </section>
+</main>
+<footer id="footer"></footer>
+<script src="vendor/maplibre-gl.js"></script>
+<script src="data/yabu.js"></script>
+<script src="data/place.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

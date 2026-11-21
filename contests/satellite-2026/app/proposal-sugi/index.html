@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スギ植え替えの優先地｜風下の人が多い林から（デモ・公開データ）</title>
+<meta name="description" content="環境省の植生図・国勢調査メッシュ・気象庁の風向・Sentinel-2 を重ね、スギ等の人工林を風下の人口で順位付けして植え替え候補のCSVを出すデモです。">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="東京都 青梅市・あきる野市周辺のスギ等の植林を区画ごとに色分けした地図"></div>
+<div id="badge" role="note">公開データを加工した実データ（架空データなし）</div>
+
+<aside id="panel">
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <header id="head">
+    <h1>スギ植え替えの優先地</h1>
+    <p class="sub">風下の人が多い人工林から（林務担当向けデモ）</p>
+  </header>
+  <nav id="steps" role="tablist" aria-label="作業の流れ">
+    <button type="button" role="tab" id="tab-1" data-step="1" aria-selected="true"><b>1</b>把握</button>
+    <button type="button" role="tab" id="tab-2" data-step="2" aria-selected="false"><b>2</b>順位</button>
+    <button type="button" role="tab" id="tab-3" data-step="3" aria-selected="false"><b>3</b>根拠</button>
+    <button type="button" role="tab" id="tab-4" data-step="4" aria-selected="false"><b>4</b>出力</button>
+  </nav>
+  <div id="panel-body">
+    <div class="fact" id="banner" role="note"><b>データの区別。</b>地図・人口・風向・衛星値はすべて公開された<b>実データ</b>の加工で、架空のデータは使っていません。ただし<b>優先度指数・半径・しきい値は説明用の仮置き</b>で、花粉の量や健康への影響を表す値ではありません。</div>
+    <section id="s1" class="step" aria-labelledby="tab-1"></section>
+    <section id="s2" class="step" hidden aria-labelledby="tab-2"></section>
+    <section id="s3" class="step" hidden aria-labelledby="tab-3"></section>
+    <section id="s4" class="step" hidden aria-labelledby="tab-4"></section>
+    <p class="foot"><button id="btn-about" type="button">出典・計算方法・限界</button></p>
+  </div>
+</aside>
+
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <h2 id="modal-title">出典・計算方法・限界</h2>
+    <div id="about-body"></div>
+    <button id="btn-close" type="button">閉じる</button>
+  </div>
+</div>
+
+<script src="vendor/maplibre-gl.js"></script>
+<script src="data/data.js"></script>
+<script src="data/muni.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
