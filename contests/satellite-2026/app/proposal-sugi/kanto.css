@@ -82,3 +82,16 @@ a{color:var(--acc)}
   #mini{bottom:38px;left:6px;padding:4px 7px;font-size:11px}
   .lg-row{grid-template-columns:26px 1fr}
 }
+.sw.sm{width:14px;height:12px;vertical-align:-2px}
+.sws{display:inline-flex;gap:0}
+.sws .sw{border-radius:0;margin:0}
+.h3{font-size:13px;margin:10px 0 2px}
+table.small{font-size:12px}
+details.fold{margin:8px 0;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 10px}
+details.fold summary{cursor:pointer;font-weight:700;font-size:13px;min-height:28px}
+tr.init{background:#fff3e0}
+#rank fieldset.row label{display:inline-block;margin-right:12px}
+.mk{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px}
+.mk-check{border:2px solid #c2185b;background:#fff}
+.mk-cut{background:#0a2a8f;border:1px solid #fff;box-shadow:0 0 0 1px #0a2a8f}
+.fact.sat{border-left-color:#c2185b;background:#fbeaf1}

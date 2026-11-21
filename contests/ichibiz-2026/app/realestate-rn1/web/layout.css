@@ -1,0 +1,76 @@
+/* ---- 画面配置: 地図が約7割、ページ全体は縦スクロールなし（右の欄は中だけスクロール）。style.css の後に読み込む ---- */
+html, body { height: 100%; }
+@media (min-width: 641px) {
+  body { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+  header#top { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding: 4px 12px; border-bottom: 1px solid var(--line); background: #fff; }
+  header#top .lead { margin: 0; font-size: .8rem; line-height: 1.35; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #app { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 7fr 3fr; }
+  #mapwrap { position: relative; min-width: 0; min-height: 0; }
+  #side { min-width: 0; min-height: 0; display: flex; flex-direction: column; border-left: 1px solid var(--line); }
+  .tabpanel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 8px 8px; }
+}
+.tabpanel[hidden] { display: none; }
+.tabs { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px 0; background: #eef1f4; border-bottom: 2px solid var(--accent); }
+.tabs button { background: #fff; color: var(--accent); border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; padding: 5px 9px; font-size: .85rem; }
+.tabs button[aria-selected=true] { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: bold; }
+.panel { margin: 8px 0; padding: 10px 12px; }
+.panel h2 { margin-top: 12px; }
+.panel h2:first-child { margin-top: 0; }
+.legend { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 10px 8px; }
+.legend legend { font-size: .85rem; color: var(--muted); padding: 0 4px; }
+.legend .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; font-size: .85rem; }
+#hazLegend .opts { grid-template-columns: 1fr; }
+.legend label { display: flex; align-items: center; gap: 4px; min-height: 28px; }
+.legend input[type=checkbox] { width: 18px; height: 18px; flex: 0 0 auto; }
+.gl { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: bold; border: 2px solid #fff; box-shadow: 0 0 0 1px #333; flex: 0 0 auto; }
+.pickbar { position: absolute; z-index: 5; left: 50%; top: 8px; transform: translateX(-50%); background: #fff7d6; border: 2px solid #b07a00; border-radius: 6px; padding: 4px 10px; font-size: .9rem; display: flex; gap: 8px; align-items: center; }
+.pickbar[hidden] { display: none; }
+.pickbar button { padding: 2px 8px; font-size: .85rem; }
+#map.picking { cursor: crosshair; }
+#marks { position: absolute; inset: 0; pointer-events: none; }
+.mk { position: absolute; pointer-events: auto; width: 28px; height: 28px; margin: -14px 0 0 -14px; padding: 0; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #1d2733, 0 2px 4px rgba(0,0,0,.5); font-size: 14px; font-weight: bold; color: #fff; cursor: pointer; line-height: 1; }
+.mk.prop { background: #c2185b; }
+.mk.work { background: #1d2733; border-radius: 4px; }
+.mk:focus-visible { outline: 3px solid #f0a000; outline-offset: 2px; }
+.popup { position: absolute; z-index: 6; width: 290px; max-width: calc(100% - 16px); max-height: 80%; overflow: auto; background: #fff; border: 2px solid var(--fg); border-radius: 6px; padding: 8px 10px; font-size: .82rem; line-height: 1.45; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.popup[hidden] { display: none; }
+.popup table:not(.near) th { white-space: nowrap; }
+.popup h3 { margin: 0 0 4px; font-size: .95rem; padding-right: 28px; }
+.popup table { border-collapse: collapse; width: 100%; margin: 4px 0; }
+.popup td, .popup th { border-bottom: 1px solid var(--line); padding: 1px 3px; text-align: left; vertical-align: top; }
+.popup .x { position: absolute; right: 4px; top: 4px; padding: 0 7px; font-size: .9rem; }
+.msg { margin: 4px 0; font-size: .85rem; min-height: 1.2em; }
+.msg.err { color: #a4262c; font-weight: bold; }
+.plist { list-style: none; margin: 4px 0; padding: 0; }
+.plist li { border: 1px solid var(--line); border-radius: 6px; margin: 4px 0; padding: 4px 8px; font-size: .85rem; }
+.plist .head { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.plist .head .t { flex: 1; min-width: 100px; overflow-wrap: anywhere; }
+.plist button { padding: 2px 8px; font-size: .8rem; }
+.num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: #c2185b; color: #fff; font-weight: bold; font-size: .8rem; }
+.num.w { background: #1d2733; border-radius: 4px; }
+.cands { margin: 4px 0; padding: 4px 8px; background: #fff7d6; border: 1px solid #b07a00; border-radius: 6px; font-size: .85rem; }
+.cands button { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 3px 6px; font-size: .82rem; }
+table.ct, table.near { border-collapse: collapse; width: 100%; font-size: .8rem; margin: 4px 0; }
+table.ct th, table.ct td, table.near th, table.near td { border: 1px solid var(--line); padding: 2px 4px; text-align: left; vertical-align: top; }
+table.ct th, table.near th { background: #eef1f4; }
+.assump ul { font-size: .8rem; margin: 4px 0; padding-left: 1.1rem; }
+.assump summary { cursor: pointer; font-weight: bold; font-size: .88rem; }
+.wrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+.wrow input[type=search] { min-width: 120px; }
+input[type=number] { width: 5em; padding: 3px; border: 1px solid var(--line); border-radius: 4px; }
+header#top .lead a { color: var(--accent); }
+@media (max-width: 640px) {
+  header#top { padding: 4px 10px; }
+  header#top .lead { font-size: .8rem; margin: 2px 0; line-height: 1.4; }
+  #side { border-left: 0; }
+  #mapwrap { height: 60vh; min-height: 300px; position: relative; }
+  #map { height: 100%; }
+  .legend .opts { grid-template-columns: 1fr; }
+}
+@media print {
+  .tabs, .pickbar, #marks, .popup { display: none !important; }
+  html, body, #app { height: auto !important; overflow: visible !important; display: block !important; }
+  #side { border: 0 !important; display: block !important; }
+  .tabpanel { padding: 0 !important; }
+  .panel { margin: 0 !important; padding: 0 !important; border: 0 !important; }
+}

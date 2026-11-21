@@ -3,27 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>23区、値段の年表 — マンション価格と家賃を、地図の上で時間を動かして見る</title>
+<title>23区、値段の年表 — 町丁目ごとのマンション価格を、間取りを選び時間を動かして見る</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header id="top">
   <h1>23区、値段の年表</h1>
-  <p class="lead">東京23区の中古マンション価格（2005年〜）と家賃（調査の年）を、区ごとに色で塗り、時間を動かして見ます。区を押すと、その区の移り変わりが出ます。</p>
+  <p class="lead">東京23区の中古マンション価格（2009年〜）を、区より小さい「地区（町名）」ごとに色で塗り、間取りを選び、時間（年）を動かして見ます。地区を押すと、その間取りの移り変わりが出ます。家賃は区ごとです。</p>
   <p class="warn"><span id="noticeTop"></span>。出典・責任は<a href="#sources">ページ下部</a>にあります。</p>
   <p id="loaderr" class="err" hidden></p>
 </header>
 
 <main id="work">
   <section id="mapcol" class="mapcol" aria-label="地図と時間の操作">
-    <div class="modebar" role="group" aria-label="見る値段">
-      <button type="button" id="modePrice" class="mode" aria-pressed="true">マンション価格</button>
-      <button type="button" id="modeRent" class="mode" aria-pressed="false">家賃</button>
-      <span id="modeNote" class="modenote"></span>
+    <div class="modebar">
+      <div class="seg" role="group" aria-label="見る値段">
+        <button type="button" id="modePrice" class="mode" aria-pressed="true">マンション価格（地区）</button>
+        <button type="button" id="modeRent" class="mode" aria-pressed="false">家賃（区）</button>
+      </div>
+      <div class="seg" id="planbar" role="group" aria-label="間取り"></div>
     </div>
     <div id="mapbox" class="mapbox">
-      <div id="map" role="application" aria-label="23区の地図。区を押すと、その区の推移が出ます。矢印キーで移動、＋−で拡大縮小。区は右（スマートフォンでは下）の順位表からも選べます" tabindex="0">
+      <div id="modeNote" class="modenote" aria-live="polite" hidden></div>
+      <div id="map" role="application" aria-label="23区の地図。地区（家賃のときは区）を押すと、推移が出ます。矢印キーで移動、＋−で拡大縮小。地区は右（スマートフォンでは下）の「地区名で探す」と順位表からも選べます" tabindex="0">
         <div id="tiles"></div>
         <canvas id="over"></canvas>
         <div id="period" class="period" aria-hidden="true"></div>
@@ -34,23 +37,24 @@
     <div class="timebar" role="group" aria-label="時間">
       <button type="button" id="play" aria-label="再生">▶ 再生</button>
       <div class="sliderbox">
-        <label for="slider" class="sr">時間（四半期）</label>
+        <label for="slider" class="sr">時間（年。その年を末尾とする直近5年の取引）</label>
         <input id="slider" type="range" min="0" max="0" value="0" step="1">
         <div id="ticks" class="ticks" aria-hidden="true"></div>
       </div>
       <output id="when" class="when" for="slider"></output>
     </div>
-    <p id="selLine" class="selline" aria-live="polite">区を押すと、推移のグラフと件数が出ます。</p>
+    <p id="selLine" class="selline" aria-live="polite">地区を押すと、推移のグラフと件数が出ます。</p>
   </section>
 
-  <aside id="side" class="side" aria-label="凡例と区の推移">
+  <aside id="side" class="side" aria-label="凡例と地区の推移">
     <section class="panel" aria-labelledby="legH">
       <h2 id="legH">凡例（<span id="legUnit"></span>）</h2>
       <ul id="legend" class="legend"></ul>
       <p id="legLow" class="legnote"></p>
+      <p id="legCount" class="legnote"></p>
     </section>
     <section id="detail" class="panel" aria-live="polite" aria-labelledby="detH">
-      <h2 id="detH">区の推移</h2>
+      <h2 id="detH">地区の推移</h2>
       <div id="detailBody"></div>
     </section>
   </aside>
@@ -63,9 +67,12 @@
     <li><strong>加工した旨</strong>: <span id="processed"></span>。</li>
     <li><strong>クレジット</strong>: <span id="credit"></span>。</li>
     <li><strong>家賃の出典</strong>: <span id="attributionRent"></span>（<a href="https://dashboard.e-stat.go.jp/" rel="noopener">統計ダッシュボード</a>）。<span id="creditEstat"></span>。</li>
+    <li><strong>地区の境界</strong>: <span id="attributionBoundary"></span>。</li>
     <li><strong>地図</strong>: <span id="attributionMap"></span>。</li>
+    <li><strong>地区と境界の突き合わせ</strong>: <span id="matchInfo"></span></li>
+    <li><strong>間取りの分け方・時間の単位・「件数が少ない」の基準</strong>: <span id="methodInfo"></span></li>
     <li><strong>責任</strong>: <span id="resp"></span>。</li>
-    <li><strong>読み方の注意</strong>: 価格は、取引された中古マンション等（建物の区分所有）の「取引価格」から作った区ごとの中央値で、売出価格ではありません。区の中で、築年数・広さ・駅からの距離の違うものが混ざり、四半期ごとにその構成が変わるので、中央値の上下がそのまま「相場の上下」とは限りません（画面の「築年数の中央値」「面積の中央値」で構成の変化を確かめられます）。家賃は5年ごとの調査で、公営・公社・民営・給与住宅などの借家をまとめた「1畳当たり」の平均で、民営賃貸マンションだけの家賃ではありません。調査の間の年は、直前の調査の値を出しています。</li>
+    <li><strong>読み方の注意</strong>: 価格は、取引された中古マンション等（建物の区分所有）の「取引価格」から作った地区ごとの中央値で、売出価格ではありません。地区の中で、築年数・広さ・駅からの距離の違うものが混ざり、窓ごとにその構成が変わるので、中央値の上下がそのまま「相場の上下」とは限りません（詳細の「築年数の中央値」「面積の中央値」で構成の変化を確かめられます）。小さな地区は少ない取引が1件入れ替わるだけで中央値が動きます。家賃は5年ごとの調査で、区ごとにしか公表されておらず、間取りや町丁目には分けられません。公営・公社・民営・給与住宅などの借家をまとめた「1畳当たり」の平均で、民営賃貸マンションだけの家賃ではありません。調査の間の年は、直前の調査の値を出しています。</li>
     <li><strong>プライバシー</strong>: 画面の操作は端末内だけで扱い、保存・送信しません。地図画像の要求は国土地理院に届きます。この画面から不動産情報ライブラリや統計のAPIは呼びません（同梱データのみ）。</li>
   </ul>
 </footer>
