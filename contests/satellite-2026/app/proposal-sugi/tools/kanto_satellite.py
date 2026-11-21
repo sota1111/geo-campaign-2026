@@ -4,7 +4,7 @@
   1. 森林簿の答え合わせ: 新しい冬（既定 2026年1〜2月）の NDVI の500mメッシュ平均。冬に緑が弱い所は「要確認」（伐採跡・森林簿とのずれ・広葉樹の混在・影・雪などの可能性。原因は判別しない）。
   2. 伐採跡の候補: 古い冬（既定 2022年1〜2月）と新しい冬の NDVI を同じ画素で比べ、古い冬に緑（NDVI≥GREEN）だった画素が DROP 以上下がった画素を数える（植え替えの進み具合の目安）。
   しきい値 GREEN・DROP は仮置き（画面と README に「仮」と明記）。
-処理: タイル(MGRS)ごとに、雲量が最小の1シーンを冬ごとに選ぶ。赤(B04)・近赤外(B08)・シーン分類(SCL)を COG の概観（40m）で読み、SCL で雲・影・雪などを除く。
+処理: タイル(MGRS)ごとに、雲量が最小の1シーンを冬ごとに選ぶ（ただし、撮影範囲がタイルの範囲のメッシュの98%以上を覆うシーンに限る。端が欠けたシーンを選ぶと、そのタイルの北や東が見えなくなるため）。赤(B04)・近赤外(B08)・シーン分類(SCL)を COG の概観（40m）で読み、SCL で雲・影・雪などを除く。
   画素の中心の緯度経度から 500mメッシュ（ix=floor(経度*160), iy=floor(緯度*240)）を決めて集計する。隣り合うタイルの重なりは、両方の冬で有効な画素が多いタイルを採る。
   衛星は樹種・林齢・雄花の量を判別できない。メッシュ内にはスギ以外の林・畑・道なども含まれる（20mのスギ画素の位置は同梱していない）。
 出力: data/sat.js（window.SUGI_SAT）、<作業ディレクトリ>/sat_scenes.json
@@ -32,7 +32,7 @@ def load_cells():
 
 
 def search(rng, bbox):
-    """期間内のシーンを（ページをたどって）全部取り、MGRS タイルごとに雲量が最小の1シーンを返す。"""
+    """期間内のシーンを（ページをたどって）全部取り、MGRS タイルごとのシーンの一覧を返す（COG でないものは除く）。"""
     out, count = {}, 0
     q = {'collections': 'sentinel-2-l2a', 'bbox': ','.join(map(str, bbox)), 'datetime': rng[0] + '/' + rng[1], 'limit': 100}
     url = STAC + '?' + urllib.parse.urlencode(q)
@@ -44,8 +44,8 @@ def search(rng, bbox):
             if not all(f['assets'].get(k, {}).get('href', '').endswith('.tif') for k in ('red', 'nir', 'scl')):
                 continue  # COG でないシーン（jp2 のみ）は読めないので除く
             t = f['properties'].get('grid:code')
-            if t and (t not in out or f['properties']['eo:cloud_cover'] < out[t]['properties']['eo:cloud_cover']):
-                out[t] = f
+            if t:
+                out.setdefault(t, []).append(f)
         url = next((l['href'] for l in d.get('links', []) if l.get('rel') == 'next' and l.get('method', 'GET') == 'GET'), None)
     return out, count
 
@@ -99,12 +99,26 @@ def main(work, list_only=False):
     lon0, lon1 = ix.min() / 160, (ix.max() + 1) / 160
     lat0, lat1 = iy.min() / 240, (iy.max() + 1) / 240
     bbox = (lon0, lat0, lon1, lat1)
-    old, n1 = search(OLD, bbox)
-    new, n2 = search(NEW, bbox)
-    tiles = sorted(set(old) & set(new))
+    oldall, n1 = search(OLD, bbox)
+    newall, n2 = search(NEW, bbox)
     cx, cy = (ix + 0.5) / 160, (iy + 0.5) / 240
-    inside = lambda f: int(((cx >= f['bbox'][0]) & (cx <= f['bbox'][2]) & (cy >= f['bbox'][1]) & (cy <= f['bbox'][3])).sum())
-    tiles = [t for t in tiles if inside(new[t]) > 0 and inside(old[t]) > 0]
+    inside = lambda bb: int(((cx >= bb[0]) & (cx <= bb[2]) & (cy >= bb[1]) & (cy <= bb[3])).sum())
+    old, new, tiles = {}, {}, []
+    for t in sorted(set(oldall) & set(newall)):
+        # シーンの bbox は撮影された範囲で、タイル全体より狭いことがある（端が欠けたシーン）。
+        # 両期間のシーンの bbox を合わせた範囲を「タイルの範囲」とし、その中のメッシュの98%以上を覆うシーンの中で雲量が最小のものを採る。
+        allf = oldall[t] + newall[t]
+        ext = (min(f['bbox'][0] for f in allf), min(f['bbox'][1] for f in allf), max(f['bbox'][2] for f in allf), max(f['bbox'][3] for f in allf))
+        full = inside(ext)
+        if full == 0:
+            continue
+        pick = lambda fs: min((f for f in fs if inside(f['bbox']) >= 0.98 * full), key=lambda f: f['properties']['eo:cloud_cover'], default=None)
+        o, nw = pick(oldall[t]), pick(newall[t])
+        if o is None or nw is None:
+            print('警告: タイルを覆うシーンがない', t, full, flush=True)
+            continue
+        old[t], new[t] = o, nw
+        tiles.append(t)
     print('候補', n1, n2, 'タイル', tiles, '片方のみ', sorted(set(old) ^ set(new)))
     scenes = {t: {'old': {'id': old[t]['id'], 'date': old[t]['properties']['datetime'][:10], 'cloud': round(old[t]['properties']['eo:cloud_cover'], 1)},
                   'new': {'id': new[t]['id'], 'date': new[t]['properties']['datetime'][:10], 'cloud': round(new[t]['properties']['eo:cloud_cover'], 1)}} for t in tiles}
