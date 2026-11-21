@@ -83,7 +83,7 @@ const EMBEDS = {
   //      optional: データ等、無くてもよいもの（子連れお出かけ診断は、利用条件の確認中で行き先データをブランチから外してある）
   'sat-yabu': { pending: 'PR #36', src: 'satellite-2026/app/proposal-yabu', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data', 'vendor'] },
   'sat-dc': { src: 'satellite-2026/app/proposal-dc', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data', 'vendor'] },
-  'sat-sugi': { pending: 'PR #36', src: 'satellite-2026/app/proposal-sugi', files: ['index.html', 'kanto.js', 'kanto-lib.js', 'kanto.css', 'ome.html', 'ome.js', 'ome.css', 'lib.js', 'data', 'vendor'] },
+  'sat-sugi': { pending: 'PR #36', src: 'satellite-2026/app/proposal-sugi', files: ['index.html', 'nat.js', 'nat-lib.js', 'nat.css', 'kanto.html', 'kanto.js', 'kanto-lib.js', 'kanto.css', 'ome.html', 'ome.js', 'ome.css', 'lib.js', 'data', 'vendor'] },
   'odpt-kankou': { pending: 'PR #36', src: 'odpt-2026/app-kankou/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-kansui': { pending: 'PR #36', src: 'odpt-2026/app-kansui/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-kodure': { pending: 'PR #19', src: 'odpt-2026/app-kodure/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'], optional: ['data'] },

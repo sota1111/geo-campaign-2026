@@ -88,7 +88,9 @@
       map.on('mousemove', 'muni-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', 'muni-fill', () => { map.getCanvas().style.cursor = ''; });
       state.mapReady = true;
+      window.__natMap = map;
       paint();
+      document.body.dataset.mapReady = '1';
     });
   }
   let painted = null;

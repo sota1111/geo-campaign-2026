@@ -25,8 +25,15 @@ SIMPLIFY = 0.003   # 度（約300m）
 CELL_HA = 0.04     # 20m メッシュ1個 = 0.04 ha
 
 
+# 政令指定都市の市コード（区コードの上3桁＋00では、同じ県の複数の政令市がぶつかるため表で持つ）
+DESIGNATED = {'札幌市': '01100', '仙台市': '04100', 'さいたま市': '11100', '千葉市': '12100', '横浜市': '14100', '川崎市': '14130', '相模原市': '14150',
+              '新潟市': '15100', '静岡市': '22100', '浜松市': '22130', '名古屋市': '23100', '京都市': '26100', '大阪市': '27100', '堺市': '27140',
+              '神戸市': '28100', '岡山市': '33100', '広島市': '34100', '北九州市': '40100', '福岡市': '40130', '熊本市': '43100'}
+
+
 def norm(s):
-    return ''.join(s.split()).replace('ヶ', 'ケ').replace('ヵ', 'ケ')
+    """表記ゆれ（ケ・ヶ、梼・檮）をそろえる。"""
+    return ''.join(s.split()).replace('ヶ', 'ケ').replace('ヵ', 'ケ').replace('檮', '梼')
 
 
 def load_units(work):
@@ -40,7 +47,7 @@ def load_units(work):
                 if not code or not name or name == '所属未定地' or p['N03_003'] in NORTH_ISLAND_GUN:
                     continue
                 if p['N03_005'] and name.endswith('市'):   # 政令指定都市の区 → 市にまとめる
-                    code = code[:3] + '00'
+                    code = DESIGNATED.get(name, code[:3] + '00')
                 u = units.setdefault(code, {'pref': p['N03_001'], 'name': name, 'geoms': []})
                 u['geoms'].append(shape(f['geometry']))
     return units
@@ -58,7 +65,7 @@ class Locator:
         qi, gi = self.tree.query(pts, predicate='within')
         out[qi] = gi
         miss = np.where(out < 0)[0]
-        if len(miss):
+        if len(miss) and near_deg:
             ni = self.tree.nearest(pts[miss])
             d = np.array([shapely.distance(pts[m], self.geoms[n]) for m, n in zip(miss, ni)])
             ok = d <= near_deg
@@ -129,7 +136,7 @@ def main(work):
         w = json.load(open(wp)); wc_meta = {'tiles': w['tiles'], 'level': w['level']}
         wa = np.array(w['cells'], dtype=np.int64)
         wlat = (wa[:, 0] + 0.5) / 120.0; wlon = (wa[:, 1] + 0.5) / 80.0
-        wu = loc.locate(wlon, wlat)
+        wu = loc.locate(wlon, wlat, near_deg=None)
         # 標本1個の面積: 概観の画素 = 10m × 2^k（k は level に応じた間引き。2,4,8,16,32,64 の level+1 番目）
         f = [2, 4, 8, 16, 32, 64][w['level']]
         pix_deg = f / 12000.0
