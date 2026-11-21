@@ -137,10 +137,9 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await ev("document.querySelector('#simOut [data-sort=floors]').click()");
   const fl = await ev("[...document.querySelectorAll('#simOut tbody tr')].map((r) => +r.cells[1].innerText)");
   check(fl.join() === fl.slice().sort((a, b) => b - a).join(), name + ': 階数で並べ替えできない ' + fl);
-  await ev("document.querySelector('#caseOut details.cases').open = true");
   const cases = await text('#caseOut');
   check((cases.match(/架空/g) || []).length >= 4 && sim.includes('公開された個別事例がない'), name + ': 事例の架空表示がない');
-  check((await ev("document.querySelectorAll('#caseOut .list li.fakeitem').length")) === 3, name + ': 架空事例3件の印がない');
+  check((await ev("document.querySelectorAll('#caseOut table.cst tr.fakeitem').length")) === 3, name + ': 架空事例3件の印がない');
   await shot(`${name}-3-similar.png`);
 
   // 点群: 見本（合成）→ 概算 → 反映
@@ -184,7 +183,7 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const nmark = await ev("document.querySelectorAll('#vendorOut .rangebar .you').length");
   const qt = await text('#vendorOut table.qt');
   report[name + '-quotes'] = qt.replace(/\n/g, ' / ').slice(0, 300);
-  check(nmark === 4 && /上位25%|中央値と|下位25%/.test(qt), name + ': 複数社の見積が帯に並ばない ' + nmark);
+  check(nmark === 4 && /高め|安め/.test(qt) && !qt.includes('見本:'), name + ': 複数社の見積が帯に並ばない ' + nmark);
   await shot(`${name}-5-vendor.png`);
 
   // 口コミを1件投稿（端末内のみ）→ 先頭に出る・並びは日付順

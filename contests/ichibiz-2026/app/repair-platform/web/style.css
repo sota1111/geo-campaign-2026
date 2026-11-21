@@ -196,3 +196,36 @@ table.simt th { font-size:.74rem; line-height:1.25; }
 table.simt button.pick { min-height:24px; }
 form.case3 details.full { grid-column:1 / -1; }
 body.typing .zoombtns .fit { display:none; }
+
+/* 第5回: 推定のときは範囲を薄く・戸数の促しを常に。位置のバッジは白地に濃い文字。帯の印は上下にずらす。スマホは地図を畳めて要約は地図の直下 */
+.big.guessing b { color:#4f6b80; }
+.guessline { margin:2px 0; font-size:.8rem; background:#eef6ff; border-left:4px solid var(--est); padding:1px 8px; }
+#quoteRead { margin:0 0 2px; min-height:1em; }
+.ovl { display:flex; flex-direction:column; gap:1px; font-size:.78rem; }
+.ovl a { color:var(--accent); }
+.steps li { margin:2px 0; }
+.pb { display:inline-block; white-space:nowrap; font-size:.74rem; font-weight:bold; padding:0 5px; border-radius:3px; border:1px solid #8b96a1; background:#fff; color:#1d2733; }
+.pb.above-q3 { border-color:var(--sel); color:#a01d4c; } .pb.below-q1 { border-color:var(--accent); color:#174a6d; }
+table.qt td:nth-child(4) { white-space:nowrap; }
+table.qt th:nth-child(2) { width:30%; } table.qt th:nth-child(3) { width:22%; }
+.rangebar .mid span { position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:.64rem; color:var(--accent); white-space:nowrap; }
+.rangebar.many { margin-top:30px; }
+.rangebar .you.up span { top:-28px; }
+.usebar { margin:4px 0; font-size:.82rem; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.usebar .pick { min-height:28px; }
+table.cst { font-size:.76rem; } table.cst td { white-space:nowrap; padding:1px 5px; } table.cst td:first-child { white-space:normal; }
+tr.fakeitem td { background:#fffaf2; }
+#mapToggle { display:none; min-height:30px; padding:2px 10px; font-size:.8rem; }
+@media (max-width: 899px) {
+  #mapToggle { display:inline-block; }
+  body.mapmin .mapbox { height:17vh; height:17dvh; min-height:120px; }
+  body.mapmin .maplegend, body.mapmin .mapnote { display:none; }
+  .selline { position:static; font-size:.82rem; padding:4px 10px; margin:2px 0 0; border-radius:6px; box-shadow:none; }
+  .selline .go { float:none; margin-left:6px; }
+  body { padding-bottom:12px; }
+  .tabs [role=tab] { font-size:.76rem; padding:6px 4px; }
+  table.qt th:nth-child(2) { width:34%; }
+  table.qt input { min-width:3em; }
+}
+form.case3 { grid-template-columns: repeat(3, minmax(0,1fr)) auto; }
+@media (max-width: 899px) { form.case3 { grid-template-columns: repeat(3, minmax(0,1fr)) auto; } table.qt { font-size:.74rem; } table.qt input { font-size:.76rem; padding:2px 3px; } }

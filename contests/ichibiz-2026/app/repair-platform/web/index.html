@@ -21,6 +21,7 @@
   <section id="mapcol" class="mapcol" aria-label="地図">
     <div class="maptools">
       <button type="button" id="pickExample">例の建物を選ぶ</button>
+      <button type="button" id="mapToggle" class="ghost" aria-pressed="false">地図を小さく</button>
       <details class="filt"><summary>絞り込み</summary>
       <label>地区 <select id="selTown"><option value="">墨田区全体</option></select></label>
       <label>規模 <select id="selMin">
@@ -41,6 +42,7 @@
       </div>
     </div>
     <p class="mapnote" id="mapNote"></p>
+    <p id="selLine" class="selline" role="button" tabindex="0" aria-live="polite"></p>
   </section>
 
   <aside id="side" class="side" aria-label="修繕費の目安・似た建物・点群・発注先">
@@ -48,7 +50,7 @@
       <button type="button" role="tab" id="t-est" aria-controls="p-est" aria-selected="true">目安・見積</button>
       <button type="button" role="tab" id="t-sim" aria-controls="p-sim" aria-selected="false" tabindex="-1">似た建物</button>
       <button type="button" role="tab" id="t-slam" aria-controls="p-slam" aria-selected="false" tabindex="-1">点群</button>
-      <button type="button" role="tab" id="t-vendor" aria-controls="p-vendor" aria-selected="false" tabindex="-1">発注先比較</button>
+      <button type="button" role="tab" id="t-vendor" aria-controls="p-vendor" aria-selected="false" tabindex="-1">発注先</button>
       <button type="button" role="tab" id="t-src" aria-controls="p-src" aria-selected="false" tabindex="-1">出典</button>
     </div>
 
@@ -60,6 +62,7 @@
           <label class="wide">手元の見積 <input id="inQuote" type="number" min="0" inputmode="numeric" placeholder="万円"><span class="u">万円</span></label>
           <label><select id="inTax" aria-label="見積の税"><option value="ex">税抜</option><option value="in">税込</option></select></label>
         </div>
+        <p id="quoteRead" class="mini" aria-live="polite"></p>
       </form>
       <div id="estOut" aria-live="polite"></div>
       <p id="simMini" class="mini"></p>
@@ -98,7 +101,6 @@
     </section>
   </aside>
 </main>
-<p id="selLine" class="selline" role="button" tabindex="0" aria-live="polite"></p>
 
 <script src="lib.js"></script>
 <script src="app.js"></script>
