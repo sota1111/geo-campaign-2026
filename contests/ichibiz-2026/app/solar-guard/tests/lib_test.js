@@ -246,4 +246,43 @@ t('診断: 同じ約5kmメッシュの2点で結果が同じ（色・地区・�
   assert.ok(sea.quietPos >= 0 && sea.quietPos <= 100 && sea.autoQuiet === true);
 });
 
+t('市町村で選んだ診断: 市町村の地区と人口密度（muniLevels と同じ規則）だけを使い、位置は持たない', () => {
+  const ms = G.muniLevels(munis.rows, regions, tiers, cells.regions);
+  const mu = ms.find((x) => x.name === '筑西市');
+  const r = G.diagnose({ muni: { region: mu.region, quiet: mu.quiet }, cls: 'unknown', answers: {}, cond: {} }, ctx());
+  assert.equal(r.byMuni, true); assert.equal(r.mesh, null); assert.equal(r.code, null);
+  assert.equal(r.region.name, '県西'); assert.equal(r.region.tier, tiers[mu.region]);
+  assert.equal(r.conds.find((c) => c.id === 'quiet').state, mu.quiet ? 'risk' : 'ok');
+  // 地区の点数＋当てはまる条件の数。市町村の色（地区＋人目）と同じ地区の点数になる
+  assert.equal(r.scoreMin, G.W_REGION * tiers[mu.region] + (mu.quiet ? 1 : 0));
+});
+
+t('まず取る対策の並べ方: 当てはまる条件への対策→区分の重点→県警チラシ→わからない条件→その他。実施済みは出さない', () => {
+  const its = ck.items.filter((it) => it.cls.includes('all') || it.cls.includes('low'));
+  // 何も答えていない: 県警チラシ（IBF）の対策が先頭
+  let res = G.evalConds(risk.conds, {}, {}, null);
+  let p = G.priorities(its, {}, risk.conds, res, 'low');
+  assert.equal(p.length, its.length);
+  // 区分を選んだら、その区分の重点（低圧: 引込柱の一次側）が先頭。次に県警チラシ
+  assert.equal(p[0].item.id, 'pole_barrier'); assert.equal(p[0].why, 'class');
+  assert.ok(p.slice(1, 3).every((x) => x.rank === 2 && x.item.src.includes('IBF')));
+  // 立地の条件（本人の回答）が当てはまると、その条件に備える対策（counter。仮の対応づけ）が先頭
+  res = G.evalConds(risk.conds, { hidden: 'yes' }, {}, null);
+  p = G.priorities(its, {}, risk.conds, res, 'unknown');
+  assert.deepEqual(p.slice(0, 3).map((x) => x.item.id).sort(), ['camera', 'fence_sensor', 'light']);
+  assert.ok(p.slice(0, 3).every((x) => x.rank === 1 && x.cond === '外から見えにくい'));
+  // 防犯設備がすべて「実施していない」→ nosec が当てはまり、その4対策が先頭
+  const ans = { fence_sensor: 'no', machine_security: 'no', camera: 'no', alarm: 'no', pipes_buried: 'yes', collector_cover: 'yes' };
+  res = G.evalConds(risk.conds, {}, ans, null);
+  p = G.priorities(its, ans, risk.conds, res, 'low');
+  assert.equal(p[0].item.id, 'pole_barrier');   // 区分の重点は先頭のまま
+  assert.deepEqual(p.slice(1, 5).map((x) => x.item.id).sort(), ['alarm', 'camera', 'fence_sensor', 'machine_security']);
+  assert.ok(p.slice(1, 5).every((x) => x.rank === 1 && x.cond === '防犯・警備の設備がない'));
+  assert.ok(!p.some((x) => x.item.id === 'pipes_buried' || x.item.id === 'collector_cover'));
+  // 同じ順の中では「実施していない」が先
+  const a2 = { aluminum: 'no' };
+  p = G.priorities(its, a2, risk.conds, G.evalConds(risk.conds, {}, a2, null), 'unknown');
+  assert.equal(p[0].item.id, 'aluminum');
+});
+
 console.log('lib_test OK', n);

@@ -141,32 +141,73 @@
      ctx:   { cells, pops, items（対策）, conds（risk.json）, tiers（地区番号→段階）, regionNames }
      返す値は、地区の実績・周囲の人口（約5kmメッシュ）・条件の判定・リスクの色と、未実施・不明の対策。個別設備の情報は参照しない。 */
   function diagnose(input, ctx) {
-    var m = toMesh(input.lon, input.lat);
-    var cellRow = ctx.cells.filter(function (r) { return r[0] === m.cx && r[1] === m.cy; })[0] || null;
-    var cellPopulation = cellPop(ctx.pops, m.cx, m.cy);   // 約5kmメッシュの人口だけを使う（入力点の1kmメッシュの人口は使わない）
-    var allDens = ctx.cells.map(function (r) { return -density(r[5]); });
-    var mine = -density(cellPopulation);
-    var below = allDens.filter(function (x) { return x < mine; }).length, eq = allDens.filter(function (x) { return x === mine; }).length;
-    var quiet = allDens.length ? (below + eq / 2) / allDens.length * 100 : null; // 0〜100（同値は平均順位。高いほど人口密度が低い）
-    var autoQuiet = quiet == null ? null : quiet >= QUIET_FROM;
+    var m = null, cellRow = null, cellPopulation = null, quiet = null, autoQuiet = null, reg = null;
+    if (input.muni) {
+      /* 市町村で選んだ場合: 位置は使わず、市町村の地区と、市町村の人口密度による「人目が少ない」（muniLevels と同じ規則）だけを使う */
+      reg = input.muni.region >= 0 ? { idx: input.muni.region, near: false } : null;
+      autoQuiet = input.muni.quiet == null ? null : !!input.muni.quiet;
+    } else {
+      m = toMesh(input.lon, input.lat);
+      cellRow = ctx.cells.filter(function (r) { return r[0] === m.cx && r[1] === m.cy; })[0] || null;
+      cellPopulation = cellPop(ctx.pops, m.cx, m.cy);   // 約5kmメッシュの人口だけを使う（入力点の1kmメッシュの人口は使わない）
+      var allDens = ctx.cells.map(function (r) { return -density(r[5]); });
+      var mine = -density(cellPopulation);
+      var below = allDens.filter(function (x) { return x < mine; }).length, eq = allDens.filter(function (x) { return x === mine; }).length;
+      quiet = allDens.length ? (below + eq / 2) / allDens.length * 100 : null; // 0〜100（同値は平均順位。高いほど人口密度が低い）
+      autoQuiet = quiet == null ? null : quiet >= QUIET_FROM;
+      reg = regionAt(ctx.cells, m.cx, m.cy);
+    }
     var items = ctx.items.filter(function (it) { return input.cls === 'unknown' || it.cls.indexOf('all') >= 0 || it.cls.indexOf(input.cls) >= 0; });
     var done = 0, no = [], unk = [];
     items.forEach(function (it) {
       var a = (input.answers || {})[it.id] || 'unknown';
       if (a === 'yes') done++; else if (a === 'no') no.push(it); else unk.push(it);
     });
-    var reg = regionAt(ctx.cells, m.cx, m.cy), tier = reg ? ctx.tiers[reg.idx] : null;
+    var tier = reg ? ctx.tiers[reg.idx] : null;
     var conds = evalConds(ctx.conds || [], input.cond, input.answers, autoQuiet);
     var nr = conds.filter(function (c) { return c.state === 'risk'; }).length, nu = conds.filter(function (c) { return c.state === 'unknown'; }).length;
     var base = (tier == null ? 0 : W_REGION * tier) + nr, max = base + nu + (tier == null ? W_REGION * 2 : 0);
     return {
-      mesh: m, code: meshCode(m.cx * CELL, m.cy * CELL), cellDensity: density(cellPopulation), cellPopulation: cellPopulation,
+      byMuni: !!input.muni, mesh: m, code: m ? meshCode(m.cx * CELL, m.cy * CELL) : null, cellDensity: m ? density(cellPopulation) : null, cellPopulation: cellPopulation,
       quietPos: quiet, autoQuiet: autoQuiet, cellVisible: !!cellRow,
       cell: cellRow ? { n: cellRow[2], kw: cellRow[3], small: cellRow[4] } : null,
       region: reg ? { idx: reg.idx, name: ctx.regionNames[reg.idx], near: reg.near, tier: tier } : null,
       conds: conds, riskCount: nr, unknownCount: nu, scoreMin: base, scoreMax: max, levelMin: diagLevel(base), levelMax: diagLevel(max),
       total: items.length, done: done, notDone: no, unknown: unk
     };
+  }
+
+  /* 優先して取る対策の並べ方（仮。効果の大小は資料に数値がないので比べない）。
+     1: いま「当てはまる」条件を解消する対策（risk.json の derive）
+     2: 県警のチラシ「ケーブルへの3つの対策」（IBF）が挙げる対策と、選んだ区分について JPEA・REASP p.10 が重点とする箇所
+     3: 「わからない」の条件に関わる対策
+     4: その他
+     同じ順の中では「実施していない」を「わからない」より先にし、次に一覧の順。「実施している」は出さない。
+     items: 区分で絞った対策、answers: 対策の回答、conds: risk.json の conds、res: evalConds の結果、cls: 区分 */
+  function priorities(items, answers, conds, res, cls) {
+    var hit = {}, unk = {};
+    conds.forEach(function (c, i) {
+      /* derive: 対策の回答から決まる条件。counter: 立地の条件（本人の回答）に備える対策（本アプリの対応づけ。仮） */
+      var ids = c.derive ? c.derive.items : (c.counter || []);
+      ids.forEach(function (id) {
+        if (res[i].state === 'risk' && !hit[id]) hit[id] = c.label;
+        if (res[i].state === 'unknown' && !unk[id]) unk[id] = c.label;
+      });
+    });
+    var out = [];
+    items.forEach(function (it, k) {
+      var a = (answers || {})[it.id] || 'unknown';
+      if (a === 'yes') return;
+      var rank, why, cond = null;
+      if (cls !== 'unknown' && it.cls.indexOf(cls) >= 0 && it.cls.indexOf('all') < 0) { rank = 0.5; why = 'class'; }   // 選んだ区分の重点箇所（JPEA・REASP p.10）。区分を選んだ答えが一覧に必ず表れるよう先頭に置く
+      else if (hit[it.id]) { rank = 1; why = 'hit'; cond = hit[it.id]; }
+      else if (it.src.indexOf('IBF') >= 0) { rank = 2; why = 'flyer'; }
+      else if (unk[it.id]) { rank = 3; why = 'unknown'; cond = unk[it.id]; }
+      else { rank = 4; why = 'other'; }
+      out.push({ item: it, answer: a, rank: rank, why: why, cond: cond, k: k });
+    });
+    out.sort(function (x, y) { return x.rank - y.rank || (x.answer === 'no' ? 0 : 1) - (y.answer === 'no' ? 0 : 1) || x.k - y.k; });
+    return out;
   }
 
   /* 座標の入力 → 数値。全角を半角にし、符号付きの10進数だけを受け付ける（「36,34」「36.34abc」は null） */
@@ -192,6 +233,6 @@
   var api = { CELL: CELL, KM2_PER_MESH: KM2_PER_MESH, LEVELS: LEVELS, W_REGION: W_REGION, TIER_MID: TIER_MID, QUIET_FROM: QUIET_FROM, MAP_LEVEL: MAP_LEVEL, DIAG_CUTS: DIAG_CUTS, diagLevel: diagLevel,
     parseCoord: parseCoord, landSet: landSet, toMesh: toMesh, cellBounds: cellBounds, meshCode: meshCode, popGrid: popGrid, popAt: popAt, localPop: localPop,
     cellPop: cellPop, density: density, percentRank: percentRank, districtStats: districtStats, quietFlags: quietFlags, mapLevel: mapLevel, meshLevels: meshLevels, muniLevels: muniLevels,
-    rankCorr: rankCorr, regionAt: regionAt, evalConds: evalConds, diagnose: diagnose, csvEscape: csvEscape, toCsv: toCsv };
+    rankCorr: rankCorr, regionAt: regionAt, evalConds: evalConds, diagnose: diagnose, priorities: priorities, csvEscape: csvEscape, toCsv: toCsv };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Sg = api;
 })(typeof window !== 'undefined' ? window : globalThis);

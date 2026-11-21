@@ -112,7 +112,7 @@ const setXY = (c, lat, lon) => c.ev(`document.getElementById("tab-diag").click()
   for (const k of cases) {
     await c.ev('document.getElementById("btn-reset").click()');
     const msg = await setXY(c, k.lat, k.lon);
-    const res = await c.ev('document.getElementById("diag-result").innerText');
+    const res = await c.ev('document.getElementById("diag-result").textContent + document.getElementById("diag-detail").textContent');
     const accepted = !/範囲の外|数字で/.test(msg) && res.includes('周囲の目安');
     console.log('B:', k.name, accepted ? '受理' : '拒否', '|', msg.slice(0, 40), '|', (res.match(/位置は(\d+)/) || [])[0] || '');
     if (k.expectReject && accepted) findings.push(`B[${/海上|千葉|栃木/.test(k.name) ? '重要' : '軽微'}] ${k.name} を受理して診断を出す（${(res.match(/位置は\S+/) || [''])[0]}、「人が少ない側（上位2割）」=${res.includes('上位2割')}）。画面は「茨城県内のみ」と案内`);
@@ -140,7 +140,8 @@ const setXY = (c, lat, lon) => c.ev(`document.getElementById("tab-diag").click()
 {
   const c = await openChrome();
   await open(c, 390, 800, true);
-  const m = await c.ev(`(function(){document.getElementById("tab-diag").click();var r=document.getElementById("map").getBoundingClientRect();var a=document.getElementById("btn-set").getBoundingClientRect().top+scrollY, b=document.getElementById("diag-result").getBoundingClientRect().top+scrollY;return {mapH:Math.round(r.height), gap:Math.round(b-a), docH:document.documentElement.scrollHeight};})()`);
+  // 評価ループ第3回: スマホの診断タブは「地図で場所を選ぶ」を押すと小さな地図が開く
+  const m = await c.ev(`(function(){document.getElementById("tab-diag").click();document.getElementById("btn-mapsel").click();var r=document.getElementById("map").getBoundingClientRect();var a=document.getElementById("btn-set").getBoundingClientRect().top+scrollY, b=document.getElementById("diag-result").getBoundingClientRect().top+scrollY;return {mapH:Math.round(r.height), gap:Math.round(b-a), docH:document.documentElement.scrollHeight};})()`);
   console.log('D: スマホ', JSON.stringify(m));
   if (m.mapH < 250) findings.push(`D[軽微] スマホ幅で地図の高さが${m.mapH}px。地図クリックで自分の発電所を指すには小さい`);
   if (m.gap > 2400) findings.push(`D[軽微] スマホ幅で「この座標で診断」ボタンから結果欄まで約${m.gap}px（チェックリスト全項目の下）。座標を入れても結果が画面外で、変化に気づきにくい`);

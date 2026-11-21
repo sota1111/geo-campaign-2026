@@ -10,13 +10,17 @@
 </head>
 <body data-tab="map">
 <header>
-  <h1>太陽光発電所の盗難対策マップ <span>銅線ケーブルなどの金属盗から発電所を守る対策を、盗難の実績と公開データの「リスクの色（仮）」で考える道具（デモ・茨城県）</span></h1>
-  <p class="lead"><b>使う人</b>: 発電事業者・O&amp;M事業者・保険会社・自治体や警察の防犯担当。 <b>できること</b>: ①県内の盗難の実績と、リスクの色（地区ごとの被害実績が主な根拠）を、約5kmのメッシュと市町村の集計で見る　②自分の発電所の位置・現場の条件・対策を入れて、その設備のリスクの色と未実施の対策を知る（本人のブラウザ内だけで計算）。 <b>しないこと</b>: 公開の地図に個別の設備の順位・一覧・「狙われやすい設備」を出すこと、被害の予測。</p>
+  <div class="hrow">
+    <h1>太陽光発電所の盗難対策マップ <span class="tag">茨城県・デモ</span></h1>
+    <details class="aboutapp" id="aboutapp"><summary>このアプリについて</summary>
+      <p class="lead"><button type="button" id="about-close" class="xbtn" aria-label="閉じる">× 閉じる</button><b>使う人</b>: 発電事業者・O&amp;M事業者・保険会社・自治体や警察の防犯担当。<br><b>できること</b>: 県内の盗難リスクの色（仮）を地図で見る／自分の設備の条件を入れて、色の理由と、まず取る対策を知る（本人のブラウザ内だけで計算）。<br><b>しないこと</b>: 公開の地図に個別の設備の順位・一覧・「狙われやすい設備」を出すこと、被害の予測。</p>
+    </details>
+  </div>
   <nav id="tabs" role="tablist" aria-label="画面の切り替え">
-    <button type="button" role="tab" id="tab-map" data-tab="map" aria-selected="true">公開の集計地図</button>
-    <button type="button" role="tab" id="tab-diag" data-tab="diag" aria-selected="false">自分の設備を診断</button>
-    <button type="button" role="tab" id="tab-reality" data-tab="reality" aria-selected="false">盗難の実態（公的な粒度）</button>
-    <button type="button" role="tab" id="tab-about" data-tab="about" aria-selected="false">出典・前提・限界</button>
+    <button type="button" role="tab" id="tab-map" data-tab="map" aria-selected="true" aria-label="公開の集計地図">集計地図</button>
+    <button type="button" role="tab" id="tab-diag" data-tab="diag" aria-selected="false" aria-label="自分の設備を診断">設備を診断</button>
+    <button type="button" role="tab" id="tab-reality" data-tab="reality" aria-selected="false">盗難の実態</button>
+    <button type="button" role="tab" id="tab-about" data-tab="about" aria-selected="false" aria-label="出典・前提・限界">出典<span class="pc">・前提</span>・限界</button>
   </nav>
 </header>
 
@@ -24,78 +28,87 @@
   <section id="panel">
     <!-- 1 公開の集計地図 -->
     <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
-      <div class="box" id="trend" role="note"></div>
-      <div class="box limits" role="note">
-        <b>この地図の読み方（必読）</b>
-        <ul>
-          <li><b>被害の予測ではなく、公開情報から作った「リスクの色（仮の規則）」</b>です。色は、茨城県警が公表した県内5地区の被害件数（設備あたり）を主な根拠に、人口密度（人目の近似）を小さく加えて4段階にしたものです。点数の配分や切り方に公的な数値の根拠はなく、的中率などの検証はしていません。</li>
-          <li><b>地区の段階は令和7年11月末の実績から作っているため、同じ期間と合うのは当然で、独立の検証ではありません</b>。別の期間（令和8年9月末）との並びと、人目の少なさが地区どうしでは実績と逆向きだったことを、下の「県警の被害実績との照合」に載せています。</li>
-          <li>表示するのは<b>約5kmのメッシュと市町村の集計だけ</b>。連続のスコアや順位の列は出しません。設備が<span id="kmin">3</span>件未満などのメッシュは<b>色を付けずに隠します</b>（設備がないメッシュと見分けがつきません）。個別設備は地図にも表にも出ません。<b>個々の発電所の色分けは、事業者が自分の設備を入れる「自分の設備を診断」の中で、本人のブラウザ内だけで行います</b>。</li>
-          <li><b>認定情報の利用ルールの禁止事項（イ）「国家・国民の安全に脅威を与える利用」に、この用途が当たるかは未確認</b>です。利用ルールの管理者は資源エネルギー庁（<a href="https://www.fit-portal.go.jp/Terms" target="_blank" rel="noopener">再エネ電子申請サイト「ご利用上の注意」</a>）で、禁止事項に定義・例示はなく、確認は未実施です。</li>
-          <li>設備の位置は<b>町字（大字）の代表点</b>で、広い大字ではメッシュがずれることがあります。出力20kW未満の太陽光は元データに含まれません。</li>
+      <div class="box key" role="note">
+        <button id="go-diag" type="button" class="primary">設備を診断する（条件を入れて理由と対策を見る）</button>
+        <p class="big"><b>色＝県警の地区単位の被害実績＋人口密度による仮の目安</b>。被害の予測ではなく、メッシュごとの実績でもありません。</p>
+      </div>
+      <details class="box" id="det-basis">
+        <summary>色の根拠と限界（照合は独立の検証ではない）</summary>
+        <ul class="note dark">
+          <li>設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。</li>
+          <li><b>この色は的中を検証していません。</b>主な根拠は県警が公表した県内5地区の被害件数（設備あたり）で、地区内のメッシュごとの実績は公開されていません。点数の配分や切り方に公的な根拠はありません。</li>
+          <li>認定情報の利用ルールの禁止事項（イ）「国家・国民の安全に脅威を与える利用」に当たるかは<b>未確認</b>（管理者は資源エネルギー庁。<a href="https://www.fit-portal.go.jp/Terms" target="_blank" rel="noopener">ご利用上の注意</a>）。</li>
+          <li>設備の位置は町字（大字）の代表点。出力20kW未満の太陽光は元データにありません。</li>
         </ul>
-      </div>
-      <div class="box">
-        <h2>色分けの規則 <span class="sub">（すべて仮。根拠は各項目に）</span></h2>
+        <h3>色分けの規則</h3>
         <div id="rules"></div>
-      </div>
-      <div class="box" id="dist-box">
-        <h2>県警の被害実績との照合 <span class="sub">（県内5地区。当たっているか・逆になっていないか）</span></h2>
-        <div id="dist-compare"></div>
-      </div>
-      <div class="box">
-        <h2>市町村別の集計</h2>
+        <details id="det-verify"><summary>詳しい検証（県警の被害実績との照合）</summary>
+          <div id="dist-compare"></div>
+        </details>
+      </details>
+      <details class="box" id="det-trend">
+        <summary>件数と法令（茨城県の金属盗の推移）</summary>
+        <div id="trend"></div>
+      </details>
+      <details class="box" id="det-munis">
+        <summary>市町村別の表（色・設備数・人口密度）</summary>
         <p class="note" id="map-summary"></p>
         <div id="muni-table" class="scroll"></div>
-        <p class="note">人口は2020年国勢調査（小地域の合計）、面積は小地域境界の面積（水面を含みうる）。市町村の「リスク（仮）」は、メッシュと同じ規則（地区の段階と、市町村の人口密度が県内の市町村の低い方から1/3かどうか）で決めたもの。</p>
-      </div>
-      <div class="box">
-        <h2>書き出し（集計のみ）</h2>
-        <p class="note">メッシュ別と市町村別の集計・前提・出典を1つのCSV（UTF-8、BOM付き）にします。リスクの色は4段階だけで、連続のスコアや順位の列は含みません。個別設備は含みません。この端末の中で作るだけで、どこにも送信しません。</p>
-        <button id="btn-csv" type="button" class="primary">集計をCSVでダウンロード</button>
+        <p class="note">人口は2020年国勢調査、面積は小地域境界の面積（水面を含みうる）。市町村の色は、メッシュと同じ規則（地区の段階と、市町村の人口密度が低い方から1/3か）。</p>
+      </details>
+      <div class="row csvrow">
+        <button id="btn-csv" type="button">集計をCSVで保存</button>
+        <span class="note">メッシュ・市町村の集計と出典（4段階の色だけで、順位や個別設備は含みません。送信しません）</span>
       </div>
     </div>
 
     <!-- 2 自己診断 -->
     <div class="pane" id="pane-diag" role="tabpanel" aria-labelledby="tab-diag" hidden>
-      <div class="box privacy" role="note" id="box-privacy">
-        <b>入力した内容は、この端末のブラウザの中で計算するだけです。送信も保存もしません。</b>
-        <details><summary>地図について（位置が外に伝わる場合）</summary>
-          <p class="note" style="color:#222">座標を入力しても地図は動かしません。ただし、地図を動かしたり拡大したりすると、見ている範囲の地図画像を地理院から取得するので、<b>見ている範囲は地理院に伝わります</b>（拡大は縮尺11、約16km四方までに制限しています）。地図を見ずに、座標の入力だけで診断できます。</p>
-        </details>
+      <div class="box result" id="box-result" aria-live="polite">
+        <div id="diag-result"></div>
       </div>
       <div class="box" id="box-pos">
-        <h2><span class="step">1</span>発電所の位置と区分</h2>
-        <p class="note">緯度・経度を入れるか、地図をクリックします（茨城県内のみ）。位置は約5kmメッシュの単位でだけ使います。</p>
+        <h2><span class="step">1</span>場所と区分</h2>
         <div class="row">
-          <label for="in-lat">緯度</label><input id="in-lat" type="text" inputmode="decimal" placeholder="例 36.34" size="9">
-          <label for="in-lon">経度</label><input id="in-lon" type="text" inputmode="decimal" placeholder="例 140.45" size="9">
-          <button id="btn-set" type="button" class="primary">この座標で診断</button>
-          <button id="btn-reset" type="button">位置と回答を消す</button>
+          <label for="in-muni">市町村</label>
+          <select id="in-muni"><option value="">選ぶ</option></select>
+          <span class="note pc">または右の地図を押す</span>
+          <button id="btn-mapsel" type="button" class="sp mapsel">地図で場所を選ぶ</button>
         </div>
         <p class="note" id="pos-msg" role="status"></p>
-        <div id="ctl-class" class="seg" role="radiogroup" aria-label="設備の区分"></div>
-        <p class="note">区分はJPEA・REASPの資料の分け方（発電出力）。区分によって、資料が挙げる重点箇所が違います（規模はリスクの点数には使いません）。</p>
-      </div>
-      <div class="box result" id="box-result" aria-live="polite">
-        <h2><span class="step">2</span>結果（この設備のリスクの色）</h2>
-        <div id="diag-result"><p class="note">位置を指すと、リスクの色（仮）・周囲の目安・未実施の対策が出ます。下の現場の条件と対策の回答を選ぶと、結果が変わります。</p></div>
+        <div class="row"><span class="lbl">区分</span><div id="ctl-class" class="seg" role="radiogroup" aria-label="設備の区分"></div></div>
+        <p class="note" id="cls-note"></p>
+        <details id="det-ll"><summary>緯度・経度で入れる</summary>
+          <div class="row">
+            <label for="in-lat">緯度</label><input id="in-lat" type="text" inputmode="decimal" placeholder="例 36.34" size="8">
+            <label for="in-lon">経度</label><input id="in-lon" type="text" inputmode="decimal" placeholder="例 140.45" size="8">
+            <button id="btn-set" type="button" class="primary">この座標で診断</button>
+          </div>
+        </details>
       </div>
       <div class="box" id="box-cond">
-        <h2><span class="step">3</span>現場の条件</h2>
-        <p class="note">JPEA・REASPと茨城県警が「盗まれやすい」とする条件のうち、本人にしか分からないものです。選ばない項目は「わからない」として扱い、結果には、すべて当てはまった場合の色も出ます。防犯設備・転がし配管・保守の条件は、次の対策の回答から自動で判定します。</p>
+        <h2><span class="step">2</span>立地の条件 <span class="sub">★に答えると判定の幅が絞られます</span></h2>
         <div id="conds"></div>
+        <details id="det-cl"><summary id="cl-sum">防犯対策</summary>
+          <div id="checklist"></div>
+        </details>
       </div>
-      <div class="box" id="box-check">
-        <h2><span class="step">4</span>いま実施している対策</h2>
-        <p class="note">警察・業界団体が公表している対策の一覧です。実施の有無を選んでください（選ばない項目は「わからない」として扱います）。</p>
-        <div id="checklist"></div>
+      <details class="box" id="box-detail">
+        <summary>色の内訳と出典</summary>
+        <div id="diag-detail"></div>
+      </details>
+      <div class="box privacy" role="note" id="box-privacy">
+        <b>入力は、この端末のブラウザの中で計算するだけです。送信も保存もしません。</b>
+        <button id="btn-reset" type="button">場所と回答を消す</button>
+        <details><summary>地図について</summary>
+          <p class="note dark">座標を入れても地図は動かしません。地図を動かしたり拡大したりすると、地図画像を地理院から取得するので、<b>見ている範囲は地理院に伝わります</b>（拡大は縮尺11、約16km四方まで）。市町村や座標の入力だけでも診断できます。</p>
+        </details>
       </div>
     </div>
 
     <!-- 3 盗難の実態 -->
     <div class="pane" id="pane-reality" role="tabpanel" aria-labelledby="tab-reality" hidden>
-      <div class="box limits" role="note"><b>ここに載せるのは、警察が公表している粒度（全国・県・県内5地区）の件数だけです。</b>個別の設備・場所は載せません。令和8年の数値は暫定値です。</div>
+      <div class="box limits" role="note"><b>警察が公表している粒度（全国・県・県内5地区）の件数だけを載せます。</b>個別の設備・場所は載せません。令和8年の数値は暫定値です。</div>
       <div id="reality"></div>
     </div>
 
@@ -108,9 +121,10 @@
   <section id="mapwrap">
     <div id="map" aria-label="茨城県の集計メッシュの地図"></div>
     <div id="legend"></div>
+    <button type="button" id="go-diag2" class="primary fab">設備を診断する</button>
   </section>
 </main>
-<footer id="credit">出典: 資源エネルギー庁 再エネ電子申請サイト 事業計画認定情報、総務省統計局 e-Stat 国勢調査2020、茨城県警察、国土地理院タイル。これらを<b>編集・加工して作成</b>したもので、国（府省等）が作成したものではありません。詳しくは「出典・前提・限界」。</footer>
+<footer id="credit"><span class="pc">出典: 資源エネルギー庁 再エネ認定情報、e-Stat 国勢調査2020、茨城県警察、地理院タイルを</span><span class="sp">出典: エネ庁・e-Stat・県警・地理院を</span><b>編集・加工して作成</b><span class="pc">（国が作成したものではありません）。詳しくは「出典・前提・限界」</span><span class="sp">（国の作成ではない）</span></footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
 <script src="lib.js"></script>
