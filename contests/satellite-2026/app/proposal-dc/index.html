@@ -17,7 +17,7 @@
   <div class="mappane">
     <div id="map" role="application" aria-label="福岡県直方市・鞍手町・北九州市西部の地図。造成地・遊休地の候補を番号つきで表示。地図をクリックするとその地点の確認項目が出る"></div>
     <details class="layers" id="layers" open>
-      <summary>地図に重ねるもの</summary>
+      <summary>衛星で見る・災害を重ねる</summary>
       <fieldset><legend>衛星で見ること（1つ選ぶ）</legend>
         <label><input type="radio" name="sat" data-layer="lst" checked> 夏の地表面温度<span class="what">地面の熱さ</span></label>
         <label><input type="radio" name="sat" data-layer="sub"> 地盤の変動<span class="what">地面の上下</span></label>
@@ -34,7 +34,8 @@
       </fieldset>
     </details>
     <button type="button" id="btn-home" class="home">全体に戻す</button>
-    <div id="legend" class="legend" aria-live="polite"></div>
+    <details class="legendbox" id="legendbox" open><summary>凡例</summary><div id="legend" class="legend" aria-live="polite"></div></details>
+    <p class="loading" id="loading" role="status">地図を読み込んでいます…（「候補地」の一覧は先に使えます）</p>
     <p class="credit" id="credit"></p>
   </div>
   <aside class="side" aria-label="選んだ地点の確認項目">
@@ -46,19 +47,18 @@
       <div class="ttl"><h2 id="target-title">確認項目の一覧</h2><button type="button" id="btn-pin" class="pin">＋比べる</button></div>
       <p id="target-sub" class="sub"></p>
       <p id="impact" class="impact"></p>
+      <p class="satline"><span class="sat">衛星</span>が担う：地盤の変動／地表面温度（冷却）／土地の状態と変化</p>
       <ol id="rows" class="rows"></ol>
     </section>
     <section id="cmp" class="cmp-box" aria-live="polite"></section>
-    <div class="foot">
-    <details class="more" id="why">
-      <summary>防災・都市課題の観点</summary>
+    <div class="why" id="why"><b>防災・都市課題にどうつながるか</b>
       <ul>
-        <li><b>浸水・土砂・津波・高潮に重ならない地点</b>なら、周辺が浸水してもデータと通信の拠点を残せる可能性がある（自治体の防災情報の置き場所の候補）。重なるなら、かさ上げ・止水の費用を見込む。</li>
-        <li><b>造成地・遊休地を使う</b>と、森林や農地を新しく拓く量を減らせる可能性がある。</li>
-        <li><b>排熱の活用</b>は近くに熱を使う施設があるかの確認から（この画面に熱需要のデータはない）。</li>
-        <li><b>地盤</b>は衛星で広く傾向を見て、気になる地点だけ地上で調べる二段階にする。</li>
+        <li>災害に重ならない所なら、災害時もデータと通信の拠点を残せる可能性（重なるなら、かさ上げ・止水の費用を見込む）</li>
+        <li>造成地・遊休地を使えば森林・農地を拓く量を減らせる可能性／地盤は衛星で傾向→気になる所だけ地上で調べる</li>
+        <li>排熱の活用は近くの熱需要の確認から（この画面に熱需要のデータはない）</li>
       </ul>
-    </details>
+    </div>
+    <div class="foot">
     <details class="more" id="limits">
       <summary>限界</summary>
       <ul>
@@ -70,7 +70,7 @@
         <li>通信・水・地震・活断層・液状化は扱わない（利用条件か基準が確認できていない）。</li>
       </ul>
     </details>
-    <button type="button" id="btn-data" class="more-btn">使っているデータ（ID・日付・利用条件）</button>
+    <button type="button" id="btn-data" class="more-btn">使っているデータ・出典</button>
     </div>
   </aside>
 </main>

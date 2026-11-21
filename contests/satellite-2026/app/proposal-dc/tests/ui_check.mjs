@@ -51,6 +51,7 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   ok(label + ': 防災・都市課題の観点がある（浸水しない場所・排熱）', await ev(`(()=>{const d=document.querySelector('#why');d.open=true;const t=d.textContent;return /防災/.test(t)&&/排熱/.test(t)})()`));
   ok(label + ': 衛星の出典表記（Copernicus・USGS・国土地理院/JAXA）が画面にある', await ev(`(()=>{const t=document.querySelector('#credit').textContent;return /Copernicus Sentinel/.test(t)&&/U\\.S\\. Geological Survey/.test(t)&&/原初データ所有：JAXA/.test(t)&&/ODbL/.test(t)&&/CC BY 4\\.0/.test(t)})()`));
   ok(label + ': 出典・注意は既定で畳まれ、ⓘで開く', await ev(`(()=>{const b=document.querySelector('#rows .row button.info');const d=document.getElementById(b.getAttribute('aria-controls'));const was=d.hidden;b.click();const r=was&&!d.hidden;b.click();return r})()`));
+  ok(label + ': 防災・都市課題の観点が畳まれずに見える', await ev(`(()=>{const w=document.querySelector('#why');return w.tagName!=='DETAILS'&&w.getBoundingClientRect().height>40&&/防災/.test(w.textContent)})()`));
   ok(label + ': 防災への一言が結果の上に常に出る', await ev(`/→/.test(document.querySelector('#impact').textContent)`));
   ok(label + ': 比べる表が最初から 2 件並び、確認すべき点か差の行がある', await ev(`(()=>{const t=document.querySelector('#cmp table.cmp');return !!t&&t.querySelectorAll('thead th').length===3&&t.querySelectorAll('tbody tr').length===8})()`));
   ok(label + ': 候補地の名前の意味（造＝造成地・遊＝遊休地）と該当数の凡例がある', await ev(`/造成地の候補/.test(document.querySelector('#legend').textContent)&&/遊休地の候補/.test(document.querySelector('#legend').textContent)&&!!document.querySelector('.cand-mk .hzd')`));
@@ -60,11 +61,13 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   const first = await ev(`document.querySelector('#target-title').textContent`);
   const opts = await ev(`[...document.querySelectorAll('#pick option')].filter(o=>!o.disabled).map(o=>o.value)`);
   await ev(`(()=>{const s=document.querySelector('#pick');s.value=${JSON.stringify(opts[Math.min(opts.length - 1, 30)])};s.dispatchEvent(new Event('change'))})()`); await sleep(900);
+  ok(label + ': 選んだ候補地が比べる表に「選択中」の列として自動で入る', await ev(`(()=>{const c=document.querySelector('#cmp thead th.cur');return !!c&&/選択中/.test(c.textContent)&&c.textContent.includes(DCApp.state.target.id)&&document.querySelectorAll('#cmp thead th').length===4})()`));
   await ev(`document.querySelector('#btn-pin').click()`);
   ok(label + ': ＋比べるで 3 件目が並ぶ', await ev(`document.querySelectorAll('#cmp thead th').length===4`));
   ok(label + ': 候補地を選ぶと見出しと確認項目が変わる', (await ev(`document.querySelector('#target-title').textContent`)) !== first && (await ev(`document.querySelectorAll('#rows .row').length`)) === 8);
   ok(label + ': 選んだ候補地の輪郭が地図にある', await ev(`DCApp.state.map.getSource('sel')._data.geometry?.type==='Polygon'`));
   // 地図をクリックして地点を指す
+  await ev(`window.scrollTo(0,0)`); await sleep(500); // スマホは選択後に結果へ寄せるので、地図の位置に戻してから指す
   const pt = await ev(`(()=>{const m=DCApp.state.map;const p=m.project(m.getCenter());const r=m.getContainer().getBoundingClientRect();return {x:r.left+p.x+(r.width>600?110:70),y:r.top+p.y-70}})()`);
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pt.x, y: pt.y, button: 'left', clickCount: 1 }); await sleep(700);

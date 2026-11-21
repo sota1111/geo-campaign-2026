@@ -197,7 +197,7 @@
 
   /** 干渉SARの階級の範囲を、言葉で先に言う（階級の数字は注記に回す） */
   function insarWords(r) {
-    if (r[0] >= -INSAR_CLASS_W && r[1] <= INSAR_CLASS_W) return { word: 'ほぼ動いていない', text: `ほぼ動いていない（±${INSAR_CLASS_W} mm/年以内）` };
+    if (r[0] >= -INSAR_CLASS_W && r[1] <= INSAR_CLASS_W) return { word: '目立つ動きなし', text: `目立つ動きなし（±${INSAR_CLASS_W} mm/年の階級内。現地確認が要る）` };
     if (r[1] <= -INSAR_CLASS_W) return { word: '沈下気味', text: `沈下気味（${fmtRange(r)}）` };
     return { word: '隆起気味', text: `隆起気味（${fmtRange(r)}）` };
   }
@@ -231,8 +231,8 @@
     const l = summarizeLst(layers.lst, cells);
     const p50 = data.stats.lst_p50;
     const cmpText = l.valid ? (l.median > p50 ? 'より高い' : l.median < p50 ? 'より低い' : 'と同じ') : '';
-    rows.push({ key: 'lst', label: '夏の地表面温度', sat: true, hint: '夏の地面の熱さ → 冷却の条件の参考（気温ではない）', status: l.valid ? 'info' : 'nodata',
-      value: l.valid ? `この場所 ${l.median.toFixed(1)} ℃。範囲全体の中央値 ${p50} ℃ ${cmpText}` : '値がない（雲など）', short: l.valid ? `${l.median.toFixed(1)} ℃` : '値なし', src: SRC.lst,
+    rows.push({ key: 'lst', label: '冷却（夏の地表面温度）', sat: true, hint: '夏の地面の熱さ → 冷却の条件の参考（気温ではない）', status: l.valid ? 'info' : 'nodata',
+      value: l.valid ? `${l.median.toFixed(1)} ℃（範囲の中央値 ${p50} ℃ ${cmpText}）。8/22 の1場面で、季節・時刻で変わる` : '値がない（雲など）', short: l.valid ? `${l.median.toFixed(1)} ℃` : '値なし', src: SRC.lst,
       note: `2026-08-22 の昼前の 1 場面。範囲全体の 10〜90% は ${data.stats.lst_p10}〜${data.stats.lst_p90} ℃。気温でも冷却の効率でもない。表面の種類（植生・裸地・建物）で大きく変わる。` });
     const ss = nearestSubstation(data.substations, lon, lat, 0), sh = nearestSubstation(data.substations, lon, lat, 66000), ln = nearestLine(data.lines, lon, lat);
     const subText = ss ? `変電所 ${fmtKm(ss.d)}${ss.s.name ? `（${ss.s.name}）` : ''}・${fmtVolt(ss.s.voltage)}` : '範囲内に OSM の変電所なし';
