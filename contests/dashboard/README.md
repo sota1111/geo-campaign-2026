@@ -42,6 +42,7 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 | `apps/biz-realestate-a4/` | 同じ土地、四つの値段（新しい案。biz-realestate の隣） |
 | `apps/biz-realestate-timeline/` | 23区、値段の年表（新しい案。biz-realestate の隣。地区（町名）ごとのマンション価格を、間取りを選び時間を動かして見る。家賃は区ごと） |
 | `apps/biz-repair/` | 大規模修繕プラットフォーム（新しい案。墨田区の PLATEAU の建物を選ぶと、国交省調査の分布から修繕費の目安の範囲と見積の位置が出る。点群・発注先の検討つき。事例・口コミのデモは架空） |
+| `apps/sat-dc/` | データセンター候補地の一次スクリーニング（新しい案。福岡県の直方・鞍手・北九州市西部で、干渉SAR・Landsat・Sentinel-2 と国土数値情報・OSM から、候補地ごとの確認項目を出典つきで並べる。点数・順位は作らない） |
 | `apps/odpt-teiji/` | バス定時性カルテ（新しい案。odpt の隣） |
 
 仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
