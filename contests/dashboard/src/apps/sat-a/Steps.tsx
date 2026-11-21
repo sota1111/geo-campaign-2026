@@ -7,8 +7,9 @@ import { Progress } from '@/components/ui/progress'
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { dataUrl } from '@/lib/data'
 import {
-  aucAt, totalKm, type Calibration, type CellSat, type Exclusion, type Outcome, type OutcomeInput, type Scanned, type Scored, type Segment,
+  LINK_MAX_M, aucAt, totalKm, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
 } from './logic'
 
 const pct = (x: number) => Math.round(x * 100)
@@ -25,7 +26,7 @@ export interface PrevInfo {
   calibrated: boolean
   scanned: number
 }
-export type CalibResult = Calibration & { ex0: Exclusion | null; ex1: Exclusion | null; pastCount: number }
+export type CalibResult = Calibration & { ex0: Exclusion | null; ex1: Exclusion | null; n: number }
 
 function Metric({ label, value, sub, testId }: { label: string; value: string; sub?: string; testId?: string }) {
   return (
@@ -86,7 +87,7 @@ function RankTable({
               <TableCell className="font-medium">{i + 1}</TableCell>
               <TableCell>{s.id}</TableCell>
               <TableCell>{s.cell}</TableCell>
-              <TableCell className="text-right">{s.year}</TableCell>
+              <TableCell className="text-right">{s.year ?? '不明'}</TableCell>
               <TableCell className="text-right font-medium">
                 {s.score.toFixed(2)}
                 {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差か、区間IDの順） */}
@@ -105,27 +106,27 @@ function RankTable({
   )
 }
 
-/** 衛星指標の作り方（どの衛星データから、どう区画の値と点数にするか）。実装済みの部分と架空の部分を印で分ける */
+/** 衛星指標の作り方（どの衛星データから、どう区画の値と点数にするか）。実データの部分と、まだ使っていない部分を印で分ける */
 const INDICATOR_STAGES: { no: string; title: string; body: string; mark: string; real: boolean }[] = [
   {
-    no: '1', title: '衛星データ: Sentinel-1（SAR）',
-    body: '欧州宇宙機関（ESA）の無料の衛星。観測幅250km、商用利用を含め無料。2機体制の6日回帰に戻る計画（提案書A・出典一覧）。',
-    mark: '想定（この画面では未取得）', real: false,
+    no: '1', title: '衛星データ: 国土地理院の干渉SAR成果（だいち2号・4号）',
+    body: '提案書は Sentinel-1（欧州宇宙機関、観測幅250km、無料）の解析を主に想定しています。この画面は Sentinel-1 の解析結果ではなく、公開済みの国土地理院の成果（ALOS-2/4、Lバンド、約90m）で代用しています。',
+    mark: '実データ（代用）', real: true,
   },
   {
-    no: '2', title: 'InSAR解析: 地表の動き（mm/年）',
-    body: '複数回の観測を重ねて、区画ごとの地表変位（負＝沈下）を出す。InSAR処理は実装しておらず、この画面の値は人が決めた式と乱数による架空値。',
-    mark: '架空値で代用', real: false,
+    no: '2', title: '階級に戻す: 地表の動き（mm/年）',
+    body: '地理院タイルの色を凡例の16階級（1階級 3.75 mm/年幅）に戻し、約90mの区画ごとに階級の中央値を取りました。値は階級の幅でしか言えず、小数の精度はありません。InSAR処理そのものは実装していません。',
+    mark: '実データ（加工）', real: true,
   },
   {
     no: '3', title: '区画値: 0〜1 にそろえる',
-    body: '区画（メッシュ）ごとに、沈下が −8mm/年以下で1、動きなしで0。地図の青みが濃い区画ほど大きい。路線単位ではなく区画単位で付ける。',
-    mark: 'この画面で計算（入力は架空）', real: true,
+    body: '区画ごとに、沈下が −8mm/年以下で1、動きなしで0（デモ上の便宜的な正規化）。この地区の階級は2種類だけで、差は階級幅以内。沈下の兆候とは言えず、点数は最大でも 0.23 です。',
+    mark: 'この画面で計算', real: true,
   },
   {
     no: '4', title: '点数: 台帳と合わせる',
-    body: '点数 ＝ 衛星の重み × 区画値 ＋ 台帳の重み × 管の古さ（60年で1）。点数の高い区間から、地中レーダの調査対象を選ぶ。',
-    mark: 'この画面で計算（台帳は架空）', real: true,
+    body: '点数 ＝ 衛星の重み × 区画値 ＋ 台帳の重み × 管の古さ（60年で1）。台帳は豊中市の下水道管渠の竣工日（CC BY 4.0）。点数の高い区間から、地中レーダの調査対象を選ぶ。',
+    mark: '実データ（台帳）', real: true,
   },
 ]
 function IndicatorFlow() {
@@ -138,7 +139,7 @@ function IndicatorFlow() {
             <div className={cn('rounded border bg-background px-2 py-1 text-xs', !st.real && 'border-dashed border-amber-500')}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                 <span className="font-medium">{st.no}. {st.title}</span>
-                <span className={cn('text-[10px]', st.real ? 'text-muted-foreground' : 'font-medium text-amber-800')}>{st.real ? '◆' : '◇'} {st.mark}</span>
+                <span className={cn('text-[10px]', st.real ? 'text-muted-foreground' : 'font-medium text-amber-800')}>◆ {st.mark}</span>
               </div>
               <p className="text-muted-foreground">{st.body}</p>
             </div>
@@ -147,7 +148,7 @@ function IndicatorFlow() {
         ))}
       </ol>
       <p className="text-[11px] text-muted-foreground">
-        公開の地盤変動データ（InSAR）を区画ごとに取り込むことは、キー不要・ライセンス明確・時間内、の条件で確認できなかったため行っていません。2・3段階の入力は架空です（◇＝架空・未実装、◆＝計算は実装済み）。
+        衛星の階級は、この地区ではほぼ一様（-3.75〜+3.75 mm/年）で、衛星では絞れません。地理院成果の利用条件は要確認（出典・限界を参照）。
       </p>
     </section>
   )
@@ -173,7 +174,7 @@ export function TopPanel({
         <Metric
           label={ties.length > 1 ? `点数が最も高い区間（同点 ${ties.length} 区間）` : '点数が最も高い区間'}
           value={best ? (ties.length > 1 ? tieIds : best.id) : '—'}
-          sub={best ? `点数 ${best.score.toFixed(2)}${ties.length > 1 ? `（小数2桁で同点。表の1位は ${best.id}）` : `／区画 ${best.cell}／布設 ${best.year}年`}` : ''}
+          sub={best ? `点数 ${best.score.toFixed(2)}${ties.length > 1 ? `（小数2桁で同点。表の1位は ${best.id}）` : `／区画 ${best.cell}／竣工 ${best.year ?? '不明'}${best.year == null ? '' : '年'}`}` : ''}
           testId="m-top"
         />
       </div>
@@ -290,155 +291,154 @@ export function PickPanel({
   )
 }
 
-/* ---------- 4 走査結果を見る ---------- */
+/* ---------- 4 調査結果を入れる ---------- */
+export interface LoadInfo {
+  name: string
+  error: string | null
+  summary: OutcomeSummary
+}
+
+const FORMATS: [string, string, string][] = [
+  ['A. 区間ID', 'segment_id,cavity', 'この画面の区間ID（例 S0312）と、空洞あり／なし'],
+  ['B. 緯度・経度の点', 'lat,lon,cavity', `点から ${LINK_MAX_M} m 以内で最も近い区間に結び付け（台帳なしの道路は除く）。同じ区間に複数点あれば「1つでもあり」ならあり`],
+]
+
 export function ScanPanel({
-  segs, ranked, selected, revealed, lastBatch, results, outcomes, onOutcome, onFillSample, onScan,
+  demo, onDemo, selected, segs, resultsCount, loadInfo, onFile, onClear, onDemoScan,
 }: {
-  segs: Segment[]
-  ranked: Scored[]
+  demo: boolean
+  onDemo: (on: boolean) => void
   selected: Set<string>
-  revealed: boolean
-  lastBatch: string[]
-  results: Map<string, boolean>
-  outcomes: OutcomeInput
-  onOutcome: (id: string, o: Outcome | undefined) => void
-  onFillSample: () => void
-  onScan: () => void
+  segs: Segment[]
+  resultsCount: number
+  loadInfo: LoadInfo | null
+  onFile: (file: File) => void
+  onClear: () => void
+  onDemoScan: () => void
 }) {
   const km = totalKm(segs, selected)
-  const batch = lastBatch.map((id) => ({ id, hit: results.get(id) === true, score: ranked.find((s) => s.id === id)?.score ?? 0 }))
-  const hit = batch.filter((b) => b.hit).length
-  if (!revealed) {
-    const rows = ranked.filter((s) => selected.has(s.id))
-    const entered = rows.filter((s) => outcomes[s.id] === 'hit' || outcomes[s.id] === 'none').length
-    return (
-      <div className="space-y-3">
-        {results.size > 0 && selected.size === 0 ? (
-          <Alert><AlertDescription>調査結果は反映済みです。再び入力するには、第2回で調査対象を選び直してください。</AlertDescription></Alert>
-        ) : (
-          <p className="text-sm">
-            選んだ <b data-testid="s3-count">{selected.size}</b> 区間（{fmt1(km)} km）を地中レーダで調査した結果を、区間ごとに入力します。
-            「未調査」や未入力の区間は今回の結果に含めず、次回も候補に残ります。
-          </p>
-        )}
-        <p className="text-xs text-muted-foreground">この画面のデータはすべて架空です。手入力でなく「サンプル結果」を使うと、乱数で作った架空の結果が入ります。</p>
-        {selected.size === 0 && results.size === 0 && (
-          <Alert><AlertDescription>入力する区間がありません。「予算内で調査対象を選ぶ」の手順で区間を選んでください。</AlertDescription></Alert>
-        )}
-        {rows.length > 0 && (
-          <div className="space-y-1">
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={onScan} disabled={entered === 0} data-testid="scan"><Radar />入力した結果を反映する（{entered} 区間入力済み）</Button>
-              <Button size="sm" variant="outline" onClick={onFillSample} data-testid="scan-sample"><Wand2 />サンプル結果を一括で入れる</Button>
-            </div>
-            <p className="text-xs text-muted-foreground" data-testid="scan-hint">
-              {entered === 0 ? '下の表で1区間以上に「空洞の疑いあり」か「異常なし」を入れると反映できます（全部入れる必要はありません）。' : `${entered} 区間の結果を反映できます。残りの区間は未調査として次回の候補に残ります。`}
-            </p>
-          </div>
-        )}
-        {rows.length > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow><TableHead>区間</TableHead><TableHead className="text-right">点数</TableHead><TableHead>調査結果</TableHead></TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.id}</TableCell>
-                  <TableCell className="text-right">{r.score.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <select
-                      className="h-8 rounded-md border bg-background px-2 text-sm"
-                      aria-label={`${r.id} の調査結果`}
-                      data-testid={`outcome-${r.id}`}
-                      value={outcomes[r.id] ?? ''}
-                      onChange={(e) => onOutcome(r.id, (e.target.value || undefined) as Outcome | undefined)}
-                    >
-                      <option value="">（未入力）</option>
-                      <option value="hit">▲ 空洞の疑いあり</option>
-                      <option value="none">○ 異常なし</option>
-                      <option value="unknown">－ 未調査</option>
-                    </select>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-    )
-  }
+  const sm = loadInfo?.summary
+  const bad: string[] = []
+  if (sm?.invalid) bad.push(`空洞の有無や座標が読めない行 ${sm.invalid}`)
+  if (sm?.unknownId) bad.push(`存在しない区間ID ${sm.unknownId}`)
+  if (sm?.unmatched) bad.push(`${LINK_MAX_M} m 以内に区間が無い点 ${sm.unmatched}`)
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        <Metric label="調査した区間" value={`${batch.length}`} />
-        <Metric label="▲ 空洞の疑い" value={`${hit}`} testId="s3-hit" />
-        <Metric label="○ 異常なし" value={`${batch.length - hit}`} />
-      </div>
-      <p className="text-xs text-muted-foreground">
-        疑いありの区間は管内カメラ調査等の追加確認に回す想定です（このデモでは扱いません）。地図にも結果の印を出しています。データは架空です。
+      <p className="text-sm">
+        <b>一次審査を通った後、地中レーダ探査車（GMS3）のデータで較正します。</b>この手順はその結果を受け取る枠です。GMS3 のデータは現時点で手元になく、この画面は使っていません。同梱している実データに空洞の結果はありません。
       </p>
-      <Table>
-        <TableHeader>
-          <TableRow><TableHead>区間</TableHead><TableHead className="text-right">点数</TableHead><TableHead>入力した結果</TableHead></TableRow>
-        </TableHeader>
-        <TableBody>
-          {batch.map((b) => (
-            <TableRow key={b.id}>
-              <TableCell>{b.id}</TableCell>
-              <TableCell className="text-right">{b.score.toFixed(2)}</TableCell>
-              <TableCell>
-                {b.hit ? <Badge className="bg-[#d55e00] text-white">▲ 疑い</Badge> : <Badge variant="outline" className="border-[#0072b2] text-[#0072b2]">○ なし</Badge>}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+
+      {demo ? (
+        <div className="space-y-2 rounded-md border-l-4 border-amber-600 bg-amber-50 p-2.5 text-sm text-amber-950" data-testid="demo-on">
+          <b>説明用デモ中（結果は架空）。</b>デモをオフにするまで、CSV は入れられません。
+          <p>選んだ <b data-testid="s3-count">{selected.size}</b> 区間（{fmt1(km)} km）を走査した、と想定して、<b>架空の</b>結果を入れます。</p>
+          <Button size="sm" onClick={onDemoScan} disabled={selected.size === 0} data-testid="demo-scan"><Radar />走査結果を入れる（架空）</Button>
+        </div>
+      ) : (
+        <div className="space-y-1.5 rounded-md border border-dashed border-primary/60 bg-background p-2.5">
+          <label className="text-sm font-medium" htmlFor="csv-file">調査結果の CSV を選ぶ（累計で入ります。同じ区間は上書き）</label>
+          <input
+            id="csv-file"
+            data-testid="csv-file"
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv"
+            className="block w-full text-sm file:mr-2 file:rounded-md file:border file:bg-background file:px-3 file:py-2"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) onFile(f)
+              e.target.value = ''
+            }}
+          />
+        </div>
+      )}
+
+      <div aria-live="polite" data-testid="load-msg">
+        {loadInfo?.error && <p className="text-sm font-bold text-red-800" data-testid="load-error">読み込めませんでした: {loadInfo.error}</p>}
+        {loadInfo && !loadInfo.error && sm && (
+          <p className="text-sm" data-testid="load-ok">
+            「{loadInfo.name}」を読み込みました（{sm.rows} 行）: 区間IDで {sm.byId} 行、緯度・経度の点で {sm.byPoint} 行を区間に結び付け、<b>{sm.segments} 区間</b>の結果（空洞あり {sm.hit}・なし {sm.none}）。
+            {sm.merged > 0 && `同じ区間への複数行 ${sm.merged} 行は「1つでもあり」ならありにまとめました${sm.conflicts ? `（あり・なしが食い違った区間 ${sm.conflicts}）` : ''}。`}
+            {bad.length > 0 && <span className="block text-amber-800">使えなかった行: {bad.join('、')}。</span>}
+          </p>
+        )}
+      </div>
+
+      <p className="text-sm" data-testid="res-total">
+        調査結果が入った区間: <b>{resultsCount}</b>{demo ? '（架空）' : ''}
+        {resultsCount > 0 && <Button size="sm" variant="outline" className="ml-2" onClick={onClear} data-testid="clear-res">結果を消す</Button>}
+      </p>
+
+      <div className="space-y-1.5">
+        <p className="text-xs text-muted-foreground">
+          GMS3 の出力の書式は<b>未確認</b>です。そこで次の<b>2つの書き方のどちらの CSV でも</b>受け付け、同じように較正します（1行目は見出し。区切りはカンマかタブ。処理はこのブラウザの中だけで、外へは送りません）。
+        </p>
+        <Table>
+          <TableHeader><TableRow><TableHead>書き方</TableHead><TableHead>見出しの例</TableHead><TableHead>内容</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {FORMATS.map(([a, b, c]) => (
+              <TableRow key={a}><TableCell className="whitespace-normal">{a}</TableCell><TableCell><code className="text-xs">{b}</code></TableCell><TableCell className="whitespace-normal text-xs">{c}</TableCell></TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <p className="text-xs text-muted-foreground">
+          空洞の列の値は「あり／なし」「1／0」「true／false」「空洞あり／空洞なし」「疑い／異常なし」を読めます。見本:{' '}
+          <a className="text-primary underline" href={dataUrl('sat-a', 'format_sample_by_segment.csv')} download>区間IDの見本</a>・
+          <a className="text-primary underline" href={dataUrl('sat-a', 'format_sample_by_point.csv')} download>緯度・経度の見本</a>
+          （書式を示すだけの仮の値で、調査結果ではありません）。
+        </p>
+      </div>
+
+      <div className="rounded-md border p-2.5 text-xs">
+        <label className="flex items-start gap-2">
+          <input type="checkbox" className="mt-0.5 size-4" checked={demo} onChange={(e) => onDemo(e.target.checked)} data-testid="demo-toggle" />
+          <span>
+            <b>説明用デモをオンにする（架空の結果で動きを見る）。既定はオフ。</b>
+            <span className="block text-muted-foreground">
+              実データには空洞の結果が無いため、動きを見せるためだけの機能です。オンにすると<b>地中レーダの結果が乱数（架空）</b>になり、オンの間は地図に「架空」と出し続けます。オン・オフを切り替えると、入れた結果と較正は初めからになります。
+            </span>
+          </span>
+        </label>
+      </div>
     </div>
   )
 }
 
 /* ---------- 5 較正を反映して第2回へ ---------- */
 export function ApplyPanel({
-  round, revealed, calib, surveyed, cellSat, resultsCount, applied, onApply,
+  round, calib, surveyed, cellSat, resultsCount, demo, applied, onApply,
 }: {
   round: number
-  revealed: boolean
-  calib: CalibResult | null
+  calib: CalibResult
   surveyed: Scanned[]
   cellSat: CellSat
   resultsCount: number
+  demo: boolean
   applied: PrevInfo | null
   onApply: () => void
 }) {
-  if (!revealed) {
-    return (
-      <div className="space-y-3">
-        {applied ? (
-          <Alert className="border-primary/40 bg-primary/5">
-            <AlertTitle>第{round}回に反映済みです</AlertTitle>
-            <AlertDescription className="text-foreground">
-              衛星指標の重みは {pct(applied.oldW)}% → {pct(applied.newW)}%。結果は、左の手順リストの「第2回の順位を確かめる」を押すと見られます（強調表示しています）。
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Alert><AlertDescription>較正には走査結果が必要です。「走査結果を見る」の手順で結果を出してください。</AlertDescription></Alert>
-        )}
-      </div>
-    )
-  }
   return (
     <div className="space-y-3">
-      {calib && calib.w === null && (
-        <Alert className="border-amber-500 bg-amber-50 text-amber-950">
-          <AlertTitle>較正に使える結果が不足しています</AlertTitle>
-          <AlertDescription className="text-amber-900">空洞の疑いあり {calib.pos} 件・異常なし {calib.neg} 件（各3件以上で較正）。重みは変えません。</AlertDescription>
+      {applied && (
+        <Alert className="border-primary/40 bg-primary/5">
+          <AlertTitle>第{round}回に反映済みです</AlertTitle>
+          <AlertDescription className="text-foreground">
+            衛星指標の重みは {pct(applied.oldW)}% → {pct(applied.newW)}%。結果は、左の手順リストの「第2回の順位を確かめる」を押すと見られます。
+          </AlertDescription>
         </Alert>
       )}
-      {calib && calib.w !== null && (
+      {resultsCount === 0 && (
+        <Alert><AlertDescription>まだ調査結果がないので、較正はしません。「調査結果を入れる」の手順で CSV を入れてください（重みは変えません）。</AlertDescription></Alert>
+      )}
+      {resultsCount > 0 && calib.w === null && (
+        <Alert className="border-amber-500 bg-amber-50 text-amber-950">
+          <AlertTitle>較正に使える結果が不足しています</AlertTitle>
+          <AlertDescription className="text-amber-900">空洞あり {calib.pos} 件・なし {calib.neg} 件（各3件以上で較正）。重みは変えません。</AlertDescription>
+        </Alert>
+      )}
+      {calib.w !== null && (
         <>
           <p className="text-sm">
-            これまでの調査結果（過去の調査 {calib.pastCount} 区間＋今回までの走査 {resultsCount} 区間。すべてサンプル）に照らして、重みを探しました。
+            入った結果（{calib.n} 区間）に照らして、重みを探しました。{demo && <b>空洞の有無はすべて架空です。</b>}
           </p>
           <Table>
             <TableHeader>
@@ -454,13 +454,15 @@ export function ApplyPanel({
             </TableBody>
           </Table>
           <p className="text-xs text-muted-foreground">
-            AUC: 空洞のあった区間が、なかった区間より高い点数になる確率。0.5＝でたらめ（当てずっぽう）と同じ、1.0＝完全に当たる。数字が大きいほど、その重みで調べる順番が当たりやすいという意味です。
-            {calib.ex1 && `点数が下位の半分とした区間（${calib.ex1.n}区間）のうち異常なしだった割合は ${pct(calib.ex1.rate)}%${calib.ex0 ? `（較正前の重みでは ${pct(calib.ex0.rate)}%）` : ''}。`}
-            架空データ上の値で、実際の精度や提案の効果を示すものではありません。
+            AUC: 空洞のあった区間が、なかった区間より高い点数になる確率。0.5＝でたらめ（当てずっぽう）と同じ、1.0＝完全に当たる。
+            {calib.ex1 && `点数が下位の半分とした区間（${calib.ex1.n}区間）のうち空洞なしだった割合は ${pct(calib.ex1.rate)}%${calib.ex0 ? `（現在の重みでは ${pct(calib.ex0.rate)}%）` : ''}。`}
+            {demo
+              ? '空洞の有無が架空のため、仕組みを見せる数字であり、実際の精度や提案の効果を示しません。'
+              : '調査した区間は点数の高い所に偏って選ばれやすく、この数字は調査した区間の中での比較です。実際の精度・効果を示すものではありません。'}
           </p>
         </>
       )}
-      <Button size="sm" onClick={onApply} data-testid="apply">較正を反映して第{round + 1}回へ進む</Button>
+      <Button size="sm" onClick={onApply} disabled={calib.w === null} data-testid="apply">較正を反映して第{round + 1}回へ進む</Button>
     </div>
   )
 }

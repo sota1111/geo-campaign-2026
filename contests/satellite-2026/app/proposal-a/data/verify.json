@@ -1,0 +1,912 @@
+{
+ "tokujuten": {
+  "priority": {
+   "target_km": 4.42,
+   "cavity_survey_km": 0.0,
+   "cavities": 0.0
+  },
+  "all_cavities_listed": 96,
+  "other": {
+   "target_km": 19.135,
+   "cavity_survey_km": 0.0,
+   "cavities": 0.0
+  }
+ },
+ "terciles": [
+  {
+   "group": "oldest",
+   "towns": 33,
+   "year_min": 1966,
+   "year_max": 1974,
+   "pipe_km": 334.4,
+   "sewer_incidents": 19,
+   "per_100km": 5.68
+  },
+  {
+   "group": "middle",
+   "towns": 33,
+   "year_min": 1975,
+   "year_max": 1982,
+   "pipe_km": 330.8,
+   "sewer_incidents": 14,
+   "per_100km": 4.23
+  },
+  {
+   "group": "newest",
+   "towns": 34,
+   "year_min": 1982,
+   "year_max": 2010,
+   "pipe_km": 346.0,
+   "sewer_incidents": 5,
+   "per_100km": 1.45
+  }
+ ],
+ "source": {
+  "mlit02": "https://www.mlit.go.jp/road/sisaku/ijikanri/xlsx/dourokanbotsu/r6/02.xlsx",
+  "sewer": "https://data.bodik.jp/dataset/272035_gesuido",
+  "chome": "e-Stat 令和2年国勢調査 小地域（町丁・字等）境界 豊中市（https://www.e-stat.go.jp/gis）"
+ },
+ "columns_in_02": [
+  "道路管理者",
+  "路線名",
+  "地名（市区町村＋町名＋地先）",
+  "要因施設",
+  "深さ・縦断方向・横断方向(m)"
+ ],
+ "has_coordinates": false,
+ "national": {
+  "national": {
+   "total": 72,
+   "sewer": 2,
+   "causes": {
+    "要因未確定": 23,
+    "道路排水施設（側溝）": 15,
+    "道路排水施設（横断水路）": 10,
+    "道路排水施設（集水桝）": 5,
+    "擁壁": 4,
+    "その他": 4,
+    "下水道": 2,
+    "橋梁": 2,
+    "舗装": 2,
+    "ガス": 1,
+    "電線共同溝": 1,
+    "電力": 1,
+    "共同溝": 1,
+    "河川施設（護岸等）": 1
+   }
+  },
+  "prefecture": {
+   "total": 1169,
+   "sewer": 40,
+   "causes": {
+    "道路排水施設": 514,
+    "要因未確定": 182,
+    "擁壁": 96,
+    "その他": 73,
+    "その他道路施設": 63,
+    "河川施設（護岸等）": 57,
+    "下水道": 40,
+    "その他占用物件": 31,
+    "": 26,
+    "上水道": 26,
+    "橋梁": 25,
+    "道路附属物": 9,
+    "法面": 7,
+    "樹木": 7,
+    "電力": 5,
+    "電線共同溝": 5,
+    "通信": 2,
+    "ガス": 1
+   }
+  },
+  "municipal": {
+   "total": 8624,
+   "sewer": 1289,
+   "causes": {
+    "道路排水施設": 3038,
+    "要因未確定": 2185,
+    "下水道": 1289,
+    "その他": 529,
+    "河川施設（護岸等）": 421,
+    "その他道路施設": 313,
+    "その他占用物件": 288,
+    "擁壁": 182,
+    "上水道": 107,
+    "道路附属物": 75,
+    "": 49,
+    "橋梁": 47,
+    "法面": 30,
+    "電力": 27,
+    "樹木": 22,
+    "ガス": 16,
+    "通信": 5,
+    "共同溝": 1
+   }
+  },
+  "municipal_by_class": {
+   "designated": {
+    "total": 2798,
+    "sewer": 604
+   },
+   "other_municipal": {
+    "total": 5645,
+    "sewer": 598
+   },
+   "tokubetsu": {
+    "total": 181,
+    "sewer": 87
+   }
+  }
+ },
+ "osaka": {
+  "total": 332,
+  "sewer": 167,
+  "municipal": 329,
+  "prefecture": 3,
+  "toyonaka": 50
+ },
+ "toyonaka": {
+  "incidents": 50,
+  "sewer": 38,
+  "causes": {
+   "下水道": 38,
+   "要因未確定": 10,
+   "道路附属物": 1,
+   "その他": 1
+  },
+  "unmatched_town": {},
+  "towns_with_polygon": 105,
+  "towns_with_incident": 36,
+  "pipe_count": 46037,
+  "pipe_km_total": 1080.1,
+  "pipe_km_outside_town_polygons": 1.8
+ },
+ "check": {
+  "min_km": 1.0,
+  "towns_used": 100,
+  "towns_used_with_sewer_incident": 29,
+  "incidents_used": 38,
+  "spearman_age_vs_rate": 0.27,
+  "auc_age_for_towns_with_sewer_incident": 0.653,
+  "perm_trials": 5000,
+  "perm_p_rho_ge": 0.0016,
+  "perm_p_auc_ge": 0.0056
+ },
+ "towns": [
+  {
+   "town": "本町",
+   "pipe_km_known": 16.65,
+   "median_year": 1968,
+   "incidents": 3,
+   "sewer_incidents": 3
+  },
+  {
+   "town": "大島町",
+   "pipe_km_known": 8.66,
+   "median_year": 1974,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "庄内東町",
+   "pipe_km_known": 9.1,
+   "median_year": 1979,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "東豊中町",
+   "pipe_km_known": 47.83,
+   "median_year": 1986,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "桜の町",
+   "pipe_km_known": 19.3,
+   "median_year": 1980,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "熊野町",
+   "pipe_km_known": 20.77,
+   "median_year": 1975,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "蛍池北町",
+   "pipe_km_known": 6.2,
+   "median_year": 1971,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "豊南町南",
+   "pipe_km_known": 7.6,
+   "median_year": 1971,
+   "incidents": 2,
+   "sewer_incidents": 2
+  },
+  {
+   "town": "上津島",
+   "pipe_km_known": 12.29,
+   "median_year": 1986,
+   "incidents": 2,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "上野西",
+   "pipe_km_known": 17.46,
+   "median_year": 1979,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "刀根山",
+   "pipe_km_known": 15.06,
+   "median_year": 1972,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "刀根山元町",
+   "pipe_km_known": 3.04,
+   "median_year": 1973,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "北桜塚",
+   "pipe_km_known": 9.04,
+   "median_year": 1974,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "千里園",
+   "pipe_km_known": 11.4,
+   "median_year": 1971,
+   "incidents": 2,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "南桜塚",
+   "pipe_km_known": 15.35,
+   "median_year": 1969,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "原田元町",
+   "pipe_km_known": 9.54,
+   "median_year": 1969,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "大黒町",
+   "pipe_km_known": 7.89,
+   "median_year": 1977,
+   "incidents": 2,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "宮山町",
+   "pipe_km_known": 20.72,
+   "median_year": 1982,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "岡上の町",
+   "pipe_km_known": 4.16,
+   "median_year": 1967,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "島江町",
+   "pipe_km_known": 4.32,
+   "median_year": 1976,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "庄内栄町",
+   "pipe_km_known": 14.3,
+   "median_year": 1980,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "庄内西町",
+   "pipe_km_known": 11.67,
+   "median_year": 1979,
+   "incidents": 2,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "曽根東町",
+   "pipe_km_known": 13.22,
+   "median_year": 1969,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "永楽荘",
+   "pipe_km_known": 15.85,
+   "median_year": 1985,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "稲津町",
+   "pipe_km_known": 5.12,
+   "median_year": 1983,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "穂積",
+   "pipe_km_known": 5.36,
+   "median_year": 1980,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "蛍池西町",
+   "pipe_km_known": 8.0,
+   "median_year": 1981,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "豊南町西",
+   "pipe_km_known": 10.73,
+   "median_year": 1974,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "長興寺北",
+   "pipe_km_known": 7.59,
+   "median_year": 1973,
+   "incidents": 1,
+   "sewer_incidents": 1
+  },
+  {
+   "town": "三和町",
+   "pipe_km_known": 4.76,
+   "median_year": 1975,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "三国",
+   "pipe_km_known": 2.8,
+   "median_year": 1981,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "上新田",
+   "pipe_km_known": 26.98,
+   "median_year": 1985,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "上野坂",
+   "pipe_km_known": 8.73,
+   "median_year": 1985,
+   "incidents": 1,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "上野東",
+   "pipe_km_known": 26.75,
+   "median_year": 1979,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "中桜塚",
+   "pipe_km_known": 21.03,
+   "median_year": 1968,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "二葉町",
+   "pipe_km_known": 6.53,
+   "median_year": 1979,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "今在家町",
+   "pipe_km_known": 2.69,
+   "median_year": 1985,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "利倉",
+   "pipe_km_known": 10.08,
+   "median_year": 1986,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "利倉東",
+   "pipe_km_known": 4.81,
+   "median_year": 1987,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "利倉西",
+   "pipe_km_known": 5.24,
+   "median_year": 1979,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "勝部",
+   "pipe_km_known": 4.57,
+   "median_year": 1971,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "北条町",
+   "pipe_km_known": 11.04,
+   "median_year": 1982,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "北緑丘",
+   "pipe_km_known": 10.32,
+   "median_year": 1985,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "千成町",
+   "pipe_km_known": 5.32,
+   "median_year": 1976,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "南空港町",
+   "pipe_km_known": 0.84,
+   "median_year": 1987,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "原田中",
+   "pipe_km_known": 3.99,
+   "median_year": 1978,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "原田南",
+   "pipe_km_known": 3.13,
+   "median_year": 1986,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "原田西町",
+   "pipe_km_known": 0.76,
+   "median_year": 1967,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "名神口",
+   "pipe_km_known": 6.96,
+   "median_year": 1988,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "向丘",
+   "pipe_km_known": 9.16,
+   "median_year": 1994,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "城山町",
+   "pipe_km_known": 7.69,
+   "median_year": 1980,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "夕日丘",
+   "pipe_km_known": 10.9,
+   "median_year": 1980,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "宝山町",
+   "pipe_km_known": 3.52,
+   "median_year": 1966,
+   "incidents": 1,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "寺内",
+   "pipe_km_known": 9.79,
+   "median_year": 1977,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "小曽根",
+   "pipe_km_known": 13.59,
+   "median_year": 1980,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "少路",
+   "pipe_km_known": 11.09,
+   "median_year": 2004,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "山ノ上町",
+   "pipe_km_known": 3.97,
+   "median_year": 1967,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "岡町",
+   "pipe_km_known": 2.7,
+   "median_year": 2010,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "岡町北",
+   "pipe_km_known": 7.83,
+   "median_year": 1966,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "岡町南",
+   "pipe_km_known": 6.36,
+   "median_year": 1969,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "広田町",
+   "pipe_km_known": 0.97,
+   "median_year": 1982,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "庄内宝町",
+   "pipe_km_known": 4.46,
+   "median_year": 1984,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "庄内幸町",
+   "pipe_km_known": 16.06,
+   "median_year": 1977,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "庄本町",
+   "pipe_km_known": 5.58,
+   "median_year": 1976,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "待兼山町",
+   "pipe_km_known": 5.33,
+   "median_year": 1987,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "新千里北町",
+   "pipe_km_known": 22.72,
+   "median_year": 1972,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "新千里南町",
+   "pipe_km_known": 26.9,
+   "median_year": 1972,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "新千里東町",
+   "pipe_km_known": 15.54,
+   "median_year": 1972,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "新千里西町",
+   "pipe_km_known": 18.18,
+   "median_year": 1972,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "日出町",
+   "pipe_km_known": 2.52,
+   "median_year": 1986,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "旭丘",
+   "pipe_km_known": 5.63,
+   "median_year": 2005,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "春日町",
+   "pipe_km_known": 18.92,
+   "median_year": 1983,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "曽根南町",
+   "pipe_km_known": 11.2,
+   "median_year": 1985,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "曽根西町",
+   "pipe_km_known": 11.76,
+   "median_year": 1969,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部元町",
+   "pipe_km_known": 3.23,
+   "median_year": 1984,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部南町",
+   "pipe_km_known": 6.79,
+   "median_year": 1982,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部寿町",
+   "pipe_km_known": 9.83,
+   "median_year": 1982,
+   "incidents": 2,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部本町",
+   "pipe_km_known": 7.47,
+   "median_year": 1984,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部緑地",
+   "pipe_km_known": 2.2,
+   "median_year": 1984,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部西町",
+   "pipe_km_known": 12.29,
+   "median_year": 1982,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "服部豊町",
+   "pipe_km_known": 5.93,
+   "median_year": 1983,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "末広町",
+   "pipe_km_known": 6.16,
+   "median_year": 1966,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "東寺内町",
+   "pipe_km_known": 3.83,
+   "median_year": 1978,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "東泉丘",
+   "pipe_km_known": 10.64,
+   "median_year": 1989,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "柴原町",
+   "pipe_km_known": 15.87,
+   "median_year": 1979,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "栗ケ丘町",
+   "pipe_km_known": 4.95,
+   "median_year": 1974,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "浜",
+   "pipe_km_known": 7.38,
+   "median_year": 1978,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "清風荘",
+   "pipe_km_known": 3.57,
+   "median_year": 1978,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "玉井町",
+   "pipe_km_known": 7.06,
+   "median_year": 1967,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "石橋麻田町",
+   "pipe_km_known": 0.64,
+   "median_year": 1974,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "神州町",
+   "pipe_km_known": 0.5,
+   "median_year": 1987,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "立花町",
+   "pipe_km_known": 6.26,
+   "median_year": 1967,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "箕輪",
+   "pipe_km_known": 8.13,
+   "median_year": 1985,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "緑丘",
+   "pipe_km_known": 29.95,
+   "median_year": 1986,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "若竹町",
+   "pipe_km_known": 6.43,
+   "median_year": 1985,
+   "incidents": 1,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "蛍池中町",
+   "pipe_km_known": 7.34,
+   "median_year": 1979,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "蛍池南町",
+   "pipe_km_known": 7.39,
+   "median_year": 1973,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "蛍池東町",
+   "pipe_km_known": 9.15,
+   "median_year": 1972,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "西泉丘",
+   "pipe_km_known": 11.08,
+   "median_year": 1989,
+   "incidents": 1,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "西緑丘",
+   "pipe_km_known": 9.95,
+   "median_year": 1987,
+   "incidents": 1,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "豊南町東",
+   "pipe_km_known": 7.27,
+   "median_year": 1977,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "赤阪",
+   "pipe_km_known": 2.83,
+   "median_year": 1972,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "走井",
+   "pipe_km_known": 8.01,
+   "median_year": 1987,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "野田町",
+   "pipe_km_known": 4.89,
+   "median_year": 2000,
+   "incidents": 0,
+   "sewer_incidents": 0
+  },
+  {
+   "town": "長興寺南",
+   "pipe_km_known": 9.96,
+   "median_year": 1974,
+   "incidents": 1,
+   "sewer_incidents": 0
+  }
+ ]
+}
