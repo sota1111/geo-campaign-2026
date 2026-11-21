@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, ExternalLink, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
+import { PrizeBreakdown } from '@/components/shared/PrizeBreakdown'
 import { PendingNote } from '@/components/shared/PendingNote'
 import { useIsPending } from '@/lib/availability'
 import { CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, getApp, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
@@ -206,8 +207,8 @@ export default function ContestPage({ contestId }: { contestId: string }) {
             <Bullets items={info.afterAward} />
           </>
         )}
-        <h3 className="text-sm font-medium">賞</h3>
-        <p className="text-sm">{info.prize}</p>
+        <h3 className="text-sm font-medium" id="contest-prize">賞金・賞の内訳</h3>
+        <PrizeBreakdown prize={info.prize} />
       </Section>
 
       <Section id="contest-unconfirmed" title="未確認の事項">
