@@ -75,6 +75,7 @@ const EMBEDS = {
   'biz-realestate-rn1': { src: 'ichibiz-2026/app/realestate-rn1/web', files: ['index.html', 'app.js', 'lib.js', 'life.js', 'style.css', 'layout.css', 'data'] },
   'biz-realestate-a4': { src: 'ichibiz-2026/app/realestate-a4/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'biz-realestate-timeline': { src: 'ichibiz-2026/app/realestate-timeline/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'biz-repair': { src: 'ichibiz-2026/app/repair-platform/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-teiji': { src: 'odpt-2026/app-teiji/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   // ---- 審査待ちの案（元のソースが、憲兵監査前の PR にだけある）。ソースが無いビルドでは含めず、画面に「PR #xx で審査待ち」と出す。
