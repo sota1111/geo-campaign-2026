@@ -1,10 +1,10 @@
 // 実行: lib_test.js の先頭の行を参照
 import test from 'node:test';
 import assert from 'node:assert';
-import { groupParcels, extractKojiPoints, matchKoji, attachKoji, fillParcels, tilesOf, MATCH_RADIUS_M } from '../tools/parcels.mjs';
+import { numLead, diagnoseXpt, groupParcels, extractKojiPoints, matchKoji, attachKoji, fillParcels, tilesOf, MATCH_RADIUS_M } from '../tools/parcels.mjs';
 
 const rec = (o) => ({ id: '133-福岡中央-商業地-9', lon: 130.4, lat: 33.59, use: '商業地', area: '福岡中央', lot: '天神1', addr: '', price: 111, change: 1, rosenka: null, rosenkaYear: '0', hikaku: 1000, shueki: null, rimawari: null, zone: '商業地域', kenpei: 80, yoseki: 800, chiseki: 100, genkyo: '', ...o });
-const feat = (lon, lat, p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { point_id: 1, u_current_years_price_ja: 12100000, standard_lot_number_ja: '福岡中央5-9', use_category_name_ja: '商業地', land_price_type: 0, ...p } });
+const feat = (lon, lat, p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] }, properties: { point_id: 1, u_current_years_price_ja: '12,100,000(円/㎡)', standard_lot_number_ja: '福岡中央5-9', use_category_name_ja: '商業地', land_price_type: 0, ...p } });
 
 test('同じ標準地番号の記録を1つにまとめ、値は記録ごとの配列で持つ', () => {
   const g = groupParcels([rec({ hikaku: 1000, rosenka: 800, rosenkaYear: '2024' }), rec({ hikaku: 1050, rosenka: 800, rosenkaYear: '2024' }), rec({ id: 'other', hikaku: 5 })]);
@@ -56,4 +56,28 @@ test('XPT002 を取るタイルは標準地の位置があるものだけ（重�
   const t = tilesOf([{ lon: 130.4, lat: 33.59 }, { lon: 130.4001, lat: 33.5901 }, { lon: 131.1, lat: 33.9 }], 13);
   assert.strictEqual(t.length, 2);
   assert.ok(t.every((e) => Number.isInteger(e.x) && Number.isInteger(e.y)));
+});
+
+test('XPT002 の価格は単位つきの文字列（3,100,000(円/㎡)）で返る。先頭の数を読む', () => {
+  assert.strictEqual(numLead('3,100,000(円/㎡)'), 3100000);
+  assert.strictEqual(numLead(2820000), 2820000);
+  assert.strictEqual(numLead('7.6'), 7.6);
+  assert.strictEqual(numLead(''), null); assert.strictEqual(numLead('-'), null); assert.strictEqual(numLead('0(円/㎡)'), null); assert.strictEqual(numLead(undefined), null);
+  const k = extractKojiPoints([feat(130.4, 33.59, { u_current_years_price_ja: '3,100,000(円/㎡)', year_on_year_change_rate: '7.6' })]);
+  assert.deepStrictEqual([k[0].price, k[0].change], [3100000, 7.6]);
+});
+test('地価区分: 0（地価公示）だけ使う。項目が無い時は除かない', () => {
+  const k = extractKojiPoints([feat(130.4, 33.59, { point_id: 1, land_price_type: 0 }), feat(130.4, 33.59, { point_id: 2, land_price_type: 1 }), feat(130.4, 33.59, { point_id: 3, land_price_type: '1' })]);
+  assert.deepStrictEqual(k.map((e) => e.id), ['1']);
+  const f = feat(130.4, 33.59, { point_id: 9 }); delete f.properties.land_price_type;
+  assert.strictEqual(extractKojiPoints([f]).length, 1);
+});
+test('診断: 項目名・地価区分の件数・価格を読めた件数を出す（値は出さない）', () => {
+  const d = diagnoseXpt([feat(130.4, 33.59, {}), feat(130.4, 33.59, { point_id: 2, land_price_type: 1, u_current_years_price_ja: '' })]);
+  assert.deepStrictEqual([d.features, d.points, d.priceReadable], [2, 2, 1]);
+  assert.deepStrictEqual(d.typeCounts, { 0: 1, 1: 1 });
+  assert.ok(d.keys.includes('u_current_years_price_ja') && d.missingKeys.length === 0);
+  const e = diagnoseXpt([{ geometry: { type: 'Point' }, properties: { foo: 1 } }]);
+  assert.ok(e.missingKeys.includes('u_current_years_price_ja') && e.priceReadable === 0);
+  assert.deepStrictEqual(diagnoseXpt(undefined).keys, []);
 });

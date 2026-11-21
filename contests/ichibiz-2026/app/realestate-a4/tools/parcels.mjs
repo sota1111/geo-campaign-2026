@@ -1,6 +1,13 @@
 /* 標準地ごとにまとめる・公示価格（XPT002）との突き合わせ。通信・ファイルには触れない純関数。
  * XCT001 は同じ標準地番号の鑑定評価書の記録を複数件返す（実データでは全て2件）ので、標準地番号ごとに1つにまとめる。 */
-import { num } from './extract.mjs';
+
+/** 先頭の数を取り出す。XPT002 の当年価格は「3,100,000(円/㎡)」のように単位つきの文字列で返る。0・数なしは null */
+export function numLead(v) {
+  if (typeof v === 'number') return Number.isFinite(v) && v !== 0 ? v : null;
+  const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(\.\d+)?/);
+  const n = m ? Number(m[0]) : NaN;
+  return Number.isFinite(n) && n !== 0 ? n : null;
+}
 
 const rad = Math.PI / 180;
 const text = (v) => (v === null || v === undefined ? '' : String(v).replace(/[\s　]+/g, ' ').trim());
@@ -33,16 +40,16 @@ export function extractKojiPoints(features) {
     const g = f?.geometry, p = f?.properties;
     if (!g || g.type !== 'Point' || !Array.isArray(g.coordinates) || !p) continue;
     const lon = Number(g.coordinates[0]), lat = Number(g.coordinates[1]);
-    const price = num(p.u_current_years_price_ja);
+    const price = numLead(p.u_current_years_price_ja);
     if (!Number.isFinite(lon) || !Number.isFinite(lat) || price === null) continue;
-    // land_price_type: 0 地価公示 / 1 地価調査（要求で地価公示だけに絞るが、念のためここでも除く）
-    if (p.land_price_type !== undefined && String(p.land_price_type) === '1') continue;
+    // land_price_type: 0 地価公示 / 1 都道府県地価調査（priceClassification と同じ区分。地価公示だけを使う）。項目が無い場合は区別できないので除かない
+    if (p.land_price_type !== undefined && String(p.land_price_type) !== '0') continue;
     const id = String(p.point_id ?? `${lon},${lat}`);
     seen.set(id, {
       id, lon, lat, price,
       lotNo: text(p.standard_lot_number_ja),
       use: text(p.use_category_name_ja).replace(/^\d+,/, ''),
-      change: num(p.year_on_year_change_rate),
+      change: numLead(p.year_on_year_change_rate),
     });
   }
   return [...seen.values()];
@@ -93,4 +100,22 @@ export function tilesOf(parcels, z) {
     set.add(`${Math.floor(((p.lon + 180) / 360) * n)}/${Math.floor((0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n)}`);
   }
   return [...set].map((k) => { const [x, y] = k.split('/').map(Number); return { x, y }; });
+}
+
+/** XPT002 の応答（features）の診断。値は出さず、項目名・地価区分ごとの件数・単位つき価格を読めた件数だけ。0点の原因調べに使う */
+export function diagnoseXpt(features) {
+  const fs = Array.isArray(features) ? features : [];
+  const props = fs.map((f) => f?.properties).filter(Boolean);
+  const typeCounts = {};
+  for (const p of props) { const k = String(p.land_price_type); typeCounts[k] = (typeCounts[k] ?? 0) + 1; }
+  const EXPECT = ['point_id', 'land_price_type', 'u_current_years_price_ja', 'standard_lot_number_ja', 'use_category_name_ja'];
+  const keys = props.length ? Object.keys(props[0]) : [];
+  return {
+    features: fs.length,
+    points: fs.filter((f) => f?.geometry?.type === 'Point').length,
+    keys,
+    missingKeys: props.length ? EXPECT.filter((k) => !keys.includes(k)) : EXPECT,
+    typeCounts,
+    priceReadable: props.filter((p) => numLead(p.u_current_years_price_ja) !== null).length,
+  };
 }
