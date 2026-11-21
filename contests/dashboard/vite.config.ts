@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 const APP_IDS = [
   'odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定。元の静的版を埋め込む）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'biz-realestate-a4', 'biz-realestate-timeline', 'biz-repair', 'odpt-teiji', 'udc-aed',
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'biz-realestate-a4', 'biz-realestate-timeline', 'biz-repair', 'sat-dc', 'odpt-teiji', 'udc-aed',
   // 審査待ちの案（元のソースが PR にだけある。ソースが無いビルドでは「審査待ち」の案内を出す）
   'sat-yabu', 'sat-sugi', 'odpt-kankou', 'odpt-kansui', 'odpt-kodure', 'biz-solar-guard',
 ]

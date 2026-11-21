@@ -1061,6 +1061,54 @@
       "score": 0,
       "reason": "未判定（情報部の判定前）",
       "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "sat-dc",
+      "contest": "udc-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "sat-dc",
+      "contest": "satellite-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "このコンペ向けに作った（データセンター候補地の一次スクリーニング。衛星データを主役に、インフラのリスク可視化・防災・都市課題を見る新案。応募テーマは総司令官が選ぶ）",
+      "source": "contests/satellite-2026/app/proposal-dc/README.md; reports/intel/satellite-2026-datacenter-20261122.md"
+    },
+    {
+      "app": "sat-dc",
+      "contest": "ichibiz-2026-business",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "sat-dc",
+      "contest": "ichibiz-2026-idea",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "sat-dc",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "sat-dc",
+      "contest": "odpt-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
     }
   ],
   "cautions": [
