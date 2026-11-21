@@ -48,8 +48,23 @@ for (const [w, h] of [[1280, 800], [1024, 768], [390, 844]]) {
     // 画面全体（ページ最下部まで）を撮る
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
     fs.writeFileSync(path.join(outDir, `${w}x${h}-${name}.png`), Buffer.from(shot.result.data, 'base64'))
-    out.push({ size: `${w}x${h}`, state: name, ...m })
+    const y = await ev(`({ appsHeadingY: Math.round(document.getElementById('h-apps').getBoundingClientRect().top + scrollY), firstCardTop: Math.round(document.querySelector('[data-testid=app-row] > li').getBoundingClientRect().top + scrollY), tabStopsPerCard: document.querySelectorAll('[data-testid=app-row] > li:first-child a, [data-testid=app-row] > li:first-child input:not(:disabled), [data-testid=app-row] > li:first-child summary').length })`)
+    out.push({ size: `${w}x${h}`, state: name, ...m, ...y })
   }
 }
-console.log(JSON.stringify({ out, errs }, null, 1))
+// M2: 提出先を選んだとき、押したカードの位置がずれないか（文書内の y）
+const shift = []
+for (const [w, h] of [[1280, 800], [1024, 768], [390, 844]]) {
+  await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 700 })
+  await send('Page.navigate', { url: base }); await sleep(1200); await ev('localStorage.clear()'); await send('Page.navigate', { url: base }); await sleep(1500)
+  await ev("document.querySelector('[data-testid=pick-satellite-2026]').click()"); await sleep(300)
+  const pos = `(() => { const e = document.querySelector('[data-testid=t-sat-alpha-satellite-2026]'); const c = document.querySelector('[data-app-card=sat-alpha]'); return { box: Math.round(e.getBoundingClientRect().top + scrollY), card: Math.round(c.getBoundingClientRect().top + scrollY) } })()`
+  const before = []
+  await ev("document.querySelector('[data-testid=t-sat-b-satellite-2026]').click()"); await sleep(300)
+  const b = await ev(pos)
+  await ev("document.querySelector('[data-testid=t-sat-alpha-satellite-2026]').click()"); await sleep(300)
+  const a = await ev(pos)
+  shift.push({ size: `${w}x${h}`, before: b, after: a, shiftPx: a.box - b.box })
+}
+console.log(JSON.stringify({ out, shift, errs }, null, 1))
 ws.close(); chrome.kill()

@@ -3,7 +3,7 @@ import { FIT_CAUTIONS, FIT_CELLS, FIT_COLUMNS, type FitCaution, type FitCell, ty
 
 /** 記号の言葉（正本 app-contest-fit-20261121.md の「判定の規則」の意味欄どおり） */
 export const MARK_WORD: Record<FitMark, string> = {
-  '◎': '今の応募先',
+  '◎': 'このコンペ向けに作った',
   '○': '出せる',
   '△': '条件付き',
   '×': '出せない',

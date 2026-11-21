@@ -117,7 +117,10 @@ describe('トップ画面の操作', () => {
     expect(loadTargets()).toEqual({ 'sat-b': ['satellite-2026'] })
     expect(window.localStorage.getItem(TARGETS_KEY)).toContain('satellite-2026')
     fireEvent.click(screen.getByTestId('t-sat-alpha-satellite-2026'))
-    expect(screen.getByTestId('cautions').textContent).toContain('失格級')
+    expect(within(document.querySelector('[data-app-card="sat-b"]') as HTMLElement).getByTestId('card-cautions').textContent).toContain('失格級')
+    expect(screen.getByTestId('cautions').textContent).toContain('該当するカードの中')
+    // 注意はアプリの行の上に差し込まない（押したカードの位置がずれない）
+    expect(document.querySelector('[data-testid="app-section"]')!.innerHTML.indexOf('data-testid="cautions"')).toBeGreaterThan(document.querySelector('[data-testid="app-section"]')!.innerHTML.indexOf('data-testid="app-row"'))
     expect(screen.getByTestId('draft-note').textContent).toContain('このブラウザだけの下書きです。正式な提出先は総司令官が参謀長に指示してください')
   })
   it('localStorage が使えなくても画面は動く', () => {
@@ -127,10 +130,26 @@ describe('トップ画面の操作', () => {
       render(<Portal />)
       fireEvent.click(screen.getByTestId('t-sat-b-satellite-2026'))
       expect(screen.getByTestId('targets-satellite-2026').textContent).toContain('1件')
-      expect(screen.getByTestId('draft-note').textContent).toContain('保存できない')
+      expect(screen.getByTestId('draft-note').textContent).toContain('保存できず')
     } finally {
       Storage.prototype.setItem = orig
     }
+  })
+  it('絞り込み・位置表示・Tab の止まり方・◎の言葉', () => {
+    render(<Portal />)
+    expect(screen.getByTestId('row-position').textContent).toContain('18件中')
+    fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '盛土' } })
+    expect(order().length).toBeLessThan(18)
+    expect(order()).toContain('sat-b')
+    fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '' } })
+    for (const li of document.querySelectorAll('[data-testid="app-row"] > li')) {
+      const stops = [...li.querySelectorAll<HTMLInputElement>('input[type=checkbox]')].filter((i) => !i.disabled && i.tabIndex === 0)
+      expect(stops).toHaveLength(1)
+    }
+    expect(screen.getByTestId('mark-odpt-udc-2026').textContent).toContain('このコンペ向けに作った')
+    expect(document.body.textContent).not.toContain('今の応募先')
+    // × の理由は折りたたみの中（既定で閉じている）
+    expect(screen.getByTestId('why-sat-b-udc-2026').closest('details')!.hasAttribute('open')).toBe(false)
   })
   it('契約: 全コンペ名が registry にある', () => {
     expect(CONTESTS).toHaveLength(4)
