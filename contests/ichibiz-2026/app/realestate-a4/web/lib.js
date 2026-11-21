@@ -35,11 +35,17 @@
     return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
   }
 
+  const has = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+  /** 4つの価格が全て値を持つか */
+  function hasAll(p) { return PRICES.every((d) => has(p[d.key])); }
+  /** 値の無い価格の理由の文（原因は断定しない: 国のデータに値が無いことだけを言う） */
+  const MISSING_NOTE = '国のデータにこの標準地の値の記載がありません';
+
   /** 地点に近い標準地を距離順（近い順。同じ距離は id 順）で n 件。uses を渡すと、その用途だけに絞る */
   function nearest(points, lon, lat, opts) {
-    const o = Object.assign({ n: DEFAULT_COUNT, uses: null }, opts || {});
+    const o = Object.assign({ n: DEFAULT_COUNT, uses: null, complete: false }, opts || {});
     return (points || [])
-      .filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat) && (!o.uses || o.uses.includes(p.use)))
+      .filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat) && (!o.uses || o.uses.includes(p.use)) && (!o.complete || hasAll(p)))
       .map((p) => ({ p, d: haversine(lon, lat, p.lon, p.lat) }))
       .sort((a, b) => a.d - b.d || String(a.p.id).localeCompare(String(b.p.id)))
       .slice(0, o.n)
@@ -62,9 +68,9 @@
     const max = Math.max(0, ...vals.filter((v) => v !== null));
     return PRICES.map((d, i) => {
       const v = vals[i];
-      const row = { key: d.key, label: d.label, note: d.note, value: v, text: yen(v), bar: v && max ? Math.round((v / max) * 100) : 0, extra: '' };
+      const row = { key: d.key, label: d.label, note: d.note, value: v, text: yen(v), bar: v && max ? Math.round((v / max) * 100) : 0, extra: v ? '' : MISSING_NOTE };
       if (d.key === 'rosenka' && v && p.rosenkaYear) row.extra = p.rosenkaYear + '年分';
-      if (d.key === 'shueki') { const r = rateText(p.rimawari); row.extra = r ? '還元利回り ' + r : (v ? '還元利回り ' + NODATA : ''); }
+      if (d.key === 'shueki') { const r = rateText(p.rimawari); if (v) row.extra = r ? '還元利回り ' + r : '還元利回り ' + NODATA; }
       return row;
     });
   }
@@ -82,9 +88,12 @@
       '<div class="bar" aria-hidden="true"><i style="width:' + r.bar + '%"></i></div>' +
       (r.extra ? '<div class="pre">' + esc(r.extra) + '</div>' : '') +
       '</li>').join('');
+    const miss = priceRows(p).filter((r) => !r.value).length;
+    const comp = miss ? '4つのうち ' + miss + ' つはデータなし' : '4つの価格がそろっています';
     return '<article class="card" data-id="' + esc(p.id) + '">' +
       '<h4><span class="nth">標準地 ' + nth + '</span> ' + esc(place) + '</h4>' +
       '<p class="cm">指した地点から直線 ' + esc(distText(entry.distance)) + '。' + esc(meta) + '</p>' +
+      '<p class="cc' + (miss ? ' part' : '') + '">' + esc(comp) + '</p>' +
       '<ul class="prices">' + rows + '</ul>' +
       '<p class="cn">' + esc(NOTICE) + '。</p></article>';
   }
@@ -108,7 +117,7 @@
     return d;
   }
 
-  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, priceRows, cardHtml, legendHtml, summaryText, validate, esc };
+  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, validate, esc };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

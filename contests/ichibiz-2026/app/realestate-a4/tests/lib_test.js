@@ -58,7 +58,35 @@ test('還元利回り: 割合は%に、%値はそのまま、空は出さない'
   const r = Lib.priceRows({ price: 1, shueki: 100, rimawari: 0.045 });
   assert.strictEqual(r[3].extra, '還元利回り 4.5%');
   assert.strictEqual(Lib.priceRows({ price: 1, shueki: 100 })[3].extra, '還元利回り データなし');
-  assert.strictEqual(Lib.priceRows({ price: 1 })[3].extra, '');
+  assert.strictEqual(Lib.priceRows({ price: 1 })[3].extra, Lib.MISSING_NOTE);
+});
+test('値が無い行には、国のデータに記載が無い旨を添える（原因は断定しない）', () => {
+  const rows = Lib.priceRows({ price: 100 });
+  assert.ok(rows.slice(1).every((r) => r.extra === '国のデータにこの標準地の値の記載がありません'));
+  assert.strictEqual(rows[0].extra, '');
+});
+test('4つそろう標準地だけに絞れる。カードにそろい具合を出す', () => {
+  const pts = [
+    { id: 'a', lon: 130, lat: 33, use: '住宅地', price: 1, rosenka: 1, hikaku: 1, shueki: 1 },
+    { id: 'b', lon: 130.0001, lat: 33, use: '住宅地', price: 1, rosenka: null, hikaku: 1, shueki: 1 },
+    { id: 'c', lon: 130.01, lat: 33, use: '住宅地', price: 1, rosenka: 1, hikaku: 1, shueki: 1 },
+  ];
+  assert.deepStrictEqual(Lib.nearest(pts, 130.0001, 33).map((e) => e.point.id), ['b', 'a', 'c']);
+  assert.deepStrictEqual(Lib.nearest(pts, 130.0001, 33, { complete: true }).map((e) => e.point.id), ['a', 'c']);
+  assert.ok(Lib.cardHtml({ point: pts[0], distance: 1 }, 1).includes('4つの価格がそろっています'));
+  assert.ok(Lib.cardHtml({ point: pts[1], distance: 1 }, 1).includes('4つのうち 1 つはデータなし'));
+});
+test('実データ（web/data/fukuoka.json があれば）: 形式・座標・還元利回りの単位', () => {
+  const f = path.join(__dirname, '../web/data/fukuoka.json');
+  if (!fs.existsSync(f)) return;
+  const d = JSON.parse(fs.readFileSync(f, 'utf8'));
+  assert.ok(Lib.validate(d));
+  assert.ok(d.points.every((p) => p.lat > 32 && p.lat < 35 && p.lon > 129 && p.lon < 132), '福岡県の範囲の10進度');
+  const r = d.points.filter((p) => p.rimawari !== null).map((p) => p.rimawari);
+  assert.ok(r.length && r.every((v) => v >= 1 && v <= 15), '還元利回りは%の値');
+  assert.match(Lib.rateText(r[0]), /^\d+(\.\d+)?%$/);
+  const near = Lib.nearest(d.points, 130.3988, 33.5902);
+  assert.strictEqual(near.length, 5);
 });
 test('路線価は年を添える', () => {
   assert.strictEqual(Lib.priceRows({ rosenka: 10, rosenkaYear: '2025' })[1].extra, '2025年分');

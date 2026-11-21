@@ -111,7 +111,7 @@
     if (!state.pin || !state.data) return;
     const u = uses();
     if (!u.length) { state.results = []; $('status').textContent = '標準地の用途を1つ以上選んでください。'; $('cards').innerHTML = ''; $('notice2').hidden = true; render(); return; }
-    state.results = Lib.nearest(state.data.points, state.pin.lon, state.pin.lat, { n: Lib.DEFAULT_COUNT, uses: u });
+    state.results = Lib.nearest(state.data.points, state.pin.lon, state.pin.lat, { n: Lib.DEFAULT_COUNT, uses: u, complete: $('completeOnly').checked });
     $('status').textContent = Lib.summaryText(state.results);
     $('legendBox').innerHTML = state.results.length ? Lib.legendHtml() : '';
     $('cards').innerHTML = state.results.map((e, i) => Lib.cardHtml(e, i + 1)).join('');
@@ -119,6 +119,7 @@
     render();
   }
   document.querySelectorAll('input[name=use]').forEach((i) => { i.onchange = showResults; });
+  $('completeOnly').onchange = showResults;
 
   $('search').addEventListener('submit', async (e) => {
     e.preventDefault();

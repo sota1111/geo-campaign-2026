@@ -31,6 +31,7 @@
       <legend>標準地の用途</legend>
       <label><input type="checkbox" name="use" value="住宅地" checked> 住宅地</label>
       <label><input type="checkbox" name="use" value="商業地" checked> 商業地</label>
+      <label><input type="checkbox" id="completeOnly"> 4つの価格がそろう標準地だけ</label>
     </fieldset>
     <div id="map" role="application" aria-label="地図。クリックまたはタップで場所を指定" tabindex="0">
       <div id="tiles"></div>
@@ -58,7 +59,7 @@
     <li><strong>加工した旨</strong>: <span id="processed"></span>。</li>
     <li><strong>クレジット</strong>: <span id="credit"></span>。</li>
     <li><strong>責任</strong>: <span id="resp"></span>。</li>
-    <li><strong>標準地について</strong>: 標準地は、価格を調べるために選ばれた土地（点）です。町全体や、近くの土地の値段を表すものではありません。空欄は、データに値が無いことを示します。相続税路線価は国税庁の路線価図が正です。</li>
+    <li><strong>標準地について</strong>: 標準地は、価格を調べるために選ばれた土地（点）です。町全体や、近くの土地の値段を表すものではありません。「データなし」は、国のデータにその標準地の値の記載が無いことを示し、理由（その手法を使っていない等）までは分かりません。相続税路線価は国税庁の路線価図が正です。</li>
     <li><strong>地図・住所検索</strong>: 国土地理院タイル（標準地図）と、国土地理院の住所検索API。</li>
     <li><strong>プライバシー</strong>: 指した位置はこの端末内だけで扱い、保存・送信しません。地図画像と住所検索の要求は国土地理院に届きます。この画面から不動産情報ライブラリのAPIは呼びません（同梱データのみ）。</li>
   </ul>
