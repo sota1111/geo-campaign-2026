@@ -5,7 +5,12 @@ import { DataBadge } from '@/components/shared/DataBadge'
 import { Remaining } from '@/components/shared/Remaining'
 import { CONTESTS, NEW_PLAN_LABEL, getApp, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
 import { CONTEST_INFO } from '@/apps/contests-info'
-import { appUrl, portalUrl } from '@/lib/data'
+import { appUrl, portalOpenUrl, portalUrl } from '@/lib/data'
+import { CONTEST_STATUS } from '@/data/status'
+import { nextDeadline } from '@/apps/contests-info'
+import { asOf } from '@/pages/Progress'
+
+const NO_DESC = '要項に説明の記載なし。'
 
 function Section({ title, children, id }: { title: string; children: React.ReactNode; id: string }) {
   return (
@@ -24,7 +29,7 @@ function Bullets({ items }: { items: string[] }) {
   )
 }
 
-function AppLinkCard({ a, paired }: { a: AppMeta; paired: boolean }) {
+function AppLinkCard({ a }: { a: AppMeta }) {
   const isNew = isNewPlan(a)
   return (
     <Card data-app-card={a.id} className={`flex flex-col gap-2 py-3 ${isNew ? 'border-2 border-dashed border-slate-500 bg-slate-50' : ''}`}>
@@ -33,7 +38,7 @@ function AppLinkCard({ a, paired }: { a: AppMeta; paired: boolean }) {
           {isNew && (
             <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-bold text-white" data-testid="new-plan-tag">{NEW_PLAN_LABEL}</span>
           )}
-          {!isNew && paired && (
+          {!isNew && (
             <span className="rounded border border-slate-500 px-1.5 py-0.5 text-xs font-bold">今の案</span>
           )}
           <DataBadge kind={a.dataKind} />
@@ -70,25 +75,57 @@ export default function ContestPage({ contestId }: { contestId: string }) {
   }
   const apps = orderedAppsByContest(meta.id)
   const hasNew = apps.some(isNewPlan)
+  const status = CONTEST_STATUS[meta.id]
+  const next = nextDeadline(info)
+  // 今の案の直後に対になる新しい案を置く組。組ごとに囲んで見せる
+  const groups = apps.filter((a) => !isNewPlan(a)).map((cur) => ({ cur, items: [cur, ...apps.filter((x) => isNewPlan(x) && x.pairWith === cur.id)] }))
+  const grouped = new Set(groups.flatMap((g) => g.items.map((x) => x.id)))
+  const orphans = apps.filter((a) => !grouped.has(a.id))
+  const implementation = info.summary.includes('実装不要') ? info.implementation.replace(/^実装は不要。/, '') : info.implementation
   const also = (info.alsoApps ?? []).map((x) => ({ ...x, app: getApp(x.id) })).filter((x) => x.app)
   return (
     <article className="mx-auto max-w-5xl space-y-6">
       <a href={portalUrl()} className="inline-flex min-h-8 items-center gap-1 text-sm font-medium text-primary underline underline-offset-2" data-testid="back-portal">
         <ArrowLeft className="size-4" aria-hidden />
-        統合ダッシュボードへ戻る
+        統合ダッシュボードの一覧へ戻る
       </a>
       <header className="space-y-2">
         <h1 className="text-xl font-bold leading-tight">{meta.name}</h1>
-        <p className="text-sm" data-testid="contest-summary">{info.summary}</p>
-        <p className="text-sm text-muted-foreground">{info.implementation}</p>
       </header>
+
+      <Section id="contest-overview" title="概要・目的">
+        <p className="text-sm" data-testid="contest-summary">{info.summary}</p>
+        <p className="text-sm text-muted-foreground">{implementation}</p>
+      </Section>
+
+      {/* 次の締切（残り日数は今日から数える） */}
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-muted/40 px-3 py-2 text-sm" data-testid="next-deadline">
+        <span className="font-bold">次の締切</span>
+        <span>{next.label} {next.text}</span>
+        <Remaining at={next.at} />
+      </p>
+
+      {/* 提出までの状況（ポータルの詳細欄と同じ文言）と、ポータルでそのコンペの詳細を開くリンク */}
+      <p className="space-y-1 text-sm" data-testid="contest-status">
+        <span className="block"><span className="font-bold">提出までの状況（{asOf} 時点の記録）</span>: {status.gap}</span>
+        <a href={portalOpenUrl(meta.id)} className="inline-flex min-h-8 items-center gap-1 font-medium text-primary underline underline-offset-2" data-testid="open-in-portal">
+          ポータルでこのコンペの詳細を開く <ArrowRight className="size-4" aria-hidden />
+        </a>
+      </p>
 
       <Section id="contest-apps" title="このコンペで挑むアプリ">
         {hasNew && (
           <p className="text-xs text-muted-foreground">「{NEW_PLAN_LABEL}」は、今の案と見比べるための案です。どれで出すかは総司令官が選びます。</p>
         )}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {apps.map((a) => <AppLinkCard key={a.id} a={a} paired={apps.some((x) => isNewPlan(x) && x.pairWith === a.id)} />)}
+        <div className="space-y-4">
+          {[...groups.map((g) => ({ key: g.cur.id, title: g.cur.division, items: g.items })), ...(orphans.length ? [{ key: 'other', title: 'その他', items: orphans }] : [])].map((g) => (
+            <div key={g.key} className="rounded-lg border p-3" data-app-group={g.key}>
+              <h3 className="mb-2 text-sm font-bold">{g.title}{g.items.length > 1 ? '（今の案と新しい案）' : ''}</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {g.items.map((a) => <AppLinkCard key={a.id} a={a} />)}
+              </div>
+            </div>
+          ))}
         </div>
         {also.map((x) => (
           <p key={x.id} className="text-sm">
@@ -111,17 +148,18 @@ export default function ContestPage({ contestId }: { contestId: string }) {
         </ul>
       </Section>
 
-      <Section id="contest-criteria" title={`審査基準（${info.criteriaTitle}）`}>
+      <Section id="contest-criteria" title={info.criteriaTitle.includes('審査基準') ? info.criteriaTitle : '審査基準'}>
+        {!info.criteriaTitle.includes('審査基準') && <p className="text-xs text-muted-foreground">{info.criteriaTitle}</p>}
         <ul className="space-y-1.5 text-sm">
           {info.criteria.map((c) => (
             <li key={c.name}>
               <span className="font-medium">{c.name}</span>
               {c.tag && <span className="ml-1.5 rounded border px-1 py-px text-xs">{c.tag}</span>}
-              <span className="block text-muted-foreground">{c.desc}</span>
+              {c.desc !== NO_DESC && <span className="block text-muted-foreground">{c.desc}</span>}
             </li>
           ))}
         </ul>
-        <p className="text-xs text-muted-foreground">{info.criteriaNote}</p>
+        <p className="text-xs text-muted-foreground">{info.criteria.some((c) => c.desc === NO_DESC) && '各項目の説明は要項に記載なし。'}{info.criteriaNote}</p>
       </Section>
 
       <Section id="contest-conditions" title="主な応募条件・注意点">

@@ -13,6 +13,11 @@ export function portalUrl(): string {
   return `${siteRoot()}index.html`
 }
 
+/** ポータルで、そのコンペの詳細を開いた状態の URL（既存の #open=<id> 形式） */
+export function portalOpenUrl(contestId: string): string {
+  return `${siteRoot()}index.html#open=${contestId}`
+}
+
 /** ?from=<コンペ id> で開かれたとき、そのコンペ id（戻り先のタブ用）。知らない値は無視する */
 export function fromContest(): string | undefined {
   if (typeof window === 'undefined') return undefined

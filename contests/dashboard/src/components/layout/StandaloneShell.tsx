@@ -52,7 +52,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
               <a
                 href={contestUrl(contest.id)}
                 data-testid="contest-link"
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
               >
                 {contest.short}の概要
               </a>
@@ -77,7 +77,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 key={n.id}
                 href={appUrl(n.id)}
                 data-testid="compare-new-link"
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
               >
                 新案「{n.name}」と見比べる
               </a>
@@ -88,7 +88,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 href={appUrl(n.id)}
                 data-testid="also-compared-link"
                 title={`「${n.name}」と見比べる`}
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
               >
                 「{n.name}」と見比べる
               </a>
