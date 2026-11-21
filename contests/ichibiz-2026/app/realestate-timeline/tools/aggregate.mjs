@@ -47,7 +47,7 @@ export function toTrade(r) {
   if (!p || !price || !area || price <= 0 || area < AREA_MIN || area > AREA_MAX) return null;
   const built = parseBuiltYear(r.BuildingYear);
   const age = built && built <= p.year ? p.year - built : null;
-  return { code, key: quarterKey(p.year, p.q), price, area, unit: price / area, age };
+  return { code, key: quarterKey(p.year, p.q), year: p.year, district: String(r.DistrictName ?? '').trim(), plan: floorGroup(r.FloorPlan), price, area, unit: price / area, age };
 }
 
 /** 区×四半期に集計する。unit は円/㎡、price は円、area は㎡。n は使えた件数 */
@@ -63,6 +63,57 @@ export function aggregate(trades) {
       price: median(ts.map((t) => t.price)), area: median(ts.map((t) => t.area)),
       age: ages.length ? median(ages) : null,
     });
+  }
+  return out;
+}
+
+// ---- 間取り（FloorPlan）を件数が足りる粒度にまとめる ----
+export const PLAN_GROUPS = [
+  { key: 'all', label: 'すべて', note: '間取りを問わない（間取りが空・特殊なものも含む）' },
+  { key: 'p1', label: '1R〜1DK', note: 'ワンルーム・1R・1K・1DK' },
+  { key: 'p2', label: '1LDK〜2DK', note: '1LDK・2K・2DK（1LDK+S などを含む）' },
+  { key: 'p3', label: '2LDK〜3DK', note: '2LDK・3K・3DK（2LDK+S などを含む）' },
+  { key: 'p4', label: '3LDK以上', note: '3LDK・4K以上の部屋数が多いもの' },
+];
+/** FloorPlan（"１ＬＤＫ"・"ワンルーム" など）→ 'p1'〜'p4'。読めない・オープンフロア・メゾネットなどは null（「すべて」にだけ入る） */
+export function floorGroup(raw) {
+  const t = String(raw ?? '').normalize('NFKC').replace(/\s/g, '').toUpperCase();
+  if (!t) return null;
+  if (t.startsWith('ワンルーム')) return 'p1';
+  const m = /^(\d)(LDK|DK|K|R)/.exec(t);
+  if (!m) return null;
+  const rooms = Number(m[1]), kind = m[2];
+  if (rooms === 1) return kind === 'LDK' ? 'p2' : 'p1';           // 1R・1K・1DK / 1LDK
+  if (rooms === 2) return kind === 'LDK' ? 'p3' : 'p2';           // 2K・2DK / 2LDK
+  if (rooms === 3) return kind === 'LDK' ? 'p4' : 'p3';           // 3K・3DK / 3LDK
+  return 'p4';                                                     // 4部屋以上
+}
+const planKeys = (t) => (t.plan ? ['all', t.plan] : ['all']);
+
+/** 範囲×間取り×年の集計。win は「その年を末尾とする直近の年数」（1 なら単年）。
+ *  scope は 'district'（区コード|地区名）か 'ward'（区コード）。戻り値: Map(`${scopeKey}|${plan}|${year}` → 統計) */
+export function aggregateYears(trades, { scope = 'district', win = 1, years } = {}) {
+  const g = new Map(); // `${scopeKey}|${plan}` → year → trades[]
+  for (const t of trades) {
+    if (scope === 'district' && !t.district) continue;
+    const sk = scope === 'district' ? `${t.code}|${t.district}` : t.code;
+    for (const pk of planKeys(t)) {
+      const k = `${sk}|${pk}`;
+      if (!g.has(k)) g.set(k, new Map());
+      const ym = g.get(k);
+      if (!ym.has(t.year)) ym.set(t.year, []);
+      ym.get(t.year).push(t);
+    }
+  }
+  const out = new Map();
+  for (const [k, ym] of g) {
+    for (const y of years) {
+      const ts = [];
+      for (let yy = y - win + 1; yy <= y; yy++) if (ym.has(yy)) ts.push(...ym.get(yy));
+      if (!ts.length) continue;
+      const units = ts.map((t) => t.unit), ages = ts.map((t) => t.age).filter((a) => a !== null);
+      out.set(`${k}|${y}`, { n: ts.length, unit: median(units), p25: quantile(units, 0.25), p75: quantile(units, 0.75), area: median(ts.map((t) => t.area)), age: ages.length ? median(ages) : null });
+    }
   }
   return out;
 }
