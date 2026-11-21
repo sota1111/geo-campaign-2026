@@ -116,7 +116,7 @@ td.why details summary { font-size: 11.5px; font-weight: normal; }
   .pc { display: none; }
   nav { flex-wrap: nowrap; }
   nav button { padding: 5px 8px; font-size: 12.5px; flex: 1 1 auto; white-space: nowrap; }
-  footer#credit { position: sticky; bottom: 0; z-index: 5; font-size: 10px; line-height: 1.35; padding: 2px 8px; }
+  footer#credit { position: sticky; bottom: 0; z-index: 5; font-size: 10px; line-height: 1.35; padding: 1px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   main { display: flex; flex-direction: column; height: auto; }
   #mapwrap { order: 1; height: 55vh; min-height: 320px; flex: none; }
   #panel { order: 2; overflow: visible; }
@@ -127,13 +127,14 @@ td.why details summary { font-size: 11.5px; font-weight: normal; }
   body[data-tab=diag] #panel, body[data-tab=diag] #pane-diag { display: contents; }
   body[data-tab=diag] main .box { margin: 10px 10px 0; }
   /* 診断（評価ループ第3回）: 場所→立地の4問→結果の順にして、最初の画面で答え始められるようにする。結果が画面外の間は上端に要約の帯 */
+  /* 評価ループ第4回: 結果のカードを最初に置き、答えた結果がすぐ見えるようにする（下の入力に移ると上端に要約の帯） */
   body[data-tab=diag] #diag-mini { order: 0; }
+  body[data-tab=diag] #box-result { order: 1; }
   body[data-tab=diag] #box-pos { order: 1; }
   /* 地図は「地図で場所を選ぶ」を押したときだけ小さく出す（タブを切り替えずに場所を選べる） */
   body[data-tab=diag] #mapwrap { display: none; order: 2; }
   body.mapsel[data-tab=diag] #mapwrap { display: block; height: 260px; min-height: 0; margin: 6px 10px 0; border: 2px solid #0072B2; border-radius: 6px; overflow: hidden; }
   body[data-tab=diag] #box-cond { order: 3; }
-  body[data-tab=diag] #box-result { order: 4; }
   body[data-tab=diag] #box-detail { order: 6; }
   body[data-tab=diag] #box-privacy { order: 7; margin-bottom: 10px; }
   body.res-off[data-tab=diag] #diag-mini { display: block; position: sticky; top: 0; z-index: 4; background: #fff; border-bottom: 2px solid #0072B2; padding: 6px 10px; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
@@ -186,3 +187,14 @@ details.more p { margin: 3px 0; font-size: 12px; color: #333; }
 #det-cl > summary { font-size: 13.5px; padding: 4px 0; }
 #det-verify { margin-top: 8px; }
 button.mapsel { background: #eef6fc; border-color: #0072B2; color: #0b4f7c; font-weight: bold; }
+
+/* 評価ループ第4回 */
+.seg button small { font-size: 10.5px; opacity: .85; margin-left: 2px; }
+.left { font-size: 12px; font-weight: bold; color: #b03a00; background: #fff3e0; border-radius: 3px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
+.prio { margin: 0 0 2px; font-size: 11.5px; color: #444; }
+.cl-cond { font-size: 12px; font-weight: bold; color: #14365d; margin: 6px 0 0; }
+.cond1 { margin: 4px 0; font-size: 12.5px; }
+.cond1 a { color: inherit; }
+.dlabel { background: rgba(255,255,255,.88); border: 1px solid #14365d; border-radius: 3px; padding: 0 4px; font-size: 11.5px; font-weight: bold; color: #14365d; white-space: nowrap; pointer-events: none; }
+.dlabel small { font-weight: normal; font-size: 10.5px; }
+@media (max-width: 720px) { .dlabel { font-size: 10.5px; } .dlabel small { font-size: 9.5px; } }

@@ -123,7 +123,7 @@ async function run(label, w, h, mobile) {
   // 市町村で選ぶ
   await c.ev('(function(){var s=document.getElementById("in-muni");s.value="筑西市";s.dispatchEvent(new Event("change"));})()');
   let res = await c.ev('document.getElementById("diag-result").textContent + document.getElementById("diag-detail").textContent');
-  if (!res.includes('県西') || !res.includes('判定には回答が必要') || !res.includes('市町村の単位')) problems.push(label + ': 市町村で選んだ診断が出ない: ' + res.slice(0, 200));
+  if (!res.includes('県西') || !/あと\d項目で確定/.test(res) || !res.includes('市町村の単位')) problems.push(label + ': 市町村で選んだ診断が出ない: ' + res.slice(0, 200));
   c.reqs.length = 0;
   await c.ev(`document.getElementById("in-lat").value="36.75";document.getElementById("in-lon").value="140.35";`);
   await click(c, '#btn-set');
@@ -132,9 +132,11 @@ async function run(label, w, h, mobile) {
   if (!res.includes('周囲の目安') || !res.includes('人の少なさ')) problems.push(label + ': 診断の周囲の目安が出ない');
   if (!res.includes('この設備のリスク') || !res.includes('地区') || !res.includes('令和7年11月末')) problems.push(label + ': 診断にリスクの色・地区の実績が出ない');
   if (await c.ev('document.getElementById("in-muni").value') !== '') problems.push(label + ': 座標で診断しても市町村の選択が残る');
+  // 評価ループ第4回: 当てはまる条件だけ表に、わからない・当てはまらない条件は1行（条件名が出典リンク）。7条件すべてに出典がある
   const nrows = await c.ev('document.querySelectorAll("#diag-detail table.cond tr").length');
-  if (nrows !== 8) problems.push(label + ': 条件の表が7行（見出し込み8）でない ' + nrows);
-  const whys = await c.ev('document.querySelectorAll("#diag-detail table.cond td.why .src a").length');
+  const nrisk = await c.ev('SgApp.STATE.res.riskCount');
+  if (nrows !== (nrisk ? nrisk + 1 : 0)) problems.push(label + ': 当てはまる条件の表の行数が違う ' + nrows + '/' + nrisk);
+  const whys = await c.ev('document.querySelectorAll("#diag-detail table.cond td.why a, #diag-detail .cond1 a").length');
   if (whys < 7) problems.push(label + ': 条件ごとの出典リンクが足りない ' + whys);
   // 現場の条件に答えると、色の点数が上がる（下限）。答えると色が出る
   const sc0 = await c.ev('SgApp.STATE.res.scoreMin');
@@ -142,7 +144,7 @@ async function run(label, w, h, mobile) {
   const sc1 = await c.ev('SgApp.STATE.res.scoreMin');
   if (sc1 !== sc0 + 1) problems.push(label + ': 条件1つ分（+1）上がらない ' + sc0 + '→' + sc1);
   res = await c.ev('document.getElementById("diag-result").textContent');
-  if (!/この色は確定です|上がる可能性あり/.test(res) || !res.includes('外から見えにくい')) problems.push(label + ': 回答後に色と理由が出ない: ' + res.slice(0, 200));
+  if (!/確定/.test(res) || !res.includes('外から見えにくい')) problems.push(label + ': 回答後に色と理由が出ない: ' + res.slice(0, 200));
   await click(c, '#conds .cd-item:nth-child(2) .seg button[data-v="yes"]'); // もう一度押すと「不明」に戻る
   if ((await c.ev('SgApp.STATE.diag.cond.hidden')) !== 'unknown') problems.push(label + ': 選んだ回答をもう一度押しても不明に戻らない');
   // 出典・加工の明記が初期画面（地図タブ）からも見える（憲兵 L5）

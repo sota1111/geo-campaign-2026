@@ -30,12 +30,12 @@
     <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
       <div class="box key" role="note">
         <button id="go-diag" type="button" class="primary">設備を診断する（条件を入れて理由と対策を見る）</button>
-        <p class="big"><b>色は、県警の地区別の被害実績に人口密度の補正を足した仮の段階です。</b><span class="pc">メッシュ（約5km四方の区画）ごとの実績ではありません（非公開）。</span></p>
-        <p class="note"><b>被害の予測ではなく</b>、的中も未検証。設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。地区内の差は、メッシュを押すか診断で見ます。</p>
+        <p class="big"><b>色は県警の5地区の被害実績（地図の地区名）＋人口密度による仮の段階</b>で、被害の予測ではなく、メッシュごとの実績でもありません。</p>
       </div>
       <details class="box" id="det-basis">
         <summary>色の根拠と限界（県警の被害実績との照合）</summary>
         <ul class="note dark">
+          <li>設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。</li>
           <li><b>この色は的中を検証していません。</b>主な根拠は県警が公表した県内5地区の被害件数（設備あたり）で、地区内のメッシュごとの実績は公開されていません。点数の配分や切り方に公的な根拠はありません。</li>
           <li>認定情報の利用ルールの禁止事項（イ）「国家・国民の安全に脅威を与える利用」に当たるかは<b>未確認</b>（管理者は資源エネルギー庁。<a href="https://www.fit-portal.go.jp/Terms" target="_blank" rel="noopener">ご利用上の注意</a>）。</li>
           <li>設備の位置は町字（大字）の代表点。出力20kW未満の太陽光は元データにありません。</li>
@@ -72,7 +72,7 @@
         <div class="row">
           <label for="in-muni">市町村</label>
           <select id="in-muni"><option value="">選ぶ</option></select>
-          <span class="note pc">または<b>右の地図をクリック</b></span>
+          <span class="note pc">または右の地図を押す</span>
           <button id="btn-mapsel" type="button" class="sp mapsel">地図で場所を選ぶ</button>
         </div>
         <p class="note" id="pos-msg" role="status"></p>
@@ -87,14 +87,14 @@
         </details>
       </div>
       <div class="box" id="box-cond">
-        <h2><span class="step">2</span>立地の条件 <span class="sub">★4問（色に影響。もう一度押すと「不明」）</span></h2>
+        <h2><span class="step">2</span>立地の条件 <span class="sub">★＝色に影響</span></h2>
         <div id="conds"></div>
-        <details id="det-cl"><summary id="cl-sum">いまの対策を入れる（任意）</summary>
+        <details id="det-cl"><summary id="cl-sum">いまの対策（任意）</summary>
           <div id="checklist"></div>
         </details>
       </div>
       <details class="box" id="box-detail">
-        <summary>色の内訳・条件ごとの出典・周囲の目安</summary>
+        <summary>色の内訳と出典</summary>
         <div id="diag-detail"></div>
       </details>
       <div class="box privacy" role="note" id="box-privacy">
@@ -123,7 +123,7 @@
     <div id="legend"></div>
   </section>
 </main>
-<footer id="credit">出典: 資源エネルギー庁 再エネ認定情報、e-Stat 国勢調査2020、茨城県警察、地理院タイルを<b>編集・加工して作成</b>（国が作成したものではありません）<span class="pc">。詳しくは「出典・前提・限界」</span></footer>
+<footer id="credit"><span class="pc">出典: 資源エネルギー庁 再エネ認定情報、e-Stat 国勢調査2020、茨城県警察、地理院タイルを</span><span class="sp">出典: エネ庁・e-Stat・県警・地理院を</span><b>編集・加工して作成</b><span class="pc">（国が作成したものではありません）。詳しくは「出典・前提・限界」</span><span class="sp">（国の作成ではない）</span></footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
 <script src="lib.js"></script>
