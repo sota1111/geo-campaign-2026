@@ -257,3 +257,37 @@ td.cmt .wi { margin-left: 2px; }
   #step2 > p.row button { padding: 3px 8px; font-size: .8rem; }
   #step2.panel { padding: 6px 6px; }
 }
+/* ---- 評価ループ第3回: 例は2か所＋5件・通勤は60分超も概算・スマホは物件があれば地図を小さく ---- */
+.mk.sel { z-index: 3; transform: scale(1.25); box-shadow: 0 0 0 3px #f0a000, 0 2px 6px rgba(0,0,0,.6); }
+#propList tr.sel > *, #propList tr.sel + tr.brow > * { background: #fff4d6; }
+#propList tr[data-i] { cursor: pointer; }
+td.cmt .cm.far { color: #8a5a00; font-weight: normal; }
+#propList table.cmp thead th.na { padding: 2px; }
+button.gowork { white-space: nowrap; }
+.wrow button.wpick { white-space: nowrap; }
+@media (max-width: 640px) {
+  body.has-props #mapwrap { height: 22dvh; min-height: 150px; }
+  body.on-sheet #mapwrap { height: 16dvh; min-height: 120px; }
+  .sidetop .loadbar { margin: 2px 0; padding: 2px 8px; font-size: .78rem; }
+  #propList table.cmp thead th { white-space: nowrap; word-break: keep-all; }
+  .wrow button { padding: 4px 6px; font-size: .78rem; }
+}
+.loadbar[hidden], .pickbar[hidden] { display: none !important; }
+@media (max-width: 640px) {
+  #map { min-height: 0; }
+  #propList table.cmp td.cmt .cm { white-space: nowrap; word-break: keep-all; }
+  #propList table.cmp td.cmt .md { word-break: keep-all; }
+  #propList table.cmp thead tr + tr th { font-size: .52rem; letter-spacing: -.04em; }
+}
+@media (max-width: 640px) {
+  #propList table.cmp th.pc { min-width: 3rem; }
+  td.cmt .cm.far { font-size: .58rem; letter-spacing: -.03em; }
+  #propList table.cmp td { letter-spacing: -.02em; }
+}
+@media screen { details.sec:not([open]) { padding: 0; border: 0; } details.sec:not([open]) > summary h4 { margin: 0; } }
+@media (max-width: 640px) {
+  .sheet .secs { gap: 3px; }
+  .sec h4 { font-size: .8rem; padding: 2px 6px; line-height: 1.35; }
+  .sechd { font-size: .68rem; }
+  #step2 > p.row { margin: 0 0 3px; }
+}

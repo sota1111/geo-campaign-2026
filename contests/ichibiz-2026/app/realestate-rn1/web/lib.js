@@ -60,18 +60,21 @@
       bbox: [134.42, 33.95, 134.66, 34.16], view: { lon: 134.5548, lat: 34.0703, z: 14 }, zoomMin: 11,
       examples: [{ label: '徳島駅付近', lon: 134.5513, lat: 34.0745 }, { label: '国府町（郊外）', lon: 134.4845, lat: 34.0540 }, { label: '八万町（郊外）', lon: 134.5190, lat: 34.0450 }],
       search: '徳島市役所、徳島市国府町府中',
+      fill: { works: [{ label: '徳島駅付近', lon: 134.5513, lat: 34.0745 }, { label: '蔵本駅付近', lon: 134.5197, lat: 34.0728 }], props: [{ label: '佐古駅付近', lon: 134.5385, lat: 34.0760 }, { label: '南昭和町付近', lon: 134.5560, lat: 34.0590 }, { label: '川内町付近', lon: 134.5880, lat: 34.1080 }, { label: '国府町（郊外）', lon: 134.4845, lat: 34.0540 }, { label: '八万町（郊外）', lon: 134.5190, lat: 34.0450 }] },
     },
     tokyo23: {
       id: 'tokyo23', dir: 'tokyo23', name: '東京23区', whole: '東京23区全体', unit: '区', codes: seq(101, 123, '13'), zoning: true, clip: true, sparse: ['elder'], size: '約12MB', wait: '回線によっては1分ほど',
       bbox: [139.55, 35.51, 139.93, 35.84], view: { lon: 139.7671, lat: 35.6812, z: 13 }, zoomMin: 11,
       examples: [{ label: '東京駅付近（千代田区）', lon: 139.7671, lat: 35.6812 }, { label: '下北沢（世田谷区）', lon: 139.6680, lat: 35.6613 }, { label: '葛西（江戸川区）', lon: 139.8723, lat: 35.6637 }, { label: '北千住（足立区）', lon: 139.8049, lat: 35.7497 }],
       search: '東京都庁、世田谷区役所',
+      fill: { works: [{ label: '東京駅付近', lon: 139.7671, lat: 35.6812 }, { label: '新宿駅付近', lon: 139.7006, lat: 35.6900 }], props: [{ label: '下北沢（世田谷区）', lon: 139.6680, lat: 35.6613 }, { label: '中野駅付近', lon: 139.6657, lat: 35.7058 }, { label: '大森駅付近', lon: 139.7282, lat: 35.5886 }, { label: '葛西（江戸川区）', lon: 139.8723, lat: 35.6637 }, { label: '北千住（足立区）', lon: 139.8049, lat: 35.7497 }] },
     },
     osaka: {
       id: 'osaka', dir: 'osaka', name: '大阪市', whole: '大阪市全体', unit: '市', codes: ['27100'].concat(OSAKA_WARDS), groupKey: '27100', zoning: true, clip: true, size: '約3.5MB', wait: '回線が遅いと十数秒',
       bbox: [135.36, 34.57, 135.62, 34.78], view: { lon: 135.4959, lat: 34.7025, z: 13 }, zoomMin: 11,
       examples: [{ label: '大阪駅付近（北区）', lon: 135.4959, lat: 34.7025 }, { label: '天王寺駅付近', lon: 135.5139, lat: 34.6465 }, { label: '平野区（郊外寄り）', lon: 135.5470, lat: 34.6150 }, { label: '住之江区（湾岸）', lon: 135.4760, lat: 34.6070 }],
       search: '大阪市役所、大阪城',
+      fill: { works: [{ label: '大阪駅付近', lon: 135.4959, lat: 34.7025 }, { label: '本町駅付近', lon: 135.5003, lat: 34.6828 }], props: [{ label: '天王寺駅付近', lon: 135.5139, lat: 34.6465 }, { label: '京橋駅付近', lon: 135.5345, lat: 34.6966 }, { label: '十三駅付近', lon: 135.4825, lat: 34.7203 }, { label: '平野区（郊外寄り）', lon: 135.5470, lat: 34.6150 }, { label: '住之江区（湾岸）', lon: 135.4760, lat: 34.6070 }] },
     },
   };
   const DEFAULT_REGION = 'tokushima';
@@ -469,7 +472,10 @@
     else sec.lines.push({ tag: 'XKT003', text: '立地適正化計画の区域の外にある。' });
     if (p.inCityFunction) sec.lines.push({ tag: 'XKT003', text: '都市機能誘導区域の中にある' + ymd(32) + '。医療・福祉・商業などの施設を集めたい区域。' });
     for (const n of p.other) sec.lines.push({ tag: 'XKT003', text: n + 'の中にある。' });
-    if (!p.inResidential && tk) sec.lines.push({ tag: '市の資料', text: '区域の外でも住むことはできる。居住促進区域の外で3戸以上の住宅を建てる開発・建築などは、着手の30日前までに市への届出が必要（徳島市「立地適正化計画 届出の手引」令和7年4月 p.2〜3）。1戸・2戸の住宅の建築は、手引の届出対象の例に入っていない（1,000㎡以上の開発を除く）。届出が要るかどうかは、市の都市計画課か宅地建物取引業者に確かめる。' });
+    if (!p.inResidential && tk) { // 要点は1行。手引の引用の詳細は「注意・聞く先」に畳む
+      sec.lines.push({ tag: '市の資料', text: '区域の外でも住める。3戸以上の住宅の建築などは着手30日前までに市へ届出（届出の手引）。' });
+      sec.lines.push({ tag: '注意', text: '徳島市「立地適正化計画 届出の手引」令和7年4月 p.2〜3。1戸・2戸の住宅の建築は、手引の届出対象の例に入っていない（1,000㎡以上の開発を除く）。届出が要るかは市の都市計画課か宅地建物取引業者に確かめる。' });
+    }
     if (!p.inResidential && !tk) sec.lines.push({ tag: '注意', text: '区域の外でも住むことはできる。区域の外での届出などが要るかは、' + u + 'の都市計画の担当課か宅地建物取引業者に確かめる。' });
     sec.lines.push({ tag: '注意', text: '区域の内外は、住めるかどうかや価格を示すものではない。' + (tk ? '市' : u) + 'が公表する図が正で、この画面は参考。' });
     sec.ask.push((tk ? '市' : u) + 'の都市計画' + (tk ? '課' : 'の担当課') + 'に、この場所の区域指定と、区域の見直しの予定を聞く。');

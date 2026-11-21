@@ -49,12 +49,11 @@ test('画面: 比較表・地図の全件表示・計算方法は既定で閉じ
   assert.ok(/<details class="assump">/.test(html));
   assert.ok(!html.includes('動く最小限のデモ'));
 });
-test('評価ループ第2回: 通勤と施設を1つの表に、シートは計画・災害を開き、API項目コードは画面で隠す', () => {
+test('評価ループ第2回: 通勤と施設を1つの表に、API項目コードは画面で隠す', () => {
   const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../web/layout.css'), 'utf8');
   const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
   assert.ok(app.includes('function nearTable(P, ws)') && !html.includes('id="nearBox"'));
-  assert.ok(app.includes("sec.id === 'plan' || sec.id === 'hazard' ? ' open'"));
   assert.ok(/\.tag\.api \{ display: none; \}/.test(css));
   assert.ok(app.includes('鉄道の本数・乗換・時刻は含みません'));
   assert.ok(!/査定|適正料金|最適地/.test(app + html));
@@ -66,4 +65,16 @@ test('シートの要約: 災害の行に種類ごとの札（parts）と想定�
   const r = Lib.sheetSummary(d, Lib.collect(d, 134.5513, 34.0745)).find((x) => x.k === '災害の想定');
   assert.ok(Array.isArray(r.parts) && r.parts.length >= 4 && Array.isArray(r.haz));
   assert.strictEqual(r.v, r.parts.join('／'));
+});
+test('評価ループ第3回: 例は勤務先2か所と物件5件、通勤は60分超でも概算を出す、Bの入力欄は開いたまま', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
+  for (const id of ['tokushima', 'tokyo23', 'osaka']) {
+    const f = Lib.REGIONS[id].fill;
+    assert.strictEqual(f.works.length, 2, id); assert.strictEqual(f.props.length, 5, id);
+    const bb = Lib.REGIONS[id].bbox;
+    for (const p of f.works.concat(f.props)) assert.ok(p.lon >= bb[0] && p.lon <= bb[2] && p.lat >= bb[1] && p.lat <= bb[3], id + ' ' + p.label);
+  }
+  assert.ok(!app.includes("Life.WALK_MAX_MIN + '分超</span>'"));
+  assert.ok(app.includes("nw === Life.MAX_WORKS; // Bが空"));
+  assert.ok(!/<details class="sec"[^>]*' open'/.test(app));
 });
