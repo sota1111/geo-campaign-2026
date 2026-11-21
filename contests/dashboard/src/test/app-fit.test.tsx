@@ -41,7 +41,10 @@ describe('適合表（情報部の正本）の取り込み', () => {
 
 describe('並び順', () => {
   it('未選択は全列の score 合計の高い順、同点は registry の並び', () => {
-    const ids = sortApps(APPS, null).map((a) => a.id)
+    const all = sortApps(APPS, null).map((a) => a.id)
+    // 判定が大半「？」の新しい案（biz-realestate-a4・timeline）は、選んだ候補の次（ここでは先頭）に置く（M7）
+    expect(all.slice(0, 2)).toEqual(['biz-realestate-a4', 'biz-realestate-timeline'])
+    const ids = all.slice(2)
     const tot = ids.map(totalScore)
     for (let i = 1; i < tot.length; i++) expect(tot[i - 1]).toBeGreaterThanOrEqual(tot[i])
     const idx = (id: string) => APPS.findIndex((a) => a.id === id)
@@ -179,6 +182,32 @@ describe('トップ画面の操作', () => {
     fireEvent.click(screen.getByTestId('t-sat-b-satellite-2026'))
     expect(mini()).toContain('✓')
     expect(mini()).toContain('選択済み')
+  })
+  it('M3: 提出先を選んでも、ポップオーバーを開いている間は並べ替えず、閉じたときに並べ替える', () => {
+    render(<Portal />)
+    const before = order()
+    openPick('sat-b')
+    fireEvent.click(screen.getByTestId('t-sat-b-satellite-2026'))
+    expect(order()).toEqual(before) // 選んだ瞬間は動かない
+    expect(within(document.querySelector('[data-app-card="sat-b"]') as HTMLElement).getByTestId('chosen-sat-b').textContent).toContain('1件') // 件数・✓ はすぐ反映
+    fireEvent.click(within(screen.getByTestId('popover-sat-b')).getByText('閉じる'))
+    expect(order()[0]).toBe('sat-b')
+  })
+  it('M4: 並びの番号は「N番目」で、評価の順位に見えない', () => {
+    render(<Portal />)
+    const badge = document.querySelector('[data-app-card]')!.querySelector('[title*="評価の順位ではありません"]')!
+    expect(badge.textContent).toBe('1番目')
+  })
+  it('M5: イチBiz の部門を選ぶと、カードにはその部門の判定が出る（部門名つき）', () => {
+    window.localStorage.setItem(TARGETS_KEY, JSON.stringify({ version: 1, targets: { 'biz-business': ['ichibiz-2026-idea'] } }))
+    render(<Portal />)
+    const mini = document.querySelector('[data-app-card="biz-business"] [data-fit-mini="ichibiz-2026"]')!.textContent!
+    expect(mini).toContain('✓')
+    expect(mini).toContain('アイデア')
+  })
+  it('M7: コンペ未選択のとき、判定が大半「？」の新しい案は並びの最後に埋もれない', () => {
+    render(<Portal />)
+    expect(order().indexOf('biz-realestate-timeline')).toBeLessThan(3)
   })
   it('localStorage が使えなくても画面は動く', () => {
     const orig = Storage.prototype.setItem

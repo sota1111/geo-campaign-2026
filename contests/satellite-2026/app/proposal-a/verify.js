@@ -14,7 +14,16 @@ export function verifyHtml(v) {
   const topTowns = v.towns.filter((t) => t.sewer_incidents > 0).slice(0, 8)
     .map((t) => `<tr><td>${t.town}</td><td class="n">${t.median_year ?? '不明'}</td><td class="n">${t.pipe_km_known.toFixed(1)}</td><td class="n">${t.sewer_incidents}</td></tr>`).join('');
   const tokP = tk && tk.priority, tokO = tk && tk.other;
+  const og = v.terciles.find((g) => g.group === 'oldest'), ng = v.terciles.find((g) => g.group === 'newest');
+  const summary = `<div class="sum" data-testid="verify-summary"><b>要点</b>
+    <ul class="tight">
+      <li>豊中市では、下水道管が古い町ほど、管の長さあたりの下水道起因の陥没が多い傾向でした（100 km あたり、古い方の3分の1の町 <b>${og.per_100km.toFixed(1)}</b> 件、新しい方 <b>${ng.per_100km.toFixed(1)}</b> 件。1年度・${ck.incidents_used} 件。<b>因果ではありません</b>）。</li>
+      <li>位置のついた空洞の実データは見つかっておらず、<b>このアプリの点数の当たり外れは検証できません</b>。</li>
+      <li>特別重点調査の「空洞 0」は、<b>空洞調査の実施延長も 0 km</b> です（「空洞がない」ではありません）。</li>
+      <li>提案書の「令和4年度 2,625 件」（国総研）と、下の令和6年度（国交省）は<b>集計の定義が異なり、並べて比べられません</b>。</li>
+    </ul>以下は詳しい説明です。</div>`;
   return `
+  ${summary}
   <p class="note"><b>地中レーダの結果は、一次審査を通るまで手元にありません。</b>そのため「この点数で空洞を当てられた」とは検証できません。代わりに、公開されている実データでできる範囲を示します。<b>因果や精度を示すものではなく、位置単位の検証でもありません。</b></p>
 
   <h3>1. 国交省「道路陥没発生箇所の詳細」（令和6年度）に何が載っているか</h3>

@@ -24,11 +24,11 @@ describe('提出予定数（総司令官の決定 2026-11-21）', () => {
     expect(p('udc-2026').parts).toEqual([])
   })
 
-  it('比べ: 足りない・予定どおり・超過を、記号と言葉で言い分ける', () => {
-    expect(planSentence(planView('satellite-2026', {}))).toBe('提出予定 2件（スポンサー1・一般1）／選んだ 0件 ▼あと2件で予定')
-    expect(planSentence(planView('satellite-2026', { 'sat-a': ['satellite-2026'] }))).toBe('提出予定 2件（スポンサー1・一般1）／選んだ 1件 ▼あと1件で予定')
+  it('比べ: 足りない・予定どおり・超過を、言葉と枠で言い分ける（▲✓は使わない）', () => {
+    expect(planSentence(planView('satellite-2026', {}))).toBe('提出予定 2件（スポンサー1・一般1）／選んだ 0件 あと2件で予定')
+    expect(planSentence(planView('satellite-2026', { 'sat-a': ['satellite-2026'] }))).toBe('提出予定 2件（スポンサー1・一般1）／選んだ 1件 あと1件で予定')
     expect(planView('satellite-2026', { 'sat-a': ['satellite-2026'], 'sat-b': ['satellite-2026'] }).state).toBe('match')
-    expect(planSentence(planView('satellite-2026', { 'sat-a': ['satellite-2026'], 'sat-b': ['satellite-2026'], 'sat-alpha': ['satellite-2026'] }))).toContain('▲予定より1件多い')
+    expect(planSentence(planView('satellite-2026', { 'sat-a': ['satellite-2026'], 'sat-b': ['satellite-2026'], 'sat-alpha': ['satellite-2026'] }))).toContain('予定より1件多い')
     expect(planSentence(planView('udc-2026', {}))).toBe('提出予定 未定／選んだ 0件')
     expect(planView('udc-2026', {}).state).toBe('undecided')
   })
@@ -47,7 +47,7 @@ describe('提出予定数（総司令官の決定 2026-11-21）', () => {
     expect(loadTargets()).toEqual({ 'sat-a': ['satellite-2026'] })
     render(<Portal />)
     expect(screen.getByTestId('planned-satellite-2026').textContent).toContain('提出予定 2件（スポンサー1・一般1）／選んだ 1件')
-    expect(screen.getByTestId('planned-satellite-2026').textContent).toContain('▼あと1件で予定')
+    expect(screen.getByTestId('planned-satellite-2026').textContent).toContain('あと1件で予定')
     expect(screen.getByTestId('planned-udc-2026').textContent).toContain('提出予定 未定／選んだ 0件')
     expect(screen.getByTestId('planned-odpt-2026').textContent).toContain('提出予定 未定')
     expect(screen.getByTestId('planned-ichibiz-2026').textContent).toContain('提出予定 3件')
@@ -58,10 +58,10 @@ describe('提出予定数（総司令官の決定 2026-11-21）', () => {
     render(<Portal />)
     const t = (k: string) => screen.getByTestId(`planned-part-ichibiz-2026-${k}`).textContent
     expect(t('ビジネス')).toContain('予定1・選んだ0')
-    expect(t('ビジネス')).toContain('▼')
+    expect(t('ビジネス')).toContain('あと1件')
     expect(t('アイデア')).toContain('予定1・選んだ2')
-    expect(t('アイデア')).toContain('▲')
-    expect(t('不動産')).toContain('✓')
+    expect(t('アイデア')).toContain('1件多い')
+    expect(t('不動産')).toContain('予定どおり')
   })
 
   it('並び順の説明: コンペを選ぶと「このコンペを提出先に選んだ候補（N件）が先」。N は「選んだ N件」と同じ数え方', () => {

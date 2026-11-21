@@ -100,6 +100,9 @@ export default function App() {
   // 空洞の結果。既定では空（実データには空洞の結果が無い）。利用者の CSV か、説明用デモ（架空）でだけ入る
   const [results, setResults] = useState<Map<string, boolean>>(new Map())
   const [demo, setDemo] = useState(false)
+  // 同梱の見本 CSV（架空の値）を入れたか／利用者自身の CSV を入れたか（note 列の「架空の見本」で判定）
+  const [srcSample, setSrcSample] = useState(false)
+  const [srcUser, setSrcUser] = useState(false)
   const [demoData, setDemoData] = useState<DemoData | null>(null)
   const [loadInfo, setLoadInfo] = useState<LoadInfo | null>(null)
   const [roundAdded, setRoundAdded] = useState(0)
@@ -110,6 +113,8 @@ export default function App() {
   const [wTouched, setWTouched] = useState(false)
   const [viewedR2, setViewedR2] = useState(false)
   const [viewedVerify, setViewedVerify] = useState(false)
+  // 手順2「選ぶ」は、区間を選んだときだけ完了にする（CSV を入れただけでは完了にしない）
+  const [pickedOnce, setPickedOnce] = useState(false)
 
   useEffect(() => {
     if (round > 1 && step === 'round2') setViewedR2(true)
@@ -150,6 +155,7 @@ export default function App() {
         setW(ap.newW)
         setRound(2)
         setViewedTop(true)
+        setPickedOnce(true)
         setStep('round2')
       })
       .catch((e) => alive && setError(String(e)))
@@ -165,6 +171,9 @@ export default function App() {
   const baseSegs = data?.segments
   // 結果が入った区間だけ surveyed（候補から外れる）
   const segs = useMemo<Segment[]>(() => (baseSegs ?? []).map((s) => ({ ...s, surveyed: results.has(s.id) })), [baseSegs, results])
+  useEffect(() => {
+    if (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9) setPickedOnce(true)
+  }, [selected, budgetKm, segs])
   const cellSat = useMemo(() => Object.fromEntries((data?.cells ?? []).map((c) => [c.id, satNorm(c.disp)])), [data])
   const cellById = useMemo(() => Object.fromEntries((data?.cells ?? []).map((c) => [c.id, c])), [data])
   const ranked = useMemo(() => rank(segs, cellSat, w), [segs, cellSat, w])
@@ -218,6 +227,7 @@ export default function App() {
     if (demo) return
     const text = await readFileText(file)
     const r = parseOutcomes(text, baseSegs ?? [])
+    if (!r.error && r.summary.segments > 0) { if (/架空の見本/.test(text)) setSrcSample(true); else setSrcUser(true) }
     setLoadInfo({ name: file.name, error: r.error, summary: r.summary })
     if (!r.error) addResults(r.results)
   }
@@ -225,6 +235,8 @@ export default function App() {
     setResults(new Map())
     setLoadInfo(null)
     setRoundAdded(0)
+    setSrcSample(false)
+    setSrcUser(false)
   }
   /** 説明用デモの切替。入れた結果・較正・回は初めからにする（実の結果と架空を混ぜない） */
   const onDemo = async (on: boolean) => {
@@ -235,7 +247,11 @@ export default function App() {
     }
     setDemo(on)
     setLoadInfo(null)
-    setSelected(new Set())
+    setSrcSample(false)
+    setSrcUser(false)
+    // 選択は残す（過去の調査済みになった区間だけ外す）
+    const pastIds = on && dm ? new Set(dm.past) : new Set<string>()
+    setSelected((cur) => new Set([...cur].filter((id) => !pastIds.has(id))))
     setW(W0)
     setRound(1)
     setMsg('')
@@ -261,13 +277,14 @@ export default function App() {
   }
 
   const hasResults = results.size > 0
+  const pastIds = useMemo(() => (demo && demoData ? new Set(demoData.past) : undefined), [demo, demoData])
   useAppSteps(
     [
       { id: 'top', title: '候補区間の点数を見る', hint: '表の行を選んで内訳を見る（豊中市の実データ）', action: '表の行を1つ選ぶと完了', done: viewedTop },
       { id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで順位が変わる', action: 'スライダーを動かすと完了', optional: true, done: wTouched },
       {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
-        done: roundAdded > 0 || round > 1 || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
+        done: pickedOnce || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
       { id: 'scan', title: '調査結果（CSV）を入れる', hint: '一次審査後に GMS3 の結果を入れる枠。区間ID または緯度・経度の CSV', action: 'CSV を入れると完了', done: roundAdded > 0 || round > 1 },
       { id: 'apply', title: '較正を反映して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
@@ -286,6 +303,12 @@ export default function App() {
     <PageHeader
       appId="sat-a"
       compact
+      badge={
+        demo ? { kind: 'fictional', label: '架空を含む（説明用デモ）' }
+          : srcSample ? { kind: 'fictional', label: srcUser ? '架空を含む（見本 CSV＋利用者の CSV）' : '架空を含む（見本 CSV）' }
+            : srcUser ? { kind: 'partial', label: '実データ＋利用者の調査結果（実データかは利用者の責任）' }
+              : undefined
+      }
       actions={
         <>
           <BusinessDialog />
@@ -313,7 +336,7 @@ export default function App() {
   const focusSeg = focus ? ranked.find((s) => s.id === focus) : undefined
   const mapStep = step === 'top' || step === 'weight' ? '1' : '2'
   const focusCell = focusSeg ? cellById[focusSeg.cell] : undefined
-  const fake = demo ? '（架空）' : ''
+  const fake = demo || srcSample ? '（架空）' : ''
 
   const aside = data ? (
     <div className="flex h-full flex-col">
@@ -329,6 +352,9 @@ export default function App() {
         step={mapStep}
         results={results}
         demo={demo}
+        sample={srcSample}
+        userCsv={srcUser}
+        pastIds={pastIds}
         onSegmentClick={onSegmentClick}
       />
       <div className="shrink-0 border-t bg-card px-3 py-1.5 text-xs" aria-live="polite" data-testid="detail">
@@ -356,7 +382,7 @@ export default function App() {
           )}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-x-3 gap-y-1 overflow-x-auto whitespace-nowrap border-t bg-card px-3 py-1.5 text-[11px] md:flex-wrap md:overflow-visible md:whitespace-normal [&>*]:shrink-0" data-testid="legend">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-t bg-card px-3 py-1.5 text-[11px] [&>*]:shrink-0" data-testid="legend">
         <span className="font-medium">凡例</span>
         <span className="flex items-center gap-1">点数 低<span className="inline-block h-2 w-14 rounded" style={{ background: 'linear-gradient(90deg,#dbe5ec,#f4b942,#8e1b6b)' }} />高</span>
         <span className="flex items-center gap-1"><span className="inline-block w-6 border-t-4 border-dashed border-[#6f7d86]" />結果が入った区間{fake}</span>
@@ -410,6 +436,9 @@ export default function App() {
             )}
             {step === 'scan' && (
               <ScanPanel
+                sample={srcSample}
+                userCsv={srcUser}
+                pastCount={pastIds ? [...results.keys()].filter((id) => pastIds.has(id)).length : 0}
                 demo={demo}
                 onDemo={onDemo}
                 selected={selected}
@@ -419,10 +448,12 @@ export default function App() {
                 onFile={onFile}
                 onClear={clearResults}
                 onDemoScan={onDemoScan}
+                onGoPick={() => setStep('pick')}
               />
             )}
             {step === 'apply' && (
               <ApplyPanel
+                sample={srcSample}
                 round={round}
                 calib={calibNow}
                 surveyed={surveyedSet}
@@ -431,10 +462,12 @@ export default function App() {
                 demo={demo}
                 applied={round > 1 && roundAdded === 0 ? prev : null}
                 onApply={applyCalib}
+                onGoScan={() => setStep('scan')}
+                onDemoOn={() => onDemo(true)}
               />
             )}
             {step === 'round2' && (
-              <Round2Panel round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} onExport={exportRound2} />
+              <Round2Panel demo={demo} sample={srcSample}onGoScan={() => setStep('scan')} onDemoOn={() => onDemo(true)} round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} onExport={exportRound2} />
             )}
             {step === 'verify' && (verify ? <VerifyPanel v={verify} /> : <Skeleton className="h-40 w-full" />)}
           </>

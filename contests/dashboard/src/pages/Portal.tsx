@@ -26,10 +26,29 @@ export default function Portal() {
     setSaved(saveTargets(targets))
   }, [targets])
 
-  const sortedAll = useMemo(() => sortApps(APPS, contest, targets), [contest, targets])
-  const nChosen = selectedCount(targets, contest)
-  // 提出先を選んだ・外した直後に並びが変わる。操作したカードが見える位置へ横スクロールし、キーボードの焦点も戻す
+  // 並べ替えに使う選択。提出先のポップオーバーを開いている間は固定し、閉じたときに追いつく（選んだ瞬間にカードが跳ばないように）
+  const [sortT, setSortT] = useState<Targets>(targets)
+  const openPops = useRef(0)
+  const targetsRef = useRef(targets)
+  targetsRef.current = targets
   const touched = useRef<string | null>(null)
+  useEffect(() => {
+    if (openPops.current === 0) setSortT(targets)
+  }, [targets])
+  const onPopover = (appId: string, open: boolean) => {
+    if (open) {
+      openPops.current += 1
+      return
+    }
+    openPops.current = Math.max(0, openPops.current - 1)
+    if (openPops.current === 0) {
+      touched.current = appId
+      setSortT(targetsRef.current)
+    }
+  }
+  const sortedAll = useMemo(() => sortApps(APPS, contest, sortT), [contest, sortT])
+  const nChosen = selectedCount(sortT, contest)
+  // 提出先のポップオーバーを閉じたときに並びが変わる。操作したカードが見える位置へ横スクロールし、キーボードの焦点も戻す
   const orderKey = sortedAll.map((a) => a.id).join(',')
   useLayoutEffect(() => {
     const id = touched.current
@@ -46,6 +65,10 @@ export default function Portal() {
     const ae = document.activeElement
     if (!ae || ae === document.body) card.querySelector<HTMLElement>(`[data-testid="pick-targets-${id}"]`)?.focus({ preventScroll: true })
   }, [orderKey])
+  // 並びが変わらなかったときに、印が次の並べ替えまで残らないようにする
+  useEffect(() => {
+    touched.current = null
+  }, [sortT])
   const apps = useMemo(() => sortedAll.filter((a) => matchesAppQuery(a, q)), [sortedAll, q])
   const cautions = useMemo(() => activeCautions(targets), [targets])
   const contestName = contest ? CONTESTS.find((c) => c.id === contest)!.name : null
@@ -72,7 +95,7 @@ export default function Portal() {
             <span className="ml-2 text-xs font-normal text-slate-700 lg:hidden">横にスクロールして4枚を見られます</span>
           </h2>
           <p className="text-slate-700">
-            {asOf} 時点。提出先を選んだアプリが左に並び、コンペを選ぶとそのコンペの候補だけが先になります　<span aria-hidden>？</span> 総司令官の判断待ち
+            {asOf} 時点（並び順はアプリの見出しの横）　<span aria-hidden>？</span> 総司令官の判断待ち
           </p>
           <ul data-testid="progress-overall">
             <li className="flex gap-1.5">
@@ -138,6 +161,8 @@ export default function Portal() {
               {(['◎', '○', '△', '×', '？'] as const).map((m) => (
                 <li key={m}><span className="font-bold">{m} {MARK_WORD[m]}</span></li>
               ))}
+              <li><span className="font-bold">✓ 選んだ提出先　▲ 判断待ち・注意</span>（✓ と ▲ は、この2つの意味だけに使います）</li>
+              <li><span className="font-bold">予定数: あと N件／予定どおり／N件多い</span>（総司令官の「提出予定」と、選んだ件数の比べ。記号ではなく言葉と枠で示します）</li>
               <li>{FIT_NOTE}</li>
               <li>{c12.text}</li>
               <li className="text-slate-700">［出典: {FIT_SOURCE}（{FIT_AS_OF}）］</li>
@@ -169,7 +194,7 @@ export default function Portal() {
             toolbar={
               <>
               <span className="font-bold text-slate-900" data-testid="mark-legend">
-                記号: ◎ このコンペ向け　○ 出せる　△ 条件付き　× 出せない　？ 要確認　／　✓ 選んだ提出先
+                記号: ◎ このコンペ向け　○ 出せる　△ 条件付き　× 出せない　？ 要確認　／　✓ 選んだ提出先　▲ 判断待ち・注意<span className="max-[1279px]:hidden">　／　予定数: あと N件・予定どおり・N件多い</span>
               </span>
               <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
                 <label htmlFor="top-app-filter" className="font-bold">名前・目的で絞り込む</label>
@@ -194,10 +219,8 @@ export default function Portal() {
                 rank={sortedAll.indexOf(a) + 1}
                 contest={contest}
                 targets={targets}
-                onToggle={(app, col) => {
-                  touched.current = app
-                  setTargets((t) => toggleTarget(t, app, col))
-                }}
+                onToggle={(app, col) => setTargets((t) => toggleTarget(t, app, col))}
+                onPopover={onPopover}
                 cautions={cautions.filter((c) => c.apps.includes(a.id))}
               />
             ))}

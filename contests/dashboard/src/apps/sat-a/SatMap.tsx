@@ -17,11 +17,16 @@ export interface SatMapProps {
   step: '1' | '2'
   results: Map<string, boolean>
   demo: boolean
+  /** 同梱の見本 CSV（架空の値）を入れた / 利用者の CSV を入れた */
+  sample?: boolean
+  userCsv?: boolean
+  /** 説明用デモの「過去の調査」（架空）の区間。小さく薄く描き、今回の走査分だけを大きく見せる */
+  pastIds?: Set<string>
   onSegmentClick: (id: string) => void
   className?: string
 }
 
-export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, step, results, demo, onSegmentClick, className }: SatMapProps) {
+export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, step, results, demo, sample, userCsv, pastIds, onSegmentClick, className }: SatMapProps) {
   const cellsFc = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: 'FeatureCollection',
@@ -58,12 +63,12 @@ export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, s
         const [a, b] = (byId.get(id) as Scored).coords
         return {
           type: 'Feature',
-          properties: { id, hit: hit ? 1 : 0 },
+          properties: { id, hit: hit ? 1 : 0, past: demo && pastIds?.has(id) ? 1 : 0 },
           geometry: { type: 'Point', coordinates: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] },
         }
       }),
     }
-  }, [ranked, results])
+  }, [ranked, results, demo, pastIds])
 
   const layers = useMemo<MapLayer[]>(() => {
     const fillColor = ['match', ['get', 'k'], ...palette.flatMap((c, k) => [k, c]), '#cccccc']
@@ -90,8 +95,8 @@ export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, s
         layout: { 'line-cap': 'round' }, paint: { 'line-color': SCORE_COLOR, 'line-width': lineW },
       },
       // 調査結果の印（形と大きさで区別。色だけに頼らない）。結果が入った区間にだけ出る
-      { id: 'res-ok', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 0], paint: { 'circle-radius': 4, 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': 2 } },
-      { id: 'res-hit', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 1], paint: { 'circle-radius': 8, 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } },
+      { id: 'res-ok', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 0], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 2, 4], 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1] } },
+      { id: 'res-hit', type: 'circle', data: resFc, filter: ['==', ['get', 'hit'], 1], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 3.5, 8], 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2.5], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1] } },
       // タップしやすいように、ほぼ透明の太い線を最前面に置く
       { id: 'seg-hit', type: 'line', data: segFc, paint: { 'line-color': '#000', 'line-width': 18, 'line-opacity': 0.01 } },
     ]
@@ -121,12 +126,22 @@ export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, s
         >
           説明用デモ中：地中レーダの結果は架空（乱数）です／第{round}回
         </div>
+      ) : sample ? (
+        <div
+          role="alert"
+          data-testid="sample-banner"
+          className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4rem)] rounded border-2 border-amber-600 bg-amber-50/95 px-2 py-1 text-xs font-bold text-amber-950 shadow"
+        >
+          見本 CSV（架空の値）を入れています。レーダ結果 {results.size} 区間は架空です{userCsv ? '（利用者の CSV を含む）' : ''}／第{round}回
+        </div>
       ) : (
         <div
           data-testid="real-badge"
           className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4rem)] rounded border border-slate-400 bg-white/95 px-2 py-1 text-xs font-medium text-slate-800 shadow"
         >
-          実データ（衛星・道路・台帳）／レーダ結果は未入力／第{round}回
+          {results.size > 0
+            ? `実データ（衛星・道路・台帳）／レーダ結果: 利用者の調査結果 ${results.size} 区間（実データかは利用者の責任）／第${round}回`
+            : `実データ（衛星・道路・台帳）／レーダ結果は未入力／第${round}回`}
         </div>
       )}
     </div>
