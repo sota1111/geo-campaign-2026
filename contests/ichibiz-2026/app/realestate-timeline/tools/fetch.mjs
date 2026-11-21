@@ -125,7 +125,7 @@ if (flag('--survey')) {
   console.log('HTTP ステータスの回数:', JSON.stringify(status)); console.log('何も書いていません'); process.exit(0);
 }
 // ---- 書き出し: 地区（区×地区名）×間取り×年（その年を末尾とする直近 WIN 年の取引）の集計。生データは書かない ----
-const years = []; for (let y = FIRST_YEAR; y <= Math.max(...trades.map((t) => t.year)); y++) years.push(y);
+const years = []; for (let y = FIRST_YEAR; y <= trades.reduce((m, t) => Math.max(m, t.year), 0); y++) years.push(y);
 const dist = aggregateYears(trades, { scope: 'district', win: WIN, years });
 const wardAgg = aggregateYears(trades, { scope: 'ward', win: WIN, years });
 const ri = (v) => Math.round(v);
