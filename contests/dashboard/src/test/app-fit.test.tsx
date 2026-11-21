@@ -10,7 +10,7 @@ import {
 } from '@/lib/fit'
 
 // 正本 JSON に未反映の新案（app-fit.ts に先に足した。反映後はここから外す）。a4・timeline は 2026-11-21 に参謀長が正本へ反映済み
-const NEW_UNREFLECTED: string[] = ['biz-repair']
+const NEW_UNREFLECTED: string[] = []
 const json = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../../../reports/intel/app-contest-fit-20261121.json'), 'utf-8'))
 
 describe('適合表（情報部の正本）の取り込み', () => {
@@ -42,9 +42,9 @@ describe('適合表（情報部の正本）の取り込み', () => {
 describe('並び順', () => {
   it('未選択は全列の score 合計の高い順、同点は registry の並び', () => {
     const all = sortApps(APPS, null).map((a) => a.id)
-    // 判定が大半「？」の新しい案（biz-realestate-a4・timeline）は、選んだ候補の次（ここでは先頭）に置く（M7）
-    expect(all.slice(0, 2)).toEqual(['biz-realestate-a4', 'biz-realestate-timeline'])
-    const ids = all.slice(2)
+    // 判定が大半「？」の新しい案（biz-realestate-a4・timeline・biz-repair）は、選んだ候補の次（ここでは先頭）に置く（M7）
+    expect(all.slice(0, 3)).toEqual(['biz-realestate-a4', 'biz-realestate-timeline', 'biz-repair'])
+    const ids = all.slice(3)
     const tot = ids.map(totalScore)
     for (let i = 1; i < tot.length; i++) expect(tot[i - 1]).toBeGreaterThanOrEqual(tot[i])
     const idx = (id: string) => APPS.findIndex((a) => a.id === id)
