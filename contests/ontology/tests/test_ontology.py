@@ -237,3 +237,21 @@ def test_graph_json_is_consistent(g):
     assert {"Contest", "App", "Submission", "Dataset", "Finding", "Task", "PullRequest", "Unit"} <= kinds
     marks = {e["props"]["mark"] for e in d["edges"] if e["rel"] == "fit"}
     assert marks <= {"◎", "○", "△", "×", "？"}
+
+
+# ---------------- 画面用 next-actions.json（ダッシュボードが読む）
+def test_ui_json_points_to_graph_nodes(g):
+    import ui_json
+
+    rep = ui_json.build(NOW)
+    ids = {n["id"] for n in graph_json.build(g, NOW)["nodes"]}
+    assert rep["submissions"] and rep["dataImpactAll"] and rep["unitLabels"]
+    for s in rep["submissions"]:
+        assert {s["submission"], s["app"], s["contest"]} <= ids
+    for d in rep["commanderDecisions"]:
+        assert d["decision"] in ids, d["decision"]  # HumanGate も画面のノードになる
+    for ds, v in rep["dataImpactAll"].items():
+        assert ds in ids and set(v["apps"]) <= ids
+    for acts in rep["unitActions"].values():
+        for a in acts:
+            assert a["app"] in ids

@@ -57,35 +57,35 @@
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/29",
+   "node": "id:task/26",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/43",
+   "node": "id:task/32",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/44",
+   "node": "id:task/46",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/52",
+   "node": "id:task/47",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/63",
+   "node": "id:task/55",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/70",
+   "node": "id:task/66",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/76",
+   "node": "id:task/73",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   },
   {
-   "node": "id:task/77",
+   "node": "id:task/83",
    "what": "担当（文面に部隊名・総司令官の語がない）"
   }
  ],
@@ -94,7 +94,7 @@
   "apps": 19,
   "fits": 108,
   "datasets": 34,
-  "licenses": 28,
+  "licenses": 29,
   "submissions": 19,
   "selection_decisions": 7,
   "unfilled_placeholders": 41,
@@ -106,23 +106,23 @@
    "sev-fix": 71,
    "sev-minor": 29
   },
-  "tasks": 83,
-  "open_tasks": 39,
-  "decisions_from_status": 10,
-  "escalations": 10,
-  "pull_requests": 37
+  "tasks": 91,
+  "open_tasks": 43,
+  "decisions_from_status": 11,
+  "escalations": 12,
+  "pull_requests": 39
  },
  "notes": [],
  "apps_without_dataset_rows": [
   "sat-a"
  ],
- "status_file": "reports/ops/status-20261113.md",
- "status_asof": "2026-11-14",
+ "status_file": "reports/ops/status-20261121.md",
+ "status_asof": "2026-11-21",
  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
- "triples": 9478,
+ "triples": 9739,
  "meta": {
   "asOf": "2026-11-21",
-  "fit_source": "contests/ontology/data/app-contest-fit-20261121.json",
+  "fit_source": "reports/intel/app-contest-fit-20261121.json",
   "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
  },
  "gap_count": 22

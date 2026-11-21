@@ -27,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 
 # 画面に出すノードの種類（より具体的な型を先に）
 TYPES = [
-    "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "Escalation",
+    "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate", "Escalation",
     "UnfilledField", "UnconfirmedDataCondition", "MissingDeliverable",
     "Finding", "Submission", "App", "Contest", "Division", "Theme", "Deadline", "Criterion", "Rule",
     "SubmissionLimit", "Dataset", "License", "Task", "Decision", "PullRequest", "Audit", "Unit", "Commander", "Stage",
@@ -75,12 +75,12 @@ def build(g, now):
         elif t == "Finding":
             status = str(g.value(g.value(n, C.severity), RDFS.label)) if g.value(n, C.severity) is not None else None
             props = {k: str(g.value(n, C[k])) for k in ("certainty", "rawSeverity") if g.value(n, C[k]) is not None}
-        elif t in ("Task", "Decision", "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "Escalation"):
+        elif t in ("Task", "Decision", "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate", "Escalation"):
             status = str(g.value(n, C.status)) if g.value(n, C.status) is not None else None
             if g.value(n, C.dueAt) is not None:
                 props["dueAt"] = str(g.value(n, C.dueAt))
             if t != "Task":
-                props["humanGate"] = t in ("SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion")
+                props["humanGate"] = t in ("SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate")
         elif t == "PullRequest":
             status = str(g.value(n, C.prState))
             props = {"number": int(g.value(n, C.prNumber)), "url": str(g.value(n, C.url))}

@@ -209,6 +209,9 @@ ESCALATION_APPS = {
     "20261114-ichibiz-rn1-honnin-kahitsu": ["biz-realestate-rn1"],
     "20261114-odpt-kodure-ksj-noncommercial": ["odpt-kodure"],
     "20261114-solar-guard-data-terms": ["biz-solar-guard"],
+    # 統合ダッシュボード自体の指摘（個別の案ではないので案には結ばない）
+    "20261121-dashboard-app-steps-hidden": [],
+    "20261121-dashboard-detail-collapse": [],
 }
 DECISION_APPS = {
     "decision-20261114-odpt-kodure": ["odpt-kodure"],

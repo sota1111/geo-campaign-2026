@@ -24,6 +24,7 @@ export default defineConfig({
       input: {
         main: path.resolve(root, 'index.html'),
         ...Object.fromEntries(CONTEST_IDS.map((id) => [`contest-${id}`, path.resolve(root, `contest/${id}/index.html`)])),
+        ontology: path.resolve(root, 'ontology/index.html'),
         ...Object.fromEntries(APP_IDS.map((id) => [id, path.resolve(root, `apps/${id}/index.html`)])),
       },
     },
