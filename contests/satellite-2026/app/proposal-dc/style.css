@@ -192,3 +192,39 @@ table.cmp .tg { font-size: 9.5px; font-weight: 400; padding: 0 3px; border: 1px 
   table.cmp thead th:first-child { width: 46px; }
   .lgsum { display: inline; }
 }
+
+/* 重みと優先値（2026-11-22）*/
+.leftcol { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.leftcol .mappane { flex: 1; }
+.wbar { flex: none; padding: 3px 10px 4px; background: #fff; border-bottom: 1px solid var(--line); }
+.wh { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; line-height: 1.4; }
+.wh .wn { color: var(--sub); font-size: 11.5px; flex: 1; min-width: 0; }
+.wh .wx { cursor: pointer; white-space: nowrap; }
+.wh button { font-size: 11.5px; padding: 0 8px; }
+.wg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 14px; }
+.wi { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) 1.4em; align-items: center; gap: 4px; font-size: 12px; line-height: 1.7; }
+.wi .wl { font-weight: 600; }
+.wi input[type=range] { width: 100%; margin: 0; height: 20px; accent-color: #5b2a86; }
+.wi output { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.satbar label span.prip { border-color: #7a4aa8; color: #5b2a86; }
+.satbar input:checked + span.prip { background: #5b2a86; color: #fff; border-color: #5b2a86; }
+.pri { margin: 2px 0 3px; padding: 2px 6px; border: 1px solid #c9b6dd; border-left: 3px solid #5b2a86; border-radius: 4px; background: #f7f2fb; font-size: 12px; line-height: 1.4; }
+.pri:empty { display: none; }
+.pri-h b { font-size: 14px; color: #3e1a60; } .pri-h small { margin-left: 4px; font-size: 11px; color: var(--sub); }
+.pri-bar { display: flex; height: 9px; margin: 2px 0; background: #e6dff0; border-radius: 2px; overflow: hidden; }
+.pri-bar i { display: block; height: 100%; }
+.pri-bar { width: 100%; }
+.pri-l { display: flex; flex-wrap: wrap; gap: 0 8px; font-size: 11px; }
+.pri-l .sq { display: inline-block; width: 8px; height: 8px; margin-right: 2px; border: 1px solid rgba(0,0,0,.3); }
+.pri-l small { color: var(--sub); font-size: 10px; }
+.pri-m, .pri-n { color: var(--warn); margin: 0; }
+table.cmp tr.prow th, table.cmp tr.prow td { background: #f1e9f8; }
+table.cmp td.pv { font-weight: 700; color: #3e1a60; }
+#calc table { margin: 4px 0; }
+@media (max-width: 800px) {
+  .leftcol { display: block; }
+  .wg { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+  .wh .wn { flex-basis: 100%; font-size: 11px; }
+  .wi { grid-template-columns: 2.4em minmax(0, 1fr) 1.2em; }
+  .pri-l small { display: none; }
+}
