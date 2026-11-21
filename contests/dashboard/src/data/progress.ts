@@ -119,7 +119,7 @@ export const PLANS: PlanProgress[] = [
   },
   {
     id: 'sat-yabu-sugi', short: '藪払い・スギ', intent: '比較中', contest: 'satellite-2026', name: '新案 藪払い・スギ植え替え', kind: '新しい案、PR #36', ...SAT, appId: 'sat-yabu', appIds: ['sat-yabu', 'sat-sugi'],
-    done: ['デモ（藪払い＝京都府与謝野町、スギ植え替え＝青梅市中心）'],
+    done: ['デモ（藪払い＝京都府与謝野町、スギ花粉＝日本全国の市町村地図で都市から森の市町村への資金配分を比較）'],
     todo: [
       { text: '提案書（docx）がない' },
       { text: '憲兵・デザイン審査が未実施' },
