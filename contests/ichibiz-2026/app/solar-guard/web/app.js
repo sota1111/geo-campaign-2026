@@ -7,7 +7,7 @@
   var BAND_LABELS = G.LEVELS;
   var MAX_ZOOM = 10;      // 地図の拡大の上限（MapLibre の拡大率10は、256px の地理院タイルでは縮尺11のタイルを取得する）。これより細かい縮尺にすると、見ている範囲の細かい地図画像を地理院が受け取り、位置が伝わりうる
   var S = { meta: null, cells: [], pops: null, munis: [], items: [], classes: [], reality: null, ck: null, land: null, regions: null,
-    risk: null, areaNames: [], tiers: [], d711: null, d89: null, sc: [], bd: [], ms: [], sort: 'name', tab: 'map',
+    risk: null, areaNames: [], tiers: [], d711: null, d89: null, sc: [], bd: [], ms: [], tw: [], towns: null, view: 'mesh', base: 'pale', sort: 'name', tab: 'map',
     diag: { lon: null, lat: null, muni: null, cls: 'unknown', answers: {}, cond: {} }, res: null };
   var map = null, mapReady = false, marker = null, popup = null;
 
@@ -21,8 +21,8 @@
 
   /* ---------- 起動 ---------- */
   function init() {
-    Promise.all([getJSON('data/cells.json'), getJSON('data/pops.json'), getJSON('data/munis.json'), getJSON('data/checklist.json'), getJSON('data/reality.json'), getJSON('data/land.json'), getJSON('data/districts.json'), getJSON('data/risk.json')]).then(function (r) {
-      S.meta = r[0].meta; S.cells = r[0].rows; S.pops = G.popGrid(r[1].rows); S.munis = r[2].rows; S.ck = r[3]; S.items = r[3].items; S.classes = r[3].classes; S.reality = r[4]; S.land = G.landSet(r[5].rows); S.regions = r[6].regions; S.risk = r[7]; S.areaNames = r[0].regions;
+    Promise.all([getJSON('data/cells.json'), getJSON('data/pops.json'), getJSON('data/munis.json'), getJSON('data/checklist.json'), getJSON('data/reality.json'), getJSON('data/land.json'), getJSON('data/districts.json'), getJSON('data/risk.json'), getJSON('data/towns.json')]).then(function (r) {
+      S.meta = r[0].meta; S.cells = r[0].rows; S.pops = G.popGrid(r[1].rows); S.munis = r[2].rows; S.ck = r[3]; S.items = r[3].items; S.classes = r[3].classes; S.reality = r[4]; S.land = G.landSet(r[5].rows); S.regions = r[6].regions; S.risk = r[7]; S.areaNames = r[0].regions; S.towns = r[8];
       $('kmin').textContent = S.meta.k_min;
       buildClass(); buildConds(); buildChecklist(); buildTrend(); buildReality(); buildAbout();
       recompute(); buildMuniSelect(); buildRules(); initMap(); renderDiag();
@@ -38,6 +38,8 @@
     /* 「このアプリについて」: 閉じるボタンと、外側を押したら閉じる（評価ループ第5回） */
     $('about-close').addEventListener('click', function () { $('aboutapp').open = false; });
     document.addEventListener('click', function (e) { var d = $('aboutapp'); if (d.open && !d.contains(e.target)) d.open = false; });
+    Array.prototype.forEach.call(document.querySelectorAll('#ctl-view button'), function (b) { b.addEventListener('click', function () { setView(b.getAttribute('data-v')); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('#ctl-base button'), function (b) { b.addEventListener('click', function () { setBase(b.getAttribute('data-v')); }); });
     $('btn-mapsel').addEventListener('click', function () { toggleMapSel(); });
     $('in-muni').addEventListener('change', function () { setMuni($('in-muni').value); });
     initMini();
@@ -74,6 +76,7 @@
       '<ul class="note dark">' +
       '<li><b>地区の段階</b>: 県警の県内5地区の件数（' + link(p.url, '令和7年11月末') + '）÷地区の設備数。設備1,000件あたり、県全体（' + n1(d.avg) + '）以上で2、' + G.TIER_MID + '以上で1、他は0。メッシュは中の設備が最も多い市町村の地区（' + n0(S.meta.stats.cells_visible_mixed_region) + 'メッシュは複数の地区にまたがる）。</li>' +
       '<li><b>人目の少なさ</b>: 国勢調査2020の人口密度が県内の低い方から1/3なら1（切り方は仮。夜間・見通しは見ない）。</li>' +
+      '<li><b>散布図（円）</b>: 町字の代表点に置く。大きさ＝町字の設備数、色＝上と同じ点数。人目の少なさは町字の人口密度（小地域の人口÷面積）が、公開した町字の中で低い方から1/3なら1。県警の件数は地区単位で、町字へは割り振らない（同じ地区の円は、人目の少なさで2色に分かれるだけ）。</li>' +
       '<li><b>使わないもの</b>: 規模（出力）は資料で向きが食い違うので使わない（両論は下）。逃げやすさは距離の根拠がなく使わない。防犯設備などは公開データにないので診断でだけ扱う。</li></ul>' +
       '<p class="note"><b>規模について（両論）</b>: ' + esc(sc.note) + '（' + link(sc.url, 'JPEA・REASP') + '）</p>';
   }
@@ -110,9 +113,11 @@
     sc.forEach(function (c) { c.band = c.level; });
     ms.forEach(function (m) { m.band = m.level; });
     S.sc = sc; S.bd = sc.map(function (c) { return c.level; }); S.ms = ms;
+    S.tw = G.townLevels(S.towns.rows, S.tiers);
     var st = S.meta.stats;
-    $('map-summary').textContent = '認定情報の太陽光（運転開始報告済み・出力20kW以上）' + n0(st.counted) + '件のうち、集計メッシュに入れたのは' + n0(st.placed) + '件（町字が地図の名称と一致しなかった' + n0(st.unplaced) + '件は市町村の集計だけ）。設備のあるメッシュ' + n0(st.cells_all) + 'のうち、' + n0(st.cells_hidden) + 'メッシュ（設備' + S.meta.k_min + '件未満の' + n0(st.cells_hidden_small_n) + '、設備' + S.meta.dom_n + '件未満で50kW以上が1件以下の' + n0(st.cells_hidden_dominant) + '）は隠しています。';
+    $('map-summary').textContent = '認定情報の太陽光（運転開始報告済み・出力20kW以上）' + n0(st.counted) + '件のうち、集計メッシュに入れたのは' + n0(st.placed) + '件（町字が地図の名称と一致しなかった' + n0(st.unplaced) + '件は市町村の集計だけ）。設備のあるメッシュ' + n0(st.cells_all) + 'のうち、' + n0(st.cells_hidden) + 'メッシュ（設備' + S.meta.k_min + '件未満の' + n0(st.cells_hidden_small_n) + '、設備' + S.meta.dom_n + '件未満で50kW以上が1件以下の' + n0(st.cells_hidden_dominant) + '）は隠しています。散布図の町字は' + n0(st.towns_all) + 'のうち' + n0(st.towns_hidden) + '（同じ規則）を隠し、' + n0(st.towns_visible) + 'を円にしています。';
     buildLegend();
+    buildTheft();
     renderDist();
     renderMunis();
   }
@@ -139,12 +144,58 @@
   }
 
   function buildLegend() {
-    var el = $('legend');
+    var el = $('legend'), dots = S.view === 'dots';
     el.className = '';
-    var h = '<span class="lgt">実績に基づく地区の目安（仮・被害の予測ではありません）</span><br class="sp"> ';
-    BAND_COLORS.forEach(function (c, i) { h += '<span class="sw" style="background:' + c + '"></span>' + BAND_LABELS[i]; });
-    h += '<span class="sw" style="background:#fff"></span>色なし';
+    var h = '<span class="lgt">' + (dots ? '円の色＝盗難リスクの目安（仮・被害の予測ではありません）' : '四角の色＝盗難リスクの目安（仮・被害の予測ではありません）') + '</span><br class="sp"> ';
+    BAND_COLORS.forEach(function (c, i) {
+      h += dots ? '<span class="sw dot lv' + i + '" style="background:' + c + '"></span>' + BAND_LABELS[i] : '<span class="sw" style="background:' + c + '"></span>' + BAND_LABELS[i];
+    });
+    if (dots) h += '<br><span class="sizes"><span class="sw dot s1"></span>10<span class="sw dot s2"></span>100<span class="sw dot s3"></span>400件　円の大きさ＝設備数。外枠が太いほど高い。位置は町字の代表点</span>';
+    else h += '<span class="sw" style="background:#fff"></span>色なし';
+    if (S.base === 'photo') h += '<br><span class="src">背景: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（シームレス空中写真）</a></span>';
     el.innerHTML = h;
+  }
+  /* 県警の実際の件数（転記）。県内5地区の太陽光発電施設関係の発生件数。市町村・町字・メッシュへは按分しない */
+  function buildTheft() {
+    var a = S.reality.areas711, b = S.reality.areas, h = '<table class="theft"><tr><th class="l">県警の件数（転記）</th>' + S.areaNames.map(function (nm) { return '<th>' + esc(nm) + '</th>'; }).join('') + '</tr>';
+    [[a, '令和7年11月末'], [b, '令和8年9月末']].forEach(function (p) {
+      h += '<tr><th class="l">' + esc(p[1]) + '</th>' + S.areaNames.map(function (nm) { var r = p[0].rows.filter(function (x) { return x.area === nm; })[0]; return '<td>' + (r ? n0(r.n) : '—') + '</td>'; }).join('') + '</tr>';
+    });
+    h += '</table><p class="src">太陽光発電施設の被害（県内5地区、暫定値）。出典: ' + link(a.url, '県警 Metal News 令和7年第12号') + '、' + link(b.url, '令和8年第10号') + '（取得 2026-11-22）。地区の数字のみで、市町村・町字・メッシュには割り振りません。</p>';
+    $('theft').innerHTML = h;
+  }
+  function setView(v) {
+    S.view = v;
+    Array.prototype.forEach.call(document.querySelectorAll('#ctl-view button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); });
+    applyLayers(); buildLegend(); closePopup();
+  }
+  function setBase(v) {
+    S.base = v;
+    Array.prototype.forEach.call(document.querySelectorAll('#ctl-base button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); });
+    applyLayers(); buildLegend();
+  }
+  function applyLayers() {
+    if (!mapReady) return;
+    var vis = function (id, on) { map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'); };
+    vis('gsi', S.base === 'pale'); vis('photo', S.base === 'photo');
+    ['cells-fill', 'cells-line', 'border-line', 'area-line'].forEach(function (id) { vis(id, S.view === 'mesh'); });
+    vis('dots', S.view === 'dots');
+  }
+  function townFeatures() {
+    var out = [];
+    S.tw.forEach(function (t, i) {
+      if (t.level != null) out.push({ type: 'Feature', properties: { i: i, n: t.n, lv: t.level }, geometry: { type: 'Point', coordinates: [t.lon, t.lat] } });
+    });
+    return out;
+  }
+  function townPopup(t, ll) {
+    var reg = t.region >= 0 ? areaOf(S.d711, S.areaNames[t.region]) : null;
+    var h = '<b>' + esc(t.city + ' ' + t.name) + '</b>（町字の集計）<br>' + bandChip(t.level) + ' <span class="src">盗難リスクの目安（仮）</span><br>' +
+      '<span class="src">設備 ' + n0(t.n) + '件・出力計 約' + mw(t.kw) + ' MW・50kW未満 ' + n0(t.small) + '件<br>' +
+      '点数 ＝ 2×地区の段階' + (reg ? '（' + esc(reg.area) + ' ' + reg.tier + '）' : '') + ' ＋ 人目の少なさ' + (t.quiet ? '（約' + n0(t.dens) + '人/km²、低い方1/3 → 1）' : '（約' + n0(t.dens) + '人/km²、1/3に入らず → 0）') +
+      '<br>地区の実績は' + (reg ? '県警の' + esc(reg.area) + '地区（' + n0(reg.theft) + '件、令和7年11月末）' : '—') + 'で、この町字の被害ではありません。点は町字の代表点' + (t.approx ? '（大字名で始まる小地域の平均）' : '') + 'で、設備の位置ではありません。</span>';
+    closePopup();
+    popup = new maplibregl.Popup({ closeButton: true, maxWidth: '260px', offset: 8 }).setLngLat(ll).setHTML(h).addTo(map);
   }
 
   /* ---------- 地図 ---------- */
@@ -163,7 +214,9 @@
     map = new maplibregl.Map({
       container: 'map',
       style: { version: 8, sources: { gsi: { type: 'raster', tileSize: 256, maxzoom: 18, tiles: ['https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png'],
-        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>' } }, layers: [{ id: 'gsi', type: 'raster', source: 'gsi' }] },
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（淡色地図）</a>' },
+        photo: { type: 'raster', tileSize: 256, maxzoom: 18, tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'],
+          attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル（シームレス空中写真）</a>' } }, layers: [{ id: 'gsi', type: 'raster', source: 'gsi' }, { id: 'photo', type: 'raster', source: 'photo', layout: { visibility: 'none' } }] },
       center: [140.3, 36.3], zoom: window.innerWidth <= 720 ? 7.7 : 8.2, maxZoom: MAX_ZOOM, attributionControl: { compact: true }
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
@@ -176,17 +229,32 @@
       map.addLayer({ id: 'border-line', type: 'line', source: 'borders', paint: { 'line-color': '#14365d', 'line-width': 2.5, 'line-opacity': 0.85 } });
       map.addLayer({ id: 'area-line', type: 'line', source: 'cells', filter: ['==', ['get', 'region'], -9], paint: { 'line-color': '#0072B2', 'line-width': 2 } });
       addAreaLabels();
+      /* 散布図: 町字の代表点に円（大きさ＝設備数、色＝盗難リスクの目安、外枠の太さ＝段階）。個別設備の位置ではない */
+      map.addSource('dots', { type: 'geojson', data: { type: 'FeatureCollection', features: townFeatures() } });
+      var rad = ['interpolate', ['linear'], ['sqrt', ['get', 'n']], 1.7, 3, 20, 15];
+      map.addLayer({ id: 'dots', type: 'circle', source: 'dots', layout: { 'circle-sort-key': ['-', 0, ['get', 'n']], visibility: 'none' },
+        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, ['*', 0.7, rad], 10, ['*', 1.25, rad]],
+          'circle-color': ['match', ['get', 'lv'], 0, BAND_COLORS[0], 1, BAND_COLORS[1], 2, BAND_COLORS[2], 3, BAND_COLORS[3], '#cccccc'],
+          'circle-opacity': 0.82, 'circle-stroke-color': '#222', 'circle-stroke-width': ['match', ['get', 'lv'], 0, 0.6, 1, 1, 2, 1.8, 3, 3, 1], 'circle-stroke-opacity': 0.9 } });
       map.addSource('mine', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       map.addLayer({ id: 'mine-line', type: 'line', source: 'mine', paint: { 'line-color': '#0072B2', 'line-width': 3, 'line-dasharray': [2, 1] } });
       mapReady = true;
       var at = document.querySelector('.maplibregl-ctrl-attrib');
       if (at && window.innerWidth <= 720) at.classList.remove('maplibregl-compact-show');   // 帰属表示は「i」で開く（出典は画面下にも常に表示）
+      applyLayers();
       if (S.diag.lon != null) showPoint();
       showArea();
     });
     map.on('click', function (e) {
       if (S.tab === 'diag') { setPoint(String(e.lngLat.lng), String(e.lngLat.lat)); return; }
-      if (S.tab === 'map') cellPopup(e.lngLat);
+      if (S.tab === 'map') {
+        if (S.view === 'dots') {
+          var fs = map.queryRenderedFeatures([[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]], { layers: ['dots'] });
+          if (fs.length) { townPopup(S.tw[fs[0].properties.i], e.lngLat); return; }
+          closePopup(); return;
+        }
+        cellPopup(e.lngLat);
+      }
     });
   }
   /* 色を付けたメッシュのうち、隣のメッシュと地区が違う辺だけを線にする（地区の境目） */
@@ -227,6 +295,7 @@
   function renderMap() {
     if (!mapReady) return;
     map.getSource('cells').setData({ type: 'FeatureCollection', features: cellFeatures() });
+    map.getSource('dots').setData({ type: 'FeatureCollection', features: townFeatures() });
   }
   function cellPopup(ll) {
     var m = G.toMesh(ll.lng, ll.lat), idx = -1;
@@ -381,7 +450,7 @@
     }
     S.diag.lon = lon; S.diag.lat = lat; S.diag.muni = null; $('in-muni').value = '';
     $('in-lat').value = lat.toFixed(4); $('in-lon').value = lon.toFixed(4);
-    msg.textContent = '地図の位置で診断します（約5km四方の単位。この端末の中だけで使用）'; msg.className = 'note';
+    msg.textContent = '地図の位置で診断します（約2km四方の単位。この端末の中だけで使用）'; msg.className = 'note';
     showPoint(); renderDiag();
   }
   function showPoint() {
@@ -538,7 +607,7 @@
     h += line('unknown', 'わからない') + line('ok', '当てはまらない');
     h += '<h3>周囲の目安（公開データの集計。被害の予測ではありません）</h3><ul class="note dark">';
     if (r.byMuni) h += '<li>市町村の単位で診断（位置は使いません）。周囲の人の少なさ: 市町村の人口密度が県内の低い方から1/3' + (r.autoQuiet ? 'に入る（人目が少ない側）' : 'には入らない') + '。</li>';
-    else h += '<li>約5kmメッシュ（基準メッシュ ' + esc(r.code) + '）の人口 約' + n0(r.cellPopulation) + '人（約' + n0(r.cellDensity) + '人/km²、2020年国勢調査）。周囲の人の少なさ: 県内の低い方から1/3' + (r.autoQuiet ? 'に入る（人目が少ない側）' : 'には入らない') + '。</li>' +
+    else h += '<li>約2kmメッシュ（基準メッシュ ' + esc(r.code) + '）の人口 約' + n0(r.cellPopulation) + '人（約' + n0(r.cellDensity) + '人/km²、2020年国勢調査）。周囲の人の少なさ: 県内の低い方から1/3' + (r.autoQuiet ? 'に入る（人目が少ない側）' : 'には入らない') + '。</li>' +
       '<li>このメッシュの認定設備: ' + (r.cellVisible ? r.cell.n + '件・出力計約' + mw(r.cell.kw) + ' MW' : '少ないか無いため表示しません') + '。</li>';
     h += '</ul><p class="note">規模（出力）は点数に使いません（資料で向きが食い違うため。両論は地図の「色の根拠」）。不審者を見かけた・被害に遭ったときは110番または最寄りの警察署へ。</p>';
     el.innerHTML = h;
@@ -581,7 +650,7 @@
     var m = S.meta, st = m.stats;
     var h = '<div class="about box">' +
       '<h2>このアプリが何で、何でないか</h2><ul>' +
-      '<li>茨城県の太陽光発電設備の<b>集計</b>（約5kmメッシュ・市町村）と、県警の地区別の被害実績から、リスクの色（仮の規則）を出す静的Webアプリ（デモ）。サーバーは使いません。</li>' +
+      '<li>茨城県の太陽光発電設備の<b>集計</b>（約2kmメッシュの四角・町字の代表点の円（散布図）・市町村）と、県警の地区別の被害実績から、リスクの色（仮の規則）を出す静的Webアプリ（デモ）。背景は地図と国土地理院の空中写真を切り替えられる。サーバーは使いません。</li>' +
       '<li>被害の予測、個別設備の順位・一覧、「狙われやすい設備」の特定はしません。認定情報には防犯設備も被害の履歴もありません。</li>' +
       '<li><b>リスクの色（低・中・やや高・高）は、地区の実績（県警の設備あたり件数）を主な根拠にした仮の規則</b>で、被害の予測ではありません。地区の段階は令和7年11月末の実績から作ったため、同じ期間との並びが合うのは当然で、独立の検証ではありません。別の期間（令和8年9月末）との並び、人目の少なさが地区間で実績と逆向きであることは「公開の集計地図」の照合表に出しています。5地区の対応づけは推測で、比べられるのは5点だけです。</li>' +
       '<li>個々の発電所の色分けは、公開の地図には出さず、事業者が自分の設備を入れる自己診断の中で、その端末のブラウザ内だけで行います。</li></ul>' +
@@ -599,9 +668,9 @@
       '<li>相対位置ではなく実績の地区差が主なので、「県内が全体として安全・危険」という意味はありません。的中率などの検証はしていません。</li></ul>' +
       '<h2>悪用を防ぐ設計</h2><ul>' +
       '<li>犯人は事前に下見をする（JPEA・REASP p.9、茨城県警）。そのため、個別設備の位置・順位・一覧は作らない。公開データから取り込む設備の行は、ビルド時に集計して捨て、画面・書き出しのデータには残らない。</li>' +
-      '<li>公開は約5kmメッシュと市町村の集計のみ。メッシュ・市町村のリスクの色は4段階（低・中・やや高・高）で、地区の段階と人口密度だけから決まる単純な規則なので、元の公開データから誰でも再現できる（新しい手がかりは足さない）。連続のスコアや順位の列は出さない。個々の発電所のリスクの色は、公開の地図・CSV・公開データには出さず、事業者が自分の設備を入れる自己診断の結果としてだけ、その端末のブラウザの中で出す。公開する集計値の粒度は、今の形で決定済み。資源エネルギー庁が条件を付ければ従う。</li>' +
+      '<li>公開は約2kmメッシュ・町字（代表点に置く円）・市町村の集計のみ（町字は設備' + m.k_min + '件未満などを隠す。点は町字の代表点で設備の位置ではない）。メッシュ・町字・市町村のリスクの色は4段階（低・中・やや高・高）で、地区の段階と人口密度だけから決まる単純な規則なので、元の公開データから誰でも再現できる（新しい手がかりは足さない）。連続のスコアや順位の列は出さない。個々の発電所のリスクの色は、公開の地図・CSV・公開データには出さず、事業者が自分の設備を入れる自己診断の結果としてだけ、その端末のブラウザの中で出す。公開する集計値の粒度は、今の形で決定済み。資源エネルギー庁が条件を付ければ従う。</li>' +
       '<li>設備が' + m.k_min + '件未満のメッシュ・市町村は、件数・容量・指標を出力しない。さらに、設備が' + m.dom_n + '件未満のメッシュは、50kW以上の設備が1件以下なら隠す（件数・出力計・50kW未満の件数から、その1件の出力が狭い幅で割り出せるため）。設備が'+m.dom_n+'件以上でも1件の大きな設備が出力計の大半を占めるメッシュは残る（対策していない。元の認定情報が出力まで公開しているため新たに漏れる情報はほぼないが、しきい値に統計的な根拠はない）。出力計は' + m.kw_round + 'kW単位に丸めて出す。' + n0(st.cells_hidden) + 'メッシュ（設備計' + n0(st.plants_in_hidden_cells) + '件）を隠している。しきい値は小さい集計を隠すための最小限の目安で、統計的な匿名性を保証するものではない。市町村の合計とメッシュの合計の差から、隠したメッシュの合計は推定できる。</li>' +
-      '<li>事業者の自己診断は、入力をブラウザの中で計算し、送信も保存もしない。診断の位置は約5kmメッシュの単位でだけ使う（人口もこの単位）。座標を入力しても地図は動かさず、地図の拡大も縮尺11（約16km四方のタイル）までに制限する。ただし地図を動かして見ている範囲の地図画像は、地理院が受け取るので、見ている範囲は地理院に伝わる。茨城県の外・海上の座標は受け付けない。</li>' +
+      '<li>事業者の自己診断は、入力をブラウザの中で計算し、送信も保存もしない。診断の位置は約2kmメッシュの単位でだけ使う（人口もこの単位）。座標を入力しても地図は動かさず、地図の拡大も縮尺11（約16km四方のタイル）までに制限する。ただし地図を動かして見ている範囲の地図画像は、地理院が受け取るので、見ている範囲は地理院に伝わる。茨城県の外・海上の座標は受け付けない。</li>' +
       '<li>盗難の実態は、警察が公表している粒度（全国・県・県内5地区）にとどめた。</li>' +
       '<li>国は盗難防止の情報を、太陽光発電設備を設置する者など盗難に遭うおそれが大きい者に周知する形（盗難特定金属製物品の処分の防止等に関する法律 第16条。情報部の確認）を取っている。当事者が自分で使う診断はこの趣旨に沿う、というのが設計の考え方である（推測）。ただし元データの認定情報は地番まで公開されており、このアプリの秘匿は「他人に見つけられなくする」ものではなく、「元データ以上の手がかり（手薄さの順位）を足さない」ためのもの。</li></ul>' +
       '<h2>限界・要確認</h2><ul>' +
@@ -610,7 +679,7 @@
       '<li>県南・県西は千葉・埼玉に近く、アクセスや逃げやすさが効いている可能性があるが、検証していない（推測）。人目の少なさ（人口密度）は、地区どうしでは県警の被害率と逆向きだった。</li>' +
       '<li>出力20kW未満の太陽光は元データに含まれない。JPEA・REASPの資料では事業用の認定件数の94.6%が10〜50kW未満（2024年3月末）なので、小規模設備の一部は集計に入らない。</li>' +
       '<li>認定情報には失効した認定を含みうる。複数地番の設備は代表地番のみ。</li>' +
-      '<li>位置は町字の代表点。町字の面積の中央値は' + st.town_area_km2_median + 'km²で、広い大字の設備は実際と別のメッシュに数えられることがある。約5kmメッシュにしたのはこのため。住所の町字が小地域名と一致しない' + n0(st.unplaced) + '件（' + n1(st.unplaced / st.counted * 100) + '%）は市町村の集計のみ。</li>' +
+      '<li>位置は町字の代表点。町字の面積の中央値は' + st.town_area_km2_median + 'km²で、広い大字の設備は実際と別のメッシュに数えられることがある。メッシュを約2kmにしたのは、町字の広さと同じ程度までで、これより細かくしても位置の精度は上がらないため（総司令官の指示で、前の約5kmから細かくした）。住所の町字が小地域名と一致しない' + n0(st.unplaced) + '件（' + n1(st.unplaced / st.counted * 100) + '%）は市町村の集計のみ。</li>' +
       '<li>人口は常住人口（2020年）で、夜間・休日の人通り、見通し、道路・側道の有無、防犯設備は反映しない。海に面したメッシュは海の面積を含むため人口密度が低く出る。県境のメッシュは隣の県の人口を含み、設備は茨城県だけを数える。</li>' +
       '<li>全国・県の件数と、本アプリの設備数は別の粒度で、設備単位・メッシュ単位の被害実績との突き合わせはしていない（公開データにその粒度がない）。</li>' +
       '<li>e-Statの利用条件は情報部の確認（政府標準利用規約2.0準拠）による。公開前に最新の条件を確認すること。</li></ul>';
@@ -637,7 +706,7 @@
     var m = S.meta, rows = [];
     rows.push(['# 太陽光発電所の盗難対策マップ（デモ・茨城県）の集計。個別設備は含みません。被害の予測ではなく、公開情報から作ったリスクの色（仮の規則）です。']);
     rows.push(['# 出典', m.plants_source + '（' + m.as_of + '時点、取得' + m.retrieved + '）を加工して作成。' + m.boundary_source + '。' + m.mesh_source + '。国が作成したものではありません。']);
-    rows.push(['# 前提', '約5kmメッシュ（1kmメッシュ×5）。設備が' + m.k_min + '件未満のメッシュ・市町村は出力しません。位置は町字の代表点（広い大字ではずれます）。出力20kW未満は元データにありません。']);
+    rows.push(['# 前提', '約2kmメッシュ（1kmメッシュ×2）。設備が' + m.k_min + '件未満のメッシュ・市町村は出力しません。位置は町字の代表点（広い大字ではずれます）。出力20kW未満は元データにありません。']);
     rows.push(['# 色の規則（仮）', '点数＝2×地区の段階（0〜2）＋人目の少なさ（0か1）。0＝低、1〜2＝中、3〜4＝やや高、5＝高。地区の段階は、県警の令和7年11月末の太陽光の件数÷地区の設備数（設備1,000件あたり）が、県全体の値以上なら2、' + G.TIER_MID + '以上なら1、未満は0。人目の少なさは、人口密度が県内の同じ単位の低い方から1/3なら1。連続のスコア・順位の列は出しません（元の集計値は含むので、並べ替えれば同じような並びは作れます）']);
     rows.push(['# 注意', '色の主な根拠は県警の5地区別の件数で、5地区と市町村の対応は推測です。地区の段階は令和7年11月末の実績から作ったので、同じ期間と合うのは当然で、独立の検証ではありません。人目の少なさは地区どうしでは実績と逆向きでした。規模（出力）は色に使っていません。出力計は' + m.kw_round + 'kW単位に丸めています。設備が少なく大きな設備の出力が推測できるメッシュも出力しません。']);
     rows.push([]);
@@ -663,6 +732,6 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   }
 
-  window.SgApp = { STATE: S, mapReady: function () { return mapReady; }, buildCsvRows: buildCsvRows, setPoint: setPoint };
+  window.SgApp = { STATE: S, map: function () { return map; }, mapReady: function () { return mapReady; }, buildCsvRows: buildCsvRows, setPoint: setPoint };
   init();
 })();

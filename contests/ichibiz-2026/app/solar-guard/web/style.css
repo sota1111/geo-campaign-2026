@@ -229,3 +229,31 @@ button.small { padding: 2px 8px; font-size: 12px; margin: 4px 0 2px; }
   #box-pos .row:has(#ctl-class) { flex-wrap: nowrap; }
 }
 .lbl { white-space: nowrap; }
+
+/* 地図の表示切り替え（四角／散布図、地図／空中写真）と、県警の件数の表 */
+#mapctl { position: absolute; left: 8px; top: 8px; z-index: 2; display: flex; flex-direction: column; gap: 3px; background: rgba(255,255,255,.94); padding: 3px 5px; border-radius: 4px; font-size: 12px; }
+#mapctl .mcl { display: inline-block; width: 2.4em; color: #444; }
+#mapctl button { border: 1px solid #14365d; background: #fff; color: #14365d; padding: 1px 7px; font-size: 12px; cursor: pointer; }
+#mapctl button + button { border-left: 0; }
+#mapctl button:first-child { border-radius: 3px 0 0 3px; }
+#mapctl button:last-child { border-radius: 0 3px 3px 0; }
+#mapctl button[aria-pressed=true] { background: #14365d; color: #fff; font-weight: bold; }
+body[data-tab=diag] #mapctl { display: none; }
+body.mapsel[data-tab=diag] #mapctl { display: flex; }
+.sw.dot { border-radius: 50%; border: 1px solid #222; box-sizing: border-box; }
+.sw.dot.lv0 { border-width: .6px; } .sw.dot.lv1 { border-width: 1px; } .sw.dot.lv2 { border-width: 2px; } .sw.dot.lv3 { border-width: 3px; }
+.sw.dot.s1 { background: #ddd; width: 8px; height: 8px; } .sw.dot.s2 { background: #ddd; width: 14px; height: 14px; } .sw.dot.s3 { background: #ddd; width: 20px; height: 20px; }
+#legend .sizes { font-size: 11px; }
+#legend .sizes .sw { vertical-align: middle; margin-left: 6px; }
+table.theft { border-collapse: collapse; font-size: 12px; margin: 4px 0 2px; width: 100%; }
+table.theft th, table.theft td { border: 1px solid #ccd; padding: 1px 5px; text-align: right; }
+table.theft th.l { text-align: left; background: #f3f5f9; font-weight: normal; }
+@media (max-width: 720px) {
+  #mapctl { top: auto; bottom: 22px; font-size: 11px; }
+  body[data-tab=map] .fab { left: auto; right: 44px; transform: none; }
+  #mapctl .mcl { width: auto; margin-right: 2px; }
+  #mapctl button { font-size: 11px; padding: 1px 5px; }
+  #legend .sizes { font-size: 9.5px; }
+  table.theft { font-size: 11px; }
+  table.theft th, table.theft td { padding: 1px 3px; }
+}
