@@ -11,12 +11,12 @@
 <body>
 <header>
   <h1>クマ対策：藪払いの優先地図 <small>人里に近い藪・林縁を衛星で絞り、刈り払いの順番を決める（コンセプトデモ）</small></h1>
-  <div class="banner" id="banner" role="note"><b>架空のデータは使っていません</b>／目撃は2009〜18年度で<b>最新ではありません</b>／配点は<b>仮置き</b>
-    <details class="more"><summary>詳しく</summary>公開データ（京都府与謝野町周辺）。刈り払いの効果は示しません。衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃＝京都府の公開データ、建物・学校＝OpenStreetMap（未登録の建物があります）。紫の塗り（出やすさの推定）は林縁・川が論文の数値、集落・市街地の係数が仮置きの判定で、目撃件数とは別のものです。目撃は通報のため人の多い所に偏ります。記録欄の入力はデモで、実際の確認ではありません。</details></div>
+  <div class="banner" id="banner" role="note"><b>デモ・実データ</b><span class="long">（架空のデータは使っていません）</span>：目撃は<b>2009〜18年度</b><span class="long">で最新ではありません</span>・配点は<b>仮置き</b>
+    <details class="more"><summary>詳しく</summary>架空のデータは使っていません。目撃は最新ではありません。公開データ（京都府与謝野町周辺）。刈り払いの効果は示しません。衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃＝京都府の公開データ、建物・学校＝OpenStreetMap（未登録の建物があります）。紫の塗り（出やすさの推定）は林縁・川が論文の数値、集落・市街地の係数が仮置きの判定で、目撃件数とは別のものです。目撃は通報のため人の多い所に偏ります。記録欄の入力はデモで、実際の確認ではありません。</details></div>
   <nav id="tabs" role="tablist" aria-label="画面の切り替え">
-    <button role="tab" data-view="rank" aria-selected="true">⑴ 地図・順位</button>
+    <button role="tab" data-view="rank" aria-selected="true">⑴ 地図<span class="long">・順位</span></button>
     <button role="tab" data-view="record" aria-selected="false">⑵ 記録・計画</button>
-    <button type="button" id="btn-rec-csv" class="quick" title="現地確認の記録をCSVで保存">記録CSV<span id="rec-n">（0件）</span></button>
+    <button type="button" id="btn-rec-csv" class="quick" title="現地確認の記録をCSVで保存">記録CSV<span id="rec-n" class="badge">0</span></button>
     <button type="button" id="btn-plan-csv" class="quick q2" title="刈り払い計画（点数の上位）をCSVで保存">計画CSV<span class="long">（上位<span id="cap-lbl">10</span>区画）</span></button>
   </nav>
 </header>
@@ -36,7 +36,7 @@
             <label><input type="checkbox" id="l-schools" checked> 学校・園（青丸・OSM）</label>
           </details>
           <button type="button" id="ndvi-chip" class="ndvichip" aria-pressed="false">衛星の緑の濃さを重ねる</button>
-          <div class="minileg" aria-label="地図の凡例"><span><i class="sw sw-high"></i>出やすさ推定：高</span><span><i class="sw sw-mid"></i>中</span><span><i class="sw sw-top"></i>優先上位20</span><span><i class="sw sw-sch"></i>学校・園</span><span id="leg-ndvi" hidden><i class="sw sw-ndvi"></i>緑が濃い</span><span id="leg-sights" hidden><i class="sw sw-sight"></i>目撃</span></div>
+          <div class="minileg" aria-label="地図の凡例"><span><i class="sw sw-high"></i><span class="long">出やすさ推定：</span>高</span><span><i class="sw sw-mid"></i>中</span><span><i class="sw sw-top"></i>優先上位20</span><span><i class="sw sw-sch"></i>学校<span class="long">・園</span></span><span class="long legold">順位の目撃は2009〜18年度</span><span id="leg-ndvi" hidden><i class="sw sw-ndvi"></i>緑が濃い</span><span id="leg-sights" hidden><i class="sw sw-sight"></i>目撃（2009〜18年度）</span></div>
         </div>
       </div>
       <div class="pane sidepane">
@@ -88,11 +88,12 @@
   </section>
   <section id="v-record" class="view" hidden>
     <p class="demo-badge">デモ入力：このブラウザにだけ保存・外部送信なし・個人名は入れない</p>
+    <p id="rec-guide" class="recguide">先に⑴で区画を選ぶと区画IDが自動で入ります。 <button type="button" id="btn-to-map" class="link">⑴ 地図で選ぶ</button></p>
     <form id="rec-form" novalidate>
       <label>区画ID（必須） <input type="text" id="r-cell" list="cell-list" placeholder="例 Y123" required pattern="Y[0-9]{3}"><small id="r-sel" class="note"></small></label>
       <datalist id="cell-list"></datalist>
       <label>確認日 <input type="date" id="r-date" required></label>
-      <label>確認者（必須） <input type="text" id="r-who" maxlength="40" required placeholder="例: 鳥獣対策係"></label>
+      <label>確認者（必須・係名） <input type="text" id="r-who" maxlength="40" required placeholder="例: 鳥獣対策係"></label>
       <label>結果（必須） <select id="r-result" required></select></label>
       <label class="wide">メモ <input type="text" id="r-memo" maxlength="200" placeholder="例: ササが背丈まで茂る"></label>
       <button type="submit">記録する</button>
