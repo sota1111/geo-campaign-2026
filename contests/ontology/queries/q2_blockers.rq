@@ -1,0 +1,17 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q2 何が止めているか。失格級の指摘・要修正・未記入欄・未確認のデータ条件・未作成の提出文を、出典つきで。
+SELECT ?sub ?blocker ?type ?label ?severity ?certainty ?description (SAMPLE(?source) AS ?firstSource)
+WHERE {
+  ?sub a c:Submission ; c:blockedBy ?blocker .
+  ?blocker a ?type ; rdfs:label ?label .
+  FILTER(?type IN (c:Finding, c:UnfilledField, c:UnconfirmedDataCondition, c:MissingDeliverable))
+  OPTIONAL { ?blocker c:severity ?s . ?s rdfs:label ?severity }
+  OPTIONAL { ?blocker c:certainty ?certainty }
+  OPTIONAL { ?blocker c:description ?description }
+  OPTIONAL { ?blocker c:hasSource ?src . ?src rdfs:label ?source }
+}
+GROUP BY ?sub ?blocker ?type ?label ?severity ?certainty ?description
+ORDER BY ?sub ?type ?label

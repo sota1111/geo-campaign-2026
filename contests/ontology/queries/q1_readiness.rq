@@ -1,0 +1,30 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q1 この案（応募）は提出可能か。止めているものの種類別の件数と判定。
+# 判定は「提出可能な状態」まで。提出そのものは総司令官（人間の関門）。
+SELECT ?sub ?label ?app ?contest
+       (COUNT(DISTINCT ?fd) AS ?disqualifying)
+       (COUNT(DISTINCT ?ff) AS ?mustFix)
+       (COUNT(DISTINCT ?uf) AS ?unfilled)
+       (COUNT(DISTINCT ?dc) AS ?dataCondition)
+       (COUNT(DISTINCT ?md) AS ?missingDraft)
+       (COUNT(DISTINCT ?ar) AS ?audited)
+       (COUNT(DISTINCT ?pd) AS ?pendingSelection)
+       (IF(COUNT(DISTINCT ?fd) + COUNT(DISTINCT ?uf) + COUNT(DISTINCT ?dc) + COUNT(DISTINCT ?md) > 0, "提出不可",
+        IF(COUNT(DISTINCT ?ff) > 0, "要修正あり",
+        IF(COUNT(DISTINCT ?ar) = 0, "未監査",
+        IF(COUNT(DISTINCT ?pd) > 0, "選定待ち", "提出可能な状態")))) AS ?readiness)
+WHERE {
+  ?sub a c:Submission ; rdfs:label ?label ; c:ofApp ?app ; c:toContest ?contest .
+  OPTIONAL { ?sub c:blockedBy ?fd . ?fd a c:Finding ; c:severity c:sev-disqualifying }
+  OPTIONAL { ?sub c:blockedBy ?ff . ?ff a c:Finding ; c:severity c:sev-fix }
+  OPTIONAL { ?sub c:blockedBy ?uf . ?uf a c:UnfilledField }
+  OPTIONAL { ?sub c:blockedBy ?dc . ?dc a c:UnconfirmedDataCondition }
+  OPTIONAL { ?sub c:blockedBy ?md . ?md a c:MissingDeliverable }
+  OPTIONAL { ?ar c:ofSubmission ?sub ; c:atStage <https://geo-campaign-2026.example/id/stage/audit> }
+  OPTIONAL { ?sub c:awaitsDecision ?pd . ?pd a c:SelectionDecision ; c:status ?st . FILTER(STRSTARTS(?st, "未決")) }
+}
+GROUP BY ?sub ?label ?app ?contest
+ORDER BY ?contest ?app

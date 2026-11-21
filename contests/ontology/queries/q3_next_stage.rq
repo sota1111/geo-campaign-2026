@@ -1,0 +1,15 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q3 次に来る部隊。標準の流れ（CLAUDE.md）で、記録のある最後の段階より後の最初の段階。
+SELECT ?sub ?maxDone ?stage ?stageLabel ?unit ?unitName ?human
+WHERE {
+  { SELECT ?sub (MAX(?o) AS ?maxDone)
+    WHERE { ?r c:ofSubmission ?sub ; c:atStage ?s . ?s c:stageOrder ?o }
+    GROUP BY ?sub }
+  ?stage a c:Stage ; c:stageOrder ?no ; rdfs:label ?stageLabel ; c:performedBy ?unit ; c:isHumanGate ?human .
+  FILTER(?no > ?maxDone)
+  FILTER NOT EXISTS { ?s2 a c:Stage ; c:stageOrder ?o2 . FILTER(?o2 > ?maxDone && ?o2 < ?no) }
+  ?unit rdfs:label ?unitName .
+}

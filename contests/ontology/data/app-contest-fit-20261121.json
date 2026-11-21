@@ -1,0 +1,1100 @@
+{
+  "asOf": "2026-11-21",
+  "branch": "claude/ops-campaign-20261109 (HEAD 49eafed)",
+  "note": "2026-11-21 総司令官の情報で UDC 列を更新（概要登録は登録完了。提出時にテーマ変更可能）。既存の情報部報告（取得日 2026-11-09〜11-15）と各アプリの README・提出文から整理した。今回、公式ページの再取得はしていない。判定は要項の条件との適合（出せるか）であり、提出文・本人欄・監査の準備状況の評価ではない。",
+  "scoring": {
+    "◎": 3,
+    "○": 2,
+    "△": 1,
+    "×": 0,
+    "？": 0
+  },
+  "contests": [
+    {
+      "id": "udc-2026",
+      "contest": "udc-2026",
+      "division": null,
+      "name": "アーバンデータチャレンジ2026",
+      "deadline": "概要登録 2026-11-15 23:59（締切済み）／本応募 2026-12-27 23:59"
+    },
+    {
+      "id": "satellite-2026",
+      "contest": "satellite-2026",
+      "division": null,
+      "name": "衛星データ活用アワード2026-2027",
+      "deadline": "2026-11-30 12:00"
+    },
+    {
+      "id": "ichibiz-2026-business",
+      "contest": "ichibiz-2026",
+      "division": "ビジネス部門",
+      "name": "イチBizアワード2026 ビジネス部門",
+      "deadline": "2026-11-30 20:00"
+    },
+    {
+      "id": "ichibiz-2026-idea",
+      "contest": "ichibiz-2026",
+      "division": "アイデア部門",
+      "name": "イチBizアワード2026 アイデア部門",
+      "deadline": "2026-12-10 20:00"
+    },
+    {
+      "id": "ichibiz-2026-realestate",
+      "contest": "ichibiz-2026",
+      "division": "不動産情報活用部門",
+      "name": "イチBizアワード2026 不動産情報活用部門",
+      "deadline": "2026-12-10 20:00"
+    },
+    {
+      "id": "odpt-2026",
+      "contest": "odpt-2026",
+      "division": null,
+      "name": "公共交通オープンデータチャレンジ2026",
+      "deadline": "2027-01-11 23:59"
+    }
+  ],
+  "cells": [
+    {
+      "app": "odpt",
+      "contest": "udc-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "作品①（アプリケーション／道路・交通）として概要登録済みの記録あり。README が「同一アプリを ODPT と UDC の両方に出す」と明記。登録完了（総司令官が 11/21 に確認。記録は reports/ops/udc-2026-registration-20261109.md）",
+      "source": "reports/ops/udc-2026-registration-20261109.md; contests/odpt-2026/app/README.md 冒頭; 総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "odpt",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない。要項p8の審査項目「衛星データ活用の妥当性」を満たすには、題材へ衛星データを組み込む書き換えと所定様式の提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）・§1-2（要項p4・p6）"
+    },
+    {
+      "app": "odpt",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "受け手が住民・家族向け（registry）で、ビジネス部門が求める「市場・顧客ニーズ」「事業化の課題」の事業モデルが未整備。書き起こせば可",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1（ビジネス部門のみ2項目）; contests/dashboard/src/apps/registry.ts"
+    },
+    {
+      "app": "odpt",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・応募資格に制限なし。GTFS等の実データで地域の移動の課題を扱う。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md 確定事項4（FAQ）"
+    },
+    {
+      "app": "odpt",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく、「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていないので、要項からは可否を決められない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5（応募要領PDF p.3-4）。応募フォーム https://g-idea.go.jp/2026/entry/ は未取得"
+    },
+    {
+      "app": "odpt",
+      "contest": "odpt-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ODPT 向けに作った本命。GTFSデータリポジトリ＋ODPTセンター（東京）のデータを使う動作する静的Webアプリ。公開URLが未用意（公開が応募の前提）",
+      "source": "contests/odpt-2026/app/README.md; reports/intel/odpt-2026-20261109.md §確定事項3・5"
+    },
+    {
+      "app": "odpt-teiji",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "odpt-teiji",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（バスの位置データ）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "odpt-teiji",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "受け手が事業者・自治体（registry）で、「市場・顧客ニーズ」「事業化の課題」の節を立てる顧客が定まっている。応募資格に実績・法人要件なし。提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/dashboard/src/apps/registry.ts（audience）"
+    },
+    {
+      "app": "odpt-teiji",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。CC BY 4.0 のバス位置・時刻表データで遅れを可視化する提案。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md 確定事項4"
+    },
+    {
+      "app": "odpt-teiji",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "odpt-teiji",
+      "contest": "odpt-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ODPT 向けの新案（定時性）。ODPTセンターの GTFS-RT・GTFS（CC BY 4.0）を使う動作する静的Webアプリ。実データでの推定精度は未検証、自動収集は未設定",
+      "source": "contests/odpt-2026/app-teiji/README.md; contests/dashboard/src/apps/registry.ts（sources・dataNote）; reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "odpt-kankou",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "odpt-kankou",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "odpt-kankou",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "観光資源データ（国土数値情報 P12）が「非商用」で、事業の提案であるビジネス部門と衝突しうる（未監査の懸念）。受け手が住民と自治体・事業者に分かれ、事業モデルも未整備",
+      "source": "contests/odpt-2026/app-kankou/README.md（データ表）; reports/command/merge-20261121.md（PR #36 の残事項）"
+    },
+    {
+      "app": "odpt-kankou",
+      "contest": "ichibiz-2026-idea",
+      "mark": "△",
+      "score": 1,
+      "reason": "アイデア部門の要項上は可だが、P12 の「非商用」条件の扱いが未確認（憲兵監査・デザイン審査とも未実施）。確認できれば○",
+      "source": "contests/odpt-2026/app-kankou/README.md; reports/command/merge-20261121.md"
+    },
+    {
+      "app": "odpt-kankou",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "odpt-kankou",
+      "contest": "odpt-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ODPT 向けの新案。都営バス・台東区コミュニティバスの GTFS（ODPTセンター、CC BY 4.0）を使う動作する静的Webアプリ。ただし P12（非商用）の懸念が未監査。GTFSデータリポジトリは未使用（「両方必須か」は要確認）",
+      "source": "contests/odpt-2026/app-kankou/README.md; reports/intel/odpt-2026-20261109.md §要確認4; reports/command/merge-20261121.md"
+    },
+    {
+      "app": "odpt-kansui",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "odpt-kansui",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（洪水・高潮のハザードタイルと OSM）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）; contests/odpt-2026/app-kansui/README.md"
+    },
+    {
+      "app": "odpt-kansui",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "受け手に施設管理者・自治体を含み（README）、「市場・顧客ニーズ」「事業化の課題」の節を立てる顧客がいる。応募資格に実績・法人要件なし。提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/odpt-2026/app-kansui/README.md 目的"
+    },
+    {
+      "app": "odpt-kansui",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。浸水想定と駅出入口を重ねる地理空間の提案。データ（CC BY 4.0・ODbL・国土地理院）に非商用条件なし",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/odpt-2026/app-kansui/README.md（データ表）"
+    },
+    {
+      "app": "odpt-kansui",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない（ハザードは国土地理院タイル）",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "odpt-kansui",
+      "contest": "odpt-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ODPT 向けの比較用新案。都営バス GTFS（ODPTセンター、CC BY 4.0）を使う動作する静的Webアプリ。ODPT の駅情報 API は未使用。憲兵監査・デザイン審査は未実施。GTFSデータリポジトリは未使用（「両方必須か」は要確認）",
+      "source": "contests/odpt-2026/app-kansui/README.md; reports/command/merge-20261121.md; reports/intel/odpt-2026-20261109.md §要確認4"
+    },
+    {
+      "app": "odpt-kodure",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "odpt-kodure",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "odpt-kodure",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "行き先データ（国土数値情報 P13・P27）が「非商用」で未解決（事務局へ確認中、期限 12/11）。事業の提案であるビジネス部門と衝突しうる。受け手は家族で事業モデルも未整備",
+      "source": "contests/odpt-2026/app-kodure/README.md 未確認事項1; reports/command/decision-20261114-odpt-kodure.md"
+    },
+    {
+      "app": "odpt-kodure",
+      "contest": "ichibiz-2026-idea",
+      "mark": "△",
+      "score": 1,
+      "reason": "アイデア部門の要項上は可だが、P13・P27 の「非商用」が未解決で、行き先データは公開ブランチから外してあり画面は「同梱していません」表示。回答が「可」なら○",
+      "source": "contests/odpt-2026/app-kodure/README.md 冒頭・未確認事項1; reports/intel/odpt-2026-kodure-ksj-license-20261114.md"
+    },
+    {
+      "app": "odpt-kodure",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "odpt-kodure",
+      "contest": "odpt-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ODPT 向けの新案。ODPTセンター15データ（基本ライセンス・CC BY 4.0）を使う。ただし P13・P27 の非商用条件が未解決で行き先データを同梱しておらず、現状は動作しない。事務局の「可」まで統合・公開・応募しない扱い",
+      "source": "contests/odpt-2026/app-kodure/README.md; reports/command/decision-20261114-odpt-kodure.md; reports/command/merge-20261121.md（#19 の残事項 B1・B2）"
+    },
+    {
+      "app": "udc-moritsuchi",
+      "contest": "udc-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "作品②（登録時はアイデア／防犯・防災）として概要登録済みの記録あり。本応募でアプリケーションに変えるかは判断待ち。タイプ・テーマは本登録時に変更可（フォームに明記）",
+      "source": "reports/ops/udc-2026-registration-20261109.md; reports/ops/status-20261113.md; 総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "udc-moritsuchi",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（README に衛星の記載なし）。提案B（sat-b）の転用先で同系統のため、共通テーマ2の枠を B・α と取り合う。事業性は書かない方針（住民向け）で、要項p4「事業化意思のない案は選考対象外」に注意",
+      "source": "reports/ops/relocation-satellite-2026-to-udc-2026.md; reports/intel/satellite-2026-20261109.md §1-2・§1-3"
+    },
+    {
+      "app": "udc-moritsuchi",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "受け手は住民で、UDC 転用時に事業性は書かない方針（事業モデル未整備）。ビジネス部門が求める市場・顧客ニーズ／事業化課題の節を新たに書き起こす必要",
+      "source": "reports/ops/relocation-satellite-2026-to-udc-2026.md; reports/intel/ichibiz-2026-20261109.md §確定事項1"
+    },
+    {
+      "app": "udc-moritsuchi",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。国土数値情報 A54 など CC BY 4.0 の公開データで住民の盛土の把握を扱う。他コンテスト提出済みでも「本コンテストとしては可」（ただし UDC ②と同一内容の扱いは各コンペの規約確認が前提）",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md 確定事項4; reports/ops/relocation-satellite-2026-to-udc-2026.md（データ表）"
+    },
+    {
+      "app": "udc-moritsuchi",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない（国土数値情報を直接使用）",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "udc-moritsuchi",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3（https://challenge2026.odpt.org/ja/outline.html、取得2026-11-09）"
+    },
+    {
+      "app": "udc-aed",
+      "contest": "udc-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "UDC には登録しない（11/13 総司令官決定）。要領は「本応募には作品概要エントリーに応募された作品のみ」で、概要登録の締切 11/15 23:59 も過ぎている（作品名・id は udc- 始まりだがイチBiz向け）（総司令官 11/21『提出時にテーマ変更可能』を受けても、この理由が残るため × のまま）",
+      "source": "reports/ops/status-20261113.md（作品③）; reports/intel/udc-2026-aed-facts-20261113.md §確定事項1; 総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "udc-aed",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（AED台帳と国勢調査メッシュ）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "udc-aed",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "受け手が自治体の担当者（registry）で、顧客がいる。応募資格に実績・法人要件なし。ただし同じ着想はアイデア部門 IN1 に出す方針で、同一アイデアの複数部門同時応募は要項に明記なし",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md（明記なし）; contests/dashboard/src/apps/registry.ts"
+    },
+    {
+      "app": "udc-aed",
+      "contest": "ichibiz-2026-idea",
+      "mark": "◎",
+      "score": 3,
+      "reason": "アイデア部門 IN1「いま使えるAED地図」のデモとして使う案（registry・status）。町田・福岡・井原・倉敷の公開データ。Geoshape のライセンス表記（BY-SA か BY か）の食い違いは要確認",
+      "source": "contests/dashboard/src/apps/registry.ts（udc-aed・CARDS_ONLY）; reports/ops/status-20261113.md; reports/intel/udc-2026-aed-facts-20261113.md 要確認A"
+    },
+    {
+      "app": "udc-aed",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "udc-aed",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "sat-a",
+      "contest": "udc-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "概要登録（11/15 23:59 締切）の記録がない。UDC要領「本応募には作品概要エントリーに応募された作品のみ応募可能」を満たさない。なお strategy-20261109 は提案A（GMS3・事業モデル）を公開されるUDCには出さない方針（総司令官 11/21『提出時にテーマ変更可能』を受けても、この理由が残るため × のまま）",
+      "source": "reports/intel/udc-2026-aed-facts-20261113.md §確定事項1; reports/ops/strategy-20261109.md; 総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "sat-a",
+      "contest": "satellite-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "提案A（協賛企業テーマ＋共通テーマ1）。提案書 proposal-A.docx あり。データは架空サンプル（GMS3 は一次通過後に提供）。要項p6の例（提案1「協賛＋共通1」）と同じ構成",
+      "source": "contests/satellite-2026/submission/proposal-A.md; reports/intel/satellite-2026-20261109.md §1-2; reports/ops/status-20261113.md"
+    },
+    {
+      "app": "sat-a",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "道路管理者向けの事業提案で、ビジネス部門の市場・顧客ニーズ／事業化課題の節に対応しうる。他コンテスト提出済みでも「本コンテストとしては可」。衛星アワード（12:00）と同日締切（20:00）。ビジネス部門向けの提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md 確定事項4"
+    },
+    {
+      "app": "sat-a",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし（デモが架空データでも要項上は問われない）。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md 確定事項4"
+    },
+    {
+      "app": "sat-a",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "sat-a",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "sat-b",
+      "contest": "udc-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "概要登録（11/15 23:59 締切）の記録がない。UDC要領「本応募には作品概要エントリーに応募された作品のみ応募可能」を満たさない。UDC 作品②は提案B の転用（住民向けに組み替えた別作品）で、B 自体は出さない設計（総司令官 11/21『提出時にテーマ変更可能』を受けても、この理由が残るため × のまま）",
+      "source": "reports/intel/udc-2026-aed-facts-20261113.md §確定事項1; reports/ops/relocation-satellite-2026-to-udc-2026.md; 総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "sat-b",
+      "contest": "satellite-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "提案B（共通テーマ2）。提案書 proposal-B.docx あり。造成地は実データ、衛星由来の変化量は未接続。新案αと共通テーマ2の枠が競合し、同時提出は失格級（要項p6）",
+      "source": "contests/satellite-2026/submission/proposal-B.md; reports/escalations/20261113-satellite-alpha-slot.md F-1; reports/intel/satellite-2026-evidence-20261109.md §1-3"
+    },
+    {
+      "app": "sat-b",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "自治体の盛土規制担当向けの事業提案（B2G）で、ビジネス部門の市場・顧客ニーズ／事業化課題の節に対応しうる。他コンテスト提出済みでも「本コンテストとしては可」。提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/ops/relocation-satellite-2026-to-udc-2026.md（提案Bは B2G の事業提案）"
+    },
+    {
+      "app": "sat-b",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。盛土造成地の実データ（横須賀市）を使う。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md 確定事項4"
+    },
+    {
+      "app": "sat-b",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "sat-b",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "sat-alpha",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "sat-alpha",
+      "contest": "satellite-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "新案α（共通テーマ2）。提案書 proposal-alpha.docx あり。Bと同時提出は失格級（要項p6「各テーマへの応募は1提案まで」／憲兵F-1）。未記入欄 F-3（【総司令官記入】8か所・【本人加筆】2か所）が残る",
+      "source": "contests/satellite-2026/submission/proposal-alpha.md; reports/escalations/20261113-satellite-alpha-slot.md; reports/command/merge-20261121.md（#35）"
+    },
+    {
+      "app": "sat-alpha",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "配電事業者・自治体向けの事業提案で、ビジネス部門の市場・顧客ニーズ／事業化課題の節に対応しうる。他コンテスト提出済みでも「本コンテストとしては可」。提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/dashboard/src/apps/registry.ts（audience）"
+    },
+    {
+      "app": "sat-alpha",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。樹高マップ（CC BY 4.0）の実データ＋架空サンプルのコンセプトデモ。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/satellite-2026/app/proposal-alpha/README.md"
+    },
+    {
+      "app": "sat-alpha",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "sat-alpha",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "sat-yabu",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "sat-yabu",
+      "contest": "satellite-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "衛星アワード向けの比較用新案（README）。Sentinel-2 の実データを使う。ただし提案書（docx）が無く（PR #36 本文）、どのテーマに当てはめるか未決。要項のテーマ文はインフラ起点で、獣害対策が合致するかは要確認。憲兵監査・デザイン審査は未実施",
+      "source": "contests/satellite-2026/app/proposal-yabu/README.md; reports/command/merge-20261121.md（#36）; reports/intel/satellite-2026-20261109.md §1-2"
+    },
+    {
+      "app": "sat-yabu",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "自治体の鳥獣担当向け（README）で顧客がいる。ビジネス部門の応募資格に実績・法人要件なし。他コンテスト提出済みでも「本コンテストとしては可」。提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/satellite-2026/app/proposal-yabu/README.md 目的"
+    },
+    {
+      "app": "sat-yabu",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。京都府公開データ（CC BY 4.0）・OSM・Sentinel-2 の実データ。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/satellite-2026/app/proposal-yabu/README.md（データ表）"
+    },
+    {
+      "app": "sat-yabu",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "sat-yabu",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "sat-sugi",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "sat-sugi",
+      "contest": "satellite-2026",
+      "mark": "◎",
+      "score": 3,
+      "reason": "衛星アワード向けの比較用新案（README）。Sentinel-2・植生図・人口メッシュの実データ。ただし提案書（docx）が無く（PR #36 本文）、どのテーマに当てはめるか未決。要項のテーマ文はインフラ起点で、花粉症対策（人工林）が合致するかは要確認。憲兵監査・デザイン審査は未実施",
+      "source": "contests/satellite-2026/app/proposal-sugi/README.md; reports/command/merge-20261121.md（#36）; reports/intel/satellite-2026-20261109.md §1-2"
+    },
+    {
+      "app": "sat-sugi",
+      "contest": "ichibiz-2026-business",
+      "mark": "○",
+      "score": 2,
+      "reason": "都道府県・市町村の林務担当向け（README）で顧客がいる。ビジネス部門の応募資格に実績・法人要件なし。他コンテスト提出済みでも「本コンテストとしては可」。提出文は未作成",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/satellite-2026/app/proposal-sugi/README.md 目的"
+    },
+    {
+      "app": "sat-sugi",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。README が「イチBizアワードのアイデア部門への転用もありうる（部門の判断は総司令官）」と記載。他コンテスト提出済みでも「本コンテストとしては可」",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; contests/satellite-2026/app/proposal-sugi/README.md 冒頭"
+    },
+    {
+      "app": "sat-sugi",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "sat-sugi",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "biz-business",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認。また生活アクセス診断マップ（作品①）と同データ・同系統で、同一主体の類似作品は無効の恐れ",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "biz-business",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（バス路線の GTFS）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "biz-business",
+      "contest": "ichibiz-2026-business",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ビジネス部門向けに作った今の案（交通担当者向け）。市場・顧客ニーズ／事業化課題を含む提出文（submission/business/）と補足資料PPTあり。本人欄・背景欄は未記入（生成AI条項のため本人の書き換えが必須）",
+      "source": "contests/ichibiz-2026/brief.md; reports/ops/status-20261113.md; reports/escalations/20261109-ichibiz-genai-clause.md"
+    },
+    {
+      "app": "biz-business",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。ただし同じ案をビジネス部門にも出す場合、同一アイデアの複数部門同時応募は要項に明記なし",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md（明記なし）"
+    },
+    {
+      "app": "biz-business",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "biz-business",
+      "contest": "odpt-2026",
+      "mark": "○",
+      "score": 2,
+      "reason": "GTFSデータリポジトリとODPTセンター（都営）の両方のデータを使う動作する静的Webアプリで、必須データ要件に当たる。別コンテスト向けの作品の応募は歓迎（FAQ）。生活アクセス診断マップと同データ・機能が重なる（複数作品の応募は可、類似の扱いは記載なし）",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3・4（[S1][S2][S4]）; contests/ichibiz-2026/app/business/README.md データ表"
+    },
+    {
+      "app": "biz-business-nb",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "biz-business-nb",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（再エネ認定情報と地理院住所検索）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "biz-business-nb",
+      "contest": "ichibiz-2026-business",
+      "mark": "◎",
+      "score": 3,
+      "reason": "ビジネス部門向けの新案NB（回収圏計画）。提出文（市場・事業化課題を含む）あり。本人欄は未記入（憲兵:失格級）。現行案（biz-business）と同じ部門で、複数件の可否は明記なし",
+      "source": "contests/dashboard/src/apps/registry.ts; reports/ops/status-20261113.md; reports/intel/ichibiz-2026-multi-entry-20261113.md"
+    },
+    {
+      "app": "biz-business-nb",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。ただしビジネス部門にも出す場合、同一アイデアの複数部門同時応募は要項に明記なし（solar-guard は NB と骨組みが同じためアイデア部門のみと決定済み）",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md; contests/ichibiz-2026/app/solar-guard/README.md 冒頭"
+    },
+    {
+      "app": "biz-business-nb",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "biz-business-nb",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "biz-idea",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "biz-idea",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（自然災害伝承碑と架空の語り）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る。事業化意思のない案は選考対象外（p4）にも注意",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）・§1-3補足（p4）"
+    },
+    {
+      "app": "biz-idea",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "アイデア部門向けの案で、受け手は聞き取り担当者・サンプルは架空の語り。ビジネス部門が求める市場・顧客ニーズ／事業化課題の事業モデルが未整備",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1; contests/dashboard/src/apps/registry.ts（dataNote）"
+    },
+    {
+      "app": "biz-idea",
+      "contest": "ichibiz-2026-idea",
+      "mark": "◎",
+      "score": 3,
+      "reason": "アイデア部門向けに作った今の案。提出文（字数OK）とデモあり。本人欄・背景欄は未記入（生成AI条項）",
+      "source": "contests/ichibiz-2026/brief.md; reports/ops/status-20261113.md"
+    },
+    {
+      "app": "biz-idea",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "biz-idea",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "biz-realestate",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "biz-realestate",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（用途地域・不動産情報ライブラリ）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る。インフラ起点のテーマ文との合致も要確認",
+      "source": "reports/intel/satellite-2026-20261109.md §1-2・§1-3"
+    },
+    {
+      "app": "biz-realestate",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "不動産部門向けの案で、受け手は土地所有者（個人）。ビジネス部門が求める市場・顧客ニーズ／事業化課題の事業モデルが未整備",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1; contests/dashboard/src/apps/registry.ts"
+    },
+    {
+      "app": "biz-realestate",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。同じ案を不動産部門にも出す場合、同一アイデアの複数部門同時応募は要項に明記なし",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md"
+    },
+    {
+      "app": "biz-realestate",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "◎",
+      "score": 3,
+      "reason": "不動産情報活用部門向けに作った今の案。不動産情報ライブラリ（取引価格・地価公示/調査・区域区分、2026-11-12取得）の実データを使う。本人欄・背景欄は未記入。新案RN1と同じ部門で、複数件の可否は明記なし",
+      "source": "contests/dashboard/src/apps/registry.ts; reports/ops/status-20261113.md; reports/intel/ichibiz-2026-multi-entry-20261113.md"
+    },
+    {
+      "app": "biz-realestate",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（不動産情報ライブラリの区域・将来人口・災害想定）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る。インフラ起点のテーマ文との合致も要確認",
+      "source": "reports/intel/satellite-2026-20261109.md §1-2・§1-3"
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "不動産部門向けの案で、受け手は住まい探しの個人。ビジネス部門が求める市場・顧客ニーズ／事業化課題の事業モデルが未整備",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1; contests/dashboard/src/apps/registry.ts"
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "contest": "ichibiz-2026-idea",
+      "mark": "○",
+      "score": 2,
+      "reason": "アイデア部門は独自項目なし・実装不要・資格制限なし。同じ案を不動産部門にも出す場合、同一アイデアの複数部門同時応募は要項に明記なし",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・3; reports/intel/ichibiz-2026-multi-entry-20261113.md"
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "◎",
+      "score": 3,
+      "reason": "不動産情報活用部門向けの新案RN1。不動産情報ライブラリAPI由来のデータ（徳島市ほか）を使う。本人欄3か所は未記入（憲兵:失格級）、XKT003・XKT025 の利用条件は問い合わせ判断待ち。現行案と同じ部門で複数件の可否は明記なし",
+      "source": "reports/intel/ichibiz-2026-rn1-facts-20261113.md; reports/command/merge-20261121.md（#27）; reports/escalations/20261114-ichibiz-rn1-honnin-kahitsu.md"
+    },
+    {
+      "app": "biz-realestate-rn1",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    },
+    {
+      "app": "biz-solar-guard",
+      "contest": "udc-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る（総司令官 11/21『提出時にテーマ変更可能』）。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認",
+      "source": "総司令官 2026-11-21 の指示"
+    },
+    {
+      "app": "biz-solar-guard",
+      "contest": "satellite-2026",
+      "mark": "△",
+      "score": 1,
+      "reason": "衛星データを使っていない（再エネ認定情報・e-Stat）。要項p8「衛星データ活用の妥当性」を満たすには題材の書き換えと提案書の新規作成が要る",
+      "source": "reports/intel/satellite-2026-20261109.md §1-3（要項p8）"
+    },
+    {
+      "app": "biz-solar-guard",
+      "contest": "ichibiz-2026-business",
+      "mark": "△",
+      "score": 1,
+      "reason": "要項上は可だが、総司令官補佐の決定（2026-11-14）で「ビジネス部門には出さず、2部門への同時応募もしない」（NBと骨組みが同じため部門を分ける）。方針と衝突",
+      "source": "contests/ichibiz-2026/app/solar-guard/README.md 冒頭; reports/command/decision-20261114-solar-guard.md"
+    },
+    {
+      "app": "biz-solar-guard",
+      "contest": "ichibiz-2026-idea",
+      "mark": "◎",
+      "score": 3,
+      "reason": "アイデア部門向けの新案（アイデア部門のみ）。ただし再エネ認定情報の利用ルール（「国家・国民の安全に脅威を与える利用」の禁止）への該当が未確認で、資源エネルギー庁への電話確認（期限 12/02）待ち。提出文は未作成",
+      "source": "contests/ichibiz-2026/app/solar-guard/README.md; reports/intel/ichibiz-2026-solar-guard-terms-20261114.md §2; reports/command/decision-20261114-solar-guard.md"
+    },
+    {
+      "app": "biz-solar-guard",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "部門独自項目「活用する不動産情報ライブラリの情報」がある。活用必須の明記はなく「実質必須」は情報部の推測。本アプリは不動産情報ライブラリを使っていない",
+      "source": "reports/intel/ichibiz-2026-20261109.md §確定事項1・5。応募フォームは未取得"
+    },
+    {
+      "app": "biz-solar-guard",
+      "contest": "odpt-2026",
+      "mark": "×",
+      "score": 0,
+      "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+    }
+  ],
+  "cautions": [
+    {
+      "id": "C1",
+      "contest": "udc-2026",
+      "apps": [
+        "odpt",
+        "udc-moritsuchi"
+      ],
+      "text": "同一主体から同一・類似の作品が複数応募されると審査対象外（無効）になることがある。「類似」の基準は非公開。1作品が応募できるタイプ・テーマは1つ。同一作品を別タイプ・テーマに出しても無効の恐れ。作品①（odpt）と②（udc-moritsuchi）は題材・データ・受け手が別と整理済み。",
+      "source": "reports/intel/udc-2026-aed-facts-20261113.md §確定事項2・要確認E; reports/ops/relocation-odpt-2026-to-udc-2026.md"
+    },
+    {
+      "id": "C2",
+      "contest": "udc-2026",
+      "apps": [
+        "odpt-teiji",
+        "odpt-kankou",
+        "odpt-kansui",
+        "odpt-kodure",
+        "biz-business",
+        "udc-aed",
+        "sat-a",
+        "sat-b",
+        "sat-alpha",
+        "sat-yabu",
+        "sat-sugi",
+        "biz-business-nb",
+        "biz-idea",
+        "biz-realestate",
+        "biz-realestate-rn1",
+        "biz-solar-guard"
+      ],
+      "text": "UDC の本応募は概要エントリー済みの作品のみ。概要登録は作品①②の2件で登録完了（総司令官が 11/21 に確認。11/12 の「登録した記録がない」は誤り）。登録枠は2件のため、同時に出せるのは最大2件の想定（未確認）。提出時にテーマ変更可（総司令官 11/21）。登録タイプ・テーマは本登録時に変更可とフォームに明記されるが、登録済みの作品を別アプリに差し替えられるかは記載がない（要確認）。ODPT 系の複数アプリや biz-business は odpt と同データ・同系統のため、仮に出せても類似作品の扱い（C1）に触れうる。",
+      "source": "reports/intel/udc-2026-aed-facts-20261113.md §確定事項1・要確認D; reports/ops/udc-2026-registration-20261109.md; 総司令官 2026-11-21 の指示"
+    },
+    {
+      "id": "C3",
+      "contest": "satellite-2026",
+      "apps": [
+        "sat-a",
+        "sat-b",
+        "sat-alpha",
+        "sat-yabu",
+        "sat-sugi"
+      ],
+      "text": "各テーマへの応募は1提案まで（要項p6）。提案Aは「協賛企業テーマ＋共通テーマ1」、B・α は共通テーマ2。B と α の同時提出は失格級（憲兵F-1）。yabu・sugi をどのテーマに当てはめるかは未決で、共通テーマ2に当てれば B・α と同じ枠を取り合う。",
+      "source": "reports/intel/satellite-2026-20261109.md §1-2（要項p6）; reports/escalations/20261113-satellite-alpha-slot.md"
+    },
+    {
+      "id": "C4",
+      "contest": "satellite-2026",
+      "apps": [
+        "sat-a",
+        "sat-b",
+        "sat-alpha",
+        "sat-yabu",
+        "sat-sugi"
+      ],
+      "text": "NEDO ページの FAQ7「代表者の重複がある場合は提案を1つにまとめる等、重複応募を回避」が本アワードに適用されるかは未確定。要項p6は同一応募者の複数提案を例示している。同じ代表者の A＋B（または A＋α）が重複応募と運用された場合の扱いは書かれていない。公式の食い違いのため併記し、どちらも採用していない。",
+      "source": "reports/intel/satellite-2026-evidence-20261109.md §1; reports/escalations/20261109-satellite-duplicate.md"
+    },
+    {
+      "id": "C5",
+      "contest": "satellite-2026",
+      "apps": [
+        "sat-yabu",
+        "sat-sugi",
+        "sat-alpha"
+      ],
+      "text": "yabu・sugi には所定様式の提案書（docx）がない（PR #36 本文）。α は未記入欄 F-3 が残る。アプリは加点要素で、提出物は提案書。事業化の意思がない案は選考対象外（p4）。代表者は日本国籍が必要（NEDO FAQ。NEDO Challenge 向けの可能性があり要確認）。",
+      "source": "reports/command/merge-20261121.md（#36）; reports/intel/satellite-2026-20261109.md §1-2・§1-4"
+    },
+    {
+      "id": "C6",
+      "contest": "ichibiz-2026",
+      "apps": [
+        "biz-business",
+        "biz-business-nb",
+        "biz-idea",
+        "biz-realestate",
+        "biz-realestate-rn1",
+        "biz-solar-guard",
+        "udc-aed"
+      ],
+      "text": "同一人物の複数アイデア応募は可。同一部門に複数件・件数の上限・同一アイデアの複数部門同時応募・部門をまたぐ別アイデアは、いずれも要項に明記なし（部門内の複数件は「可と読めるが推測」）。現行案と新案を同じ部門に出す場合（biz-business と NB、biz-realestate と RN1）はこの未確定に当たる。審査員が類似内容を検討している可能性（p7）があり、同一人物の似た2案は独自性で互いに不利になりうる（推測）。",
+      "source": "reports/intel/ichibiz-2026-multi-entry-20261113.md"
+    },
+    {
+      "id": "C7",
+      "contest": "ichibiz-2026",
+      "apps": [
+        "biz-solar-guard",
+        "biz-business-nb"
+      ],
+      "text": "太陽光 盗難対策マップはアイデア部門のみ・ビジネス部門には出さず2部門同時応募もしない（総司令官補佐の決定 2026-11-14）。NB（ビジネス部門）と骨組みが同じ。",
+      "source": "contests/ichibiz-2026/app/solar-guard/README.md 冒頭; reports/command/decision-20261114-solar-guard.md"
+    },
+    {
+      "id": "C8",
+      "contest": "ichibiz-2026",
+      "apps": [
+        "biz-business",
+        "biz-business-nb",
+        "biz-idea",
+        "biz-realestate",
+        "biz-realestate-rn1",
+        "biz-solar-guard",
+        "udc-aed"
+      ],
+      "text": "全部門共通で、生成AIの出力をそのまま用いたもの・独自性が認められないものは応募を控える（本人の書き換え・記入が必須）。応募内容は協賛企業・外部審査員に提供される。協力団体・協賛企業との交渉は禁止。ビジネス部門 11/30 20:00 は衛星アワード 11/30 12:00 と同日で、アイデア・不動産部門は 12/10 20:00。",
+      "source": "reports/intel/ichibiz-2026-20261109.md 応募上の注意（PDF p.7-8）・結論; reports/escalations/20261109-ichibiz-genai-clause.md"
+    },
+    {
+      "id": "C9",
+      "contest": "odpt-2026",
+      "apps": [
+        "odpt",
+        "odpt-teiji",
+        "odpt-kankou",
+        "odpt-kansui",
+        "odpt-kodure",
+        "biz-business"
+      ],
+      "text": "1応募者が複数作品を応募可。ただし「類似の扱い」は記載なし。他コンペの応募作品の応募は歓迎、ODPT 応募作品を他コンペに出すことも可（相手方の規約とデータ利用規約の確認が前提）。応募規約の全文（既存作品の可否など）は未取得。提出後は説明文を編集できない。",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項1・4・要確認5; reports/intel/odpt-2026-challengeinfo-20261112.md"
+    },
+    {
+      "id": "C10",
+      "contest": "odpt-2026",
+      "apps": [
+        "odpt",
+        "odpt-kodure",
+        "odpt-teiji",
+        "odpt-kankou",
+        "odpt-kansui",
+        "biz-business"
+      ],
+      "text": "成果物は開催期間（〜2027/3/12）中、誰でも無償で利用できる状態で公開が必要。チャレンジ限定ライセンスのデータは再配布禁止・2027/3/12 で終了し削除義務、他コンペにも出すアプリには使わない方針（odpt・kodure は未使用）。応募資格データは「ODPTセンターおよびGTFSデータリポジトリ」で、両方必須か一方でよいかは公式から読み取れない。teiji・kankou・kansui・kodure はODPTセンターのみ、odpt・biz-business は両方を使う。",
+      "source": "reports/intel/odpt-2026-20261109.md §確定事項3・5・要確認4; reports/intel/odpt-2026-challengeinfo-20261112.md 要約4・5; reports/escalations/20261109-odpt-center-data.md"
+    },
+    {
+      "id": "C11",
+      "contest": "cross",
+      "apps": [
+        "odpt-kodure",
+        "odpt-kankou",
+        "biz-solar-guard",
+        "biz-realestate-rn1",
+        "udc-aed"
+      ],
+      "text": "データ利用条件の未解決が、どのコンペに出す場合にも効く。kodure: 国土数値情報 P13・P27（非商用）、事務局回答待ち 12/11 18:00。kankou: 国土数値情報 P12（非商用）の懸念、未監査。solar-guard: 再エネ認定情報の利用ルール（国家・国民の安全に脅威を与える利用の禁止）、電話確認 12/02 18:00。RN1: XKT003・XKT025 の利用条件。udc-aed: Geoshape のライセンス表記（CC BY-SA か CC BY か）の食い違い。",
+      "source": "reports/command/merge-20261121.md; reports/command/decision-20261114-odpt-kodure.md; reports/command/decision-20261114-solar-guard.md; reports/intel/ichibiz-2026-rn1-facts-20261113.md; reports/intel/udc-2026-aed-facts-20261113.md 要確認A"
+    },
+    {
+      "id": "C12",
+      "contest": "cross",
+      "apps": [
+        "all"
+      ],
+      "text": "どの応募も、提出に必要な本人欄（氏名・所属・体制・本人の経験など）が未記入で、憲兵の再監査で失格級0になるまで「提出可能」ではない。この表は要項への適合を示すもので、提出可能の判定ではない。",
+      "source": "reports/ops/status-20261113.md 全体; reports/command/merge-20261121.md（マージは提出可の意味ではない）"
+    },
+    {
+      "id": "C13",
+      "contest": "cross",
+      "apps": [
+        "odpt",
+        "biz-business",
+        "udc-moritsuchi",
+        "sat-b"
+      ],
+      "text": "同じ題材を複数コンペに出す場合、各コンペ側の重複・類似規定と公開の扱いを個別に確認する。UDC 作品②は提案B（衛星）の転用で、提案Bの事業モデルは UDC に出さない設計。biz-business は odpt の生成データを再利用している。",
+      "source": "reports/ops/relocation-satellite-2026-to-udc-2026.md; contests/ichibiz-2026/app/business/README.md"
+    }
+  ],
+  "registryGaps": [
+    "contests/dashboard/src/apps/registry.ts の APPS は12件（odpt, udc-moritsuchi, sat-a, sat-b, biz-business, biz-idea, biz-realestate, sat-alpha, biz-business-nb, biz-realestate-rn1, udc-aed, odpt-teiji）。odpt-kankou, odpt-kansui, odpt-kodure, sat-yabu, sat-sugi, biz-solar-guard の6件は未登録（progress.ts に solar-guard・kodure の記載あり）。copy-data.mjs にも6件はない。"
+  ]
+}

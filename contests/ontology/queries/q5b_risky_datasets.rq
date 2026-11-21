@@ -1,0 +1,15 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q5b 利用条件が非商用・未確認と記録されているデータ（Q5 の既定の対象）。
+SELECT DISTINCT ?dataset ?datasetLabel ?why
+WHERE {
+  ?dataset a c:Dataset ; rdfs:label ?datasetLabel .
+  { ?dataset c:hasLicense ?l . ?l c:restricts c:NonCommercial . BIND("非商用" AS ?why) }
+  UNION
+  { ?dataset c:hasLicense ?l . ?l c:conditionStatus ?s . FILTER(STRSTARTS(?s, "未確認")) BIND("条件が未確認と記録されている" AS ?why) }
+  UNION
+  { ?b a c:UnconfirmedDataCondition ; c:overDataset ?dataset . BIND("監査・エスカレーションが未確認と記録" AS ?why) }
+}
+ORDER BY ?dataset
