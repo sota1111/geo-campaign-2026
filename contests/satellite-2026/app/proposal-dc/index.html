@@ -36,7 +36,7 @@
       </details>
     </div>
     <button type="button" id="btn-home" class="home">全体に戻す</button>
-    <details class="legendbox" id="legendbox" open><summary>凡例<span class="lgsum">　造＝造成地・遊＝遊休地・右肩の数＝災害の種類数</span></summary><div id="legend" class="legend" aria-live="polite"></div></details>
+    <details class="legendbox" id="legendbox" open><summary>凡例<span class="lgsum">：造＝造成地・遊＝遊休地・右肩の数＝重なる災害の種類</span></summary><div id="legend" class="legend" aria-live="polite"></div></details>
     <p class="loading" id="loading" role="status">地図を読み込んでいます…（「候補地」の一覧は先に使えます）</p>
     <p class="tilewarn" id="tilewarn" hidden>背景地図を読めません（候補地・層・確認項目は使えます）</p>
     <p class="credit" id="credit"></p>
@@ -56,14 +56,19 @@
     <section id="cmp" class="cmp-box" aria-live="polite"></section>
     <div class="why" id="why"><b>防災・都市課題にどうつながるか</b>
       <ul>
-        <li>災害に重ならない所 → 災害時もデータ・通信の拠点を残せる可能性</li>
+        <li>災害に重ならない所 → 災害時も通信の拠点を残せる可能性</li>
         <li>造成地・遊休地 → 森林・農地を拓く量を減らせる可能性</li>
-        <li class="unv">排熱の活用 → 近くの熱需要を自治体に聞く <span class="tag">今回は未検証</span></li>
+        <li class="unv">排熱の活用 → 熱需要を自治体に聞く <span class="tag">未検証</span></li>
       </ul>
     </div>
     <div class="foot">
-    <details class="more" id="limits">
-      <summary>限界</summary>
+    <button type="button" id="btn-lim" class="more-btn lim">限界（誤差・1場面）</button>
+    <button type="button" id="btn-data" class="more-btn">使っているデータ・出典</button>
+    </div>
+  </aside>
+</main>
+<dialog id="limits" aria-labelledby="limits-t">
+      <h2 id="limits-t">限界（誤解しないために）</h2>
       <ul>
         <li><b>災害区域</b>（国土数値情報）は縮尺 1/25,000〜1/50,000 程度の概略で、位置の誤差は数百 m 規模。重要事項説明・証明には使えない。未作成の川・未指定の区域は「外」と出る。</li>
         <li><b>地盤の変動</b>（干渉SAR）は約 90 m 格子で、数百 m より狭い変動は読めない。植生・水面は値なし。沈下の原因は断定しない。</li>
@@ -72,11 +77,8 @@
         <li><b>電力</b>は OSM の登録分だけ。空き容量・接続可否・工期は分からない。</li>
         <li>通信・水・地震・活断層・液状化は扱わない（利用条件か基準が確認できていない）。</li>
       </ul>
-    </details>
-    <button type="button" id="btn-data" class="more-btn">使っているデータ・出典</button>
-    </div>
-  </aside>
-</main>
+  <form method="dialog"><button>閉じる</button></form>
+</dialog>
 <dialog id="datadlg" aria-labelledby="datadlg-t">
   <h2 id="datadlg-t">使っているデータ</h2>
   <div id="datadlg-body"></div>

@@ -236,18 +236,19 @@
     const p50 = data.stats.lst_p50;
     const cmpText = l.valid ? (l.median > p50 ? '周りより高い' : l.median < p50 ? '周りより低い' : '周りと同じ') : '';
     rows.push({ key: 'lst', label: '地表面温度', sat: true, hint: '夏の日中の地面の熱さ（気温・冷却の可否そのものではない）', status: l.valid ? 'info' : 'nodata',
-      value: l.valid ? `${l.median.toFixed(1)}℃・${cmpText}（8/22の1場面。冷却の可否は別に確認）` : '値がない（雲など）', short: l.valid ? `${l.median.toFixed(1)} ℃` : '値なし', num: l.valid ? l.median : null, src: SRC.lst,
+      value: l.valid ? `${l.median.toFixed(1)}℃・${cmpText}（8/22の1場面）` : '値がない（雲など）', short: l.valid ? `${l.median.toFixed(1)} ℃` : '値なし', num: l.valid ? l.median : null, src: SRC.lst,
       note: `2026-08-22 の昼前の 1 場面で、季節・時刻で変わる。範囲の中央値は ${p50} ℃、範囲全体の 10〜90% は ${data.stats.lst_p10}〜${data.stats.lst_p90} ℃。気温でも冷却の効率でもない。表面の種類（植生・裸地・建物）で大きく変わる。` });
     const ss = nearestSubstation(data.substations, lon, lat, 0), sh = nearestSubstation(data.substations, lon, lat, 66000), ln = nearestLine(data.lines, lon, lat);
     const subText = ss ? `変電所 ${fmtKm(ss.d)}・${fmtVolt(ss.s.voltage)}` : '範囲内に OSM の変電所なし';
-    const hv = sh && (!ss || sh.s !== ss.s) ? `／66 kV以上 ${fmtKm(sh.d)}` : '';
-    const lnText = ln ? `／送電線 ${fmtKm(ln.d)}（${fmtVolt(ln.l.v)}）` : '';
-    rows.push({ key: 'power', label: '電力設備（OSM）', status: 'info', value: subText + hv + lnText, short: ss ? `変電所 ${fmtKm(ss.d)}` : '変電所なし', src: SRC.sub,
-      note: (ss && ss.s.name ? `最寄りの変電所：${ss.s.name}。` : '') + 'いずれも最寄りまでの直線距離。OSM は網羅的でない。変電所の空き容量・接続の可否は分からない（電力会社の確認が要る）。' });
+    // 1 行に収める：最寄りの変電所と送電線の距離だけ。66 kV 以上の変電所・送電線の電圧は出典欄へ
+    const hv = sh && (!ss || sh.s !== ss.s) ? `66 kV以上の変電所 ${fmtKm(sh.d)}。` : '';
+    const lnText = ln ? `／送電線 ${fmtKm(ln.d)}` : '';
+    rows.push({ key: 'power', label: '電力設備（OSM）', status: 'info', value: subText + lnText, short: ss ? `変電所 ${fmtKm(ss.d)}` : '変電所なし', src: SRC.sub,
+      note: (ss && ss.s.name ? `最寄りの変電所：${ss.s.name}。` : '') + hv + (ln ? `最寄りの送電線は ${fmtVolt(ln.l.v)}。` : '') + 'いずれも最寄りまでの直線距離。OSM は網羅的でない。変電所の空き容量・接続の可否は分からない（電力会社の確認が要る）。' });
     const d = summarizeLand(layers.land, layers.chg, cells);
     const parts = [1, 2, 3, 4, 5].filter((v) => d.share[v] > 0).sort((a, b) => d.share[b] - d.share[a]).map((v) => `${LAND[v]} ${d.share[v]}%`);
     rows.push({ key: 'land', label: '土地の状態', sat: true, hint: '衛星画像で、いま何があるか・2020 年から植生が裸地等に変わったかを見る → 造成地・遊休地か', status: 'info',
-      value: d.valid ? `いま${parts.join('・')}${d.changed ? `。2020年は植生で今は裸地等の所：範囲の${d.changed}%` : ''}` : '値がない（雲など）', short: d.valid ? parts[0] : '値なし', src: SRC.land,
+      value: d.valid ? `${parts.join('・')}${d.changed ? `（植生→裸地等 2020→26年：${d.changed}%）` : ''}` : '値がない（雲など）', short: d.valid ? parts[0] : '値なし', src: SRC.land,
       note: '裸地等は更地・造成地のほか、舗装・未登録の建物・採石場を含む。建物は OSM に登録された分だけ。' });
     return rows;
   }

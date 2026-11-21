@@ -63,7 +63,8 @@ main { flex: 1; display: grid; grid-template-columns: minmax(0, 62fr) minmax(0, 
 .pin { flex: none; font-size: 12px; padding: 2px 8px; }
 .credit-more { font-size: 10px; padding: 0 5px; margin-right: 2px; }
 table.cmp thead th small { font-size: 10px; color: var(--acc); font-weight: 600; }
-.pin[aria-pressed="true"] { background: var(--acc); color: #fff; }
+.pin { background: var(--acc); color: #fff; font-weight: 700; }
+.pin[aria-pressed="true"] { background: #fff; color: var(--acc); font-weight: 400; }
 .impact { margin: 2px 0 4px; padding: 2px 6px; font-size: 12px; font-weight: 600; border-radius: 4px; }
 .impact.none { background: var(--nonebg); color: var(--none); } .impact.hit { background: var(--hitbg); color: var(--hit); }
 h2 { font-size: 15px; margin: 4px 0 0; }
@@ -78,7 +79,7 @@ h2 { font-size: 15px; margin: 4px 0 0; }
 .why { margin-top: 4px; padding: 3px 8px; font-size: 12px; background: var(--nonebg); border-left: 3px solid var(--none); border-radius: 4px; }
 .why ul { margin: 1px 0 0; padding-left: 16px; line-height: 1.35; }
 .why .unv { color: var(--sub); } .why .tag { font-size: 10.5px; padding: 0 4px; border: 1px dashed var(--nodata); border-radius: 3px; color: var(--nodata); white-space: nowrap; }
-.row { display: grid; grid-template-columns: 62px 1fr 22px; gap: 0 6px; padding: 1px 0; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 62px 1fr 30px; gap: 0 6px; padding: 1px 0; border-top: 1px solid var(--line); }
 .chip { align-self: start; margin-top: 2px; padding: 0 4px; border-radius: 3px; font-size: 11px; font-weight: 700; text-align: center; white-space: nowrap; }
 .chip.hit { color: var(--hit); background: var(--hitbg); border: 1px solid var(--hit); }
 .chip.none { color: var(--none); background: var(--nonebg); border: 1px solid var(--none); }
@@ -91,7 +92,7 @@ h2 { font-size: 15px; margin: 4px 0 0; }
 .row .hint { color: var(--acc); }
 .row .src { font-size: 10.5px; color: var(--sub); line-height: 1.35; margin-top: 1px; }
 .row .src a { color: var(--acc); }
-.row button.info { align-self: start; padding: 0; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; line-height: 1; border-color: #9cb3c9; color: var(--sub); }
+.row button.info { align-self: start; padding: 0; width: 30px; height: 20px; border-radius: 4px; font-size: 10.5px; line-height: 1; border-color: #9cb3c9; color: var(--sub); }
 .row button.info[aria-expanded="true"] { background: var(--infobg); }
 .cmp-box { margin-top: 4px; }
 .cmp-box h3 { margin: 0 0 2px; font-size: 13px; } .cmp-box h3 small { font-weight: 400; font-size: 11px; color: var(--sub); }
@@ -163,4 +164,31 @@ dialog th { background: var(--bg); }
   table.cmp thead th { white-space: normal; }
   table.cmp thead th small { display: block; }
   .why { font-size: 11.5px; }
+}
+
+/* 第5回：地盤の層・例の明示・概略の一言・未確認の行 */
+.mvd { display: inline-block; padding: 0 4px; border-radius: 3px; background: #b2182b; color: #fff; font-size: 10px; font-weight: 700; line-height: 1.5; }
+.mvmk { box-shadow: 0 0 3px rgba(0,0,0,.6); border: 1px solid #fff; cursor: default; }
+.mvmk[hidden] { display: none; }
+.legend .sw.hatch { background: repeating-linear-gradient(45deg, rgba(90,110,140,.7) 0 2px, rgba(90,110,140,.08) 2px 5px); }
+.satnote.strong { background: #fff4e0; border-color: var(--warn); font-weight: 600; }
+.satnote.strong b { color: #7a3d00; }
+.extag { display: inline-block; padding: 0 5px; border-radius: 3px; background: #6b4fa0; color: #fff; font-size: 10.5px; font-weight: 700; }
+.errtag { display: inline-block; padding: 0 4px; border: 1px solid var(--warn); border-radius: 3px; color: var(--warn); font-size: 10.5px; white-space: nowrap; }
+.sub { font-size: 11.5px; }
+table.cmp thead th .rng { font-size: 10px; font-weight: 400; color: var(--sub); }
+table.cmp thead th small.ex { color: #6b4fa0; margin-left: 2px; }
+table.cmp thead th small { margin-left: 2px; }
+table.cmp .tg { font-size: 9.5px; font-weight: 400; padding: 0 3px; border: 1px solid var(--line); border-radius: 3px; color: var(--sub); white-space: nowrap; }
+.rows li.gap { display: grid; grid-template-columns: 62px 1fr; gap: 0 6px; padding: 1px 0; border-top: 1px solid var(--line); font-size: 12px; color: var(--sub); line-height: 1.35; }
+.rows li.gap .chip { margin-top: 1px; }
+.more-btn.lim { border-color: var(--warn); color: var(--warn); }
+@media (max-width: 800px) {
+  .home { top: auto; bottom: 22px; right: 8px; }
+  .row { grid-template-columns: 60px 1fr 30px; gap: 0 4px; }
+  .rows li.gap { grid-template-columns: 60px 1fr; gap: 0 4px; font-size: 11px; }
+  .row .rb { font-size: 12.5px; line-height: 1.35; }
+  .row .val { margin-left: 4px; }
+  table.cmp thead th:first-child { width: 46px; }
+  .lgsum { display: inline; }
 }
