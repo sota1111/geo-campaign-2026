@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getApp } from '@/apps/registry'
-import { appUrl, contestUrl, ontologyDataUrl } from '@/lib/data'
+import { appUrl, contestUrl, ontologyDataUrl, ontologyFiguresUrl } from '@/lib/data'
 import { MARK_WORD } from '@/lib/fit'
 import {
   CAT, DEFAULT_SEVERITIES, DEFAULT_TYPES, GATE_TYPES, OPTIONAL_RELS, READINESS_MARK, SHAPE_CLASS, SHAPE_WORD, TYPE_STYLE,
@@ -92,6 +92,7 @@ export default function OntologyPage() {
           いま図に出しているのは {shownNodes.length} ノード・{shownEdges.length} つながり
           {view.focus ? '（選んだノードの近傍だけ）' : isDefault && !view.extra.length && !view.expanded.length ? '（既定: コンペ・応募・アプリ・止めているもの〈失格級の指摘・未確認のデータ条件・提出物の欠落〉。未記入欄・総司令官の判断・データ等は下の「図に出す種類」で足せます）' : ''}
         </p>
+        <p className="text-xs"><a href={ontologyFiguresUrl()} className="font-bold text-blue-900 underline" data-testid="onto-figures-link">図解ページ（型・止めているもの・次の行動・データ条件・適合を図で読む）へ</a></p>
         <a href="#onto-list" className="sr-only focus:not-sr-only focus:inline-block focus:rounded-md focus:bg-slate-900 focus:px-2 focus:py-1 focus:text-xs focus:font-bold focus:text-white">図を飛ばして、ノードの一覧へ</a>
       </header>
 

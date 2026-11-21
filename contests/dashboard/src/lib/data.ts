@@ -46,6 +46,11 @@ export function ontologyUrl(): string {
   return `${siteRoot()}ontology/index.html`
 }
 
+/** オントロジーの図解ページ（public/ontology-figures/。contests/ontology/figures.py が生成）の URL */
+export function ontologyFiguresUrl(): string {
+  return `${siteRoot()}ontology-figures/index.html`
+}
+
 /** ビルド時に public/ontology/ へ写した、オントロジーの JSON（graph.json・next-actions.json）の URL */
 export function ontologyDataUrl(file: string): string {
   return `${siteRoot()}ontology/${file}`

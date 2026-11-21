@@ -11,7 +11,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { pendingLabel, useIsPending } from '@/lib/availability'
 import { CONTESTS, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
-import { appUrl, contestUrl, ontologyUrl, portalUrl } from '@/lib/data'
+import { appUrl, contestUrl, ontologyFiguresUrl, ontologyUrl, portalUrl } from '@/lib/data'
 import { contestsByDeadline } from '@/apps/contests-info'
 import { asOf } from '@/pages/Progress'
 
@@ -161,6 +161,9 @@ export function AppShell({ children, activeContest }: { children: React.ReactNod
             <a href={ontologyUrl()} className="whitespace-nowrap text-sm font-medium hover:underline" data-testid="ontology-link" title="コンペ・案・データ・止めているもの・作業・判断のつながりを図とカードで見る">
               <span className="sm:hidden">つながり図</span>
               <span className="hidden sm:inline">つながり図（オントロジー）</span>
+            </a>
+            <a href={ontologyFiguresUrl()} className="whitespace-nowrap text-sm font-medium hover:underline" data-testid="ontology-figures-link" title="オントロジーを、型・提出を止めているもの・次の行動・データ条件・適合の図で読む">
+              図解
             </a>
             <span className="hidden text-xs text-muted-foreground lg:inline">提出状況は {asOf} 時点の記録</span>
           </header>
