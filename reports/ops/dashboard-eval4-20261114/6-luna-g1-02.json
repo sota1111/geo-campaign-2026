@@ -1,0 +1,70 @@
+{
+  "run": "6-luna-g1-02",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {"achieved": true, "value": "仙台市交通局（データ蓄積前）を選択して事業者画面を表示。", "where": "17-bus-selected.png"},
+        "G12-2": {"achieved": true, "value": "遅れ集計なし。2026-11-13の1日・40回取得で、遅れを推定できる位置データがまだなく、位置データ不足のため推定結果は未確定。収集予定時間帯の結果も未確定。", "where": "17-bus-selected.png, 27-bus-source-details.png"},
+        "G12-3": {"achieved": true, "value": "出典は公共交通オープンデータセンターの各事業者のバス位置・時刻表（CC BY 4.0）。収集初期で数値は試作段階の参考値。", "where": "27-bus-source-details.png, 17-bus-selected.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "右上の「出典・ライセンス」および右欄下部", "trying": "選択中事業者の出典とデータ状態を確認", "unclear": "モーダルは元アプリの出典欄・READMEを参照する説明で、実際の出典欄の場所がすぐ分からなかった", "action": "モーダルを閉じて右欄を下までスクロールし、画面内の出典・ライセンス欄を確認。約1分。", "suggestion": "この画面内の出典欄へ移動できるリンクを置き、データ期間・取得回数と同じ場所に出典を表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {"achieved": true, "value": "熱海駅起点で最寄りの登録地は熱海市0012、腹付け型、約1,100〜1,150m。", "where": "18-earth-landfill.png"},
+        "G2-2": {"achieved": true, "value": "1961〜69年の航空写真と現在の写真を境界スライダーで比較。画面説明では造成地範囲内の道路・建物の見え方に変化あり。", "where": "19-earth-oldphotos.png"},
+        "G2-3": {"achieved": true, "value": "「その他」分類で1件を端末内に保存。航空写真と現在を比べ、範囲内の道路・建物の見え方に変化があると記録。", "where": "26-earth-draft-copy.png"},
+        "G2-4": {"achieved": true, "value": "記録から通報文のたたき台を表示し、通報文コピーを実行。画面にコピー完了が表示された。CSV出力は画面上で完了表示となったが保存ファイルを確認できなかったため、コピーで達成。", "where": "26-earth-draft-copy.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "手順2「近くの盛土造成地を確かめる」", "trying": "熱海駅近くの登録地を特定", "unclear": "「500m以内に登録なし」と「最寄りは約1,100m」が続き、候補自体がないのか距離内にないだけなのか一瞬迷った", "action": "一覧の最上段の熱海市0012を選び、型を確認。約30秒。", "suggestion": "500m内にない旨と最寄り候補を別枠で示す"},
+        {"severity": "中", "where": "手順4の「気づいたこと」分類", "trying": "航空写真比較で気づいた道路・建物の見え方の変化を記録", "unclear": "初期選択が「亀裂・段差」で、現地で亀裂を見たと誤解される記録にならないか不明", "action": "「その他」を選び、写真比較の観察だとメモ。約1分。", "suggestion": "「画像上の気づき」分類を設け、現地確認済みの報告と区別する"},
+        {"severity": "低", "where": "アプリを開き直した直後の手順進捗", "trying": "保存済み記録が残っているかを確認", "unclear": "進捗表示が0/5に戻っていたため、記録も失われたのか判断できなかった", "action": "手順5へ進み、保存記録1件が残っていることを確認。約1分。", "suggestion": "手順進捗と端末内の保存記録が別であることを説明する"}
+      ],
+      "bugs": [
+        "手順5で「台帳をCSVで書き出す」を押すと画面に「CSVを書き出しました。」と表示されたが、指定保存先にCSVファイルが見当たらなかった。"
+      ]
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {"achieved": true, "value": "最高点0.94はS021・S022・S036の3区間同点。順位表の1位表示はS021。", "where": "03-satellite-scrolled.png"},
+        "G3-2": {"achieved": true, "value": "予算3.0kmに対し22区間・2.9kmを選択し、サンプル調査結果へ進んだ。", "where": "07-sat-autopick.png"},
+        "G3-3": {"achieved": true, "value": "調査結果を反映して衛星指標の重みが50%から60%に更新。第2回の未調査区間1位はS033（前回2位、1つ上昇）。", "where": "12-sat-second-ranking.png"},
+        "G3-4": {"achieved": true, "value": "画面上部に「架空データ」、サンプル市は実在地点ではない旨の表示。", "where": "02-satellite-home.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "手順2の自動選択ボタンと「候補15区間」一覧", "trying": "予算内で高得点区間を選択", "unclear": "候補表は15区間なのに、自動選択後は22区間になった", "action": "補足を読み、上限3.0kmまで点数順で選ぶため上位15外も含むと理解。約1分。", "suggestion": "「予算内で候補全体から選ぶ」とボタンに明記し、選択前に区間数と延長を示す"},
+        {"severity": "低", "where": "手順1の最高点カードと上位表", "trying": "最高点の区間を特定", "unclear": "0.94点が3区間同点なのに、カードに「表の1位はS021」とあり単独首位か迷った", "action": "上位表の順位と同点区間3つを記録。", "suggestion": "同点順位と表上の表示順を分けて示す"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {"achieved": true, "value": "大町から平日朝8時発・30分以内に病院へ行ける。手段は徒歩。", "where": "28-access-share.png"},
+        "G1-2": {"achieved": true, "value": "日曜ダイヤでも同じく徒歩で行ける。", "where": "28-access-share.png"},
+        "G1-3": {"achieved": true, "value": "最寄り停留所は片原町（約508m）。最終便は平日19:48、日曜19:48。", "where": "28-access-share.png"},
+        "G1-4": {"achieved": true, "value": "結論と画面リンクをコピーし、コピー済み表示を確認。リンクは127.0.0.1のローカル確認用で、公開後のURLを共有するよう画面に注意書きあり。", "where": "28-access-share.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "手順5「結論とリンクをコピー」", "trying": "結論と画面リンクを兄へ送れる状態にする", "unclear": "コピー完了表示は出たが、URLが127.0.0.1のローカル確認用で外部の相手は開けないと注意書きにあった", "action": "コピー完了を確認し、注意書きを読んで公開URLが別途必要と判断。約1分。", "suggestion": "コピー成功表示と同時にローカル用URLであることを明示し、公開URLがない場合は共有前に分かる表示にする"}
+      ],
+      "bugs": []
+    }
+  ]
+}

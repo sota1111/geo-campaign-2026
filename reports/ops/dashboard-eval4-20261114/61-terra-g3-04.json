@@ -1,0 +1,229 @@
+{
+  "run": "61-terra-g3-04",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "徳島駅付近：居住誘導区域内、都市機能誘導区域内",
+          "where": "04.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500mの推計人口：2025年1,643人、2035年1,463人、2050年1,187人（2025〜2050年28%減）",
+          "where": "04.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校",
+          "where": "04.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水0.5〜3m未満、津波1〜2m未満、高潮1〜3m未満の想定区域内。土砂災害警戒区域外",
+          "where": "05.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "将来人口は推計で実人口ではない。区域判定は参考で市公表図が正",
+          "where": "04.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "場所を指す地図",
+          "trying": "結果を探す",
+          "unclear": "結果が地図の下にあり、指定後に画面が移動しない",
+          "action": "下へスクロール（約15秒）",
+          "suggestion": "結果へのリンクを表示する"
+        },
+        {
+          "severity": "低",
+          "where": "人口と区域の欄",
+          "trying": "区域と人口の関係を理解する",
+          "unclear": "並列表示で因果関係と誤解しそう",
+          "action": "注意書きで因果を示さないと確認（約10秒）",
+          "suggestion": "注意を見出し近くに置く"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "架空のぬま田から半径1km以内に洪水の碑1件。大禹謨（1972年・洪水）350m。近さは因果や危険度を示さない",
+          "where": "08.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "1961〜69年の写真と現在を比較し、1945〜50年の空中写真を地図に重ねた",
+          "where": "06.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "架空のサンプルの語りを保存。必ず未確認から始まり、地図に？で表示",
+          "where": "06.png"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "確認済み・公開に変更後、公開分1件をGeoJSONで出力しファイルを確認",
+          "where": "11.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "オレンジの地名と語りは架空サンプル、青丸の伝承碑は実データ",
+          "where": "08.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順3",
+          "trying": "写真を見て手順を終える",
+          "unclear": "見ただけでは完了にならず、完了条件が分かりにくい",
+          "action": "後で重ね地図を選択（約30秒）",
+          "suggestion": "完了条件を写真の横に示す"
+        },
+        {
+          "severity": "中",
+          "where": "手順6",
+          "trying": "保存した記録を出力",
+          "unclear": "公開分0件となり、公開指定と確認済みの両方が必要と分かった",
+          "action": "手順5に戻り両方を設定（約40秒）",
+          "suggestion": "0件の理由から該当記録に移動できるようにする"
+        },
+        {
+          "severity": "中",
+          "where": "確認済みダイアログ",
+          "trying": "架空サンプルを出力",
+          "unclear": "出典検証できないサンプルを確認済みにする判断に迷った",
+          "action": "デモでは確認役を兼ねる説明を読んで操作（約20秒）",
+          "suggestion": "実務の出典検証との違いを強調する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市・月曜03:00、確認できたAEDは11台（2か所）",
+          "where": "12.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "市境から800m以上内側の人口175,218人のうち直線500m圏外は約167,400人（96%）",
+          "where": "12.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "地図の選択地点に24時間AEDを1台置くと新たに約2,400人が直線500m圏内",
+          "where": "02.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "候補・出力の設置先候補をCSVで書き出し、ファイルを確認",
+          "where": "候補・出力タブ（ボタンのスクリーンショットは保存できず。CSVは同名ディレクトリ）"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "時間不明5台は標準条件で数えない。隣市AED未読込、市境付近は上限寄り。距離は直線",
+          "where": "12.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "診断画面の左ペイン",
+          "trying": "数値と条件を確認",
+          "unclear": "数値と曜日・距離を同時に見にくい",
+          "action": "上下にスクロール（約20秒）",
+          "suggestion": "条件と主要結果を固定表示"
+        },
+        {
+          "severity": "中",
+          "where": "候補・出力",
+          "trying": "クリック地点の試算をCSV化",
+          "unclear": "候補一覧等はあるがクリック地点そのものの出力が見当たらない",
+          "action": "候補一覧を出力（約25秒）",
+          "suggestion": "クリック地点の条件と増加人数を出力する"
+        },
+        {
+          "severity": "低",
+          "where": "11台（2か所）",
+          "trying": "台数と場所数の差を理解",
+          "unclear": "差の理由が分からない",
+          "action": "両方記録（約10秒）",
+          "suggestion": "複数台設置の説明を添える"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅付近の例：商業地域、建ぺい率80%、容積率600%",
+          "where": "03.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水想定区域内（0.5〜3m）、高潮・津波想定区域内",
+          "where": "03.png"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る：建てられる建物と買い手の用途。貸す：用途制限。活かす：建物の種類や避難先。手放す：解体の要否・費用や国庫帰属前の登記",
+          "where": "03.png・10.png・09.png"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "印刷・PDF保存ボタンを押し「印刷画面を開きました」と表示。A4・1ページの案内",
+          "where": "07.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "徳島駅付近の例",
+          "trying": "土地の条件を試す",
+          "unclear": "架空回答の建物あり・登記まだが質問に反映されることに後で気づいた",
+          "action": "1枚シートの例の回答を確認（約20秒）",
+          "suggestion": "開始時に架空回答も自動入力すると明示"
+        },
+        {
+          "severity": "中",
+          "where": "手順4",
+          "trying": "4出口を比較",
+          "unclear": "長い左ペインをスクロールする必要がある",
+          "action": "各欄までスクロール（約25秒）",
+          "suggestion": "見出しリンクや折りたたみを設ける"
+        },
+        {
+          "severity": "低",
+          "where": "手順5",
+          "trying": "印刷状態を確認",
+          "unclear": "印刷画面を開いたと表示されたがプレビュー自体は見えない",
+          "action": "反応とA4案内を確認（約10秒）",
+          "suggestion": "画面内プレビューを設ける"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

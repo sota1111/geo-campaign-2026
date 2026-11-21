@@ -41,6 +41,15 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 
 仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
 
+## コンペの概要ページ（サイドバーのコンペ名から入る）
+
+ポータルのサイドバーのコンペ名はリンクで、押すと `contest/<コンペid>/index.html`（`udc-2026`・`satellite-2026`・`ichibiz-2026`・`odpt-2026` の4ページ）に移ります。ページには、概要・目的、実装の要否、そのコンペのアプリのカード（`orderedAppsByContest` の並び。新しい案は「新しい案（比較用・未選定）」の破線カード。押すとアプリの独立ページ）、締切、審査基準、提出のしかた・失格につながる条件・賞、未確認の事項、出典が出ます。サイドバーはポータルと同じです。上の「統合ダッシュボードへ戻る」でポータルに戻れ、各アプリの独立ページのヘッダーにも「○○の概要」リンク（`data-testid=contest-link`）があります。ポータルのトップ画面（一覧・その場で開く詳細）は変えていません。
+
+- 文言はすべて `src/apps/contests-info.ts` の `CONTEST_INFO`（出典はファイル先頭に記載）から出します。出典のない項目は書かず、無い項目は出しません。「目的」は `summary`（何を募集しているか）です。
+- 仕組み: `contest/<id>/index.html` が `src/contest-main.tsx` を読み、`#root` の `data-contest` で `src/pages/ContestPage.tsx` を描画します。`data-root="../../"` でサイトルートを解決し（`contestUrl()` は `@/lib/data`）、サブパスに置いても動きます。
+- 更新のしかた: 文言は `CONTEST_INFO` を直す。アプリの出し入れは `registry.ts` の `APPS`（カードは自動で変わる）。コンペを足すときは `registry.ts` の `CONTESTS`・`CONTEST_INFO` に足し、`contest/<id>/index.html`（既存のものを複写して `data-contest` と題名を変える）を作り、`vite.config.ts` の `CONTEST_IDS` と `scripts/roundtrip.mjs` の `contests` に足す。
+- 確認: `node scripts/smoke.mjs http://127.0.0.1:8840/ docs/screenshots/<日付> contest/udc-2026/ contest/satellite-2026/ contest/ichibiz-2026/ contest/odpt-2026/`、`node scripts/roundtrip.mjs`（サイドバー→コンペ画面→アプリ→「○○の概要」→ポータルの往復も確認）。テスト: `src/test/contest-page.test.tsx`。
+
 ## 進捗の表示（判断待ち・総司令官の作業・案ごとの完了と残作業）
 
 データは `src/data/progress.ts` にあります（型付き TS。元は `reports/ops/status-<日付>.md`）。参謀長は次の順で更新します。

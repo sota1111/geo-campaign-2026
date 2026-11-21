@@ -1,0 +1,205 @@
+{
+  "run": "6-luna-g2-09",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {
+          "achieved": true,
+          "value": "横須賀市716か所。上位: 本庁0005 80点、田浦0047 80点、久里浜0012 80点、逸見0047 80点、本庁0051 77点",
+          "where": "02-fill.png, 04-fill.png"
+        },
+        "G4-2": {
+          "achieved": false,
+          "value": "5行CSVプレビューを確認。ダウンロード完了は確認できず",
+          "where": "06-fill.png"
+        },
+        "G4-3": {
+          "achieved": false,
+          "value": "記録0件のまま。最新巡視0か所",
+          "where": "08-fill.png, 09-fill.png"
+        },
+        "G4-4": {
+          "achieved": true,
+          "value": "衛星由来変化量は未接続・点数に含まれない。架空12地点で変化体験",
+          "where": "02-fill.png, 03-fill.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "CSV書き出し手順",
+          "trying": "巡視計画をCSV保存",
+          "unclear": "押下後に保存完了したか、手順完了したかが分からない",
+          "action": "再度押したが完了表示なし",
+          "suggestion": "ダウンロード開始・完了と失敗を表示する"
+        },
+        {
+          "severity": "高",
+          "where": "巡視結果フォーム",
+          "trying": "巡視結果を1件記録",
+          "unclear": "入力後の記録が一覧に反映されず原因も不明",
+          "action": "入力・押下を再試行、台帳反映を確認したが0件",
+          "suggestion": "必須欄の未入力・保存結果を明示する"
+        },
+        {
+          "severity": "中",
+          "where": "手順3 衛星変化量",
+          "trying": "実データの巡視順位に衛星量を使う",
+          "unclear": "実データと架空体験が別である点",
+          "action": "説明文で12地点は架空と把握",
+          "suggestion": "実データへ反映しない旨を手順直下に明記"
+        }
+      ],
+      "bugs": [
+        "巡視記録押下後も記録0件、台帳反映なし",
+        "計画CSVボタン押下後も手順未完了で保存状態が見えない"
+      ]
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図（画面内見出し：配電線 樹木リスク台帳）",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {
+          "achieved": true,
+          "value": "F1-03 136点（85衛星・公開 / 51事業者）、停電想定420戸・避難所",
+          "where": "10-alpha.png"
+        },
+        "G8-2": {
+          "achieved": true,
+          "value": "計画対象4区間 F1-03,F2-05,F2-03,F3-04、約2.8km",
+          "where": "11-alpha.png"
+        },
+        "G8-3": {
+          "achieved": false,
+          "value": "記録なしのまま、点数・順位更新なし",
+          "where": "12-alpha.png"
+        },
+        "G8-4": {
+          "achieved": true,
+          "value": "①〜④は架空。⑤樹高マップのみ実データ（Meta・WRI、青梅市周辺、撮影日2020-02-09）",
+          "where": "10-alpha.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "外枠と埋め込みアプリ",
+          "trying": "実行サンプルを開いて操作",
+          "unclear": "外側はタイトルのみで実操作領域が埋め込み内",
+          "action": "埋め込み内のタブを操作",
+          "suggestion": "外枠に埋め込み操作エリアを示す"
+        },
+        {
+          "severity": "高",
+          "where": "③現地確認の記録",
+          "trying": "F1-03の確認結果を記録",
+          "unclear": "押下後も記録なし",
+          "action": "入力して記録ボタンを押し、一覧確認",
+          "suggestion": "保存成功・失敗を表示"
+        }
+      ],
+      "bugs": [
+        "現地確認記録を入力して記録ボタンを押しても記録なし"
+      ]
+    },
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {
+          "achieved": true,
+          "value": "案A 4,190人・65歳以上943人、案B 2,190人・65歳以上797人",
+          "where": "05-bus.png"
+        },
+        "G5-2": {
+          "achieved": true,
+          "value": "影響小は案B",
+          "where": "05-bus.png"
+        },
+        "G5-3": {
+          "achieved": true,
+          "value": "会議資料用CSV書き出しボタンを操作",
+          "where": "06-bus.png"
+        },
+        "G5-4": {
+          "achieved": true,
+          "value": "複数路線停止時の人数は下限（少なくとも）。平日朝8時・20分以内",
+          "where": "04-bus.png, 05-bus.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "案A/Bの作成",
+          "trying": "見直し案を作る",
+          "unclear": "例の路線をそのまま確定する意味",
+          "action": "表示されている例を各案として確定",
+          "suggestion": "比較用初期案と明記"
+        },
+        {
+          "severity": "中",
+          "where": "CSV書き出し",
+          "trying": "会議資料用のCSVを書き出す",
+          "unclear": "完了表示がなく保存を確認できない",
+          "action": "CSVボタンを押した",
+          "suggestion": "出力ファイル名と完了を表示"
+        }
+      ],
+      "bugs": [
+        "CSVボタン押下後に画面内で保存完了を確認できない"
+      ]
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {
+          "achieved": true,
+          "value": "2045年まで推定3,084件・508.4MW。20km圏外1,878件・322.5MW（63.4%）",
+          "where": "07-solar.png"
+        },
+        "G9-2": {
+          "achieved": true,
+          "value": "候補1拠点で322.5MW（63.4%）→166.4MW（32.7%）、平均37.4→16.2km",
+          "where": "07-solar.png"
+        },
+        "G9-3": {
+          "achieved": true,
+          "value": "結果をCSVでダウンロードするボタンを操作",
+          "where": "08-solar.png"
+        },
+        "G9-4": {
+          "achieved": true,
+          "value": "設備位置は町字代表点。廃棄時期は調達期間終了等の仮説。20kW未満設備は元データに含まれない",
+          "where": "07-solar.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "2回収圏の中か外か",
+          "trying": "圏外量を把握",
+          "unclear": "回収圏半径・直線距離・未確認拠点除外状態が混在して見える",
+          "action": "前提説明と初期値を読み直した",
+          "suggestion": "現状と拠点追加後を同条件の表で比較"
+        },
+        {
+          "severity": "中",
+          "where": "候補追加試算",
+          "trying": "候補1拠点の効果を件数でも把握",
+          "unclear": "MWの変化は示すが候補追加後の件数が本文に見当たらない",
+          "action": "MWの前後差を記録",
+          "suggestion": "件数も前後で併記"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

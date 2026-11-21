@@ -181,3 +181,27 @@ test("hash: 途中で切れた共有URL（%E0）でも既定値で起動する",
 test("readableShare: 一般の人が使えない設置位置は分母に入れない", () => {
   assert.equal(AN.readableShare({ "24h": 1, timed: 1, unknown: 2, nonpublic: 5 }), 0.5);
 });
+
+test("remaining: 置いた後も圏外の人口と割合（新たに入る人と同じ市全体の母数）", () => {
+  // 夜間は使えるAEDなし → 全部圏外。全体 650
+  const cov = AN.coverage(cells, [AWK], 0, 180, 500, "strict");
+  const g = AN.gainAt(cells, cov.covered, 35.0205, 139.0, 500); // c3(境界付近) と c4 が入る
+  assert.equal(g.pop, 350);
+  const r = AN.remaining(cov, g.pop);
+  assert.equal(r.before, 650); assert.equal(r.pop, 300); assert.equal(r.den, 650); assert.ok(Math.abs(r.share - 300 / 650) < 1e-9);
+  // 境界付近の候補でも「新たに入る人」の分だけ減る（矛盾しない）
+  assert.equal(r.before - r.pop, g.pop);
+  assert.equal(AN.remaining(cov, 99999).pop, 0);
+});
+
+test("topCandidates: 累計の新規人口と、置いた後に残る人口が整合する", () => {
+  const cov = AN.coverage(cells, [], 0, 180, 500, "strict");
+  const c = AN.topCandidates(cells, cov.covered, 500, 5);
+  assert.equal(c[0].cumPop, c[0].pop); assert.equal(c[1].cumPop, c[0].pop + c[1].pop);
+  assert.equal(c[0].popCore, 50 + 0); // 1位は c3(境界付近)+c4(core 50)
+  assert.equal(c[1].cumCore, 350); // core セル（c1+c2+c4）を覆い切る
+  assert.equal(AN.remaining(cov, c[0].cumPop).pop, cov.popOut - c[0].cumPop);
+  const last = c[c.length - 1];
+  assert.equal(AN.remaining(cov, last.cumPop).pop, 0); // 候補を全部置けば残らない
+  assert.equal(last.cumPop, cov.popOut);
+});

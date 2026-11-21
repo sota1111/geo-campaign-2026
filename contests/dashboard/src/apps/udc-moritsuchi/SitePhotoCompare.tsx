@@ -98,6 +98,7 @@ export function SitePhotoCompare({ fill, onInteract }: { fill: FillFeature; onIn
           </p>
         )}
         {!obs && <p>見えること: この地点の読み取りは未実施です。写真は目視で見比べ、昔の様子は断定しません。</p>}
+        <p data-testid="site-compare-limit">昔の写真は粗く、今の写真とは撮影の条件も違うため、<b>写真だけで変化を断定はできません</b>。気になる違いは、次の手順で「写真で見た違い（現地は未確認）」として記録できます。</p>
         {hill && <p>陰影起伏は<b>現在の</b>地形を陰影で表した図です。昔の地形は分かりません（写真より粗く表示されます）。</p>}
       </div>
       <PhotoCompare

@@ -8,6 +8,7 @@ const APP_IDS = [
   // 新しい案（比較用・未選定。元の静的版を埋め込む）
   'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed',
 ]
+const CONTEST_IDS = ['udc-2026', 'satellite-2026', 'ichibiz-2026', 'odpt-2026']
 const root = import.meta.dirname
 
 // マルチページ: ポータル index.html ＋ apps/<id>/index.html（別エントリ・別バンドル）
@@ -20,6 +21,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(root, 'index.html'),
+        ...Object.fromEntries(CONTEST_IDS.map((id) => [`contest-${id}`, path.resolve(root, `contest/${id}/index.html`)])),
         ...Object.fromEntries(APP_IDS.map((id) => [id, path.resolve(root, `apps/${id}/index.html`)])),
       },
     },

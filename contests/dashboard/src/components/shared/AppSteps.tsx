@@ -10,6 +10,9 @@ export interface AppStep {
   action?: string
   /** 完了しているか（ページの状態から計算して渡す） */
   done: boolean
+  /** 利用者の操作ではなく自動・既定値で満たされた時の説明（例: 「例の地点で設定済み」）。done が true の間だけ有効。
+   *  完了には数えるが、サイドバーでは操作済みと区別して表示し、進捗にも「うち自動 n」と出す */
+  auto?: string
   /** true なら「任意」。「いまここ」の判定と進捗の数から除外される */
   optional?: boolean
   /** 手順をクリックした時（タブ切替・スクロールなど。ページ側が渡す） */
@@ -37,10 +40,12 @@ export function stepProgress(steps: AppStep[]) {
 
 /** 進捗の表示文言。任意を除外して数えていることが分かるようにする。
  *  任意あり: 「必須 5 のうち 3 完了（任意 1）」／任意なし: 「5 のうち 3 完了」 */
-export function progressLabel(steps: Pick<AppStep, 'done' | 'optional'>[]): string {
+export function progressLabel(steps: Pick<AppStep, 'done' | 'optional' | 'auto'>[]): string {
   const p = stepProgress(steps as AppStep[])
   const opt = steps.filter((s) => s.optional).length
-  return opt > 0 ? `必須 ${p.total} のうち ${p.done} 完了（任意 ${opt}）` : `${p.total} のうち ${p.done} 完了`
+  const auto = steps.filter((s) => !s.optional && s.done && s.auto).length
+  const notes = [auto > 0 ? `うち自動 ${auto}` : '', opt > 0 ? `任意 ${opt}` : ''].filter(Boolean)
+  return `${opt > 0 ? `必須 ${p.total}` : `${p.total}`} のうち ${p.done} 完了${notes.length ? `（${notes.join('・')}）` : ''}`
 }
 
 type PublicStep = Omit<AppStep, 'onSelect'>
@@ -67,7 +72,7 @@ interface Ctx {
 const AppStepsContext = createContext<Ctx | null>(null)
 
 const signature = (steps: AppStep[], opts?: AppStepsOptions) =>
-  JSON.stringify([steps.map((s) => [s.id, s.title, s.hint ?? '', s.action ?? '', s.done, !!s.optional]), opts?.activeId ?? '', opts?.description ?? ''])
+  JSON.stringify([steps.map((s) => [s.id, s.title, s.hint ?? '', s.action ?? '', s.done, !!s.optional, s.auto ?? '']), opts?.activeId ?? '', opts?.description ?? ''])
 
 /** StandaloneShell が使う。登録された手順（onSelect を除く）を保持する */
 export function AppStepsProvider({ children }: { children: ReactNode }) {

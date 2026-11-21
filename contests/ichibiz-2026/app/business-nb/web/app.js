@@ -137,7 +137,8 @@
     if (!S.alt || !S.alt.total.plants) return '';
     var a = S.base.total, b = S.alt.total, o = opts();
     var inc = S.est ? a : b, exc = S.est ? b : a;
-    return '<br><span class="altnote">受入可否が未確認の拠点（' + esc(unconfNames()) + '）を含む場合の圏外は' + pct(inc.outKw, inc.kw) + '%、含まない場合は' + pct(exc.outKw, exc.kw) + '%（' + o.radiusKm + ' km・直線。どちらが実態に近いかは未確認）。</span>';
+    // 候補拠点を置いた後もこの比較は「既存施設だけ」の値のまま。主文（候補込み）と並ぶと候補が計算に入っていないように見えるため、明記する
+    return '<br><span class="altnote">' + (S.cand ? '【参考・候補拠点を足す前の既存施設だけでの比較】' : '') + '受入可否が未確認の拠点（' + esc(unconfNames()) + '）を含む場合の圏外は' + pct(inc.outKw, inc.kw) + '%、含まない場合は' + pct(exc.outKw, exc.kw) + '%（' + o.radiusKm + ' km・直線。どちらが実態に近いかは未確認）。</span>';
   }
 
   function renderChart() {

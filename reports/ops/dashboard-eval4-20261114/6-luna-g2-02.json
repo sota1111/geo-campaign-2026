@@ -1,0 +1,69 @@
+{
+  "run": "6-luna-g2-02",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線 樹木リスク台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {"achieved": true, "value": "区間F1-03が136点（衛星・公開データ85、事業者データ51）、衛星のみ順位1位", "where": "G8-plan-top-score.png"},
+        "G8-2": {"achieved": true, "value": "上位4区間の現地確認計画を作成。F1-03 136点、F2-05 79点、F2-03 92点、F3-04 81点。対象延長約2.8km", "where": "G8-plan-top-score.png"},
+        "G8-3": {"achieved": false, "value": "F1-03に2026-11-14『要伐採』を記録し、確認件数と要伐採件数は各1に更新。重み25・8・0のままで、点数・順位の更新なし（画面に自動では変えない旨の説明）", "where": "G8-field-record.png; G8-score-review.png"},
+        "G8-4": {"achieved": true, "value": "①〜④の線・区間・点数・停電戸数・確認結果は架空。⑤はMeta・WRI樹高マップの実データ体験（東京都青梅市周辺）のみ。線は仮線", "where": "G8-plan-top-score.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "現地確認記録の区間選択欄", "trying": "最高点F1-03の確認結果を登録", "unclear": "初期選択がF1-01のままで、選択したつもりのIDが登録前に明瞭に確認できなかった", "action": "F1-01の記録に気づいた後、F1-03を選択表示で確認して記録し直した。評価用ブラウザ内に2行できたが、最後にプロファイルを削除", "suggestion": "計画の先頭区間を初期値にし、登録確認で区間IDを再表示する"},
+        {"severity": "高", "where": "点数の見直し画面", "trying": "現地確認結果により点数か順位が更新されたか確認", "unclear": "記録数は反映されたが、点数・順位は自動更新されないと分かり、目標を完了できなかった", "action": "画面の『自動では変えません』を読み、重みが変化していないことを確認", "suggestion": "記録後に件数集計と点数更新の違いを案内し、再評価の手順を示す"},
+        {"severity": "中", "where": "トップのアプリ一覧", "trying": "配電線アプリを開く", "unclear": "最初のクリックが反応せず、クリック可能な範囲が分かりにくかった", "action": "位置を少し変えて再クリック", "suggestion": "カード全体をクリック可能にし、選択反応を明確にする"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {"achieved": true, "value": "案A：徳島バス株式会社・28 鳴門屋原線 4,190人／65歳以上943人。案B：徳島バス株式会社・21 鳴門線 2,190人／65歳以上797人", "where": "G5-scenario-A-lower-bound.png; G5-scenario-B.png; G5-comparison.png"},
+        "G5-2": {"achieved": true, "value": "案Bの影響が小さい。総数・65歳以上の両方が少ない", "where": "G5-comparison.png"},
+        "G5-3": {"achieved": true, "value": "比較表CSVをダウンロード。plan-comparison-tokushima-wdm20.csvを作成・確認", "where": "G5-csv-export.png"},
+        "G5-4": {"achieved": true, "value": "複数路線を同時に廃止する場合の人数は『少なくとも』の下限値。全停留所廃止のみ計算し、減便は未対応", "where": "G5-scenario-A-lower-bound.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "案A作成の『止める路線を追加』欄", "trying": "比較用に2案を異なる路線で作成", "unclear": "追加欄と例路線の確定の関係、路線を案に追加する操作か個別案の入替えかがすぐに分からなかった", "action": "案Aの初期路線28番を確定し、案Bの初期路線21番も確定して比較", "suggestion": "各案に選択済み路線を常時表示し、複数路線時の下限値の意味を追加操作の近くに示す"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの『回収圏』計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {"achieved": true, "value": "2045年まで・回収圏20kmで最寄り施設から直線20km超は1,878件・322.5MW（63.4%）", "where": "G9-site-added.png"},
+        "G9-2": {"achieved": true, "value": "試算候補拠点を1か所追加。圏外322.5MW（63.4%）→166.4MW（32.7%）、平均距離37.4km→16.2km", "where": "G9-site-added.png"},
+        "G9-3": {"achieved": true, "value": "recovery-zone-kyoto-fit-2045-20km.csvを作成・確認", "where": "G9-csv-export.png"},
+        "G9-4": {"achieved": true, "value": "位置・廃棄時期は推定／仮説。施設所在地も推定を含み、距離は直線・町字代表点。20kW未満の設備は元データに含まれない", "where": "G9-assumptions.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "地図左側の条件パネル", "trying": "圏外量を見て候補拠点を追加", "unclear": "条件パネルが独立してスクロールすることが分からず、スクロール中に対象年を一度2050年へ変更した", "action": "気づいて2045年へ戻し、候補拠点の試算を続けた。約2分", "suggestion": "パネル内スクロールを目立たせ、選択中の仮説条件を結果の近くに固定表示する"},
+        {"severity": "低", "where": "画面上部の前提説明", "trying": "圏外件数を現場の設備実数として解釈", "unclear": "出力が推定と仮説に基づく値か、初見では即断しにくかった", "action": "前提欄で位置推定、廃棄仮説、直線距離を確認", "suggestion": "結果の直近にも推定値・仮説条件を短く表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {"achieved": true, "value": "実データ（横須賀市）で上位5か所。横須賀市本庁0005 80点、田浦0047 80点、逸見0047 80点、久里浜0012 80点、本庁0051 77点", "where": "G4-plan-csv.png"},
+        "G4-2": {"achieved": true, "value": "patrol-plan.csvを作成・確認。5地点入り", "where": "G4-plan-csv.png"},
+        "G4-3": {"achieved": true, "value": "横須賀市本庁0005に2026-11-14『問題なし』を記録。計画一覧と台帳の最新巡視に反映", "where": "G4-ledger-reflected.png"},
+        "G4-4": {"achieved": true, "value": "衛星由来の変化量は未接続で点数に含まれない。模擬12地点での衛星スライダー体験と実台帳を区別", "where": "G4-plan-csv.png; G4-ledger-reflected.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "巡視結果の選択欄", "trying": "『問題なし』を選んで巡視記録を保存", "unclear": "メニュー上の項目をクリックしても選択状態にならず、記録できない理由が分からなかった", "action": "エラー表示後、欄を開き直しキーボードで選択。約30秒", "suggestion": "選択後の状態を明確にし、未選択時は欄へ誘導する"}
+      ],
+      "bugs": []
+    }
+  ]
+}

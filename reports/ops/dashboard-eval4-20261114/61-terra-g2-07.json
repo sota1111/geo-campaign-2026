@@ -1,0 +1,198 @@
+{
+  "run": "61-terra-g2-07",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {
+          "achieved": true,
+          "value": "案A 4,190人・65歳以上943人、案B 2,190人・65歳以上797人",
+          "where": "02-bus-compare.png"
+        },
+        "G5-2": {
+          "achieved": true,
+          "value": "案B",
+          "where": "02-bus-compare.png"
+        },
+        "G5-3": {
+          "achieved": true,
+          "value": "plan-comparison-tokushima-wdm20.csv",
+          "where": "03-bus-export.png"
+        },
+        "G5-4": {
+          "achieved": true,
+          "value": "複数路線の人数は下限値",
+          "where": "01-bus-condition.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "案作成",
+          "trying": "2案を作る",
+          "unclear": "初期路線は例か選択済みか",
+          "action": "例のまま確定",
+          "suggestion": "チップにも例と表示"
+        },
+        {
+          "severity": "中",
+          "where": "条件画面",
+          "trying": "下限値を理解",
+          "unclear": "下限となる理由",
+          "action": "注意と詳細案内を確認",
+          "suggestion": "併用経路の例を添える"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {
+          "achieved": true,
+          "value": "1,878件・322.5 MW（63.4%）",
+          "where": "06-solar-after.png"
+        },
+        "G9-2": {
+          "achieved": true,
+          "value": "候補追加で322.5→166.4 MW、63.4→32.7%",
+          "where": "06-solar-after.png"
+        },
+        "G9-3": {
+          "achieved": true,
+          "value": "recovery-zone-kyoto-fit-2045-20km.csv",
+          "where": "07-solar-export.png"
+        },
+        "G9-4": {
+          "achieved": true,
+          "value": "位置は町字代表点、廃棄時期は仮定",
+          "where": "04-solar-assumptions.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "左の結果欄",
+          "trying": "圏外量と拠点追加を探す",
+          "unclear": "左欄のみスクロールすること",
+          "action": "左欄でスクロール",
+          "suggestion": "続きの存在を明示"
+        },
+        {
+          "severity": "中",
+          "where": "拠点追加",
+          "trying": "候補を探す",
+          "unclear": "最小化する対象",
+          "action": "説明を読んで実行",
+          "suggestion": "ボタンに距離の合計と明示"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {
+          "achieved": true,
+          "value": "横須賀市716か所から上位5か所",
+          "where": "10-fill-export.png"
+        },
+        "G4-2": {
+          "achieved": true,
+          "value": "patrol-plan.csv、5行",
+          "where": "10-fill-export.png"
+        },
+        "G4-3": {
+          "achieved": true,
+          "value": "本庁0005、是正対象、台帳に反映",
+          "where": "11-fill-record.png"
+        },
+        "G4-4": {
+          "achieved": true,
+          "value": "衛星由来変化量は未接続で点数に含まれない",
+          "where": "08-fill-data.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順3",
+          "trying": "実データで計画",
+          "unclear": "架空値の操作が実データに影響するか",
+          "action": "注意を読んで手順4へ",
+          "suggestion": "手順一覧にも影響しないと表示"
+        },
+        {
+          "severity": "低",
+          "where": "巡回計画",
+          "trying": "上位5件を確認",
+          "unclear": "表示が順位順と違う",
+          "action": "巡回順と台帳順位を確認",
+          "suggestion": "見出しに並べ替えを明示"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図（配電線 樹木リスク台帳）",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {
+          "achieved": true,
+          "value": "F1-03、136点",
+          "where": "12-power-ranking.png"
+        },
+        "G8-2": {
+          "achieved": true,
+          "value": "上位4区間を計画し記録段階へ",
+          "where": "12-power-ranking.png"
+        },
+        "G8-3": {
+          "achieved": true,
+          "value": "F1-03を要伐採と記録、手動で重みを変更し136→161点",
+          "where": "05-power-updated.png"
+        },
+        "G8-4": {
+          "achieved": true,
+          "value": "①〜④は架空、⑤のMeta・WRI樹高マップは実データ、線は仮",
+          "where": "12-power-ranking.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "現地確認の計画",
+          "trying": "上位区間を確認",
+          "unclear": "点数順ではない",
+          "action": "巡回順の説明を確認",
+          "suggestion": "台帳順位を併記"
+        },
+        {
+          "severity": "中",
+          "where": "現地確認の記録",
+          "trying": "F1-03を記録",
+          "unclear": "初期選択がF1-01",
+          "action": "選び直した",
+          "suggestion": "計画対象を引き継ぐ"
+        },
+        {
+          "severity": "中",
+          "where": "点数の見直し",
+          "trying": "結果を優先順位に反映",
+          "unclear": "自動で変わるか",
+          "action": "手動で重みを変更",
+          "suggestion": "記録後に手動操作へ案内"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

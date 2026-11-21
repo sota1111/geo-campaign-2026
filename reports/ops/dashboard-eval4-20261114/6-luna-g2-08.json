@@ -1,0 +1,74 @@
+{
+  "run": "6-luna-g2-08",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {"achieved": true, "value": "既定の20 km・2045年まで・調達期間終了時仮説で、圏外753件・166.4 MW (32.7%)。", "where": "25-solar-app.png"},
+        "G9-2": {"achieved": true, "value": "距離最小化の候補拠点1か所を試算。圏外322.5 MW (63.4%) → 166.4 MW (32.7%)、平均距離37.4 → 16.2 km。座標35.281, 135.312付近。", "where": "26-solar-suggest.png"},
+        "G9-3": {"achieved": true, "value": "recovery-zone-kyoto-fit-2045-20km.csv をダウンロード。", "where": "26-solar-suggest.png"},
+        "G9-4": {"achieved": true, "value": "設備位置は町字代表点。廃棄時期はFIT終了または運転開始＋N年という仮説。距離は直線で、20kW未満設備は元データに含まれない。", "where": "25-solar-app.png"}
+      },
+      "confusions": [
+        {"severity":"低","where":"3拠点を足すと？（試算）","trying":"回収圏外の削減候補を置く","unclear":"距離を最小化する操作が実在拠点の開設を確定するのか、仮置き試算なのか","action":"試しに実行し、座標と試算の表示を確認した","suggestion":"ボタン名を『候補地点を試算』とし、仮置きであることを事前に示す"},
+        {"severity":"低","where":"施設条件","trying":"圏外量を判断する","unclear":"受入未確認拠点を既定で除外した場合と含む場合で圏外率が大きく異なる","action":"画面の両条件の割合を読み、既定除外を採用した","suggestion":"圏外量の横に両ケースの比較を出し、既定条件を明記する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {"achieved": true, "value": "横須賀市実データ716か所。計画5件: 本庁0005(80点/台帳1位)、田浦0047(80/2位)、逸見0047(80/4位)、久里浜0012(80/3位)、本庁0051(77/5位)。", "where": "14-step4.png"},
+        "G4-2": {"achieved": false, "value": "CSV出力の手順画面に5件の表が表示されたが、計画CSVを保存できず、手順5は未完了。", "where": "16-step5.png"},
+        "G4-3": {"achieved": true, "value": "2026-11-14、本庁0005を『問題なし』で記録。台帳の最新巡視に80点・問題なし・2026-11-14が1件反映。", "where": "22-verify-ledger.png"},
+        "G4-4": {"achieved": true, "value": "実データ版の衛星由来変化量は未接続・点数に含まれない。架空12地点の100%試算は順位変動8地点、上位5に区域外 山林縁が新規。", "where": "07-sat100.png"}
+      },
+      "confusions": [
+        {"severity":"高","where":"手順3/4のガイドと本文","trying":"『次はこれ』から手順4の計画作成へ進む","unclear":"項目を開く操作と本文手順の切替・完了操作の関係。ヘッダー番号が本文とずれる場面もあった","action":"手順リストから該当項目を選び直し、本文の確定ボタンを探した","suggestion":"選択中手順の本文を同期し、ガイド項目は『手順を開く』と表記する"},
+        {"severity":"高","where":"計画CSV出力","trying":"確定した5件の計画を持ち帰る","unclear":"出力操作が成功したか、台帳全件CSVと計画CSVのどちらか","action":"画面上のCSV手順を試したがファイルを得られず、未達とした","suggestion":"出力成功時にファイル名・完了状態を表示し、計画CSVと台帳CSVを区別する"},
+        {"severity":"中","where":"巡視結果フォーム","trying":"巡視結果を登録する","unclear":"入力した巡視者がフォームに認識されず必須欄エラーが出た","action":"巡視者を入力し直して保存し、その後台帳反映を確認した","suggestion":"入力値と必須エラーを欄の隣に即時表示する"},
+        {"severity":"中","where":"計画の回り順","trying":"優先度上位5件を訪問順に確認する","unclear":"同点の台帳順位と訪問順が異なる","action":"各行の台帳順位と点数を読み、回り順は別の順序と理解した","suggestion":"優先順位と訪問順を列で分ける"}
+      ],
+      "bugs": [
+        "手順3の架空スライダー操作後に手順4を選択すると、ヘッダーや本文に旧番号が残るなど表示が不整合。手順項目を切り替え、再読込しても進捗と本文が一致しない場面を再現。",
+        "手順5の計画CSVをダウンロードできず、CSV出力操作後も手順は未完了のまま。"
+      ]
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {"achieved": false, "value": "最上位区間の名前・点数を証跡付きで報告できる記録を確保できなかった。", "where": "スクリーンショット未保存"},
+        "G8-2": {"achieved": true, "value": "現地確認へ進める操作は実施したが、区間名の証跡なし。", "where": "スクリーンショット未保存"},
+        "G8-3": {"achieved": false, "value": "確認結果後の点数・順位更新を確認できなかった。", "where": "スクリーンショット未保存"},
+        "G8-4": {"achieved": false, "value": "トップカードでは『一部架空』を確認。実データと架空データの具体的な内訳は記録できず。", "where": "23-home2.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"配電線沿いの優先伐採地図","trying":"最高点区間の特定から現地確認・記録を進める","unclear":"具体的な区間、確認前後の順位、実データ・架空データの内訳を証跡で確かめられなかった","action":"アプリの利用を試したが、結果を報告できる画面記録を確保できなかった","suggestion":"区間一覧にデータの実/架空ラベルを置き、確認前後の点数順位を記録画面に表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {"achieved": true, "value": "案A 4,190人・うち65歳以上943人。案B 2,190人・うち65歳以上797人。", "where": "36-verdict.png"},
+        "G5-2": {"achieved": true, "value": "影響が小さい案はB。", "where": "36-verdict.png"},
+        "G5-3": {"achieved": true, "value": "plan-comparison-tokushima-wdm20.csvを書き出し。", "where": "42-bus-csvdone.png"},
+        "G5-4": {"achieved": true, "value": "複数路線の人数は下限値。代替交通は全員補える仮定の算術で実際の効果見込みではない。", "where": "27-bus.png"}
+      },
+      "confusions": [
+        {"severity":"中","where":"手順ガイド","trying":"案A・案B・比較・書き出しの順に進む","unclear":"手順項目を押すことと、本文内で例を確定する操作が別である","action":"本文の確定ボタンを探して押した","suggestion":"手順を開く操作と例を確定する操作を明確に分ける"},
+        {"severity":"低","where":"比較画面の代替交通試算","trying":"病院へ行けなくなる人数を比較する","unclear":"仮定上の残人数が実際の交通施策の効果と誤解されうる","action":"注記を確認し、実施効果として扱わなかった","suggestion":"試算の数値横にも『仮定上の算術』を表示する"}
+      ],
+      "bugs": []
+    }
+  ]
+}

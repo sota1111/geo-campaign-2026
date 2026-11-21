@@ -20,13 +20,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   ATAMI_STATION, KINDS, KIND_LABEL, distText, fmtDate, inCoverage, kindDescription,
-  ledgerSummary, makeRecord, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
+  ledgerSummary, makeRecord, moritsuchiProgress, nearbyFills, nearestFill, reportText, sanitizeRecords, toCSV, toGeoJSON, fromGeoJSON,
   type FillFeature, type MwRecord, type NearFill,
 } from './lib'
 import { KIND_HELP, NEAR_M, nearSummary, searchPlaces, type PlaceHit } from './search'
@@ -167,7 +166,9 @@ export default function App() {
   const op = Math.min(100, Math.max(0, Number(opStr) || 60))
 
   // フォーム
-  const [kind, setKind] = useState('crack')
+  // 初期値は未選択（既定で「亀裂・段差」が入ると、見ていない亀裂を記録・通報してしまう）
+  const [kind, setKind] = useState('')
+  const [copiedMsg, setCopiedMsg] = useState('')
   const [when, setWhen] = useState(() => fmtDate(new Date()).replace(' ', 'T'))
   const [memo, setMemo] = useState('')
   const [blurred, setBlurred] = useState(false)
@@ -295,6 +296,7 @@ export default function App() {
     const f = fills.find((x) => x.properties.id === id)
     if (!f) return
     setSelFill(id)
+    setDidLook(true)
     toast.success(`${id}（${f.properties.kind}）を選びました`)
     mapRef.current?.fitBounds(bboxOf(f), { padding: 70, maxZoom: 17, duration: 600 })
   }, [fills])
@@ -330,10 +332,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, fills])
 
-  // 「確かめる」: 起点を決めたうえで表示したら済。造成地が未選択なら最寄りを選んだ状態で見せる
+  // 「確かめる」: 画面を開いただけでは済にしない（一覧か地図で造成地を自分で選んだとき済）。造成地が未選択なら最寄りを選んだ状態で見せる
   useEffect(() => {
     if (step !== 'look' || !originChosen || !fills.length) return
-    setDidLook(true)
     if (selFill === null) {
       const first = nearbyFills(origin.lng, origin.lat, fills, 1)[0]
       if (first) setSelFill(first.id)
@@ -341,10 +342,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, originChosen, fills])
 
-  // 「見比べる」: 造成地を選んだうえで表示したら済。昔の写真が未選択なら1961〜69年を重ねて見せる
+  // 「見比べる」: 画面を開いただけでは済にしない（写真の境界を動かす・切り替えたとき済）。見せ方の初期化だけここで行う
   useEffect(() => {
     if (step !== 'compare' || selFill === null) return
-    setDidCompare(true)
     // 主役は新旧比較。大きな地図への半透明の重ね表示は、旧操作の折りたたみを開いたときだけ出す
     if (!sample) setOld('none')
     const f = fills.find((x) => x.properties.id === selFill)
@@ -395,6 +395,14 @@ export default function App() {
       selectRecord(id)
     } else if (layerId === 'fills-fill') {
       setSelFill(String(f.properties?.id))
+      // 地図上の盛土を押したら、その造成地の詳細（「近くの盛土造成地を確かめる」の画面）を開く。
+      // 記録の位置を決めている最中（rec）・書き出し中（prep）・写真の見比べ中（compare）は画面を切り替えない
+      if (step === 'place' || step === 'ref') {
+        setDidLook(true)
+        goStep('look')
+      } else if (step === 'look') {
+        setDidLook(true)
+      }
     }
   }
   const onMapClick = ({ lng, lat }: { lng: number; lat: number }) => {
@@ -437,7 +445,7 @@ export default function App() {
   /* ---------- 記録 ---------- */
   const save = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pick) return
+    if (!pick || !kind) return
     const rec = makeRecord({
       id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       lng: pick.lng, lat: pick.lat, kind, memo,
@@ -449,6 +457,8 @@ export default function App() {
     setPick(null)
     setPickMsg('')
     setMemo('')
+    setKind('')
+    setCopiedMsg('')
     setWhen(fmtDate(new Date()).replace(' ', 'T'))
     setSelRec(rec.id)
     setAddedNow(true)
@@ -475,9 +485,13 @@ export default function App() {
   const copy = async (text: string, okMsg: string, prepared = false) => {
     try {
       await navigator.clipboard.writeText(text)
-      if (prepared) setDidPrepare(true)
+      if (prepared) {
+        setDidPrepare(true)
+        setCopiedMsg(okMsg)
+      }
       toast.success(okMsg)
     } catch {
+      if (prepared) setCopiedMsg('コピーできませんでした。文面を手動で選択してコピーしてください。')
       toast.error('コピーできませんでした。文面を手動で選択してコピーしてください。')
     }
   }
@@ -499,15 +513,17 @@ export default function App() {
 
   const exportGeo = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
-    downloadGeoJson(`moritsuchi-records-${stamp()}.geojson`, markGeoJson(toGeoJSON(records)))
+    const name = `moritsuchi-records-${stamp()}.geojson`
+    downloadGeoJson(name, markGeoJson(toGeoJSON(records)))
     setDidPrepare(true)
-    setIoMsg('GeoJSONを書き出しました。')
+    setIoMsg(`GeoJSONを書き出しました（${name}、${records.length}件。ブラウザのダウンロード先に保存されます）。`)
   }
   const exportCsv = () => {
     if (!records.length) return setIoMsg('書き出す記録がありません。')
-    downloadText(`moritsuchi-records-${stamp()}.csv`, markCsv(toCSV(records)), 'text/csv;charset=utf-8')
+    const name = `moritsuchi-records-${stamp()}.csv`
+    downloadText(name, markCsv(toCSV(records)), 'text/csv;charset=utf-8')
     setDidPrepare(true)
-    setIoMsg('CSVを書き出しました。')
+    setIoMsg(`CSVを書き出しました（${name}、${records.length}件。ブラウザのダウンロード先に保存されます）。`)
   }
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target
@@ -560,13 +576,15 @@ export default function App() {
   }
 
   // 左サイドバー（スマホは上部ステッパー）が唯一のナビゲーション。上から順に進めると目的を達成できる
+  // 必須は「場所」「近くの盛土を確かめる」「記録」「届け出の準備」の4つ。昔の写真は確認用の任意（参考）。判定は lib.ts の moritsuchiProgress
+  const ps = moritsuchiProgress({ originChosen, originIsExample, didLook, didCompare, addedNow, didPrepare })
   useAppSteps(
     [
-      { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: originChosen },
-      { id: 'look', title: STEP_META.look.title, hint: '一覧から選び、型を見る', done: didLook },
-      { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今', done: didCompare },
-      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: addedNow },
-      { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: didPrepare },
+      { id: 'place', title: STEP_META.place.title, hint: '住所・駅名で検索（熱海駅は例）', done: ps.place.done, auto: ps.place.auto },
+      { id: 'look', title: STEP_META.look.title, hint: '一覧か地図の盛土を選び、型を見る', action: '造成地を選ぶと完了', done: ps.look.done, optional: false },
+      { id: 'rec', title: STEP_META.rec.title, hint: '地図で位置を決めて台帳に足す', action: '今回1件保存すると完了', done: ps.rec.done },
+      { id: 'prep', title: STEP_META.prep.title, hint: '台帳の書き出し・通報文', action: '書き出すかコピーすると完了', done: ps.prep.done },
+      { id: 'compare', title: STEP_META.compare.title, hint: '1961〜69年／1974〜78年の写真と今（任意）', action: '写真の境界を動かすと完了', done: ps.compare.done, optional: true },
       { id: 'ref', title: STEP_META.ref.title, hint: '出典・注意・ハザードマップ', done: false, optional: true },
     ],
     {
@@ -683,6 +701,13 @@ export default function App() {
           </p>
         )}
       </div>
+      {(originIsExample || !originChosen) && (
+        <Alert data-testid="home-howto">
+          <AlertDescription>
+            自宅を設定するには、下の検索欄に自宅の住所や最寄り駅を入れて「探す」を押し、出てきた候補を選んでください。いまの「熱海駅」は例の位置で、自宅ではありません。
+          </AlertDescription>
+        </Alert>
+      )}
       {searchForm}
       <p className="text-xs text-muted-foreground">検索は国土地理院の地名検索（GETのみ）を使います。入力した文字だけが送られ、記録は送られません。</p>
       <div className="flex flex-wrap gap-2">
@@ -721,6 +746,11 @@ export default function App() {
       <div className="rounded-md border-2 border-primary bg-accent/50 p-2">
         <div className="text-xs text-muted-foreground" data-testid="near-origin">起点: 「{origin.label}」{originIsExample && '（自宅の結果ではありません）'}</div>
         <div className="text-sm font-semibold" data-testid="near-summary">{nearSummary(stationList)}</div>
+        {originIsExample && (
+          <button type="button" className="mt-1 text-xs font-medium text-primary underline" data-testid="look-set-home" onClick={() => goStep('place')}>
+            自宅の近くを見るには: 「自宅の場所を入れる」で住所を検索する
+          </button>
+        )}
       </div>
       <ul className="space-y-1.5" aria-label="近い盛土造成地">
         {stationList.map((d) => (
@@ -758,7 +788,7 @@ export default function App() {
           <KindBadge kind={selFillFeature.properties.kind} />
         </div>
       ) : (
-        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。手順2の一覧か、地図の色付きの範囲をタップして選ぶと、その造成地の昔の写真と今を見比べられます。</p>
+        <p className="rounded-md border border-dashed p-2 text-sm text-muted-foreground">造成地は未選択です。「近くの盛土造成地を確かめる」の一覧か、地図の色付きの範囲をタップして選ぶと、その造成地の昔の写真と今を見比べられます。</p>
       )}
       {selFillFeature && (
         <>
@@ -843,13 +873,20 @@ export default function App() {
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="mw-kind">気づいたこと</Label>
-          <Select value={kind} onValueChange={setKind}>
-            <SelectTrigger id="mw-kind" className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="mw-kind">気づいたこと（必須）</Label>
+          {/* 標準の select（キーボード・支援技術で確実に選べる）。未選択では保存できない */}
+          <select
+            id="mw-kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+            required
+            data-testid="kind-select"
+            className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">選んでください</option>
+            {KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
+          </select>
+          <p className="text-xs text-muted-foreground">昔の写真との見比べで気づいたことは「写真で見た違い（現地は未確認）」を選びます。</p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="mw-when">気づいた日時</Label>
@@ -879,7 +916,8 @@ export default function App() {
             <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setClearOpen(true)}><Trash2 className="size-3.5" />全記録を消す</Button>
           </div>
         )}
-        <Button type="submit" disabled={!pick} className="w-full">台帳に足す（この端末に保存）</Button>
+        {pick && !kind && <p className="text-xs font-medium text-amber-900" data-testid="kind-required">「気づいたこと」を選ぶと保存できます。</p>}
+        <Button type="submit" disabled={!pick || !kind} className="w-full">台帳に足す（この端末に保存）</Button>
       </div>
     </form>
   )
@@ -912,6 +950,9 @@ export default function App() {
           <Button size="lg" className="h-12 text-base" onClick={exportCsv} disabled={!records.length} data-testid="export-csv"><Download className="size-5" />台帳をCSVで書き出す</Button>
           <Button size="lg" variant="outline" className="h-12 text-base" onClick={exportGeo} disabled={!records.length}><Download className="size-5" />GeoJSONで書き出す</Button>
         </div>
+        {/^(CSV|GeoJSON)を書き出しました/.test(ioMsg) && (
+          <p className="rounded-md border border-sky-700 bg-sky-50 p-2 text-sm font-medium text-sky-950" role="status" data-testid="export-msg">✔ {ioMsg}</p>
+        )}
         <p className="text-xs text-muted-foreground">
           CSVは表計算ソフトで開けます。GeoJSONは、仲間に渡して読み込んでもらったり、地図ソフト（QGIS等）で確かめたりできます。このページは送信しません。
         </p>
@@ -928,7 +969,18 @@ export default function App() {
               {r.outOfCoverage && <div className="text-xs text-destructive">※対象範囲外の位置</div>}
               {r.memo && <div className="whitespace-pre-wrap break-words text-xs text-muted-foreground">{r.memo}</div>}
               <div className="flex gap-2 pt-0.5">
-                <Button size="sm" variant="outline" onClick={() => selectRecord(r.id)}>この記録の通報文</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    selectRecord(r.id)
+                    setCopiedMsg('')
+                    // 通報文は一覧の下に出る。押した直後に見えるよう、そこまで動かす
+                    requestAnimationFrame(() => document.getElementById('mw-report')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+                  }}
+                >
+                  この記録の通報文
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => removeRecord(r.id)}><Trash2 className="size-4" />削除</Button>
               </div>
             </li>
@@ -951,10 +1003,15 @@ export default function App() {
       </p>
 
       {selectedRecord && (
-        <div className="space-y-2 rounded-md border p-3">
+        <div id="mw-report" className="space-y-2 rounded-md border p-3">
           <div className="text-sm font-semibold">1件の通報文のたたき台（選んだ記録）</div>
           <Textarea readOnly rows={7} value={report} aria-label="通報文のたたき台" className="text-sm" data-testid="report-text" />
           <Button variant="outline" onClick={() => copy(withSampleMark(report), 'コピーしました。市の窓口へ電話・メール・フォームで伝えるときに使えます', true)}><Copy className="size-4" />通報文をコピーする</Button>
+          {copiedMsg && (
+            <p className="rounded-md border border-sky-700 bg-sky-50 p-2 text-sm font-medium text-sky-950" role="status" data-testid="copy-msg">
+              {copiedMsg.startsWith('コピーできません') ? copiedMsg : `✔ ${copiedMsg}`}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             通報先は「熱海市・伊東市の担当窓口」です。連絡先は各市の公式サイトで確認してください（このページには載せていません）。静岡県の例は国のガイドライン2.3に紹介されています。
           </p>

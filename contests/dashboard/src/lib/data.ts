@@ -13,11 +13,21 @@ export function portalUrl(): string {
   return `${siteRoot()}index.html`
 }
 
+/** ポータルで、そのコンペの詳細を開いた状態の URL（既存の #open=<id> 形式） */
+export function portalOpenUrl(contestId: string): string {
+  return `${siteRoot()}index.html#open=${contestId}`
+}
+
 /** ?from=<コンペ id> で開かれたとき、そのコンペ id（戻り先のタブ用）。知らない値は無視する */
 export function fromContest(): string | undefined {
   if (typeof window === 'undefined') return undefined
   const v = new URLSearchParams(window.location.search).get('from')
   return v && ['odpt-2026', 'udc-2026', 'satellite-2026', 'ichibiz-2026'].includes(v) ? v : undefined
+}
+
+/** コンペの概要ページ（contest/<id>/index.html）の URL。サイドバーのコンペ名・アプリのヘッダーから入る */
+export function contestUrl(contestId: string): string {
+  return `${siteRoot()}contest/${contestId}/index.html`
 }
 
 /** 各アプリの独立ページの URL */

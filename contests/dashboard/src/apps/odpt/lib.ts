@@ -519,3 +519,31 @@ export function dataUsedLine(data: Pick<RegionData, 'feeds' | 'routes' | 'nodes'
   const shown = ops.slice(0, 3).join('・') + (ops.length > 3 ? `ほか${ops.length - 3}事業者` : '')
   return `使ったデータ: ${shown}の時刻表（GTFS。${srcs.join('・')}で公開${lic.length ? `・${lic.join('／')}` : ''}）`
 }
+
+/** 手順の進み具合の判定（画面の状態 → 各手順が済か・自動か）。
+ *  必須は「場所を決める」「結論を見る」「家族に送る（コピー）」の3つ。休日比較・最終便・条件は、見るかどうかで目的の達成は変わらないので任意。
+ *  共有リンクで開いて地点が自動で入った場合は、場所の手順を「自動で設定済み」と区別する。
+ *  コピーした文面には結論が入っているので、結論の手順は「見た」か「コピーした」で済とする。 */
+export interface OdptProgressInput {
+  hasPt: boolean
+  verdictShown: boolean
+  fromLink: boolean
+  seenVerdict: boolean
+  seenCmp: boolean
+  seenLast: boolean
+  copied: boolean
+  condTouched: boolean
+}
+export interface StepState { done: boolean; optional: boolean; auto?: string }
+export function odptProgress(i: OdptProgressInput): Record<'place' | 'cond' | 'verdict' | 'hol' | 'last' | 'copy', StepState> {
+  const place = i.hasPt && i.verdictShown
+  const copy = i.hasPt && i.copied
+  return {
+    place: { done: place, optional: false, auto: place && i.fromLink ? '共有リンクの地点で設定済み' : undefined },
+    cond: { done: i.condTouched, optional: true },
+    verdict: { done: i.hasPt && (i.seenVerdict || copy), optional: false },
+    hol: { done: i.hasPt && i.seenCmp, optional: true },
+    last: { done: i.hasPt && i.seenLast, optional: true },
+    copy: { done: copy, optional: false },
+  }
+}

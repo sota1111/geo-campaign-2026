@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { AppStepsProvider, useRegisteredSteps } from '@/components/shared/AppSteps'
 import { HeaderSlotContext } from '@/components/shared/HeaderSlot'
 import { CONTESTS, alsoComparedBy, getApp, newPlansOf } from '@/apps/registry'
-import { appUrl, portalUrl } from '@/lib/data'
+import { appUrl, contestUrl, portalUrl } from '@/lib/data'
 import { StepsSidebar, StepsTopbar } from './StepsPanel'
 import { SampleBar, sampleUrl } from './SampleBar'
 import { AppIdContext } from '@/components/shared/AppIdContext'
@@ -48,6 +48,15 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
               <ArrowLeft className="size-4" />
               統合ダッシュボード
             </a>
+            {contest && (
+              <a
+                href={contestUrl(contest.id)}
+                data-testid="contest-link"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
+              >
+                {contest.short}の概要
+              </a>
+            )}
             <span className="min-w-0 flex-1 truncate text-xs font-semibold md:hidden">{app?.name}</span>
             <span className="hidden truncate text-xs text-muted-foreground md:inline">
               {app?.embed && <span className="font-semibold text-foreground">{app.name}　</span>}
@@ -68,7 +77,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 key={n.id}
                 href={appUrl(n.id)}
                 data-testid="compare-new-link"
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
               >
                 新案「{n.name}」と見比べる
               </a>
@@ -79,7 +88,7 @@ function ShellBody({ appId, children }: { appId: string; children: ReactNode }) 
                 href={appUrl(n.id)}
                 data-testid="also-compared-link"
                 title={`「${n.name}」と見比べる`}
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary underline underline-offset-2 hover:bg-accent md:min-h-8"
               >
                 「{n.name}」と見比べる
               </a>

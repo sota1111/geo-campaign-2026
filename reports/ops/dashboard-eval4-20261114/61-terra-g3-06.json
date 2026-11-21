@@ -1,0 +1,197 @@
+{
+  "run": "61-terra-g3-06",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "月曜03:00、11台（2か所）",
+          "where": "02-aed.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "約167,400人、96%。市境から800m以上内側、直線500m",
+          "where": "02-aed.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "原町田二丁目付近に1台で約12,700人",
+          "where": "03-aed-candidate.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "設置先候補CSVをダウンロード",
+          "where": "04-aed.png"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "時間不明5台、市境800m以内を除く集計、直線距離",
+          "where": "02-aed.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "候補・出力の下部",
+          "trying": "CSV出力",
+          "unclear": "ボタンが一覧の下で初め見えない。約20秒",
+          "action": "左欄をスクロール",
+          "suggestion": "上部に出力へのリンクを置く"
+        },
+        {
+          "severity": "中",
+          "where": "診断結果",
+          "trying": "割合の分母を理解",
+          "unclear": "96%は市全体ではなく市境800m以上内側の175,218人。約20秒",
+          "action": "注記を読み直した",
+          "suggestion": "数字の直下に対象範囲と分母を併記"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅付近の例は商業地域、建ぺい率80%、容積率600%",
+          "where": "07-land-conditions.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水0.5〜3m、高潮・津波の想定区域内、土砂警戒区域外",
+          "where": "07-land-conditions.png"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る：用途・買い手への説明、貸す：用途制限、活かす：建物の種類・避難先、手放す：解体費用・登記を相談",
+          "where": "08-land-questions.png"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "A4・1枚のシートと印刷・PDF保存ボタンを表示しクリック",
+          "where": "09-sheet.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順4の一覧",
+          "trying": "4つの出口を読む",
+          "unclear": "売るの項目が長く他の出口が初め見えない。約20秒",
+          "action": "スクロールした",
+          "suggestion": "出口別の見出しリンクを置く"
+        },
+        {
+          "severity": "中",
+          "where": "例を選択後の手順表示",
+          "trying": "回答を確認",
+          "unclear": "架空回答も自動入力され2手順完了となり混同しそう。約15秒",
+          "action": "例・架空の表示を確認",
+          "suggestion": "完了表示に例の回答と明記"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "居住誘導区域・都市機能誘導区域の中",
+          "where": "11-living-result.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500m、2025年1,643人→2050年1,187人、28%減",
+          "where": "11-living-result.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校",
+          "where": "11-living-result.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水・津波・高潮の想定区域内、土砂災害警戒区域外",
+          "where": "12-living-hazard.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "将来人口は推計、区域画面は参考で市の公表図が正",
+          "where": "11-living-result.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "結果シートの人口と区域",
+          "trying": "将来の住みやすさを判断",
+          "unclear": "人口減と区域指定に因果関係があると誤読しそう。約10秒",
+          "action": "注意書きを読んだ",
+          "suggestion": "注意書きを数値の近くで目立たせる"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "ぬま田（架空）、半径1kmに洪水の碑1件、大禹謨（1972年・洪水）350m",
+          "where": "05-memory-compare.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "1961〜69年と現在の写真を境界で比較",
+          "where": "04-memory.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "架空の語り1件を保存し未確認として地図に残った",
+          "where": "06-memory-record.png"
+        },
+        "G6-4": {
+          "achieved": false,
+          "value": "公開分0件。未確認のため対象外。ボタンを押したが出力を確認できず",
+          "where": "06-memory-record.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "地名と語りは架空サンプル、青い碑は実データ",
+          "where": "05-memory-compare.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順3の写真比較",
+          "trying": "昔と今を比較",
+          "unclear": "比較表示を見るだけでは手順完了にならない。約15秒",
+          "action": "後続手順に進んだ",
+          "suggestion": "完了条件を写真のそばに明示"
+        },
+        {
+          "severity": "高",
+          "where": "手順5〜6",
+          "trying": "記録を公開用に出力",
+          "unclear": "未確認では公開分0件、確認済みには出典を確かめた扱いが必要。約30秒",
+          "action": "架空で裏付けがなく確認済みにせずボタンを試した",
+          "suggestion": "必要な確認と空件時の反応を明示"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

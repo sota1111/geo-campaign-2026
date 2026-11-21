@@ -216,6 +216,7 @@ def main():
         finally:
             if sink:
                 sink.close()
+        pub["static_gtfs_acquired"] = hhmm(gz.stat().st_mtime) if gz.exists() else None
         write_json_atomic(web / f"{s['dataset']}.json", json.dumps(pub, ensure_ascii=False, separators=(",", ":")))
         write_quality(detail, agg)
         if schedule and agg["n_rows"]:

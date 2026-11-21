@@ -1,0 +1,70 @@
+{
+  "run": "6-luna-g2-04",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {"achieved": true, "value": "FIT終了時点までの推定3,084件・508.4MW中、20km回収圏外は1,878件・322.5MW（63.4%）", "where": "05-solar-scroll.png"},
+        "G9-2": {"achieved": false, "value": "追加前は上記。拠点1か所の追加前後値を得られず", "where": "05-solar-scroll.png"},
+        "G9-3": {"achieved": true, "value": "施設別・年別・市区町村別・前提を含むCSVのダウンロード機能を実行", "where": "08-solar-export.png"},
+        "G9-4": {"achieved": true, "value": "位置は町字代表点。廃棄時期は運転開始年＋N年の仮説。直線距離で、出力は件数換算なし", "where": "02-solar.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "左ペインの条件・施設設定欄と地図", "trying": "施設を1か所追加して前後を比較", "unclear": "拠点追加の入口と成功を示す表示", "action": "地図マーカーを試したが追加確認ができず、追加を断念", "suggestion": "施設追加ボタンを条件欄に置き、追加前後の件数・容量を並べる"},
+        {"severity": "中", "where": "左ペインと右地図", "trying": "結果欄へスクロール", "unclear": "独立スクロール領域のどこが操作対象か", "action": "スクロール位置を変えて試行、約1分", "suggestion": "各ペインの独立スクロールを明示し見出しを固定する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {"achieved": true, "value": "実データ版・横須賀市716か所。上位5地点: 本庁0005 80点、田浦0047 80点、逸見0047 80点、久里浜0012 80点、本庁0051 77点", "where": "12-fill-plan.png"},
+        "G4-2": {"achieved": false, "value": "計画確定画面で計画CSVを案内。台帳全件CSV(ledger.csv)も表示", "where": "12-fill-plan.png"},
+        "G4-3": {"achieved": false, "value": "記録フォームへ到達できず", "where": "12-fill-plan.png"},
+        "G4-4": {"achieved": true, "value": "衛星由来変化量は未接続で点数に含まず。衛星体験12地点は架空", "where": "10-fill.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "左の手順ナビと台帳・地図", "trying": "上位地点を選び巡視計画を作る", "unclear": "台帳行選択と手順ナビの役割", "action": "ナビ操作後に手順4で5地点確定、進捗表示とのずれに数分費やした", "suggestion": "現在手順・次操作を明示し、進捗とナビの挙動を統一する"},
+        {"severity": "中", "where": "計画確定後の手順5", "trying": "計画CSVを保存", "unclear": "台帳全件CSVと計画CSVの場所・違い", "action": "ナビをクリックしたが到達せず、CSV未出力", "suggestion": "確定直後に計画CSVボタンと次手順ボタンを表示する"}
+      ],
+      "bugs": ["手順4で件数5を確定すると5地点を表示するが、進捗が3/7のまま。手順5のCSV書き出しを押しても明確な画面遷移がない。"]
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {"achieved": true, "value": "F1-03が最高136点（衛星・公開85／事業者51）、樹高22m、高木率56%、停電想定420戸・避難所", "where": "13-line.png"},
+        "G8-2": {"achieved": true, "value": "現地確認計画の上位4区間: F1-03、F2-05、F2-03、F3-04", "where": "14-line-route.png"},
+        "G8-3": {"achieved": false, "value": "記録フォームは表示。記録後の更新は未確認", "where": "15-line-record.png"},
+        "G8-4": {"achieved": true, "value": "①〜④は架空、実データ体験⑤はMeta・WRIの樹高マップ（東京都青梅市周辺）", "where": "13-line.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "現地確認計画タブ", "trying": "区間を現地確認へ回す", "unclear": "計画CSVと協議用区間表CSVの違い", "action": "計画CSVを選んだが保存完了を確認できず", "suggestion": "CSVに含む区間と用途をボタン近くに表示する"},
+        {"severity": "中", "where": "現地確認の記録フォーム", "trying": "結果を記録して点数・順位更新を確認", "unclear": "記録の保存後に台帳へ反映・再計算される手順", "action": "フォーム確認で止まり、記録せず", "suggestion": "保存後に反映状態と更新後の点数・順位を同画面に表示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {"achieved": true, "value": "案A=4,190人（65歳以上943人）、案B=2,190人（65歳以上797人）", "where": "21-bus-compare.png"},
+        "G5-2": {"achieved": true, "value": "影響が小さい案はB", "where": "21-bus-compare.png"},
+        "G5-3": {"achieved": false, "value": "比較表は画面表示。CSV機能は見つけられず", "where": "22-bus-export.png"},
+        "G5-4": {"achieved": true, "value": "複数路線同時廃止時の人数は下限値と説明", "where": "17-bus.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "左手順ナビと案作成・比較画面", "trying": "案A/Bを作り比較を確定", "unclear": "ナビ移動だけで確定か、各段階の確定ボタンが必要か", "action": "トップへ戻る等で進捗表示が戻り、値を再確認するため数分", "suggestion": "案ごとの作成・確定状態を表示し、次段階へ進むボタンを統一する"},
+        {"severity": "中", "where": "比較結果の詳細比較表・地区別内訳", "trying": "会議用CSVを出力", "unclear": "折りたたみ結果表の下に書き出し機能があるか", "action": "比較表を開いて値を確認したがCSVは発見できず、約2分", "suggestion": "結果上部にCSV/コピーを置き、出力項目を明記する"}
+      ],
+      "bugs": ["手順ナビを移動した際、案の人数が表示されていても完了数が0に戻ることがあり、確定・保存状態が不明瞭。"]
+    }
+  ]
+}

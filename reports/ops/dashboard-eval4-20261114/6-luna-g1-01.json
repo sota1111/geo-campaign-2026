@@ -1,0 +1,65 @@
+{
+  "run": "6-luna-g1-01",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ（トップ画面で名称のみ確認）",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G1-1": {"achieved": false, "value": "確認できず", "where": "home.png"},
+        "G1-2": {"achieved": false, "value": "確認できず", "where": "home.png"},
+        "G1-3": {"achieved": false, "value": "確認できず", "where": "home.png"},
+        "G1-4": {"achieved": false, "value": "確認できず", "where": "home.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "トップ画面の左アプリ一覧", "trying": "生活アクセス診断マップを開く", "unclear": "下方に続く一覧をどうスクロールするか分からず、ホイールやスクロールバー操作で目的項目に移動できなかった", "action": "中央の進捗カードを見たり別のアプリを開いたりした後、目的アプリへの到達を断念", "suggestion": "住民の通院など用途別の起動リンクをトップに設け、左一覧を確実にスクロール可能にする"}
+      ],
+      "bugs": ["トップの左アプリ一覧をスクロールできず、目的アプリに到達できなかった（再現性は限定的）。"]
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス路線見直し案の比較（誤って開いた画面）。トップにはバス定時性カルテの名称も表示",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G12-1": {"achieved": false, "value": "トップに『バス定時性カルテ』（事業者・自治体向け）の名称を確認したが、事業者画面は開けず", "where": "home.png"},
+        "G12-2": {"achieved": false, "value": "遅れ集計は確認できず。誤って開いた画面は路線廃止による病院・学校アクセス比較", "where": "bus.png"},
+        "G12-3": {"achieved": false, "value": "確認できず", "where": "bus.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "トップ左一覧の交通アプリ付近", "trying": "事業者の遅れを見る画面を開く", "unclear": "似た交通系アプリのうち、どれが路線別・時間帯別の遅れを扱うか分からず、一覧のスクロールもできなかった", "action": "『バス路線見直し案の比較』を開き、目的と異なることを確認して戻った", "suggestion": "『遅れの集計』『事業者向け』など目的をアプリ名の近くに明示し、トップから直接起動できるようにする"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ（トップ画面で名称のみ確認）",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G2-1": {"achieved": false, "value": "確認できず", "where": "home.png"},
+        "G2-2": {"achieved": false, "value": "確認できず", "where": "home.png"},
+        "G2-3": {"achieved": false, "value": "確認できず", "where": "home.png"},
+        "G2-4": {"achieved": false, "value": "確認できず", "where": "home.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "トップ画面の左アプリ一覧", "trying": "住民向けの盛土確認アプリを開く", "unclear": "トップに表示された名称から目的に合うアプリは分かったが、一覧下方の項目へ移動できなかった", "action": "他の表示アプリを確認した後、目的アプリへの到達を断念", "suggestion": "住民向け盛土確認を用途語で案内し、アプリ一覧をスクロール可能にする"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {"achieved": true, "value": "第1位S021、0.94（S022・S036も0.94同点。表1位S021）", "where": "road-entry.png"},
+        "G3-2": {"achieved": true, "value": "上位から自動選定。上限3.0km、22区間・2.9km", "where": "road-selected.png"},
+        "G3-3": {"achieved": true, "value": "サンプル走査後に較正。衛星重み50%から60%、第2回1位S033（第1回S020から更新）", "where": "road-step4.png / road-step5.png"},
+        "G3-4": {"achieved": true, "value": "架空の街・架空入力値・乱数シミュレーションと画面で明示", "where": "road-entry.png / road-step3top.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "第1段階の点数表、第2段階の自動選択ボタン", "trying": "上位区間を確認して予算内の候補を選ぶ", "unclear": "表と主操作ボタンが中央ペインのスクロール先にあり、初期表示から見えなかった", "action": "中央ペインのスクロールバーをドラッグして操作箇所を探した", "suggestion": "段階を開いた時に主操作ボタンを見える位置に置くか、操作ボタンを固定表示する"}
+      ],
+      "bugs": []
+    }
+  ]
+}

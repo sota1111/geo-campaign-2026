@@ -146,7 +146,7 @@ export function rank(sites: Site[], w: Weights, refDate: string, results: Patrol
 export interface Pt { x: number; y: number }
 export const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y)
 
-function tourLength(route: Pt[], origin: Pt): number {
+export function tourLength(route: Pt[], origin: Pt): number {
   let total = 0
   let cur = origin
   for (const p of route) { total += dist(cur, p); cur = p }

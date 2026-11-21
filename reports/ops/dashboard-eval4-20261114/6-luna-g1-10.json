@@ -1,0 +1,189 @@
+{
+  "run": "6-luna-g1-10",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {
+          "achieved": true,
+          "value": "バス定時性カルテを開いた。トップ上は「新しい案（比較用・未選定）」",
+          "where": "01-top.png, 31-teiji-visible.png"
+        },
+        "G12-2": {
+          "achieved": true,
+          "value": "遅れ集計はまだなし。全事業者「データ蓄積前」。きょバスは取得40回（1日分）だが遅れ推定可能なデータ量に達していない",
+          "where": "02-teiji.png, 31-teiji-visible.png"
+        },
+        "G12-3": {
+          "achieved": true,
+          "value": "出典は出典・ライセンス画面。画面上部で昼間収集を11/13 11:00〜12:00に予定・結果未確定。きょバスは2026-11-13 00:02:19〜00:21:49の40回取得",
+          "where": "31-teiji-visible.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "トップの交通担当者向けアプリ欄",
+          "trying": "遅延が出ている事業者・時間帯を探す",
+          "unclear": "新しい案（比較用・未選定）とあり、現時点の実務利用可能性が不明",
+          "action": "開いて状態を確認し、全事業者データ蓄積前と分かった。約1分",
+          "suggestion": "トップカードにも遅れ集計なし・収集開始前と表示する"
+        },
+        {
+          "severity": "低",
+          "where": "定時性画面上部と事業者詳細",
+          "trying": "収集時期とデータ内容を把握",
+          "unclear": "予定収集枠ときょバスの直近取得時刻の関係",
+          "action": "別の時刻表示として読み分けた。約1分",
+          "suggestion": "「次回予定」「直近取得実績」の見出しで区別する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": false,
+          "value": "熱海駅近くの造成地・型を特定できず。初期画面は熱海駅例表示だが、自宅地点ではない",
+          "where": "25-mori-visible.png"
+        },
+        "G2-2": {
+          "achieved": false,
+          "value": "過去写真比較へ未到達",
+          "where": "25-mori-visible.png"
+        },
+        "G2-3": {
+          "achieved": false,
+          "value": "変化記録を保存できず",
+          "where": "25-mori-visible.png"
+        },
+        "G2-4": {
+          "achieved": false,
+          "value": "コピー・書き出しへ未到達",
+          "where": "25-mori-visible.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "手順1の地図と住所入力欄",
+          "trying": "熱海駅近くの自宅位置を設定し近隣盛土を特定",
+          "unclear": "初期駅例表示と自宅位置確定の違い、検索の確定方法",
+          "action": "住所検索と画面を確認したが位置確定できず。約3分",
+          "suggestion": "現在地点と自宅地点を明確に分け、検索結果候補を表示する"
+        },
+        {
+          "severity": "中",
+          "where": "手順1の駅例ボタン",
+          "trying": "駅例を使って次工程へ進む",
+          "unclear": "例ボタンが地点確定・再表示・移動のいずれか",
+          "action": "地図と進捗を確認したが進行が見えず。約2分",
+          "suggestion": "ボタンを「この駅を自宅位置として使う」と明記する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "第1回最高点はS021・S022・S036で同点0.94。表の1位S021",
+          "where": "04-sata.png, 20-sata-visible.png"
+        },
+        "G3-2": {
+          "achieved": false,
+          "value": "通常画面で予算内の調査対象選択に進めず",
+          "where": "20-sata-visible.png"
+        },
+        "G3-3": {
+          "achieved": false,
+          "value": "通常画面で結果反映・第2回順位更新まで進めず。模擬画面のみ第2回1位S033・0.75、衛星重み60%、走査済み22区間除外、上位10区間全て順位変動と表示",
+          "where": "12-sata-sample.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "架空データ、架空の街「サンプル市」（実在の地点ではない）と明記",
+          "where": "20-sata-visible.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "手順1と点数上位表",
+          "trying": "行を選んで予算選択に進む",
+          "unclear": "手順番号・「次はこれ」と表の行のどれが操作対象か",
+          "action": "表の行、手順2〜5、画面スクロールを試したが0/5のまま。約4分",
+          "suggestion": "完了条件の行選択をボタンで示し、選択フィードバックと次手順導線を出す"
+        },
+        {
+          "severity": "中",
+          "where": "実行サンプル画面",
+          "trying": "第2回の更新結果を見る",
+          "unclear": "本人の調査操作結果か模擬結果か",
+          "action": "模擬利用・保存されないと読むことで区別。約1分",
+          "suggestion": "模擬バナーを強調し、通常操作との区別を維持する"
+        }
+      ],
+      "bugs": [
+        "通常画面でS021の上位行を押し、手順2〜5を押しても進捗0/5から変わらず先へ進めない（20-sata-visible.png）。"
+      ]
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": false,
+          "value": "富山市大町の平日朝30分以内の病院アクセス結論は得られず。初期条件は平日・朝8時・30分以内・病院",
+          "where": "05-odpt.png, 07-odpt-search.png, 09-odpt-picked.png"
+        },
+        "G1-2": {
+          "achieved": false,
+          "value": "地点を設定できず日曜ダイヤとの差を確認できない",
+          "where": "28-odpt-sunday.png"
+        },
+        "G1-3": {
+          "achieved": false,
+          "value": "最寄停留所・平日の最終便を確認できない",
+          "where": "29-odpt-lastbus.png"
+        },
+        "G1-4": {
+          "achieved": false,
+          "value": "共有用の結論・リンクをコピーできない",
+          "where": "30-odpt-share.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "高",
+          "where": "手順1の住所検索欄と富山市地図",
+          "trying": "富山市大町を検索し地点を選ぶ",
+          "unclear": "検索確定ができたか不明で候補表示もなく、地図選択は診断範囲外となる",
+          "action": "住所検索と地図地点指定を試したが地点確定できず中断。約4分",
+          "suggestion": "検索候補一覧を表示し、失敗時に入力内容を保持する。範囲外地点から診断範囲へ移動する導線を出す"
+        },
+        {
+          "severity": "中",
+          "where": "手順2〜5",
+          "trying": "結論・日曜比較・最終便・共有を確認",
+          "unclear": "地点設定が前提で手順が進まない",
+          "action": "各手順を開き条件を確認し地点未設定で中断。約2分",
+          "suggestion": "地点設定へ戻るボタンと、地点確定後に診断可能と最初に説明する"
+        }
+      ],
+      "bugs": [
+        "「富山市大町」で検索しても位置候補が出ず選択できない。地図上の地点選択は診断範囲外となる（07-odpt-search.png、09-odpt-picked.png）。"
+      ]
+    }
+  ]
+}

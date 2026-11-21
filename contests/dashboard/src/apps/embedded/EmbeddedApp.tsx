@@ -25,9 +25,10 @@ export function EmbeddedApp({ appId }: { appId: string }) {
         actions={
           <SourceDialog
             sources={[
+              ...(app.sources ?? []),
               {
-                name: '元の静的版（出典・ライセンスは画面内の「出典」欄と、元アプリの README に従う）',
-                note: `${app.originalPath}。このページは元の静的版を変更せずに表示しています。`,
+                name: '表示のしかた',
+                note: '元の静的版を変更せずに表示しています。詳しい前提・限界は画面内の「出典」欄にもあります。',
               },
             ]}
           />

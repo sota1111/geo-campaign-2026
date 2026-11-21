@@ -1,0 +1,213 @@
+{
+  "run": "61-terra-g3-03",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 7,
+      "app_title_seen": "相続前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {
+          "achieved": true,
+          "value": "徳島駅付近の例は商業地域、建ぺい率80%・容積率600%。土地の条件（10-land-result.png）",
+          "where": "10-land-result.png"
+        },
+        "G7-2": {
+          "achieved": true,
+          "value": "洪水想定区域内、深さの目安0.5〜3m。高潮・津波も想定区域内、土砂災害警戒区域外（10-land-result.png）",
+          "where": "10-land-result.png"
+        },
+        "G7-3": {
+          "achieved": true,
+          "value": "売る：買い手への説明事項を不動産会社に聞く（11-questions.png）。貸す：借り手への説明・修繕安全確認、活かす：避難先や敷地高さの確認（04-place.png）。手放す：建物解体の要否・費用や相続登記を司法書士等に聞く（同画面を下にスクロール）",
+          "where": "11-questions.png、04-place.png"
+        },
+        "G7-4": {
+          "achieved": true,
+          "value": "A4・1枚のシートと「印刷・PDFで保存する」ボタンが表示され、ボタンを押した（12-sheet.png）。PDFファイルの生成までは確認していない",
+          "where": "12-sheet.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順4の縦に長い「4つの出口」で、4種類すべての質問を見つけようとした",
+          "trying": "手順4の縦に長い「4つの出口」で、4種類すべての質問を見つけようとした",
+          "unclear": "最初は「売る」しか見えず、他の出口が同じ欄の下にあると気づきにくい",
+          "action": "欄内をスクロールして確認した",
+          "suggestion": "4つの見出しへの目次や折りたたみを設けると探しやすい"
+        },
+        {
+          "severity": "低",
+          "where": "手順1の駅の例を実際の相続地として使えるか迷った",
+          "trying": "手順1の駅の例を実際の相続地として使えるか迷った",
+          "unclear": "例の説明とシートの「回答は架空」を読み直した",
+          "action": "約10秒",
+          "suggestion": "例ボタン近くに「実地の判断には住所を指定」と併記するとよい"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {
+          "achieved": true,
+          "value": "徳島駅付近は居住誘導区域内、都市機能誘導区域内。先行きシート1（09-land.png）",
+          "where": "09-land.png"
+        },
+        "G10-2": {
+          "achieved": true,
+          "value": "半径500mの推計人口は2025年1,643人→2035年1,463人→2050年1,187人、2025〜2050年−28%。先行きシート2（09-land.png）",
+          "where": "09-land.png"
+        },
+        "G10-3": {
+          "achieved": true,
+          "value": "内町小学校区。先行きシート3（09-land.png）",
+          "where": "09-land.png"
+        },
+        "G10-4": {
+          "achieved": true,
+          "value": "洪水、津波、高潮の想定区域内、土砂災害警戒区域外。先行きシート5（02-land.png）",
+          "where": "02-land.png"
+        },
+        "G10-5": {
+          "achieved": true,
+          "value": "将来人口は推計で実人口ではない。計画区域の画面は参考で市公表図が正。徒歩圏は直線800m（09-land.png、02-land.png）",
+          "where": "09-land.png、02-land.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "先行きシートの計画区域で、居住誘導区域と市の「居住促進区域」が別物か迷った",
+          "trying": "先行きシートの計画区域で、居住誘導区域と市の「居住促進区域」が別物か迷った",
+          "unclear": "説明を読み、市がそう呼ぶ区域と理解した",
+          "action": "約20秒",
+          "suggestion": "両名称を見出しに並記するとよい"
+        },
+        {
+          "severity": "中",
+          "where": "施設の「徒歩圏」を生活実感の徒歩距離と解釈しかけた",
+          "trying": "施設の「徒歩圏」を生活実感の徒歩距離と解釈しかけた",
+          "unclear": "注意書きで直線800mと確認した",
+          "action": "約15秒",
+          "suggestion": "見出しにも直線距離であることを強調するとよい"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {
+          "achieved": true,
+          "value": "架空の「ぬま田」、半径1km内に語りと同じ洪水の伝承碑1件。大禹謨（だいうぼ）、1972年・洪水、350m。因果や危険度は示さない（05-monument.png）",
+          "where": "05-monument.png"
+        },
+        "G6-2": {
+          "achieved": true,
+          "value": "1961〜69年の空中写真と現在の写真を境界付きで比較（06-old.png）",
+          "where": "06-old.png"
+        },
+        "G6-3": {
+          "achieved": true,
+          "value": "架空サンプルを1件保存し、「未確認」の記録として保存、未確認のまま公開分に入らないと表示（07-record.png）",
+          "where": "07-record.png"
+        },
+        "G6-4": {
+          "achieved": true,
+          "value": "デモの確認役として公開を選び確認済みにした後、公開分1件をGeoJSONに書き出した（01-top.png、chimei-kioku-public.geojson）",
+          "where": "01-top.png"
+        },
+        "G6-5": {
+          "achieved": true,
+          "value": "地名と語りは架空のサンプル、青い伝承碑は国土地理院の実データと明示（05-monument.png、07-record.png）",
+          "where": "05-monument.png、07-record.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "伝承碑との突き合わせで「手がかりあり」を地名の由来の証明と読みかけた",
+          "trying": "伝承碑との突き合わせで「手がかりあり」を地名の由来の証明と読みかけた",
+          "unclear": "直下の因果関係を示さない注意を読み直した",
+          "action": "約15秒",
+          "suggestion": "結果見出し自体を「同種の災害碑が近くにある」にすると誤解しにくい"
+        },
+        {
+          "severity": "中",
+          "where": "書き出しで保存した未確認の記録が公開分0件なのを見て、保存が失敗したか迷った",
+          "trying": "書き出しで保存した未確認の記録が公開分0件なのを見て、保存が失敗したか迷った",
+          "unclear": "確認・公開範囲の画面に戻り、未確認は公開分に入らないと理解した",
+          "action": "約30秒",
+          "suggestion": "0件の横に未確認件数と確認画面へのリンクを示すとよい"
+        },
+        {
+          "severity": "低",
+          "where": "昔の写真は左右の境界比較が初期表示で、「重ねる」という手順名から半透明重ね合わせを想像した",
+          "trying": "昔の写真は左右の境界比較が初期表示で、「重ねる」という手順名から半透明重ね合わせを想像した",
+          "unclear": "境界を見て比較だと分かった",
+          "action": "約10秒",
+          "suggestion": "手順名を「昔と今を比較」とするとよい"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {
+          "achieved": true,
+          "value": "町田市、月曜03:00、利用可能と確認できたAEDは11台（2か所）（03-check.png）",
+          "where": "03-check.png"
+        },
+        "G11-2": {
+          "achieved": true,
+          "value": "徒歩圏に使えるAEDがない人は約167,400人、96%。対象は市境から800m以上内側の人口175,218人（03-check.png）",
+          "where": "03-check.png"
+        },
+        "G11-3": {
+          "achieved": true,
+          "value": "24時間AEDを原町田二丁目付近に1台置く候補では新たに約12,700人が徒歩圏に入る（08-export.png）",
+          "where": "08-export.png"
+        },
+        "G11-4": {
+          "achieved": true,
+          "value": "候補・出力から設置先候補CSVを書き出し、aed_candidates_machida_月0300_r500_strict.csvを確認（08-export.pngの候補画面を下へスクロール）",
+          "where": "08-export.png"
+        },
+        "G11-5": {
+          "achieved": true,
+          "value": "直線500mで道路距離ではない。登録288台中、時間不明5台、一般利用できない設置位置4台を数えない。市境800m以内は隣市AEDを読み込まないため全市値は上限（03-check.png）",
+          "where": "03-check.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "診断結果の11台が2か所と併記され、台数と施設数の違いを一瞬確認した",
+          "trying": "診断結果の11台が2か所と併記され、台数と施設数の違いを一瞬確認した",
+          "unclear": "両方を読み直した",
+          "action": "約10秒",
+          "suggestion": "「11台／設置場所2か所」と並べるとよい"
+        },
+        {
+          "severity": "中",
+          "where": "候補の約12,700人に「※境界付近」とあり、隣市のAEDを含めない影響の大きさが気になった",
+          "trying": "候補の約12,700人に「※境界付近」とあり、隣市のAEDを含めない影響の大きさが気になった",
+          "unclear": "診断画面の市境の注意を読み直した",
+          "action": "約20秒",
+          "suggestion": "候補の注記から市境の制約に直接飛べるとよい"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

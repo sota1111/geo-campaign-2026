@@ -1,0 +1,70 @@
+{
+  "run": "6-luna-g3-07",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {"achieved": false, "value": "用途地域の凡例（住居系／商業系／工業系）のみ。徳島駅付近の地点区分は不明", "where": "02-g7.png"},
+        "G7-2": {"achieved": false, "value": "ハザード欄に『なし』と見えたが、区域外の判定か未選択状態か不明", "where": "02-g7.png"},
+        "G7-3": {"achieved": false, "value": "手順バーは5のうち2完了。4出口ごとの質問事項は確認できず", "where": "02-g7.png"},
+        "G7-4": {"achieved": false, "value": "印刷・PDF保存の画面/操作まで未到達", "where": "02-g7.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "地図上部のハザード欄", "trying": "徳島駅付近の例の災害想定区域を判断", "unclear": "『なし』が未選択か区域外の結果か", "action": "例を再取得したが判別できず保留", "suggestion": "未選択・区域外・区域内を明確に区別し、選択地点の判定文を表示"},
+        {"severity": "中", "where": "手順バーと地図操作の周辺", "trying": "土地位置決定後に次の手順へ進む", "unclear": "次に押す場所が画面内で直感的に分からない", "action": "説明を探して左のステップバーを選ぶ案内を見つけた。約1分", "suggestion": "次の手順ボタンを大きく表示し、地図下にも導線を置く"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {"achieved": false, "value": "値なし。比較用タイトル等のみ表示", "where": "03-g10.png"},
+        "G10-2": {"achieved": false, "value": "人口推計の値なし", "where": "03-g10.png"},
+        "G10-3": {"achieved": false, "value": "小学校区の値なし", "where": "03-g10.png"},
+        "G10-4": {"achieved": false, "value": "災害区域の値なし", "where": "03-g10.png"},
+        "G10-5": {"achieved": false, "value": "『実データ』表示は確認したが、個別の推計・参考情報の注記はなし", "where": "03-g10.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "アプリページ全体", "trying": "候補地の区域・人口・学区・災害情報を確認", "unclear": "比較用タイトル以降の地図・本文が表示されず、どの操作から始めるのか不明", "action": "約15秒待って再訪したが変化なし。判定未達", "suggestion": "デモ入口を明示し、読み込み失敗時は原因・再試行方法を表示"}
+      ],
+      "bugs": ["リンクを開いて約15秒待っても、タイトル等以外に本文・地図が表示されない。区域、推計、学区、災害情報を確認できない。"]
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {"achieved": false, "value": "ぬま田（架空）・洪水というサンプル情報と伝承碑の凡例は見えたが照合結果なし", "where": "04-g6.png"},
+        "G6-2": {"achieved": false, "value": "淡色・標準・写真の選択肢のみ確認", "where": "04-g6.png"},
+        "G6-3": {"achieved": false, "value": "未確認/確認済みの凡例のみ。記録保存未確認", "where": "04-g6.png"},
+        "G6-4": {"achieved": false, "value": "公開用書き出し未確認", "where": "04-g6.png"},
+        "G6-5": {"achieved": true, "value": "オレンジの地名と語りは架空のサンプルと明記。候補も各々架空と表示", "where": "04-g6.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "地名選択後の地図/結果欄", "trying": "選んだ地名の近くにある伝承碑との突き合わせを確認", "unclear": "碑との距離や一致結果をどこで読むか", "action": "凡例と候補を確認したが結果値を確認できず", "suggestion": "選択地点の結果パネルに近傍碑・距離・照合状態を文章で表示"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G11-1": {"achieved": false, "value": "値なし。タイトル・比較用説明のみ", "where": "05-g11.png"},
+        "G11-2": {"achieved": false, "value": "値なし", "where": "05-g11.png"},
+        "G11-3": {"achieved": false, "value": "値なし", "where": "05-g11.png"},
+        "G11-4": {"achieved": false, "value": "CSV等の書き出し未確認", "where": "05-g11.png"},
+        "G11-5": {"achieved": false, "value": "数値の限界に関する説明未確認", "where": "05-g11.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "アプリページ全体", "trying": "午前3時のAED台数・徒歩圏の未カバー人口・追加配置効果を確認", "unclear": "利用条件を選ぶ場所や試算結果が表示されない", "action": "約15秒待ったが変化なし。目標値は未達", "suggestion": "サンプル条件・結果を表示し、読み込み失敗時の案内を出す"}
+      ],
+      "bugs": ["リンクを開いて約15秒待っても本文・地図が現れず、台数・人口・追加配置試算・出力・限界説明を確認できない。"]
+    }
+  ]
+}

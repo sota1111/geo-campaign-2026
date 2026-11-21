@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
 import {
-  DEFAULT_WEIGHTS, DEFAULT_WEIGHTS_REAL, RESULTS, buildReal, buildSample, clone, filterSites, hitStats, planRoute,
+  DEFAULT_WEIGHTS, DEFAULT_WEIGHTS_REAL, RESULTS, buildReal, buildSample, clone, filterSites, hitStats, planRoute, tourLength,
   rank, toCSV, type Dataset, type Mode, type PatrolResult, type RealRaw, type Ranked, type RealWeights,
   type SampleRaw, type SampleWeights, type Weights,
 } from './lib'
@@ -67,10 +67,10 @@ const SOURCES: SourceItem[] = [
     url: 'https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html',
     note: '標高差・平均傾斜は本デモ用に算出（造成地ポリゴン内の最大−最小で、盛土の高さそのものではありません）。写真はブラウザが地理院から直接取得します。',
   },
-  { name: '架空サンプル（12地点）', note: '地点・区域・変化量・許可届出・巡視結果はすべて架空です。第三者データを含みません。手順3「衛星の変化量で巡視の優先順位を決める」はこの架空値を使います。' },
+  { name: '架空サンプル（12地点）', note: '地点・区域・変化量・許可届出・巡視結果はすべて架空です。第三者データを含みません。参考の手順「衛星の変化量が入ると巡視の順位がどう変わるか」はこの架空値を使います。' },
   {
     name: '衛星由来の変化量（外部データは取り込んでいません）',
-    note: '2026-11-12 時点の検討結果: キー不要・ライセンス明確・地点ごとに使える公開の InSAR／光学の変化データを、横須賀市の716か所について時間内に確認・取り込みできませんでした（国土地理院の地図レイヤ一覧に該当する地盤変動のレイヤを見つけられず、地理院サイトの解説ページへは作業環境から接続できませんでした。存在しないと断定するものではありません）。そのため実データ版に衛星由来の値は入れておらず、画面では「未接続」と示しています。手順3は架空値の体験です。実運用で使う想定のデータは Sentinel-1（SAR）・Sentinel-2（光学）で、いずれも ESA が商用利用を含め無料で提供しています（提案書B・出典一覧）。',
+    note: '2026-11-12 時点の検討結果: キー不要・ライセンス明確・地点ごとに使える公開の InSAR／光学の変化データを、横須賀市の716か所について時間内に確認・取り込みできませんでした（国土地理院の地図レイヤ一覧に該当する地盤変動のレイヤを見つけられず、地理院サイトの解説ページへは作業環境から接続できませんでした。存在しないと断定するものではありません）。そのため実データ版に衛星由来の値は入れておらず、画面では「未接続」と示しています。参考の手順（衛星の変化量）は架空値の体験です。実運用で使う想定のデータは Sentinel-1（SAR）・Sentinel-2（光学）で、いずれも ESA が商用利用を含め無料で提供しています（提案書B・出典一覧）。',
     url: 'https://documentation.dataspace.copernicus.eu/Data/SentinelMissions/Sentinel2.html',
   },
 ]
@@ -196,7 +196,16 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
   // 開いた時点で巡視済みの地点は、今月の計画に入れない（この画面で記録した地点は、計画に残して「記録済み」と出す）
   const [doneBefore] = useState<Set<string>>(() => new Set(seed ? [] : results.map((r) => r.siteId)))
   const planPool = useMemo(() => ranked.filter((s) => !doneBefore.has(s.id)), [ranked, doneBefore])
-  const plan = useMemo(() => planRoute(planPool, ds.origin, Math.max(1, Math.min(30, cap || 1))), [planPool, ds, cap])
+  // 確定した計画（回る順の ID）はこのタブに保存し、記録した後や開き直した後も同じ計画を出す（以前は開き直すと再計算され、巡視済みの地点が抜けて別の5件になった）
+  const [planIds, setPlanIds] = useSessionState<string[]>(`sat-b:plan:${mode}`, [])
+  const plan = useMemo(() => {
+    if (planIds.length) {
+      const byId = new Map(ranked.map((s) => [s.id, s]))
+      const route = planIds.map((id) => byId.get(id)).filter((s): s is NonNullable<typeof s> => !!s)
+      if (route.length === planIds.length) return { route, total: tourLength(route, ds.origin), nearest: tourLength(route, ds.origin) }
+    }
+    return planRoute(planPool, ds.origin, Math.max(1, Math.min(30, cap || 1)))
+  }, [planIds, ranked, planPool, ds, cap])
   const note = real ? '実データ: 国土数値情報A54/A56・地理院DEM。衛星由来の変化は未接続' : 'サンプル（架空）'
   const resetAll = () => {
     setResults([])
@@ -210,7 +219,8 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
     [
       { id: 'data', title: 'データを確かめる', hint: real ? '実データの内容を確認' : '「実データ（横須賀市）」を選ぶ', action: '確認ボタンを押すと完了', done: real && dataChecked },
       { id: 'ledger', title: '台帳で優先度と内訳を見る', hint: '台帳の行を選ぶと内訳が見られる', action: '台帳の行を1つ選ぶと完了', done: prog.ledger },
-      { id: 'sat', title: '衛星の変化量で巡視の優先順位を決める（架空値）', hint: '衛星の変化が点数に入ると、巡視候補が入れ替わる', action: 'スライダーを右へ動かすと完了', done: prog.sat },
+      // 実データ（横須賀市）には衛星由来の値が未接続のため、架空値の体験は「参考（任意）」にする（必須に残すと、実データの計画にも要るのかと迷わせる）
+      { id: 'sat', title: '衛星の変化量が入ると巡視の順位がどう変わるか（架空値の体験）', hint: '衛星の変化が点数に入ると、巡視候補が入れ替わる（実データの計画には影響しません）', action: 'スライダーを右へ動かすと完了', optional: true, done: prog.sat },
       { id: 'plan', title: '件数を決めて計画を作る', hint: '巡視可能件数（初期値5）', action: '「この計画で確定する」を押すと完了', done: planSeen },
       { id: 'csv', title: '計画をCSVで書き出す', action: '書き出すと完了', done: planExported },
       { id: 'record', title: '巡視結果を記録する', action: '記録すると完了', done: recordedNow },
@@ -303,7 +313,12 @@ function Body({ mode, ds, fictional, setMode }: { mode: Mode; ds: Dataset; ficti
           />
         )}
         {step === 'plan' && (
-          <PlanPanel mode={mode} plan={plan} cap={cap} setCap={setCap} sel={sel} onSelect={select} skipped={doneBefore.size} confirmed={planSeen} onConfirm={() => setProg({ plan: true })} />
+          <PlanPanel
+            mode={mode} plan={plan} cap={planIds.length || cap}
+            setCap={(n) => { setPlanIds([]); setCap(n) }}
+            sel={sel} onSelect={select} skipped={doneBefore.size} confirmed={planSeen && planIds.length > 0}
+            onConfirm={() => { setPlanIds(plan.route.map((s) => s.id)); setProg({ plan: true }) }}
+          />
         )}
         {step === 'csv' && <CsvPanel mode={mode} plan={plan} note={note} onExported={() => setProg({ csv: true, plan: true })} />}
         {step === 'record' && (
@@ -360,7 +375,7 @@ function DataPanel({ ds, mode, ranked, results, dataChecked, setDataChecked, onR
           {real ? (
             <p>
               造成地の位置・型・規制区域は国土数値情報、標高差と傾斜は地理院DEM、写真は地理院タイルの実データです。
-              <b>{NOT_CONNECTED}</b>。実運用では Sentinel-1/2 で算出する想定で、今の点数は型・区域・面積・標高差・傾斜だけの暫定です。衛星の変化が巡視の優先順位を決める流れは、手順3で架空の12地点を使って体験できます（実データとは別物です）。
+              <b>{NOT_CONNECTED}</b>。実運用では Sentinel-1/2 で算出する想定で、今の点数は型・区域・面積・標高差・傾斜だけの暫定です。衛星の変化が巡視の優先順位を決める流れは、左の「参考（任意）」の手順で架空の12地点を使って体験できます（実データとは別物で、実データの計画には影響しません）。
               衛星は「どこを先に見るか」を示すだけで、違反の判断は職員が現地で行います。内容を読んだら、下のボタンを押してください。
             </p>
           ) : (
@@ -522,7 +537,7 @@ function PlanPanel({ mode, plan, cap, setCap, sel, onSelect, skipped, confirmed,
         <b>同点のとき</b>は面積の大きい順、面積も同じなら ID の順（台帳と同じ順位）。内訳は各行の下に出ます。
       </p>
       <p className="rounded-md border border-dashed border-amber-500 bg-amber-50 p-1.5 text-xs">
-        <b>この計画はCSVで書き出して保存してください。</b>画面を閉じると再計算されます（保存されるのは巡視結果の記録だけです）。
+        <b>確定した計画は、このタブを閉じるまで保ちます</b>（巡視を記録した後も同じ地点・回る順のまま）。件数を変えると作り直します。残すには次の手順でCSVに書き出してください。
       </p>
       <p className="text-xs text-muted-foreground">
         {real
@@ -627,7 +642,7 @@ function RecordPanel({ planIds, mode, ranked, results, setResults, recSite, setR
     <form onSubmit={submit} noValidate className="space-y-3 text-sm">
       {!csvDone && (
         <p className="rounded-md border border-dashed border-amber-500 bg-amber-50 p-1.5 text-xs" data-testid="csv-pending">
-          手順4「計画をCSVで書き出す」がまだ済んでいません。記録は先にできますが、計画は画面を閉じると再計算されます。左の手順リストの4から書き出せます。
+          手順4「計画をCSVで書き出す」がまだ済んでいません。記録は先にできますが、計画はこのタブを閉じると消えます。左の手順リストの4から書き出せます。
         </p>
       )}
       <p className="text-xs text-muted-foreground">
@@ -819,7 +834,7 @@ function SiteDetail({ s, mode, results }: { s: Ranked; mode: Mode; results: Patr
             <li key={label} className="flex justify-between gap-2">
               <span>{p == null ? '衛星由来' : label}</span>
               {p == null
-                ? <span className="shrink-0 font-medium text-amber-800">未接続（手順3で架空値を体験）</span>
+                ? <span className="shrink-0 font-medium text-amber-800">未接続（参考の手順で架空値を体験）</span>
                 : <span className="shrink-0 font-mono">{p >= 0 ? '+' : ''}{p}</span>}
             </li>
           ))}

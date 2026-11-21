@@ -1,0 +1,68 @@
+{
+  "run": "6-luna-g2-01",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G4-1": {"achieved": true, "value": "実データ版（神奈川県横須賀市・716か所）。上位5件: 横須賀市本庁0005 80点、横須賀市田浦0047 80点、横須賀市逸見0047 80点、横須賀市久里浜0012 80点、横須賀市本庁0051 77点。", "where": "04-g4-home.png、10-g4-csv-after.png"},
+        "G4-2": {"achieved": true, "value": "patrol-plan.csv（5行）をダウンロードし、指定フォルダ内に保存。", "where": "10-g4-csv-after.png"},
+        "G4-3": {"achieved": true, "value": "横須賀市本庁0005に2026-11-14「要継続観察」を記録。台帳一覧の最新の巡視に同結果・日付が反映。", "where": "12-g4-result-options.png"},
+        "G4-4": {"achieved": true, "value": "衛星由来の変化量は未接続で点数に含まれない。", "where": "04-g4-home.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "トップ画面左側のアプリ一覧", "trying": "盛土台帳を探して開く", "unclear": "似たコンペ内の候補が縦に並び、目的に合うアプリをすぐ特定できなかった", "action": "最初に路面下アプリを開き、トップへ戻って盛土巡視台帳を選び直した。約1分", "suggestion": "利用目的タグや検索でアプリ一覧を絞れるようにする"},
+        {"severity": "中", "where": "巡視結果画面の結果プルダウン", "trying": "巡視結果を記録する", "unclear": "閉じた状態では記録可能な結果候補が分からなかった", "action": "プルダウンを開いて候補を確認し、要継続観察を選んだ。約1分", "suggestion": "候補を一覧または説明付きで見せる"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線沿いの優先伐採地図（画面内見出し: 配電線 樹木リスク台帳）",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {"achieved": true, "value": "F1-03が最高点。調整前136点（衛星・公開データ85＋事業者データ51）、衛星のみ順位1位。重み調整後141点（90＋51）。", "where": "05-g8-ranking.png、08-g8-score.png"},
+        "G8-2": {"achieved": true, "value": "上位4区間の現地確認計画を作り、F1-03を選んで現地確認の記録画面へ進んだ。", "where": "07-g8-record.png"},
+        "G8-3": {"achieved": true, "value": "F1-03に要伐採を記録。最新確認に2026-11-14が反映。記録のみでは136点・1位のままだったが、④点数の見直しで該当重みを25から30へ手動変更すると141点になった。順位は1位のまま。", "where": "07-g8-record.png、08-g8-score.png"},
+        "G8-4": {"achieved": true, "value": "①〜④の配電線・区間・点数・停電戸数・確認は架空。⑤はMeta・WRI樹冠高データの東京都青梅市周辺の実データ体験のみ。", "where": "07-g8-record.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "アプリ上部の一部架空表示と画面内の黄色い注意書き", "trying": "最高点の区間と衛星由来データを確認する", "unclear": "一部架空という表示だけでは、どの値が実測か区別できず誤解しかけた", "action": "黄色い注意書きを読み、①〜④は架空、⑤だけ樹冠高の実データ体験と把握した。約2分", "suggestion": "上部に①〜④架空・⑤樹冠高のみ実データと要約表示する"},
+        {"severity": "中", "where": "④点数の見直し", "trying": "記録結果を次の点数・順位に反映する", "unclear": "記録後に自動更新されず、重みを手動でどれだけ変えるべきか根拠が分からなかった", "action": "少数サンプルで率を出さない説明を確認し、例として25から30へ変更。約3分", "suggestion": "1件の記録では重み変更の根拠が弱いことと、変更例の意味を画面で説明する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {"achieved": true, "value": "徳島周辺・平日8時・20分条件。案A（徳島バス28番鍛冶屋原線）4,190人、65歳以上943人。案B（徳島バス21番鳴門線）2,190人、65歳以上797人。", "where": "12-g5-planB.png"},
+        "G5-2": {"achieved": true, "value": "案B。案Aより総数2,000人、65歳以上146人少ない。", "where": "12-g5-planB.png"},
+        "G5-3": {"achieved": true, "value": "plan-comparison-tokushima-wdm20.csvを指定フォルダに保存。", "where": "12-g5-planB.png"},
+        "G5-4": {"achieved": true, "value": "複数路線を同時に止める場合、人数は下限値。", "where": "09-g5-home.png、12-g5-planB.png"}
+      },
+      "confusions": [
+        {"severity": "低", "where": "案A・案Bの路線選択画面", "trying": "比較用の2案を作る", "unclear": "異なる初期例のまま確定してよいか一瞬迷った", "action": "両案を例の路線のまま確定して比較した。約30秒", "suggestion": "初期例が比較用サンプルで、案ごとに独立して変更できることを選択欄に添える"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの回収圏計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {"achieved": true, "value": "2045年までの推定設備3,084件・508.4MWのうち、20km圏外1,878件・322.5MW（63.4%）。", "where": "05-g9-baseline.png"},
+        "G9-2": {"achieved": true, "value": "候補拠点1か所（緯度35.281・経度135.312付近）追加後、圏外容量322.5MW（63.4%）から166.4MW（32.7%）へ。平均最寄り距離37.4kmから22.1kmへ。", "where": "06-g9-addhub.png"},
+        "G9-3": {"achieved": true, "value": "recovery-zone-kyoto-fit-2045-20km.csvを指定フォルダに保存。", "where": "07-g9-export.png"},
+        "G9-4": {"achieved": true, "value": "住所を町字代表点に変換した位置で、撤去時期はFIT終了や運転開始＋N年等の仮説。2026-09-30時点ファイルで20kW未満は含まれない。", "where": "04-g9-home.png"}
+      },
+      "confusions": [
+        {"severity": "低", "where": "20km回収圏と施設別集計", "trying": "圏外設備の距離と件数を把握する", "unclear": "20kmが実走距離か直線距離か確認が必要に感じた", "action": "説明欄で直線距離と確認し、表示値をその前提で扱った。損失ほぼなし", "suggestion": "地図凡例にも直線距離と表示する"}
+      ],
+      "bugs": []
+    }
+  ]
+}

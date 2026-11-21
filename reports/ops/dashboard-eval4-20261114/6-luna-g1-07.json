@@ -1,0 +1,68 @@
+{
+  "run": "6-luna-g1-07",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {"achieved": true, "value": "熱海駅（例）の最寄り造成地: 熱海市0012、腹付け型、直線約1100m。駅は自宅の位置ではないと表示", "where": "02-morido-atami.png"},
+        "G2-2": {"achieved": false, "value": "昔の写真比較画面は開けたが、造成地未選択で比較できず", "where": "03-old-photo.png"},
+        "G2-3": {"achieved": false, "value": "記録画面で位置未選択。保存できず", "where": "03-old-photo.png"},
+        "G2-4": {"achieved": false, "value": "空台帳のCSV/GeoJSON出力ボタンは表示。押下したがファイル確認できず", "where": "06-list.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "手順2・3の地図", "trying": "熱海駅近くの造成地を選び、昔と今を比較", "unclear": "最寄りカードの造成地IDと地図上の色付き範囲の対応、一覧の開き方", "action": "地図・手順カードを試したが未選択のまま。約4分を費やした", "suggestion": "最寄りカードに地図表示/選択を置き、造成地IDを地図と比較画面に共通表示する"},
+        {"severity": "中", "where": "手順5の空台帳", "trying": "CSVか通報文を出力", "unclear": "記録がなくても出力されるか、記録が先に必要か", "action": "CSVボタンを押したがファイルを確認できず。約1分", "suggestion": "空台帳では出力を無効化し、記録追加が必要と明示する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {"achieved": true, "value": "1位S021、0.94点。同点S022・S036も0.94", "where": "12-sat.png"},
+        "G3-2": {"achieved": true, "value": "予算上限3.0km、選択22区間、合計2.9/3.0km", "where": "13-sat-budget.png"},
+        "G3-3": {"achieved": false, "value": "第2回順位はまだありません。較正には走査結果が必要", "where": "16-sat-rank2.png"},
+        "G3-4": {"achieved": true, "value": "架空のサンプル市・架空値・乱数による走査シミュレーションと明記", "where": "12-sat.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "候補区間表、手順3・4", "trying": "予算内の対象を選び、走査結果を較正して第2回へ進む", "unclear": "表の行選択、点数内訳表示、調査対象チェックのどの操作が手順1を完了するか", "action": "選択22区間までは確認したが、走査結果・較正・第2回順位は未完了。約4分", "suggestion": "手順ごとの選択状態を統一し、結果生成と第2回反映の操作をカード内に置く"},
+        {"severity": "中", "where": "手順2の予算選択", "trying": "3km以内の調査対象を選ぶ", "unclear": "上位15＋それ以外7という内訳が予算内に選ばれた22件を意味するか", "action": "上部の22区間・2.9/3.0kmで確認。約1分", "suggestion": "区間数・順位内訳・総延長を一文で先に示す"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {"achieved": true, "value": "富山市大町、平日朝8時・30分以内・病院は徒歩で行ける。目安の病院は佐々木病院、直線約469m・徒歩目安約8分", "where": "24-access-conclusion.png"},
+        "G1-2": {"achieved": true, "value": "日曜朝8時も徒歩で行ける。平日と同じ結果", "where": "21-access-sunday.png"},
+        "G1-3": {"achieved": true, "value": "堀川南大町（約136m）、平日最終20:44発。参考: 南富山駅前（約344m）は23:00", "where": "22-access-lastbus.png"},
+        "G1-4": {"achieved": true, "value": "結論とリンクをコピー。画面にコピー完了の表示", "where": "31-share-done.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "左の手順カード", "trying": "場所検索後に病院アクセスの結論を見る", "unclear": "場所欄の説明と手順カードのどちらから結論を開くか", "action": "共有1枚画面から結論を確認した。約2分", "suggestion": "手順カード押下後に内容欄へ自動スクロールし、選択状態を強調する"},
+        {"severity": "低", "where": "共有画面", "trying": "遠方の家族へリンクを渡す", "unclear": "手元用アドレスを相手が別端末で開けるか", "action": "結論とリンクをコピーしたが別端末での表示は未確認", "suggestion": "現状の共有リンクが開ける対象を明記する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {"achieved": true, "value": "とさでん交通 空港連絡バスを選択", "where": "28-provider-top.png"},
+        "G12-2": {"achieved": true, "value": "遅れ集計なし、判定不能。観測停留所の遅れ推定値0件・停留所推定0件。日中の取得不足", "where": "27-provider.png"},
+        "G12-3": {"achieved": true, "value": "バス位置データを時刻表と突き合わせる。とさでん交通の取得期間は2026-11-13 00:02:18〜00:21:48、1日・40回。データ蓄積前で数値は試作段階の参考値", "where": "28-provider-top.png; 27-provider.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "事業者欄・画面右の集計欄", "trying": "事業者の時間帯別遅れ集計を見る", "unclear": "初期のデータ蓄積前表示の意味と、選択後に集計が出ない理由", "action": "とさでん交通 空港連絡バスを選び、下へスクロールして0件・判定不能を確認。約1分", "suggestion": "事業者選択後、集計欄の直前に蓄積状態と集計不可の理由を固定表示する"}
+      ],
+      "bugs": []
+    }
+  ]
+}

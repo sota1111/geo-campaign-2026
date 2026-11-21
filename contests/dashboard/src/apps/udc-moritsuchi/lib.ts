@@ -7,6 +7,8 @@ export const KINDS = [
   { id: 'wall', label: '擁壁・のり面のふくらみ／変形' },
   { id: 'haul', label: '土砂・資材の搬入や新しい盛り上がり' },
   { id: 'slide', label: '崩れ・落石' },
+  // ダッシュボード版で追加: 昔の写真との見比べで気づいた違い（現地で亀裂等を見たわけではない記録を、現地の異常と取り違えないため）
+  { id: 'photo', label: '写真で見た違い（現地は未確認）' },
   { id: 'other', label: 'その他' },
 ] as const
 
@@ -319,4 +321,28 @@ export function reportText(r: MwRecord) {
     lines.splice(8, 0, '※この位置は本アプリの対象範囲（熱海市・伊東市）の外です。大規模盛土造成地データとの比較はできていません。')
   }
   return lines.join('\n')
+}
+
+/** 手順の進み具合の判定（画面の状態 → 各手順が済か・自動か）。
+ *  必須は「自宅の場所を入れる」「台帳に記録を足す」「台帳にまとめて届ける」の3つ。
+ *  近くの造成地を確かめる・昔の写真と見比べるは確認用で、やらなくても記録と届け出はできるので任意。
+ *  どちらも、利用者が実際に選ぶ・動かす操作をしたときだけ済にする（手順の画面を開いただけでは済にしない）。
+ *  起点が「熱海駅の例」の場合は、場所の手順を「例の地点で設定済み」と区別する（自宅の結果ではない）。 */
+export interface MoritsuchiProgressInput {
+  originChosen: boolean
+  originIsExample: boolean
+  didLook: boolean
+  didCompare: boolean
+  addedNow: boolean
+  didPrepare: boolean
+}
+export interface StepState { done: boolean; optional: boolean; auto?: string }
+export function moritsuchiProgress(i: MoritsuchiProgressInput): Record<'place' | 'look' | 'compare' | 'rec' | 'prep', StepState> {
+  return {
+    place: { done: i.originChosen, optional: false, auto: i.originChosen && i.originIsExample ? '例の地点で設定済み（自宅ではありません）' : undefined },
+    look: { done: i.didLook, optional: false },
+    compare: { done: i.didCompare, optional: true },
+    rec: { done: i.addedNow, optional: false },
+    prep: { done: i.didPrepare, optional: false },
+  }
 }

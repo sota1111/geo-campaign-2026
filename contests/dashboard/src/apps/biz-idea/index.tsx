@@ -264,6 +264,10 @@ export default function BizIdeaApp() {
 
   /* 手順2: 「この結果を確認した」を押す、または探す範囲を変えたら済（開いて見ただけでは済にしない） */
   const markCross = () => setDone((d) => (d.cross ? d : { ...d, cross: true }))
+  // 手順3は、地名を選んだうえで昔と今の写真を表示したら済（見比べたのに未完了のままだと、何をすれば済むのか迷わせる。盛土ウォッチと同じ規則）
+  useEffect(() => {
+    if (step === 'overlay' && focus) setDone((d) => (d.overlay ? d : { ...d, overlay: true }))
+  }, [step, focus])
 
   const selectPlace = useCallback((p: SamplePlace) => {
     closePopup()
@@ -427,7 +431,7 @@ export default function BizIdeaApp() {
     [
       { id: 'place', title: '地名を選ぶ', hint: '地名と語りは架空のサンプル', done: !!focus },
       { id: 'cross', title: '伝承碑と突き合わせる', hint: '半径内の自然災害伝承碑（実データ）と比べる', done: done.cross },
-      { id: 'overlay', title: '昔の地図・写真と重ねる', hint: '昔と今の写真を見比べる', action: '見比べるか、重ね地図を選ぶと完了', done: done.overlay },
+      { id: 'overlay', title: '昔の地図・写真と重ねる', hint: '昔と今の写真を見比べる', action: '写真を表示すると完了', done: done.overlay },
       { id: 'record', title: '聞き取りを記録する', hint: '保存すると「未確認」になる', action: '保存すると完了', done: touched.saved },
       {
         id: 'confirm', title: '確認して公開範囲を選ぶ', hint: 'デモでは自分が確認役を兼ねる',
@@ -680,6 +684,15 @@ export default function BizIdeaApp() {
     <div className="space-y-3">
       {priorNotice}
       <Note>記録は必ず「未確認」から始まります。確認役が出典などを確かめて「確認済み」にし、公開範囲を選びます。このデモでは、あなたが確認役を兼ねます（実運用では図書館・郷土資料館等の担当者が行います）。</Note>
+      <div className="rounded-md border-2 border-[#0072B2] bg-blue-50 p-2 text-xs text-blue-950" data-testid="publish-conditions">
+        <p className="font-bold">公開分に入る条件（3つとも必要）</p>
+        <ol className="mt-0.5 list-decimal space-y-0.5 pl-5">
+          <li>「確認済みにする…」を押して確認済みにする（公開範囲を選ぶだけでは未確認のままです）</li>
+          <li>公開範囲を「公開」にする</li>
+          <li>利用条件を「利用不可」以外にする</li>
+        </ol>
+        <p className="mt-1">このデモの地名と語りは架空のサンプルです。操作を試すために確認済みにしてかまいません。</p>
+      </div>
       {!records.length && <div className="rounded-md border p-3 text-sm">まだ記録がありません。手順「聞き取りを記録する」で1件保存してください。</div>}
       <ul className="space-y-2">
         {records.map((r) => (

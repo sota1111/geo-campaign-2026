@@ -96,3 +96,8 @@ fieldset.regions input { width:20px; height:20px; vertical-align:-4px; }
 fieldset.regions label { display:inline-flex; align-items:center; gap:4px; min-height:36px; padding-right:6px; }
 .sec li.nod { color:#4b5560; }
 .tag.nod-tag { border-color:#6b7480; background:#eef0f2; color:#2d3640; }
+/* シートの項目への目次（画面のみ） */
+.sec-toc { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 13px; margin: 4px 0 8px; position: sticky; top: 0; background: #fff; padding: 4px 0; z-index: 2; }
+.sec-toc button { font-size: 12px; padding: 2px 8px; }
+.sec { scroll-margin-top: 44px; }
+@media print { .sec-toc { display: none; } }

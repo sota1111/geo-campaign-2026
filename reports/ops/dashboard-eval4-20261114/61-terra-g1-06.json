@@ -1,0 +1,161 @@
+{
+  "run": "61-terra-g1-06",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G12-1": {
+          "achieved": true,
+          "value": "きよバス",
+          "where": "05-bus.png"
+        },
+        "G12-2": {
+          "achieved": true,
+          "value": "位置データ不足で遅れ推定・集計なし",
+          "where": "05-bus.png"
+        },
+        "G12-3": {
+          "achieved": true,
+          "value": "公共交通オープンデータセンターのバス位置・時刻表、収集中",
+          "where": "01-top.png、05-bus.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "出典・ライセンスのモーダル",
+          "trying": "提供元を知る",
+          "unclear": "元画面の出典欄とREADMEを参照する案内だけ",
+          "action": "閉じて右ペイン最下部までスクロール",
+          "suggestion": "提供元をモーダルに直接表示"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": true,
+          "value": "熱海市0012、腹付け型、駅の北西約1100m",
+          "where": "09-earth-sites.png"
+        },
+        "G2-2": {
+          "achieved": true,
+          "value": "1961〜69年と全国最新写真を比較",
+          "where": "10-earth-photo.png"
+        },
+        "G2-3": {
+          "achieved": true,
+          "value": "建物の見え方の違いを未確認として記録し保存",
+          "where": "12-earth-export.png"
+        },
+        "G2-4": {
+          "achieved": false,
+          "value": "コピーを押したが成功を確認し損ねた",
+          "where": "12-earth-export.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "写真比較",
+          "trying": "昔と今の変化を確認",
+          "unclear": "画像が小さく不鮮明で断定できない",
+          "action": "未確認として記録",
+          "suggestion": "拡大表示と画像の限界を示す"
+        },
+        {
+          "severity": "高",
+          "where": "記録の種類",
+          "trying": "写真の見え方の違いを記録",
+          "unclear": "初期値の亀裂・段差が通報文に付く",
+          "action": "保存後に気づいた",
+          "suggestion": "初期値を未選択にし不明や写真上の変化を追加"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "S021・S022・S036が0.94で同点",
+          "where": "02-satellite.png"
+        },
+        "G3-2": {
+          "achieved": true,
+          "value": "3.0km予算中22区間2.9kmを選択",
+          "where": "03-toplower.png"
+        },
+        "G3-3": {
+          "achieved": true,
+          "value": "重み50→60%、未走査1位S020→S033",
+          "where": "04-sidebar.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "架空データ、走査結果は乱数シミュレーション",
+          "where": "03-toplower.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "ステップ1",
+          "trying": "最高点を確認",
+          "unclear": "表の行選択が完了条件",
+          "action": "後で未完了表示に気づいた",
+          "suggestion": "行選択の必要性を強調"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": true,
+          "value": "富山市大町、平日朝8時、徒歩で病院へ30分以内。佐々木病院まで直線約469m、徒歩目安8分",
+          "where": "06-bus-source.png"
+        },
+        "G1-2": {
+          "achieved": true,
+          "value": "日曜も徒歩で行ける、同じ結論",
+          "where": "07-bus-bottom.png"
+        },
+        "G1-3": {
+          "achieved": true,
+          "value": "堀川南大町、平日20:44発",
+          "where": "08-earth.png"
+        },
+        "G1-4": {
+          "achieved": true,
+          "value": "結論とリンクのコピー画面と手動コピー用文面を確認",
+          "where": "11-earth-record.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "コピー画面",
+          "trying": "兄にリンクを送る準備",
+          "unclear": "127.0.0.1を遠方で開けるか",
+          "action": "公開後のアドレスが必要と確認",
+          "suggestion": "コピー前にローカルリンクの制限を強調"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

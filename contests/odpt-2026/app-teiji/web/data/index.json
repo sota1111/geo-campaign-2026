@@ -1,12 +1,12 @@
 {
- "generated": "2026-11-13 00:22:43",
+ "generated": "2026-11-13 23:56:45",
  "operators": [
   {
    "id": "odpt_kiyose_city_kiyo_bus",
    "name": "きよバス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 22,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -15,9 +15,9 @@
   {
    "id": "odpt_tosaden_traffic_airportbus",
    "name": "とさでん交通 空港連絡バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 16,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -26,9 +26,9 @@
   {
    "id": "odpt_tosaden_traffic_regularbus",
    "name": "とさでん交通 路線バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 1156,
+   "last": "2026-11-13 11:59:30",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -37,9 +37,9 @@
   {
    "id": "odpt_takasaki_city_yosiibus",
    "name": "よしいバス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 168,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -48,9 +48,9 @@
   {
    "id": "odpt_joshin_hire_all_lines",
    "name": "上信ハイヤー株式会社",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 13,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -59,9 +59,9 @@
   {
    "id": "odpt_keisei_transit_bus_all_lines",
    "name": "京成バス千葉ウエスト",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 522,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -70,9 +70,9 @@
   {
    "id": "odpt_keifuku_bus_keifuku_rosen",
    "name": "京福バス（路線バス）",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 1159,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -81,9 +81,9 @@
   {
    "id": "odpt_sendai_municipal_bus_realtime_information",
    "name": "仙台市交通局",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 4816,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -92,9 +92,9 @@
   {
    "id": "odpt_nagoya_housing_city_planning_bureau_nagoya_srt_all_lines",
    "name": "名古屋市　SRT",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 13,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -103,9 +103,9 @@
   {
    "id": "odpt_tosa_city_all_lines",
    "name": "土佐市ドラゴンバス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 83,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -114,9 +114,9 @@
   {
    "id": "odpt_nippon_chuo_bus_maebashi_area",
    "name": "日本中央バス　全線 (2025.9/30までは奥多野線を除く)",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 327,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -125,9 +125,9 @@
   {
    "id": "odpt_tokyo_suginami_city_green_slow_mobility",
    "name": "杉並区グリーンスローモビリティ",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 7,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -136,9 +136,9 @@
   {
    "id": "b_bus_gtfs_rt-toei",
    "name": "東京都交通局",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "集計あり",
+   "stop_estimates": 15064,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -147,9 +147,9 @@
   {
    "id": "odpt_joshin_kanko_bus_all_lines",
    "name": "株式会社上信観光バス　乗合事業課",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 283,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -158,9 +158,9 @@
   {
    "id": "odpt_gunma_bus_all_lines",
    "name": "株式会社群馬バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 700,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -169,9 +169,9 @@
   {
    "id": "odpt_nagai_transportation_all_lines",
    "name": "永井バス（永井運輸株式会社）",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 418,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -180,9 +180,9 @@
   {
    "id": "odpt_kenko_hokubu_kotsu_localbus",
    "name": "県交北部交通 路線バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 313,
+   "last": "2026-11-13 11:59:30",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -191,9 +191,9 @@
   {
    "id": "odpt_gunmachuo_bus_all_lines",
    "name": "群馬中央バス株式会社",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 250,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -202,9 +202,9 @@
   {
    "id": "odpt_kan_etsu_transportation_all_lines",
    "name": "関越交通バス",
-   "verdict": "判定不能",
+   "status": "蓄積中",
    "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -213,9 +213,9 @@
   {
    "id": "odpt_aomori_city_all_lines",
    "name": "青森市営バス路線情報",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:49",
+   "status": "蓄積中",
+   "stop_estimates": 1381,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:19",
    "observed_days": [
     "2026-11-13"
@@ -224,9 +224,9 @@
   {
    "id": "odpt_urban_development_aomori_city_all_lines",
    "name": "青森県青森市　コミュニティバス",
-   "verdict": "判定不能",
+   "status": "蓄積中",
    "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -235,9 +235,9 @@
   {
    "id": "odpt_susaki_city_citybus",
    "name": "須崎市 市営バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 25,
+   "last": "2026-11-13 11:59:30",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -246,9 +246,9 @@
   {
    "id": "odpt_kochi_seinan_traffic_localbus",
    "name": "高知西南交通 路線バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 314,
+   "last": "2026-11-13 11:59:31",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"
@@ -257,9 +257,9 @@
   {
    "id": "odpt_kochi_koryo_kotsu_localbus",
    "name": "高知高陵交通 路線バス",
-   "verdict": "判定不能",
-   "stop_estimates": 0,
-   "last": "2026-11-13 00:21:48",
+   "status": "蓄積中",
+   "stop_estimates": 200,
+   "last": "2026-11-13 11:59:30",
    "first": "2026-11-13 00:02:18",
    "observed_days": [
     "2026-11-13"

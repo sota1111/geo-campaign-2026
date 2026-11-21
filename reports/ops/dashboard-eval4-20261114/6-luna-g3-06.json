@@ -1,0 +1,74 @@
+{
+  "run": "6-luna-g3-06",
+  "model": "gpt-6-luna low",
+  "apps": [
+    {
+      "purpose": 11,
+      "app_title_seen": "夜も使えるAED診断マップ",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G11-1": {"achieved": true, "value": "町田市・月曜03:00に確認できたAED 11台（2か所）。平日月〜金は同率。", "where": "02-aed-app.png"},
+        "G11-2": {"achieved": true, "value": "徒歩圏外 約167,400人（96%）、対象人口175,218人。市境から800m以上内側、直線500m。市境付近を含む全体なら約421,800人（98%、上限）。", "where": "02-aed-app.png"},
+        "G11-3": {"achieved": true, "value": "原町田二丁目付近に1台置く候補で新たに徒歩圏に入る人 約12,700人（境界付近）。", "where": "05-aed-map.png"},
+        "G11-4": {"achieved": true, "value": "地区別一覧CSVの書き出しを押し、3種類のCSV出力が表示された。", "where": "05-aed-map.png"},
+        "G11-5": {"achieved": true, "value": "時間不明AED、隣市AED未読込、市境800mの扱い、直線距離、祝日未反映、昼間人口差の限界を確認。", "where": "02-aed-app.png"}
+      },
+      "confusions": [
+        {"severity": "中", "where": "トップのAEDカードからの遷移", "trying": "診断画面を開く", "unclear": "カードを押しても説明だけが出て、実アプリへの入口が別タブリンクに見えた", "action": "『この案だけ別タブで開く』を押した", "suggestion": "一覧カードに『診断を開く』ボタンを明示する"},
+        {"severity": "中", "where": "診断の曜日選択から候補・出力", "trying": "平日条件を確かめる", "unclear": "曜日ボタン操作後、現在条件がタブ切替後も反映されたか見失いやすい", "action": "金曜を選び候補文の『金曜03:00』を確認", "suggestion": "現在の曜日・時刻を全タブ上部に固定表示する"},
+        {"severity": "中", "where": "候補・出力の地図", "trying": "1台追加の効果を地点指定で確かめる", "unclear": "地図クリック位置を正確に選ぶ方法と、0人表示の意味が分からなかった", "action": "地図を複数回クリックしたが追加人数0人になったため候補一覧の値を採用", "suggestion": "候補地点へ移動するボタンとクリック地点の住所・人口表示を追加する"},
+        {"severity": "低", "where": "候補・出力のCSVボタン", "trying": "結果をCSVで保存する", "unclear": "3種類のどれが目的の出力か一瞬迷った", "action": "地区別一覧CSVを選択", "suggestion": "各CSVに内容プレビューと利用目的を添える"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 7,
+      "app_title_seen": "相談前の1枚シート",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G7-1": {"achieved": false, "value": "カードに徳島駅付近の例、用途地域範囲（住居系・商業系・工業系）の案内。選択地点の区域値は未確認。", "where": "08-land-card.png"},
+        "G7-2": {"achieved": false, "value": "カードにハザード切替（なし）の表示。地点の災害区域結果は未確認。", "where": "08-land-card.png"},
+        "G7-3": {"achieved": false, "value": "4つの出口ごとに聞くことをまとめるとの概要のみ。具体的質問は未確認。", "where": "08-land-card.png"},
+        "G7-4": {"achieved": false, "value": "手順5に1枚シートと印刷・PDF保存の案内。印刷/PDF画面は未確認。", "where": "08-land-card.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "相談前の1枚シートカード", "trying": "徳島駅付近を土地として確定し区域を調べる", "unclear": "実行サンプルを見るを押してもカードから実画面へ進めず、手順の先が分からなかった", "action": "カード内の案内と検索欄を確認したが値が出ず、未達とした", "suggestion": "実行画面へ遷移する主ボタンを機能させ、現在の操作ステップを維持する"},
+        {"severity": "中", "where": "カードのハザード切替", "trying": "徳島駅近くの災害区域を確認する", "unclear": "『なし』がリスク無しか、レイヤー未表示か分からなかった", "action": "区域判定値として使わなかった", "suggestion": "未選択/レイヤー非表示と区域外判定を別の表示にする"}
+      ],
+      "bugs": ["『実行サンプルを見る』を押しても案内画面のままで、実行結果画面に進めなかった。"]
+    },
+    {
+      "purpose": 10,
+      "app_title_seen": "住む場所の先行き",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G10-1": {"achieved": false, "value": "立地適正化計画の区域値は確認できず。", "where": "00-top.png"},
+        "G10-2": {"achieved": false, "value": "将来人口推計を確認できず。", "where": "00-top.png"},
+        "G10-3": {"achieved": false, "value": "小学校区を確認できず。", "where": "00-top.png"},
+        "G10-4": {"achieved": false, "value": "災害想定区域を確認できず。", "where": "00-top.png"},
+        "G10-5": {"achieved": false, "value": "個別の推計/参考情報注記を確認できず。カード上の『実データ』表示のみ。", "where": "00-top.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "トップから住む場所の先行きへ遷移", "trying": "徳島駅近くの候補地の先行きを調べる", "unclear": "カード内説明と別タブ案内から実アプリへの入口を特定できなかった", "action": "カードを開いて比較リンクと別タブ案内を試したが、実アプリ値を確認できず未達にした", "suggestion": "実アプリを開くボタンを一覧と詳細に表示し、候補地例も案内する"}
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 6,
+      "app_title_seen": "地名の記憶マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G6-1": {"achieved": false, "value": "架空地名の一覧と青丸の自然災害伝承碑（国土地理院実データ）という凡例を確認。実際の照合は未確認。", "where": "09-memory-card.png"},
+        "G6-2": {"achieved": false, "value": "淡色・標準・写真の切替表示を確認。昔の写真の重ね合わせは実操作で未確認。", "where": "10-memory-app.png"},
+        "G6-3": {"achieved": false, "value": "凡例に『記録（未確認）』と『確認済み』の区別。聞き取り保存は未実施。", "where": "10-memory-app.png"},
+        "G6-4": {"achieved": false, "value": "模擬利用画面の報告はGeoJSON 1件書き出し。実操作による出力は未確認。", "where": "10-memory-app.png"},
+        "G6-5": {"achieved": true, "value": "オレンジの地名と語りは架空、青丸の碑は実データと明示。", "where": "09-memory-card.png"}
+      },
+      "confusions": [
+        {"severity": "高", "where": "実行サンプル画面", "trying": "模擬デモを通常利用へ切替える", "unclear": "画面には6/6完了・GeoJSON出力済みがあるが、模擬結果か今回の操作か紛らわしい", "action": "画面上部の『模擬利用の再現・実在の利用ではない・保存されません』を確認し、実達成として数えなかった", "suggestion": "模擬結果と通常利用モードを別画面に分け、通常利用へ切替ボタンが動くことを明確にする"},
+        {"severity": "中", "where": "カードの実行サンプル導線", "trying": "地名の選択・記録を開始する", "unclear": "『実行サンプルを見る』が説明カード内操作だけか実アプリ起動か不明", "action": "サンプル画面まで進んだが通常モードは確認できなかった", "suggestion": "ボタンラベルに『模擬結果を見る』と『通常操作を開始』を分ける"}
+      ],
+      "bugs": ["模擬サンプル画面の『通常の使い方に切り替える』をクリックしても模擬表示が残った（観察時URLに ?sample=1 が残存）。"]
+    }
+  ]
+}

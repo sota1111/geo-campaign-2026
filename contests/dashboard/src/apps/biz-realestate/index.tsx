@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl'
 import { AlertTriangle, CheckCircle2, Copy, HelpCircle, Printer, Search, Loader2, MapPin } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StepLayout } from '@/components/shared/StepLayout'
-import { useAppSteps } from '@/components/shared/AppSteps'
+import { useAppSteps, useRegisteredSteps } from '@/components/shared/AppSteps'
 import { MapView, type MapLayer } from '@/components/shared/MapView'
 import { SourceDialog, type SourceItem } from '@/components/shared/SourceDialog'
 import { Button } from '@/components/ui/button'
@@ -246,7 +246,8 @@ export default function App() {
     if (mine !== seq.current) return
     setBusy(false)
     setFacts(example ? { ...f, example: true } : f)
-    if (example) { setAnswers(SAMPLE_ANSWERS); setAnswered(true) }
+    // 例の土地は「位置だけ」。回答（建物あり・相続登記まだ等）は自動で入れない（自分の土地の事実と取り違えるため）。例の回答は手順2のボタンで入れる
+    if (example) { setAnswers({}); setAnswered(false) }
     setAddress(addr)
     setStatus(f.inArea ? '公開データの取得が完了しました。' : 'この地点は地図データの範囲（徳島市周辺）の外です。用途地域・公共交通は出ません。')
   }, [data])
@@ -524,7 +525,7 @@ export default function App() {
               <Button type="button" variant="secondary" className="h-auto min-h-11 whitespace-normal py-2 md:min-h-8" disabled={busy} data-testid="use-example" onClick={showExample}>
                 {facts?.example ? '例の土地をもう一度取得する' : '徳島駅付近の例で試す'}
               </Button>
-              <p className="text-xs text-muted-foreground">徳島駅の位置の公開データで試せます。実在の相続土地ではなく、回答は例（架空）です。{facts && !facts.example ? '別の土地に切り替わります。' : ''}</p>
+              <p className="text-xs text-muted-foreground">徳島駅の位置の公開データで試せます（位置だけを使い、手順2の回答は入れません）。実在の相続土地ではありません。{facts && !facts.example ? '別の土地に切り替わります。' : ''}</p>
             </div>
             <NextHint step="place" ready={!!facts && !busy} />
           </div>
@@ -554,7 +555,14 @@ export default function App() {
                 : '土地の位置を決めると、回答がシートに反映されます。'}
             </p>
             {facts && !answered && (
-              <Button type="button" variant="secondary" className="h-auto min-h-11 whitespace-normal py-2" data-testid="skip-answers" onClick={() => setAnswered(true)}>どれも分からないので、このまま済にする</Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" className="h-auto min-h-11 whitespace-normal py-2" data-testid="skip-answers" onClick={() => setAnswered(true)}>どれも分からないので、このまま済にする</Button>
+                {facts.example && (
+                  <Button type="button" variant="outline" className="h-auto min-h-11 whitespace-normal py-2" data-testid="example-answers" onClick={() => { setAnswers(SAMPLE_ANSWERS); setAnswered(true) }}>
+                    例の回答（架空）を入れて試す
+                  </Button>
+                )}
+              </div>
             )}
             {facts && answered && <p className="text-xs font-medium text-sky-900" role="status" data-testid="answers-done">この手順は済です（回答はいつでも変えられます）。</p>}
             <NextHint step="answers" ready={!!facts && answered} />
@@ -592,6 +600,21 @@ export default function App() {
         return (
           <div className="space-y-3" data-testid="exits-panel">
             {!desktop && <ExitPicker sheet={sheet} value={exitKey} onChange={setExitKey} />}
+            {desktop && (
+              // 4つの出口は縦に長い。先頭に目次を置き、押すとその出口まで移動する（「売る」だけで画面が埋まり、残りが下にあると気づきにくかった）
+              <nav aria-label="4つの出口へ移動" className="sticky top-0 z-10 -mx-1 flex flex-wrap gap-1 bg-background/95 px-1 py-1" data-testid="exit-toc">
+                {sheet.exits.map((e) => (
+                  <button
+                    key={e.key}
+                    type="button"
+                    className="rounded-md border px-2 py-1 text-xs font-medium hover:bg-accent"
+                    onClick={() => document.querySelector(`[data-testid="exits-panel"] [data-testid="exit-${e.key}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })}
+                  >
+                    {EXIT_LABEL[e.key]}（{e.items.length}）
+                  </button>
+                ))}
+              </nav>
+            )}
             {sheet.exits.map((e) => <ExitBlock key={e.key} e={e} hiddenOnScreen={!desktop && e.key !== exitKey} />)}
             <MissingList sheet={sheet} part="missing" lib={!!lib} />
             <MissingList sheet={sheet} part="other" lib={!!lib} />
@@ -680,12 +703,15 @@ export default function App() {
 }
 
 function NextHint({ step, ready }: { step: string; ready: boolean }) {
-  const i = ORDER.indexOf(step as (typeof ORDER)[number])
-  const next = ORDER[i + 1]
+  // 次に案内するのは、この手順より後ろではなく「まだ済んでいない最初の手順」（例の土地で手順2が済んでいても「次は手順2」と出していた）
+  const { steps } = useRegisteredSteps()
+  const todo = steps.find((x) => !x.done && !x.optional && x.id !== step)?.id as (typeof ORDER)[number] | undefined
+  const next = todo
+  const i = next ? ORDER.indexOf(next) - 1 : 0
   if (!ready) return null
   return (
     <p className="rounded-md bg-sky-50 px-2 py-1.5 text-xs font-medium text-sky-900 print:hidden" data-testid="next-hint">
-      {next ? `次は手順${i + 2}：${STEP_META[next].title}（手順バーから選びます。スマホは画面上部、パソコンは左）` : 'これで最後の手順です。印刷は任意で、シートは画面で読めます。'}
+      {next ? `次は手順${i + 2}：${STEP_META[next].title}（手順バーから選びます。スマホは画面上部、パソコンは左）` : '目的に必要な手順はすべて済みました。印刷は任意で、シートは画面で読めます。'}
     </p>
   )
 }
@@ -792,7 +818,7 @@ function useIsDesktop() {
 
 function ExitBlock({ e, hiddenOnScreen = false, note = true }: { e: import('./lib').Exit; hiddenOnScreen?: boolean; note?: boolean }) {
   return (
-    <div className={cn('rounded-md border p-3 print:mb-1.5 print:p-1.5', hiddenOnScreen && 'hidden print:block')} data-testid={`exit-${e.key}`}>
+    <div className={cn('scroll-mt-10 rounded-md border p-3 print:mb-1.5 print:p-1.5', hiddenOnScreen && 'hidden print:block')} data-testid={`exit-${e.key}`}>
       <h4 className="mb-1 text-base font-bold print:mb-0.5 print:text-[9pt]">{e.label}</h4>
       {e.key === 'release' && note && (
         <p className="mb-1 text-xs text-muted-foreground print:text-[6.5pt] print:text-black">相続土地国庫帰属制度（国庫帰属）＝相続した土地を、一定の条件で国に引き取ってもらう制度。</p>

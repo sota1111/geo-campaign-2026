@@ -113,6 +113,46 @@ export function calibrate(scanned: Scanned[], cellSat: CellSat, minEach = 3): Ca
   return { w: cands[0].w, reason: null, pos, neg, table, ledgerOnly: table[0].auc, satOnly: table[10].auc }
 }
 
+/** 調査結果の入力値。hit=空洞あり, none=空洞なし, unknown=未調査（今回は走らなかった） */
+export type Outcome = 'hit' | 'none' | 'unknown'
+export type OutcomeInput = Record<string, Outcome | undefined>
+
+/** サンプル（架空）の結果を、選んだ区間すべてに対して作る（sim_cavity を結果とみなす） */
+export function sampleOutcomes(segs: Segment[], ids: Iterable<string>): OutcomeInput {
+  const set = new Set(ids)
+  const out: OutcomeInput = {}
+  for (const s of segs) if (set.has(s.id)) out[s.id] = s.sim_cavity ? 'hit' : 'none'
+  return out
+}
+
+/** 手入力された結果を区間に反映する。
+ *  - hit/none を入力した区間だけ「調査済み」になり、その結果が sim_cavity（結果の値）に入る
+ *  - unknown・未入力の区間は未調査のまま（次回も候補に残る）
+ *  戻り値: 更新後の区間、結果マップ（既存＋今回）、今回調査済みになった区間ID・未調査のままの区間ID */
+export function applyOutcomes(
+  segs: Segment[],
+  outcomes: OutcomeInput,
+  prevResults: Map<string, boolean> = new Map(),
+): { segs: Segment[]; results: Map<string, boolean>; done: string[]; skipped: string[] } {
+  const results = new Map(prevResults)
+  const done: string[] = []
+  const skipped: string[] = []
+  const next = segs.map((s) => {
+    const o = outcomes[s.id]
+    if (o === undefined) return s
+    if (o === 'unknown') {
+      skipped.push(s.id)
+      return s
+    }
+    if (s.cls !== 'life' || s.surveyed) return s
+    const hit = o === 'hit'
+    results.set(s.id, hit)
+    done.push(s.id)
+    return { ...s, surveyed: true, sim_cavity: hit }
+  })
+  return { segs: next, results, done, skipped }
+}
+
 /** 点数が下位の半分を「異常なし」と判定したとき、その中で実際に異常なしだった割合。件数が minN 未満なら null */
 export function exclusionAccuracy(scanned: Scanned[], cellSat: CellSat, w: number, minN = 5): Exclusion | null {
   const arr = scanned

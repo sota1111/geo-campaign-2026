@@ -1,0 +1,182 @@
+{
+  "run": "61-terra-g2-10",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 8,
+      "app_title_seen": "配電線 樹木リスク台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G8-1": {
+          "achieved": true,
+          "value": "F1-03、136点（衛星・公開85／事業者51）",
+          "where": "01-power.png"
+        },
+        "G8-2": {
+          "achieved": true,
+          "value": "上位4区間 F1-03、F2-05、F2-03、F3-04を現地確認計画に選択",
+          "where": "02-plan.png"
+        },
+        "G8-3": {
+          "achieved": true,
+          "value": "F1-03に要伐採を記録し、確認集計を踏まえ重みを25→30に手動変更。136→141点",
+          "where": "03-power-updated.png"
+        },
+        "G8-4": {
+          "achieved": true,
+          "value": "①〜④の配電線・区間・点数・停電戸数・現地確認は架空。⑤のMeta・WRI樹高マップは実データ、線は仮",
+          "where": "01-power.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "②現地確認の計画",
+          "trying": "点数上位を現地確認に選ぶ",
+          "unclear": "一覧の順が点数順でなく、F2-05（79点）がF2-03（92点）より先に見えた。約20秒迷った",
+          "action": "説明を読み営業所からの近い順と理解した",
+          "suggestion": "見出しに「巡回順」と台帳順位を併記する"
+        },
+        {
+          "severity": "中",
+          "where": "③記録・④点数の見直し",
+          "trying": "記録を次の優先順位に反映",
+          "unclear": "記録だけで点数が変わるか、手動変更が必要か迷った。約30秒",
+          "action": "④の説明と集計を確認し重みを手動変更した",
+          "suggestion": "記録後に見直し画面への導線と手動更新の説明を表示する"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 5,
+      "app_title_seen": "バス路線見直し案の比較",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G5-1": {
+          "achieved": true,
+          "value": "平日朝8時・20分、案A 鍛冶屋原線 4,190人・65歳以上943人、案B 鳴門線 2,190人・65歳以上797人",
+          "where": "04-bus-compare.png"
+        },
+        "G5-2": {
+          "achieved": true,
+          "value": "案B（2,190人）が案A（4,190人）より少ない",
+          "where": "04-bus-compare.png"
+        },
+        "G5-3": {
+          "achieved": true,
+          "value": "plan-comparison-tokushima-wdm20.csv を書き出し",
+          "where": "05-bus-export.png"
+        },
+        "G5-4": {
+          "achieved": true,
+          "value": "複数路線同時停止の人数は「少なくとも」の下限値",
+          "where": "04-bus-compare.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "低",
+          "where": "案A・案Bを作る",
+          "trying": "二つの案を作る",
+          "unclear": "最初から入った路線が確定済みか例示か一瞬迷った。約10秒",
+          "action": "例のまま確定ボタンで両案を確定した",
+          "suggestion": "初期選択のラベルに「例・未確定」を付ける"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 9,
+      "app_title_seen": "使用済み太陽光パネルの「回収圏」計画",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G9-1": {
+          "achieved": true,
+          "value": "2045年まで、調達期間終了時・20km・府外施設含む条件で圏外1,878件、322.5MW（63.4%）",
+          "where": "07-solar-before.png"
+        },
+        "G9-2": {
+          "achieved": true,
+          "value": "距離が最も減る町字に候補を追加。圏外322.5→166.4MW、63.4→32.7%、平均距離37.4→16.2km",
+          "where": "08-solar-after.png"
+        },
+        "G9-3": {
+          "achieved": true,
+          "value": "recovery-zone-kyoto-fit-2045-20km.csv をダウンロード",
+          "where": "09-solar-export.png"
+        },
+        "G9-4": {
+          "achieved": true,
+          "value": "設備位置は町字代表点で同一町字は重なる。廃棄時期は調達期間終了時または運転開始＋年数の仮説で実撤去時期ではない",
+          "where": "06-solar-notes.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "②回収圏の中か外か",
+          "trying": "圏外の量を読む",
+          "unclear": "候補施設の受入可否未確認の場合と含まない場合の比率が併記され、どれが現条件か迷った。約25秒",
+          "action": "本文の施設条件と63.4%の値を突き合わせた",
+          "suggestion": "現在の設定に対応する値を明確に強調する"
+        },
+        {
+          "severity": "低",
+          "where": "③拠点を足すと",
+          "trying": "候補を置いた後の結果を確認",
+          "unclear": "ボタン押下後、結果が画面下に現れて見えず、変化に気づきにくかった。約15秒",
+          "action": "左パネルを下へスクロールした",
+          "suggestion": "結果へ自動スクロールするか結果へのリンクを出す"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 4,
+      "app_title_seen": "盛土巡視台帳",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G4-1": {
+          "achieved": true,
+          "value": "実データ横須賀市716か所。上位5か所：本庁0005、田浦0047、逸見0047、久里浜0012（各80点）、本庁0051（77点）",
+          "where": "10-fill-data.png、11-fill-plan.png"
+        },
+        "G4-2": {
+          "achieved": true,
+          "value": "patrol-plan.csv 5行を書き出し",
+          "where": "11-fill-plan.png、12-fill-record.png"
+        },
+        "G4-3": {
+          "achieved": true,
+          "value": "本庁0005に2026-11-14、評価班、是正対象を記録。台帳の最新の巡視に反映",
+          "where": "12-fill-record.png"
+        },
+        "G4-4": {
+          "achieved": true,
+          "value": "衛星由来の変化量は未接続で点数に含まれない",
+          "where": "10-fill-data.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "左の手順3と手順4",
+          "trying": "実データで巡視計画を作る",
+          "unclear": "必須手順3は架空値の衛星操作で、実データの計画に必要なのか迷った。約20秒",
+          "action": "手順4に直接進み5件を確定した",
+          "suggestion": "実データの計画には不要な体験手順と明示し、必須進捗から分ける"
+        },
+        {
+          "severity": "低",
+          "where": "巡視計画の一覧",
+          "trying": "優先度上位5件を確認",
+          "unclear": "一覧は順位順ではなく回る順なので、上位の選定と巡回順を混同しかけた。約15秒",
+          "action": "台帳順位と説明を照合した",
+          "suggestion": "列見出しに巡回順と優先順位を並べて示す"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}

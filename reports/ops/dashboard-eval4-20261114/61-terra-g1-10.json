@@ -1,0 +1,177 @@
+{
+  "run": "61-terra-g1-10",
+  "model": "gpt-6.1-terra low",
+  "apps": [
+    {
+      "purpose": 12,
+      "app_title_seen": "バス定時性カルテ",
+      "found_app_without_trouble": false,
+      "goals": {
+        "G12-1": {
+          "achieved": true,
+          "value": "きょバス（データ蓄積前）",
+          "where": "08-bus.png"
+        },
+        "G12-2": {
+          "achieved": true,
+          "value": "集計前。1日分40回、推定0便、日中取得不足",
+          "where": "08-bus.png"
+        },
+        "G12-3": {
+          "achieved": true,
+          "value": "公共交通オープンデータセンター、各事業者のバス位置・時刻表。蓄積前",
+          "where": "09-bus-select.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "トップ左メニュー",
+          "trying": "遅れ分析を探す",
+          "unclear": "目的のアプリが下方に隠れ、路線見直し案と迷った",
+          "action": "スクロールして対象者を確認（約30秒）",
+          "suggestion": "用途検索や説明を一覧に表示"
+        },
+        {
+          "severity": "中",
+          "where": "出典・ライセンス",
+          "trying": "提供元を確認",
+          "unclear": "モーダルに具体的な提供元がない",
+          "action": "右側最下部を探した（約30秒）",
+          "suggestion": "モーダルに具体的な出典を記載"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 2,
+      "app_title_seen": "みんなの盛土ウォッチ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G2-1": {
+          "achieved": true,
+          "value": "熱海市0012、駅の北西約1100m、腹付け型",
+          "where": "11-mound-near.png"
+        },
+        "G2-2": {
+          "achieved": true,
+          "value": "1961〜69年と全国最新写真を比較",
+          "where": "12-mound-compare.png"
+        },
+        "G2-3": {
+          "achieved": false,
+          "value": "保存したが具体的変化は特定できず、分類が亀裂・段差のまま",
+          "where": "07-top-scroll.png"
+        },
+        "G2-4": {
+          "achieved": true,
+          "value": "通報文をコピー。分類誤りを含む",
+          "where": "07-top-scroll.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "比較写真",
+          "trying": "具体的な変化を見つける",
+          "unclear": "写真が不鮮明で変化を確信できない",
+          "action": "不確実なメモを保存（約40秒）",
+          "suggestion": "拡大と解像度・撮影年の説明"
+        },
+        {
+          "severity": "高",
+          "where": "台帳の記録フォーム",
+          "trying": "写真の見え方の違いを記録",
+          "unclear": "分類の初期値が亀裂・段差のまま残った",
+          "action": "通報文で誤分類に気づいた（約30秒）",
+          "suggestion": "初期値を未選択にし保存前に確認"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 3,
+      "app_title_seen": "路面下リスクの二段階調査",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G3-1": {
+          "achieved": true,
+          "value": "S021・S022・S036が0.94で同点",
+          "where": "02-satellite.png"
+        },
+        "G3-2": {
+          "achieved": true,
+          "value": "3.0kmの予算で22区間2.9kmを選び走査へ",
+          "where": "06-satellite-round2.png"
+        },
+        "G3-3": {
+          "achieved": true,
+          "value": "衛星重み50%→60%、未走査1位S020→S033",
+          "where": "06-satellite-round2.png"
+        },
+        "G3-4": {
+          "achieved": true,
+          "value": "サンプル市とデータは架空、走査はシミュレーション",
+          "where": "02-satellite.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "手順1 候補区間の点数",
+          "trying": "最高点を確認",
+          "unclear": "読むだけでは完了せず表の行選択が必要",
+          "action": "直接次へ進んだ（約15秒）",
+          "suggestion": "行選択とその理由を最高値付近に表示"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "purpose": 1,
+      "app_title_seen": "生活アクセス診断マップ",
+      "found_app_without_trouble": true,
+      "goals": {
+        "G1-1": {
+          "achieved": true,
+          "value": "富山市大町、平日朝8時、病院へ徒歩30分以内。佐々木病院約469m、徒歩約8分",
+          "where": "05-satellite-calibrate.png"
+        },
+        "G1-2": {
+          "achieved": true,
+          "value": "日曜朝も徒歩で行ける。最終便は平日20:44、休日20:45",
+          "where": "10-mound.png"
+        },
+        "G1-3": {
+          "achieved": true,
+          "value": "堀川南大町、平日20:44発",
+          "where": "10-mound.png"
+        },
+        "G1-4": {
+          "achieved": true,
+          "value": "結論とリンクをコピー済み。ただしローカル確認用URL",
+          "where": "03-satellite-step2.png"
+        }
+      },
+      "confusions": [
+        {
+          "severity": "中",
+          "where": "場所検索後",
+          "trying": "結論を見る",
+          "unclear": "検索後に自動で次へ進まない",
+          "action": "左手順を押した（約15秒）",
+          "suggestion": "検索結果に次へボタン"
+        },
+        {
+          "severity": "中",
+          "where": "家族に送る画面",
+          "trying": "遠方の兄に共有",
+          "unclear": "コピーしたURLは127.0.0.1で遠方では使えない",
+          "action": "注記を読み送信せず（約20秒）",
+          "suggestion": "コピー前に共有不可を目立たせる"
+        }
+      ],
+      "bugs": []
+    }
+  ]
+}
