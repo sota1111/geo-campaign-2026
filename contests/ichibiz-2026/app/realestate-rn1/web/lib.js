@@ -607,7 +607,7 @@
     if (p && p.hasPlan) zone = (p.inResidential ? '居住誘導区域' + (tk ? '（居住促進区域）' : '') + 'の中' : p.inPlanArea ? '計画区域の中・居住誘導区域の外' : '立地適正化計画の区域の外') + (p.inCityFunction ? '／都市機能誘導区域の中' : '');
     else if (f.zoning && f.zoning.use && f.zoning.use.length) zone = '用途地域: ' + f.zoning.use.map((e) => e.name).join('・') + '（立地適正化計画のデータ無し）';
     else if (p && !p.hasPlan) zone = '立地適正化計画のデータ無し';
-    rows.push({ k: '区域', v: zone, short: p && p.hasPlan ? (p.inResidential ? '居住誘導 内' : '居住誘導 外') : '計画データ無し' });
+    rows.push({ k: '区域', id: 'zone', inRes: !!(p && p.hasPlan && p.inResidential), v: zone, short: p && p.hasPlan ? (p.inResidential ? '居住誘導 内' : '居住誘導 外') : '計画データ無し' });
     const q = f.pop;
     if (q && q.meshN) {
       const [y0, , y2] = pickYears(q.years), L = q.local, C = q.city;
@@ -630,7 +630,7 @@
       if (spec.noBoundary) { parts.push(nm[spec.part] + ' ' + (v.level > 0 ? lab(v.level) : '区分なし')); continue; }
       if (v.mixed) { haz.push(nm[spec.part]); parts.push(nm[spec.part] + ' 境界付近'); } else if (v.level > 0) { haz.push(nm[spec.part]); parts.push(nm[spec.part] + ' ' + lab(v.level)); } else parts.push(nm[spec.part] + ' 外');
     }
-    rows.push({ k: '災害の想定', v: parts.join('／'), short: haz.length ? '災害: ' + haz.join('・') + 'の想定区域か付近' : '災害の想定区域 外' });
+    rows.push({ k: '災害の想定', v: parts.join('／'), short: haz.length ? '災害: ' + haz.join('・') + 'の想定区域か付近' : '災害の想定区域 外', parts: parts, haz: haz });
     return rows;
   }
 

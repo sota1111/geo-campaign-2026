@@ -151,3 +151,109 @@ table.cmp th:first-child { width: 2.9em; }
 }
 #status:empty { display: none; }
 @media (max-width: 640px) { table.sum th { white-space: normal; width: 30%; } }
+/* ---- 評価ループ第2回: 1つの比較表・勤務先のたたみ・スマホは地図を上に固定してパネルだけスクロール ---- */
+.stepn { display: inline-flex; align-items: center; justify-content: center; width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--accent); color: #fff; font-size: .8rem; margin-right: 4px; vertical-align: 1px; }
+button.mini { padding: 1px 8px; font-size: .78rem; vertical-align: 1px; }
+.wfold { margin: 0 0 2px; font-size: .85rem; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.wfold .num { margin-left: 4px; }
+#propList table.cmp { table-layout: auto; font-size: .76rem; }
+#propList table.cmp th, #propList table.cmp td { padding: 2px 3px; word-break: keep-all; white-space: nowrap; vertical-align: middle; }
+#propList table.cmp th.pc { white-space: normal; text-align: left; min-width: 7em; }
+#propList table.cmp thead th { font-size: .72rem; line-height: 1.25; }
+#propList table.cmp th.grp { background: #dfe6ec; }
+#propList table.cmp thead th.na { white-space: normal; font-weight: normal; color: var(--muted); }
+#propList table.cmp .hsub { display: block; font-size: .64rem; }
+button.pname { display: inline-flex; align-items: center; gap: 3px; background: none; border: 0; color: var(--accent); padding: 0; font-size: .78rem; font-weight: bold; text-align: left; text-decoration: underline; line-height: 1.3; }
+button.pname .rowno { display: inline-flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; height: 20px; flex: 0 0 auto; }
+.pbs { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 1px; }
+.pb { font-size: .62rem; line-height: 1.3; border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; color: var(--muted); font-weight: normal; background: #fff; }
+.pb.in { border-color: #2f9e5b; color: #1b6b3a; }
+.pb.hz { border-color: #b07a00; color: #6b4a00; background: #fff8e1; }
+td.cmt .cm { font-size: .82rem; }
+td.cmt .md { display: block; font-size: .62rem; color: var(--muted); line-height: 1.1; }
+td.cmt .wi { margin-left: 2px; }
+.tnote { margin: 2px 0 6px; font-size: .72rem; color: #3d4954; line-height: 1.45; }
+.flash { animation: flashcol 1.6s ease-out; }
+@keyframes flashcol { 0% { background: #ffe58a; } 100% { background: inherit; } }
+.sechd { font-weight: normal; font-size: .76rem; margin-left: 8px; opacity: .92; }
+.tag.api { display: none; }
+.hb { display: inline-block; font-size: .74rem; border: 1px solid #b07a00; background: #fff8e1; color: #6b4a00; border-radius: 3px; padding: 0 4px; margin: 1px 0; line-height: 1.4; }
+.hb.out { border-color: var(--line); background: #fff; color: var(--muted); }
+.hb.nd { border-color: #6b7480; background: #eef0f2; color: #2d3640; }
+@media print { .tag.api { display: inline-block; } .sechd { color: #fff; } }
+@media (max-width: 640px) {
+  html, body { height: 100%; }
+  body { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+  header#top { flex: 0 0 auto; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  header#top .lead { font-size: .72rem; margin: 0; }
+  #app { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #mapwrap { flex: 0 0 auto; height: 30vh; height: 30dvh; min-height: 190px; }
+  #side { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .tabpanel { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .panel { margin: 4px 0; }
+  .panel#stepP { padding: 6px 6px; }
+  #propList table.cmp { font-size: .66rem; }
+  #propList table.cmp th, #propList table.cmp td { padding: 1px 2px; }
+  #propList table.cmp th.pc { min-width: 4.6em; }
+  button.pname { font-size: .7rem; }
+  td.cmt .cm { font-size: .72rem; }
+  #propForm input[type=search] { min-width: 100px; }
+  .sidetop fieldset.regions label { min-height: 28px; }
+  .sidetop fieldset.regions legend { line-height: 28px; }
+  .sechd { display: block; margin-left: 0; }
+}
+@media print and (max-width: 640px) { body { height: auto !important; overflow: visible !important; display: block !important; } }
+#propForm[hidden] { display: none; }
+.msg:empty { min-height: 0; margin: 0; }
+.pbs { flex-wrap: nowrap; }
+#propList table.cmp th.pc { min-width: 0; }
+@media (max-width: 640px) {
+  #propList table.cmp { font-size: .6rem; }
+  #propList table.cmp thead th { white-space: normal; word-break: break-all; font-size: .6rem; }
+  #propList table.cmp th, #propList table.cmp td { padding: 1px 1px; }
+  #propList table.cmp th.pc { white-space: normal; }
+  .pbs { flex-wrap: wrap; }
+  .pb { font-size: .56rem; padding: 0 2px; }
+  button.pname { font-size: .64rem; }
+  button.pname .rowno { height: 16px; min-width: 16px; font-size: .62rem; padding: 0 3px; }
+  td.cmt .cm { font-size: .66rem; }
+  td.cmt .md { font-size: .54rem; }
+  .tnote { font-size: .66rem; }
+}
+.pb { white-space: nowrap; }
+#propList table.cmp td.cmt { line-height: 1.2; }
+#propList table.cmp thead tr + tr th { white-space: normal; word-break: break-all; }
+@media (max-width: 640px) {
+  button.pname { display: inline; }
+  #propList table.cmp td.cmt, #propList table.cmp td.na { white-space: normal; word-break: break-all; }
+  #propList table.cmp th.pc { word-break: break-all; }
+}
+@media (min-width: 641px) {
+  #propList table.cmp { font-size: .72rem; }
+  .pb { font-size: .58rem; padding: 0 2px; }
+  td.cmt .cm { font-size: .78rem; }
+}
+@media (max-width: 640px) { #propList table.cmp th.pc { min-width: 3.6rem; } }
+#propList tr.brow { display: none; }
+@media (max-width: 640px) {
+  .lfull { display: none; }
+  header#top .lead { font-size: .7rem; }
+  #propList tr.brow { display: table-row; }
+  #propList tr.brow td { text-align: left; padding: 0 2px 2px; border-top: 0; background: #fafbfc; }
+  #propList tr.brow .pbs { display: flex; gap: 3px; }
+  #propList tr:has(+ tr.brow) > * { border-bottom: 0; }
+  #propList th.pc .pbs { display: none; }
+  #propList table.cmp th.pc { min-width: 3.4rem; }
+  #propList table.cmp th.pc .hsub { display: none; }
+  .attr { font-size: .6rem; }
+}
+@media (max-width: 640px) { #propList table.cmp td.na { white-space: nowrap; word-break: keep-all; } }
+@media (max-width: 640px) {
+  .sheet { padding: 6px 8px; }
+  .sheet h3 { font-size: 1rem; }
+  .sheet .meta { font-size: .72rem; line-height: 1.4; }
+  table.sum { font-size: .76rem; }
+  table.sum th { font-size: .7rem; width: 26%; }
+  #step2 > p.row button { padding: 3px 8px; font-size: .8rem; }
+  #step2.panel { padding: 6px 6px; }
+}

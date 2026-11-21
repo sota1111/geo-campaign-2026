@@ -11,7 +11,7 @@
 <body>
 <header id="top">
   <h1>住む場所の先行き</h1>
-  <p class="lead">物件（10件まで）と勤務先2か所の通勤・生活施設・先行き（計画・人口・災害）を比べる試作版。実データで、結論は出しません（<a href="#tab-info" id="aboutLink">出典・注意</a>）。</p>
+  <p class="lead"><span class="lfull">物件と勤務先を入れて、</span>通勤・生活施設・将来の見通しを1つの表で比べる（<a href="#tab-info" id="aboutLink">出典・注意</a>）</p>
 </header>
 
 <div id="app">
@@ -81,11 +81,10 @@
 
     <div class="tabpanel" id="tab-props" role="tabpanel" aria-labelledby="t-props">
       <section class="panel" id="stepP">
-        <h2>勤務先（2か所）</h2>
         <div id="workForms"></div>
         <p id="workMsg" class="msg" role="status"></p>
 
-        <h2>物件の住所（最大10件）</h2>
+        <h2><span class="stepn" aria-hidden="true">2</span>物件の住所（最大10件）<span id="propFull" class="hsub" hidden> 10件まで入りました（消すには地図の番号を押す）</span> <button type="button" id="exFill" class="secondary mini">例を入れる</button></h2>
         <form id="propForm" class="row">
           <label class="sr" for="propQ">物件の住所</label>
           <input id="propQ" type="search" placeholder="例: 徳島市幸町2丁目" autocomplete="off">
@@ -94,15 +93,12 @@
         </form>
         <p id="propMsg" class="msg" role="status"></p>
         <div id="propCands"></div>
-        <h2>物件と通勤時間の目安 <span class="hsub">直線距離から見積り・概算</span></h2>
         <div id="propList"></div>
-        <h2>生活施設までの距離 <span class="hsub">直線・最短を太字</span></h2>
-        <div id="nearBox"></div>
         <details class="assump">
-          <summary>計算方法（徒歩＝直線×1.25÷分速80m ほか）</summary>
+          <summary>計算方法・データの注意</summary>
           <ul id="assump"></ul>
+          <p class="hint">入力はこの端末だけに保存（住所検索の文字列は国土地理院へ送信）。 <button type="button" id="clearAll" class="secondary mini">入力をすべて消す</button></p>
         </details>
-        <p class="hint">入力はこの端末（localStorage）だけに保存し、住所検索で入力文字列だけを国土地理院へ送ります。 <button type="button" id="clearAll" class="secondary">入力をすべて消す</button></p>
       </section>
     </div>
 

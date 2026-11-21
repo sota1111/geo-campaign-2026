@@ -49,3 +49,21 @@ test('画面: 比較表・地図の全件表示・計算方法は既定で閉じ
   assert.ok(/<details class="assump">/.test(html));
   assert.ok(!html.includes('動く最小限のデモ'));
 });
+test('評価ループ第2回: 通勤と施設を1つの表に、シートは計画・災害を開き、API項目コードは画面で隠す', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../web/layout.css'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
+  assert.ok(app.includes('function nearTable(P, ws)') && !html.includes('id="nearBox"'));
+  assert.ok(app.includes("sec.id === 'plan' || sec.id === 'hazard' ? ' open'"));
+  assert.ok(/\.tag\.api \{ display: none; \}/.test(css));
+  assert.ok(app.includes('鉄道の本数・乗換・時刻は含みません'));
+  assert.ok(!/査定|適正料金|最適地/.test(app + html));
+});
+test('シートの要約: 災害の行に種類ごとの札（parts）と想定区域の種類（haz）を持つ', () => {
+  const dir = path.join(__dirname, '../web/data/tokushima');
+  const rd = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+  const d = Lib.assemble(rd('manifest.json'), { plan: rd('plan.json'), population: rd('population.json'), districts: rd('districts.json'), facilities: rd('facilities.json'), hazards: rd('hazards.json') }, Lib.REGIONS.tokushima);
+  const r = Lib.sheetSummary(d, Lib.collect(d, 134.5513, 34.0745)).find((x) => x.k === '災害の想定');
+  assert.ok(Array.isArray(r.parts) && r.parts.length >= 4 && Array.isArray(r.haz));
+  assert.strictEqual(r.v, r.parts.join('／'));
+});
