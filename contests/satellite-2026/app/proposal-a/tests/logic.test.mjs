@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, AGE_UNKNOWN } from '../logic.js';
+import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom } from '../logic.js';
 
 const data = JSON.parse(fs.readFileSync(new URL('../data/toyonaka.json', import.meta.url)));
 const cellSat = Object.fromEntries(data.cells.map((c) => [c.id, satNorm(c.disp)]));
@@ -44,7 +44,7 @@ test('selectByBudget: 未調査の生活道路のみ・予算内・上位優先'
   const set = new Set(ids);
   assert.ok(ids.length > 0);
   assert.ok(totalKm(data.segments, set) <= 3);
-  for (const id of ids) { const s = data.segments.find((x) => x.id === id); assert.equal(s.cls, 'life'); assert.equal(s.surveyed, false); }
+  for (const id of ids) { const s = data.segments.find((x) => x.id === id); assert.equal(s.cls, 'life'); assert.ok(!s.surveyed); }
   assert.equal(selectByBudget(r, 0).length, 0);
   // 最上位の候補は必ず含まれる（1区間は3kmより短い）
   const top = r.find((s) => s.cls === 'life' && !s.surveyed);
@@ -87,7 +87,10 @@ test('exclusionAccuracy: 下位半分の異常なし割合。件数不足はnull
 });
 
 test('実データ（豊中市北東部）の整合性', () => {
-  assert.ok(data.note.includes('実データ') && data.note.includes('架空'));
+  assert.ok(data.note.includes('実データ') && data.note.includes('含まない'));
+  // 実データのファイルに架空の結果（sim_cavity・調査済み）が入っていない
+  assert.ok(!JSON.stringify(data).includes('sim_cavity'));
+  assert.ok(data.segments.every((s) => !('surveyed' in s) && !('sim_cavity' in s)));
   const sat = data.satellite;
   assert.equal(sat.class_width_mm_yr, 3.75); assert.equal(sat.classes, 16);
   assert.ok(!JSON.stringify(sat).includes('Sentinel'));
@@ -106,10 +109,8 @@ test('実データ（豊中市北東部）の整合性', () => {
     assert.ok(['life', 'arterial', 'noledger'].includes(sg.cls));
     for (const [lo, la] of sg.coords) assert.ok(lo > w - 0.002 && lo < e + 0.002 && la > s - 0.002 && la < n + 0.002);
     if (sg.cls === 'life') assert.ok(sg.year === null || (sg.year >= 1900 && sg.year <= 2026));
-    if (sg.cls === 'noledger') assert.equal(sg.surveyed, false);
-    if (sg.cls === 'arterial') assert.equal(sg.surveyed, true);
   }
-  assert.ok(data.segments.filter((s) => s.cls === 'life' && !s.surveyed).length > 500);
+  assert.ok(data.segments.filter((s) => s.cls === 'life').length > 500);
   // 統計と本体の一致、突き合わせ率の根拠
   const st = data.stats, by = (c) => data.segments.filter((s) => s.cls === c).length;
   assert.equal(st.segments, data.segments.length);
@@ -126,4 +127,100 @@ test('実データで衛星の点数が効きにくい（階級が少なく同�
   const r = rank(data.segments, cellSat, 1).filter((s) => s.cls === 'life' && !s.surveyed);
   assert.ok(new Set(r.map((s) => s.score)).size <= ks.size);     // 衛星のみの点数は階級の数だけ
   assert.ok(Math.max(...Object.values(cellSat)) < 0.5);          // どの区画も衛星の点数は小さい
+});
+
+// ---- 調査結果 CSV の取り込み（GMS3 の書式は未確認。区間ID と 緯度・経度 の2通りで受ける）
+const mid = (s) => [(s.coords[0][0] + s.coords[1][0]) / 2, (s.coords[0][1] + s.coords[1][1]) / 2];
+const life = data.segments.filter((s) => s.cls === 'life');
+
+test('parseCsv: 引用符・BOM・CRLF・タブ区切り', () => {
+  assert.deepEqual(parseCsv('\uFEFFa,b\r\n"x,y",2\r\n'), [['a', 'b'], ['x,y', '2']]);
+  assert.deepEqual(parseCsv('a\tb\n1\t2'), [['a', 'b'], ['1', '2']]);
+  assert.deepEqual(parseCsv('a,b\n\n1,2\n'), [['a', 'b'], ['1', '2']]);
+});
+
+test('parseCavity: あり/なしの表記ゆれ', () => {
+  for (const v of ['あり', '1', 'true', 'TRUE', '空洞あり', '疑い', ' 有 ', 'yes']) assert.equal(parseCavity(v), true, v);
+  for (const v of ['なし', '0', 'false', '空洞なし', '異常なし', '無', 'no']) assert.equal(parseCavity(v), false, v);
+  for (const v of ['', '不明', '？', null]) assert.equal(parseCavity(v), null, String(v));
+});
+
+test('parseOutcomes: 区間IDの書き方', () => {
+  const [a, b, c] = life;
+  const r = parseOutcomes(`segment_id,cavity\n${a.id},あり\n${b.id},なし\n${c.id},1\nXXXX,あり\n${a.id},?\n`, data.segments);
+  assert.equal(r.error, null);
+  assert.equal(r.results.size, 3);
+  assert.equal(r.results.get(a.id), true); assert.equal(r.results.get(b.id), false);
+  assert.equal(r.summary.unknownId, 1); assert.equal(r.summary.invalid, 1); assert.equal(r.summary.byId, 3);
+});
+
+test('parseOutcomes: 緯度・経度の書き方（近い区間に結び付け、遠い点は使わない）', () => {
+  const [a, b] = life;
+  const [la, lb] = [mid(a), mid(b)];
+  const r = parseOutcomes(`緯度,経度,空洞\n${la[1]},${la[0]},あり\n${lb[1]},${lb[0]},なし\n34.9,135.9,あり\n`, data.segments);
+  assert.equal(r.error, null);
+  assert.equal(r.summary.byPoint, 2); assert.equal(r.summary.unmatched, 1);
+  assert.equal(r.results.get(a.id), true); assert.equal(r.results.get(b.id), false);
+});
+
+test('parseOutcomes: 同じ区間の複数行は「1つでもあり」ならあり', () => {
+  const a = life[5];
+  const r = parseOutcomes(`segment_id,cavity\n${a.id},なし\n${a.id},あり\n`, data.segments);
+  assert.equal(r.results.get(a.id), true); assert.equal(r.summary.merged, 1); assert.equal(r.summary.conflicts, 1);
+});
+
+test('parseOutcomes: 見出しの誤り・空はエラー', () => {
+  assert.ok(parseOutcomes('foo,bar\n1,2\n', data.segments).error);
+  assert.ok(parseOutcomes('segment_id,foo\nS0001,1\n', data.segments).error);
+  assert.ok(parseOutcomes('segment_id,cavity\n', data.segments).error);
+});
+
+test('2つの書き方で、同じ結果なら同じ較正になる', () => {
+  const pick = life.filter((_, i) => i % 40 === 0).slice(0, 40);
+  const hitOf = (s) => (s.year != null && s.year <= 1975);
+  const byId = 'segment_id,cavity\n' + pick.map((s) => `${s.id},${hitOf(s) ? 'あり' : 'なし'}`).join('\n');
+  const byPt = 'lat,lon,cavity\n' + pick.map((s) => `${(mid(s)[1] + 0.00002).toFixed(6)},${mid(s)[0].toFixed(6)},${hitOf(s) ? 1 : 0}`).join('\n');
+  const r1 = parseOutcomes(byId, data.segments), r2 = parseOutcomes(byPt, data.segments);
+  assert.equal(r1.results.size, pick.length); assert.equal(r2.results.size, pick.length);
+  assert.deepEqual([...r1.results].sort(), [...r2.results].sort());
+  const c1 = calibrate(scannedFrom(data.segments, r1.results), cellSat), c2 = calibrate(scannedFrom(data.segments, r2.results), cellSat);
+  assert.deepEqual(c1, c2);
+  assert.ok(c1.w !== null);
+});
+
+test('距離: 区間の中点は0m、約20m 離れた点は20m前後', () => {
+  const s = life[0], [lo, la] = mid(s);
+  assert.ok(distToSegM(lo, la, s.coords) < 0.01);
+  const d = distToSegM(lo, la + 0.0003, [[lo - 0.01, la], [lo + 0.01, la]]);
+  assert.ok(d > 30 && d < 36, String(d));
+  assert.equal(nearestSegment(lo, la + 0.5, data.segments), null);
+});
+
+test('同梱の書式見本が読める', () => {
+  for (const f of ['format_sample_by_segment.csv', 'format_sample_by_point.csv']) {
+    const t = fs.readFileSync(new URL('../data/' + f, import.meta.url), 'utf8');
+    const r = parseOutcomes(t, data.segments);
+    assert.equal(r.error, null, f); assert.equal(r.results.size, 3, f);
+  }
+});
+
+test('検証データ verify.json の整合性（豊中市の件数）', () => {
+  const v = JSON.parse(fs.readFileSync(new URL('../data/verify.json', import.meta.url)));
+  assert.equal(v.has_coordinates, false);
+  assert.equal(v.national.municipal.total, 8624); assert.equal(v.national.municipal.sewer, 1289);
+  assert.equal(v.national.national.total + v.national.prefecture.total + v.national.municipal.total, 9865);
+  assert.equal(v.toyonaka.incidents, 50); assert.equal(v.toyonaka.sewer, 38);
+  assert.equal(v.towns.reduce((a, t) => a + t.incidents, 0), 50);
+  assert.equal(v.tokujuten.all_cavities_listed, 96);
+  assert.equal(v.tokujuten.priority.cavities + v.tokujuten.other.cavities, 0);
+  assert.equal(v.tokujuten.priority.cavity_survey_km + v.tokujuten.other.cavity_survey_km, 0);
+  assert.equal(v.terciles.reduce((a, g) => a + g.sewer_incidents, 0), v.check.incidents_used);
+  assert.ok(!JSON.stringify(v).includes('号線'), '路線名を出力に含めない');
+});
+
+test('説明用デモの架空データは別ファイルで、既定のデータに混ざらない', () => {
+  const d = JSON.parse(fs.readFileSync(new URL('../data/demo_sim.json', import.meta.url)));
+  assert.ok(d.note.includes('架空'));
+  const ids = new Set(data.segments.map((s) => s.id));
+  for (const id of [...d.past, ...d.hit]) assert.ok(ids.has(id));
 });
