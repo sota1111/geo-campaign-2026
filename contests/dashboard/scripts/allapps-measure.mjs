@@ -1,7 +1,6 @@
-// トップ画面の一覧（カード／タブ）と詳細欄の大きさを数値で測り、カードを押す前後を撮る。
+// トップ画面（コンペの大カード＋アプリの小カード）とコンペ概要ページを、1280×800・1024×768・390×844 で撮り、
+// 横スクロール・小カードの最小幅・コンソールエラーを数値で出す。
 // usage: node scripts/allapps-measure.mjs <base_url> <out_dir>   （要 preview 起動・google-chrome）
-// 合格基準（デザイン審査 S1）: どの大きさでも、カードを押した後に詳細欄の中身が画面の高さの半分以上見える。
-// 一覧の位置・高さ・scrollY は、押す前後で変わらない。
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -24,34 +23,23 @@ ws.onmessage = (m) => {
   const d = JSON.parse(m.data)
   if (d.id && pend.has(d.id)) { pend.get(d.id)(d); pend.delete(d.id) }
   if (d.method === 'Runtime.exceptionThrown') errs.push('EXC ' + d.params.exceptionDetails.text)
+  if (d.method === 'Log.entryAdded' && d.params.entry.level === 'error') errs.push('LOG ' + d.params.entry.text)
 }
 const send = (method, params = {}) => new Promise((r) => { const i = ++n; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
 const ev = async (e) => (await send('Runtime.evaluate', { expression: e, returnByValue: true })).result?.result?.value
-await send('Runtime.enable'); await send('Page.enable')
+await send('Runtime.enable'); await send('Page.enable'); await send('Log.enable')
 
-const measure = `(() => {
-  const list = document.querySelector('[data-testid=contest-list]').getBoundingClientRect()
-  const pane = document.querySelector('[data-testid=detail-pane]').getBoundingClientRect()
-  const box = document.querySelector('[role=region][id^=detail-]')
-  const b = box.getBoundingClientRect()
-  return { vh: innerHeight, scrollY, sw: document.documentElement.scrollWidth, listTop: Math.round(list.top), listH: Math.round(list.height),
-    paneH: Math.round(pane.height), contentH: Math.round(b.height), half: Math.round(b.height) >= innerHeight / 2,
-    title: document.querySelector('[data-testid=detail-title]').textContent }
-})()`
 const out = []
-for (const [w, h] of [[1280, 800], [1024, 768], [768, 1024], [640, 900], [390, 844]]) {
+for (const [w, h] of [[1280, 800], [1024, 768], [390, 844]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 700 })
-  await send('Page.navigate', { url: base })
-  await sleep(2500)
-  const before = await ev(measure)
-  let shot = await send('Page.captureScreenshot', { format: 'png' })
-  fs.writeFileSync(path.join(outDir, `size-${w}x${h}-before.png`), Buffer.from(shot.result.data, 'base64'))
-  await ev(`document.querySelector('[data-testid=row-ichibiz-2026]').click()`)
-  await sleep(800)
-  const after = await ev(measure)
-  shot = await send('Page.captureScreenshot', { format: 'png' })
-  fs.writeFileSync(path.join(outDir, `size-${w}x${h}-after.png`), Buffer.from(shot.result.data, 'base64'))
-  out.push({ size: `${w}x${h}`, before, after, listSame: before.listTop === after.listTop && before.listH === after.listH && after.scrollY === 0 })
+  for (const [name, route] of [['top', ''], ['contest-ichibiz', 'contest/ichibiz-2026/'], ['contest-satellite', 'contest/satellite-2026/']]) {
+    await send('Page.navigate', { url: base + route })
+    await sleep(2500)
+    const m = await ev(`(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, minMini: Math.min(...[...document.querySelectorAll('[data-app-card]')].map((e) => Math.round(e.getBoundingClientRect().width))), bigCards: document.querySelectorAll('[data-contest-card]').length, miniCards: document.querySelectorAll('a[data-app-card]').length }))()`)
+    const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
+    fs.writeFileSync(path.join(outDir, `${w}x${h}-${name}.png`), Buffer.from(shot.result.data, 'base64'))
+    out.push({ size: `${w}x${h}`, page: name, ...m })
+  }
 }
-console.log(JSON.stringify({ out, errs }, null, 1))
+console.log(JSON.stringify({ out, errs }))
 ws.close(); chrome.kill()
