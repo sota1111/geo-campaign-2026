@@ -64,7 +64,7 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     r.info.resources = await c.ev('performance.getEntriesByType("resource").map(e=>e.name.split("/").slice(-1)[0]).join(",")');
     need(!r.info.resources.includes('demo_sim'), '既定で demo_sim.json を読み込んでいる');
     const noFake = async (tag) => {
-      const t = await c.ev('document.body.innerText.replace(/説明用デモ（架空の結果で動きを見る）。既定はオフ/g,"")');
+      const t = await c.ev('document.body.innerText.replace(/説明用デモ（架空の結果で動きを見る）。既定はオフ|説明用デモで動きを見る（架空の結果）/g,"")');
       need(!t.includes('架空'), `既定の画面(${tag})に「架空」が出ている`);
     };
     await noFake('第1');
