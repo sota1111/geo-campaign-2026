@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom } from '../logic.js';
+import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, adoptWeight, MIN_AUC, MIN_GAIN, aucAt, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom } from '../logic.js';
 
 const data = JSON.parse(fs.readFileSync(new URL('../data/toyonaka.json', import.meta.url)));
 const cellSat = Object.fromEntries(data.cells.map((c) => [c.id, satNorm(c.disp)]));
@@ -30,6 +30,30 @@ test('topShift: 衛星が全区画で同じ値なら台帳のみと順位は変�
   for (let i = 0; i < 30; i++) segs.push({ id: 'S' + String(i).padStart(2, '0'), cls: 'life', surveyed: false, cell: i < 15 ? 'A' : 'B', year: 1960 + i, lenM: 50 });
   assert.equal(topShift(segs, { A: 0.2, B: 0.2 }, 1, 10), 0);
   assert.ok(topShift(segs, { A: 0, B: 1 }, 1, 10) > 0);
+});
+
+test('rank: 同点は竣工年の古い順（不明は後ろ）→区間ID順', () => {
+  const segs = [{ id: 'S3', cell: 'A', year: 1960 }, { id: 'S1', cell: 'A', year: 1962 }, { id: 'S2', cell: 'A', year: null }, { id: 'S0', cell: 'A', year: 1960 }];
+  assert.deepEqual(rank(segs, { A: 0 }, 1).map((x) => x.id), ['S0', 'S3', 'S1', 'S2']);
+  const r = rank(data.segments, cellSat, 0.1).filter((s) => s.cls === 'life');
+  const t = r.filter((s) => Math.abs(s.score - r[0].score) < 1e-9);
+  for (let i = 1; i < t.length; i++) assert.ok(t[i - 1].year <= t[i].year);
+});
+
+test('adoptWeight: 当てずっぽうに近い・差が小さい結果では重みを変えない／明確な差なら更新', () => {
+  assert.ok(MIN_AUC >= 0.5 && MIN_GAIN > 0);
+  const cs = { A: 0, B: 1 };
+  const mk = (n, f) => Array.from({ length: n }, (_, i) => ({ cell: i % 2 ? 'B' : 'A', year: 1970 + (i % 7), hit: f(i) }));
+  const strong = mk(40, (i) => i % 2 === 1); // 衛星（B）がよく当たる
+  const cal = calibrate(strong, cs);
+  const a = adoptWeight(cal, strong, cs, 0);
+  assert.equal(a.adopt, true); assert.equal(a.w, cal.w); assert.ok(a.best >= MIN_AUC);
+  const rnd = mk(40, (i) => i % 4 < 2); // 衛星とは無関係
+  const ar = adoptWeight(calibrate(rnd, cs), rnd, cs, 0.1);
+  assert.equal(ar.adopt, false); assert.equal(ar.w, 0.1);
+  assert.equal(adoptWeight({ w: null }, [], cs, 0.3).reason, 'short');
+  assert.equal(adoptWeight({ w: null }, [], cs, 0.3).w, 0.3);
+  void aucAt;
 });
 
 test('rank は降順で、同点はidで安定', () => {

@@ -87,7 +87,36 @@ export function segScore(seg: Pick<Segment, 'cell' | 'year'>, cellSat: CellSat, 
 export function rank(segs: Segment[], cellSat: CellSat, w: number): Scored[] {
   return segs
     .map((s) => ({ ...s, score: segScore(s, cellSat, w) }))
-    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+    .sort(byScore)
+}
+
+/** 並べ方: 点数の高い順。同点（差 1e-9 未満）は竣工年の古い順（不明は後ろ）、さらに区間ID順 */
+const yearKey = (y: number | null | undefined) => (y == null ? 99999 : y)
+export function byScore(a: Scored, b: Scored) {
+  if (Math.abs(b.score - a.score) > 1e-9) return b.score - a.score
+  return yearKey(a.year) - yearKey(b.year) || a.id.localeCompare(b.id)
+}
+
+/** 重みを変える条件（仮の基準。画面に明示する）: 最良の重みの AUC が MIN_AUC 以上、かつ今の重みより MIN_GAIN 以上高いこと */
+export const MIN_AUC = 0.6
+export const MIN_GAIN = 0.05
+export type AdoptReason = 'short' | 'low' | 'small' | 'same' | null
+export interface Adoption { w: number; adopt: boolean; reason: AdoptReason; best: number | null; cur: number | null }
+export const ADOPT_REASON: Record<Exclude<AdoptReason, null>, string> = {
+  short: '結果が足りない',
+  low: `最良でも AUC が ${MIN_AUC.toFixed(2)} 未満`,
+  small: `今の重みとの AUC の差が ${MIN_GAIN.toFixed(2)} 未満`,
+  same: '今の重みが最良',
+}
+/** 較正の結果から、次回に使う重みを決める。条件を満たさなければ今の重みのまま（当てずっぽうに近い結果で重みを動かさない） */
+export function adoptWeight(cal: Calibration | null, scanned: Scanned[], cellSat: CellSat, curW: number, minAuc = MIN_AUC, minGain = MIN_GAIN): Adoption {
+  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null }
+  const best = aucAt(scanned, cellSat, cal.w) as number
+  const cur = aucAt(scanned, cellSat, curW) as number
+  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur }
+  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur }
+  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur }
+  return { w: cal.w, adopt: true, reason: null, best, cur }
 }
 
 /** 結果が未入力の生活道路（候補）だけを取り出す（順位順を保つ） */

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import { dataUrl } from '@/lib/data'
 import {
-  LINK_MAX_M, aucAt, totalKm, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
+  ADOPT_REASON, LINK_MAX_M, MIN_AUC, MIN_GAIN, aucAt, totalKm, type Adoption, type AdoptReason, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
 } from './logic'
 
 const pct = (x: number) => Math.round(x * 100)
@@ -25,8 +25,9 @@ export interface PrevInfo {
   changed: number
   calibrated: boolean
   scanned: number
+  reason?: AdoptReason
 }
-export type CalibResult = Calibration & { ex0: Exclusion | null; ex1: Exclusion | null; n: number }
+export type CalibResult = Calibration & { ex0: Exclusion | null; ex1: Exclusion | null; n: number; ad: Adoption }
 
 function Metric({ label, value, sub, testId }: { label: string; value: string; sub?: string; testId?: string }) {
   return (
@@ -90,7 +91,7 @@ function RankTable({
               <TableCell className="text-right">{s.year ?? '不明'}</TableCell>
               <TableCell className="text-right font-medium">
                 {s.score.toFixed(2)}
-                {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差か、区間IDの順） */}
+                {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差、同点は竣工年の古い順→区間IDの順） */}
                 {(rows[i - 1]?.score.toFixed(2) === s.score.toFixed(2) || rows[i + 1]?.score.toFixed(2) === s.score.toFixed(2)) && (
                   <span className="ml-1 text-[10px] font-normal text-muted-foreground" data-testid="tie-mark">同点</span>
                 )}
@@ -174,7 +175,7 @@ export function TopPanel({
         <Metric
           label={ties.length > 1 ? `点数が最も高い区間（同点 ${ties.length} 区間）` : '点数が最も高い区間'}
           value={best ? (ties.length > 1 ? tieIds : best.id) : '—'}
-          sub={best ? `点数 ${best.score.toFixed(2)}${ties.length > 1 ? `（小数2桁で同点。表の1位は ${best.id}）` : `／区画 ${best.cell}／竣工 ${best.year ?? '不明'}${best.year == null ? '' : '年'}`}` : ''}
+          sub={best ? `点数 ${best.score.toFixed(2)}${ties.length > 1 ? `（同点は竣工年の古い順→区間番号順。表の1位は ${best.id}）` : `／区画 ${best.cell}／竣工 ${best.year ?? '不明'}${best.year == null ? '' : '年'}`}` : ''}
           testId="m-top"
         />
       </div>
@@ -200,7 +201,7 @@ export function WeightPanel({ w, setW, candidates, focus, onFocus }: {
 
 /* ---------- 3 予算内で調査対象を選ぶ ---------- */
 export function PickPanel({
-  budgetKm, setBudgetKm, segs, candidates, selected, toggle, focus, onFocus, onAuto, onClear, onExport,
+  budgetKm, setBudgetKm, segs, candidates, selected, toggle, focus, onFocus, onAuto, onClear, onExport, exportMsg,
 }: {
   budgetKm: number
   setBudgetKm: (v: number) => void
@@ -213,6 +214,7 @@ export function PickPanel({
   onAuto: () => void
   onClear: () => void
   onExport: () => void
+  exportMsg?: string
 }) {
   const km = totalKm(segs, selected)
   const over = km > budgetKm + 1e-9
@@ -240,7 +242,7 @@ export function PickPanel({
         </div>
         <Slider value={[budgetKm]} min={1} max={8} step={0.5} aria-labelledby="bud-label" onValueChange={([v]) => setBudgetKm(v)} />
         <p className="text-xs text-muted-foreground">
-          調査費や車両台数の制約を、地中レーダ車が走れる道のり（km）に置き換えています。金額への換算はしていません。仮の値で、実際の調査能力を表すものではありません。
+          調査費・車両の制約を走行延長に置き換えた仮の値です（金額換算なし。実際の調査能力ではありません）。
         </p>
       </div>
 
@@ -249,8 +251,9 @@ export function PickPanel({
         <Button size="sm" variant="outline" onClick={onClear} data-testid="clear">選択をクリア</Button>
         <Button size="sm" variant="outline" onClick={onExport} disabled={selected.size === 0} data-testid="export-targets"><Download />調査対象をCSVで書き出す</Button>
       </div>
+      {exportMsg && <p className="text-sm font-medium text-emerald-800" role="status" data-testid="export-msg">✓ {exportMsg}</p>}
       <p className="text-xs text-muted-foreground">
-        延長の上限（{fmt1(budgetKm)}km）まで点数順に選ぶため、表の上位15に入らない区間も含まれます。地図の道路のタップでも選択／解除できます。
+        上限（{fmt1(budgetKm)}km）まで点数順に選びます（同点は竣工年の古い順）。地図の道路のタップでも選択／解除できます。
       </p>
 
       <div className="text-sm font-medium">候補 {rows.length} 区間（点数の高い順）</div>
@@ -277,7 +280,7 @@ export function PickPanel({
               <TableCell>{s.id}</TableCell>
               <TableCell className="text-right font-medium">
                 {s.score.toFixed(2)}
-                {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差か、区間IDの順） */}
+                {/* 小数2桁で前後と同じなら「同点」（表の並びは小数3桁以下の差、同点は竣工年の古い順→区間IDの順） */}
                 {(rows[i - 1]?.score.toFixed(2) === s.score.toFixed(2) || rows[i + 1]?.score.toFixed(2) === s.score.toFixed(2)) && (
                   <span className="ml-1 text-[10px] font-normal text-muted-foreground" data-testid="tie-mark">同点</span>
                 )}
@@ -500,24 +503,29 @@ export function ApplyPanel({
             <TableBody>
               <TableRow><TableCell>台帳のみ（衛星0%）</TableCell><TableCell className="text-right">{calib.ledgerOnly?.toFixed(2)}</TableCell></TableRow>
               <TableRow><TableCell>衛星のみ（100%）</TableCell><TableCell className="text-right">{calib.satOnly?.toFixed(2)}</TableCell></TableRow>
+              {!calib.ad.adopt && calib.ad.reason !== 'same' && (
+                <TableRow><TableCell>最良: 衛星 {pct(calib.w)}%</TableCell><TableCell className="text-right">{calib.ad.best?.toFixed(2)}</TableCell></TableRow>
+              )}
               <TableRow data-state="selected">
-                <TableCell className="font-medium">採用: 衛星 {pct(calib.w)}%</TableCell>
-                <TableCell className="text-right font-medium" data-testid="auc-adopted">{aucAt(surveyed, cellSat, calib.w)?.toFixed(2)}</TableCell>
+                <TableCell className="font-medium">採用: 衛星 {pct(calib.ad.w)}%{calib.ad.adopt ? '（更新）' : '（今のまま）'}</TableCell>
+                <TableCell className="text-right font-medium" data-testid="auc-adopted">{aucAt(surveyed, cellSat, calib.ad.w)?.toFixed(2)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
+          {!calib.ad.adopt && calib.ad.reason && calib.ad.reason !== 'same' && (
+            <div className="rounded-md border-l-4 border-amber-600 bg-amber-50 p-2 text-sm text-amber-950" data-testid="no-change">
+              <b>この結果では重みを変える根拠がありません</b>（{ADOPT_REASON[calib.ad.reason]}）。重みは今のままです。
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
-            AUC: 空洞のあった区間が、なかった区間より高い点数になる確率。0.5＝でたらめ（当てずっぽう）と同じ、1.0＝完全に当たる。
-            {calib.ex1 && `点数が下位の半分とした区間（${calib.ex1.n}区間）のうち空洞なしだった割合は ${pct(calib.ex1.rate)}%${calib.ex0 ? `（現在の重みでは ${pct(calib.ex0.rate)}%）` : ''}。`}
-            {demo || sample
-              ? '空洞の有無が架空のため、仕組みを見せる数字であり、実際の精度や提案の効果を示しません。'
-              : '調査した区間は点数の高い所に偏って選ばれやすく、この数字は調査した区間の中での比較です。実際の精度・効果を示すものではありません。'}
+            重みを変える条件（仮の基準）: AUC {MIN_AUC.toFixed(2)} 以上かつ今の重みより {MIN_GAIN.toFixed(2)} 以上高い。AUC＝空洞のあった区間が高い点数になる確率（0.5＝当てずっぽう）。
+            {demo || sample ? '空洞の有無は架空で、精度や効果を示しません。' : '調査した区間の中での比較で、実際の精度・効果ではありません。'}
           </p>
         </>
       )}
       <div className="flex flex-wrap gap-2">
         {applied && onGoRound2 && <Button size="sm" onClick={onGoRound2} data-testid="goto-round2">第{round}回の順位を見る（手順5へ）</Button>}
-        <Button size="sm" variant={applied && onGoRound2 ? 'outline' : 'default'} onClick={onApply} disabled={calib.w === null} data-testid="apply">較正を反映して第{round + 1}回へ進む</Button>
+        <Button size="sm" variant={applied && onGoRound2 ? 'outline' : 'default'} onClick={onApply} disabled={calib.w === null} data-testid="apply">{calib.w !== null && !calib.ad.adopt ? `重みを変えずに第${round + 1}回へ進む` : `較正を反映して第${round + 1}回へ進む`}</Button>
       </div>
     </div>
   )
@@ -567,7 +575,7 @@ export function Round2Panel({
       <p className="text-sm font-medium" data-testid="what-changed">
         {prev.calibrated
           ? prev.newW === prev.oldW
-          ? `何が変わったか: 調査結果に照らしても重み（衛星${pct(prev.newW)}%）は変わらず、調査した${prev.scanned}区間を除いた順位を作り直しました。`
+          ? `何が変わったか: 重み（衛星${pct(prev.newW)}%）は変えず（${ADOPT_REASON[prev.reason ?? 'same']}）、調査した${prev.scanned}区間を除いた順位を作り直しました。`
           : `何が変わったか: 調査結果に照らして当たりやすい重み（衛星${pct(prev.newW)}%）に更新し、調査した${prev.scanned}区間を除いた順位を作り直しました。`
           : `何が変わったか: 結果が不足していたため重みは据え置き、調査した${prev.scanned}区間を除いた順位を作り直しました。`}
       </p>

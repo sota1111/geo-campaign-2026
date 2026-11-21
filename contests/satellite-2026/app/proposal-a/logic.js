@@ -23,7 +23,14 @@ export function segScore(seg, cellSat, w) {
 export function rank(segs, cellSat, w) {
   return segs
     .map((s) => ({ ...s, score: segScore(s, cellSat, w) }))
-    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    .sort(byScore);
+}
+
+/** 並べ方: 点数の高い順。同点（差 1e-9 未満）は竣工年の古い順（不明は後ろ）、さらに区間ID順。 */
+const yearKey = (y) => (y == null ? 99999 : y);
+export function byScore(a, b) {
+  if (Math.abs(b.score - a.score) > 1e-9) return b.score - a.score;
+  return yearKey(a.year) - yearKey(b.year) || a.id.localeCompare(b.id);
 }
 
 /** 未調査の生活道路の上位から、予算（km）を超えない範囲で貪欲に選ぶ。 */
@@ -66,6 +73,21 @@ export function calibrate(scanned, cellSat, minEach = 3) {
   const cands = table.filter((t) => Math.abs(t.auc - best) < 1e-12);
   cands.sort((a, b) => Math.abs(a.w - 0.5) - Math.abs(b.w - 0.5) || a.w - b.w);
   return { w: cands[0].w, reason: null, pos, neg, table, ledgerOnly: table[0].auc, satOnly: table[10].auc };
+}
+
+/** 重みを変える条件（仮の基準。画面に明示する）: 最良の重みの AUC が MIN_AUC 以上、かつ今の重みより MIN_GAIN 以上高いこと。
+ *  満たさなければ重みは今のまま（当てずっぽうに近い結果で重みを動かさない）。 */
+export const MIN_AUC = 0.6;
+export const MIN_GAIN = 0.05;
+/** 較正の結果から、次回に使う重みを決める。戻り値 { w, adopt, reason, best, cur }。
+ *  reason: 'short'（結果不足）/ 'low'（最良でも MIN_AUC 未満）/ 'small'（今の重みとの差が MIN_GAIN 未満）/ 'same'（今の重みが最良）/ null（更新） */
+export function adoptWeight(cal, scanned, cellSat, curW, minAuc = MIN_AUC, minGain = MIN_GAIN) {
+  if (!cal || cal.w === null) return { w: curW, adopt: false, reason: 'short', best: null, cur: null };
+  const best = aucAt(scanned, cellSat, cal.w), cur = aucAt(scanned, cellSat, curW);
+  if (Math.abs(cal.w - curW) < 1e-9) return { w: curW, adopt: false, reason: 'same', best, cur };
+  if (best < minAuc) return { w: curW, adopt: false, reason: 'low', best, cur };
+  if (best - cur < minGain) return { w: curW, adopt: false, reason: 'small', best, cur };
+  return { w: cal.w, adopt: true, reason: null, best, cur };
 }
 
 /** 除外の精度: 点数が下位の半分を「異常なし」と判定したとき、その中で実際に異常なしだった割合。

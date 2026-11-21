@@ -19,7 +19,7 @@ import {
 import { VerifyPanel, type VerifyData } from './Verify'
 import { SOURCES } from './About'
 import {
-  NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, totalKm,
+  NOW_YEAR, ADOPT_REASON, adoptWeight, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, totalKm,
   type DataFile, type DemoData, type Scanned, type Segment,
 } from './logic'
 
@@ -52,6 +52,7 @@ function calibOf(scanned: Scanned[], cellSat: Record<string, number>, w: number)
   const c = calibrate(scanned, cellSat)
   return {
     ...c,
+    ad: adoptWeight(c, scanned, cellSat, w),
     ex0: exclusionAccuracy(scanned, cellSat, w),
     ex1: c.w === null ? null : exclusionAccuracy(scanned, cellSat, c.w),
     n: scanned.length,
@@ -63,16 +64,16 @@ function applyOf(segs: Segment[], cellSat: Record<string, number>, w: number, ro
   const before = candidatesOf(rank(segs, cellSat, w))
   const rankMap: Record<string, number> = {}
   before.forEach((s, i) => (rankMap[s.id] = i + 1))
-  const newW = calib && calib.w !== null ? calib.w : w
+  const newW = calib ? calib.ad.w : w
   const after = candidatesOf(rank(segs, cellSat, newW))
   const changed = after.slice(0, 10).filter((s, i) => before[i]?.id !== s.id).length
   const prev: PrevInfo = {
     rank: rankMap, topId: before[0]?.id ?? '', round, oldW: w, newW, newTopId: after[0]?.id ?? '', changed,
-    calibrated: !!(calib && calib.w !== null), scanned: scannedCount,
+    calibrated: !!(calib && calib.w !== null), scanned: scannedCount, reason: calib ? calib.ad.reason : 'short',
   }
   let msg: string
   if (calib && calib.w !== null) {
-    msg = `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（入った結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `結果が入った区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `結果が入った区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
+    msg = `${calib.ad.adopt ? `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。` : `衛星指標の重みは ${pct(w)}% のまま（${ADOPT_REASON[calib.ad.reason ?? 'same']}）。`}${before[0]?.id === after[0]?.id ? `結果が入った区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `結果が入った区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
   } else {
     msg = '較正に使える結果が不足していたため、重みは変えていません（結果が入った区間が候補から外れた分だけ順位が繰り上がります）。'
   }
@@ -115,6 +116,9 @@ export default function App() {
   const [viewedVerify, setViewedVerify] = useState(false)
   // 手順2「選ぶ」は、区間を選んだときだけ完了にする（CSV を入れただけでは完了にしない）
   const [pickedOnce, setPickedOnce] = useState(false)
+  // 書き出した直後の確認表示（ファイル名・区間数・延長）。選択を変えたら消す
+  const [exportMsg, setExportMsg] = useState('')
+  useEffect(() => setExportMsg(''), [selected])
 
   useEffect(() => {
     if (round > 1 && step === 'round2') setViewedR2(true)
@@ -206,6 +210,7 @@ export default function App() {
       .sort((a, b) => (rk.get(a.id) ?? 999) - (rk.get(b.id) ?? 999))
       .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote])
     downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
+    setExportMsg(`survey-targets.csv（${rows.length} 区間・${totalKm(segs, selected).toFixed(1)} km）を書き出しました`)
   }
   const exportRound2 = () => {
     const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, dataNote])
@@ -444,6 +449,7 @@ export default function App() {
                 onAuto={() => setSelected(new Set(selectByBudget(ranked, budgetKm)))}
                 onClear={() => setSelected(new Set())}
                 onExport={exportTargets}
+                exportMsg={exportMsg}
               />
             )}
             {step === 'scan' && (
