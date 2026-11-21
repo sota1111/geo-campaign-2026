@@ -71,6 +71,8 @@ classDiagram
 - **Submission** は「案 × コンペ（× 部門・テーマ）」。止めているもの `Blocker` は、監査の指摘（失格級・要修正）、提出文に残る【本人加筆】等の穴、データ条件の未確認、提出文の欠落。
 - 重大度は `Severity` の個体: 監査 `sev-disqualifying`（失格級）`sev-fix`（要修正）`sev-minor`（軽微）、デザイン `dsev-major`（重大）`dsev-medium`（中）`dsev-minor`（軽微）。デザイン審査（`reports/design/`）の取り込みは未着手。
 
+CI（`.github/workflows/guard.yml` の `ontology` ジョブ）は `build_graph.py --offline --check` と pytest を毎 PR で実行する。`reports/audit/` や `reports/escalations/` に新しい報告を足した PR は、`mappings.py` の `AUDITS`・`ESCALATION_APPS` に対象アプリを登録し、生成物（`campaign.jsonld`・`graph.json`・`next-actions.json`・`build-report.json`・図）を再生成して同じ PR に入れること。登録も再生成も無いと CI が落ち、マージできない。
+
 ## 使い方
 依存: `pip install -r contests/ontology/requirements.txt`（rdflib, pyshacl, pytest）。
 
