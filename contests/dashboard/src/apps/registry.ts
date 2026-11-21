@@ -113,7 +113,7 @@ export const APPS: AppMeta[] = [
     deadlineAt: '2026-11-30T12:00:00+09:00',
     purpose:
       '道路管理者が、路面下の空洞調査の候補区間を衛星の指標などで絞り込み、地中レーダ調査の対象を予算内で選び、結果を次の絞り込みに活かす流れを確かめる。',
-    dataKind: 'partial',
+    dataKind: 'real',
     dataNote: '衛星の階級・道路・下水道台帳は豊中市北東部の実データ。地中レーダの結果は同梱せず利用者がCSVで入れる（説明用デモの架空の結果は既定オフ）',
     originalPath: 'contests/satellite-2026/app/proposal-a/',
   },
