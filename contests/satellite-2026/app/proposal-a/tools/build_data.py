@@ -3,8 +3,8 @@
   1. GSI 干渉SAR タイル(qu) -> 約90m 区画の階級（insar_cells.py）
   2. OSM 道路 -> 交差点・長さ・曲がりで区間に分割
   3. 豊中市 下水道 管渠（シェープ, EPSG:6674）-> 竣工年・管径を、道路区間に最近傍で紐づけ
-  4. 地中レーダ結果 sim_cavity だけは乱数（固定シード）。実データではない。
-usage: python3 -I tools/build_data.py > data/toyonaka.json   （標準出力に JSON、統計は標準エラー）
+  4. 説明用デモ用の架空の結果 sim_cavity・surveyed を乱数（固定シード）で付ける。実データではない。出力後に tools/split_demo.py で実データ（data/toyonaka.json）と架空（data/demo_sim.json）に分ける。
+usage: python3 -I tools/build_data.py > tools/cache/full.json   （標準出力に JSON、統計は標準エラー）
 """
 import collections, json, math, os, random, statistics, sys
 

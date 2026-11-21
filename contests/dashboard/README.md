@@ -183,7 +183,7 @@ export default function App() {
 |---|---|
 | odpt | index.json, {iida,kumamoto,tokushima,tokyo,toyama}.json, whatif_{同}.json |
 | udc-moritsuchi | fills.geojson |
-| sat-a | sample.json |
+| sat-a | toyonaka.json, demo_sim.json, verify.json, format_sample_*.csv（実データ版。2026-11-21 に旧 sample.json から付け替え） |
 | sat-b | real.json, sample.json |
 | biz-business | odpt と同じ（index.json, 5地域, whatif_ 5地域） |
 | biz-idea | lore.json, samples.json |

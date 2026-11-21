@@ -324,3 +324,14 @@ def test_decisions_are_merged_per_status_list_row(g):
     # 畳んだものも畳まないものも、元の未決の判断を取りこぼさない
     q4 = {"id:" + r["decision"][len(str(ID)):] for r in NA.q(g, "q4_pending_decisions")}
     assert q4 == {d["decision"] for d in ds} | set(folded)
+
+
+# ---------------- 提出予定数（総司令官 2026-11-21 の指示。要項の上限 SubmissionLimit とは別）
+def test_planned_submissions_in_graph_and_ui_json(g):
+    import ui_json
+
+    p = ui_json.build(NOW)["plannedSubmissions"]
+    assert p["satellite-2026"] == {"total": 2, "parts": {"スポンサー": 1, "一般": 1}}
+    assert p["ichibiz-2026"] == {"total": 3, "parts": {"ビジネス": 1, "アイデア": 1, "不動産": 1}}
+    assert "udc-2026" not in p and "odpt-2026" not in p  # 指示なし。数を作らない
+    assert not set(g.subjects(RDF.type, C.PlannedSubmission)) & set(g.subjects(RDF.type, C.SubmissionLimit))

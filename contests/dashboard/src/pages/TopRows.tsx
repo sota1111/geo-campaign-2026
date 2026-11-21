@@ -5,6 +5,7 @@ import { NEW_PLAN_LABEL, isNewPlan, getApp, CONTESTS, type AppMeta, type Contest
 import { CONTEST_INFO, nextDeadline, type ContestInfo } from '@/apps/contests-info'
 import { PrizeBreakdown } from '@/components/shared/PrizeBreakdown'
 import { DataBadge } from '@/components/shared/DataBadge'
+import { PlanDivisions, PlanLine } from '@/components/shared/PlanCount'
 import { Remaining } from '@/components/shared/Remaining'
 import { CONTEST_STATUS, STATUS_LABEL, contestDecisionTexts, otherNextCount } from '@/data/status'
 import { contestColor } from '@/data/colors'
@@ -13,7 +14,7 @@ import { appUrl, contestUrl } from '@/lib/data'
 import { pendingLabel, useIsPending } from '@/lib/availability'
 import { Src, planOf } from '@/pages/ContestCards'
 import {
-  MARK_WORD, appsForColumn, appsForContest, cellOf, columnShort, columnsOf, contestScore, isSelectable, totalScore,
+  MARK_WORD, appsForColumn, planView, appsForContest, cellOf, columnShort, columnsOf, contestScore, isSelectable, totalScore,
   type ActiveCaution, type Targets,
 } from '@/lib/fit'
 
@@ -73,7 +74,7 @@ function useFitLevel(deps: string, max: number) {
  * 入りきらないときは下位から削る（行数 → 「ほか n 件」 → 非表示）。概要と審査基準は最後まで残し、削るのは最終手段（概要 3→2→1 行、審査基準 全項目→2→1 行）。
  * lv: -1 = 全項目・全文（幅 1024px 未満で縦に積むとき）、0 = 全項目（各2行まで）、1 以上 = 下位から削る。
  */
-export const CARD_MAX_LV = 19
+export const CARD_MAX_LV = 20
 export function cardPlan(lv: number) {
   const c2 = 'line-clamp-2'
   const all = lv < 0
@@ -81,6 +82,8 @@ export function cardPlan(lv: number) {
     c2,
     // 下位から: 件数の行(1) → 提出可能数(2〜4) → 主なルール(5〜7) → 次にやること(8〜10) → 判断待ち(11〜14) → 審査基準・概要の行数(15〜19)
     hideTargets: lv >= 1,
+    // イチBiz の部門ごとの「予定・選んだ」は、最後の手段（審査基準を1行にする段の次）でだけ畳む。合計の行は残る
+    hideDiv: lv >= 20,
     nLimits: all ? 99 : lv >= 2 ? 1 : 2,
     limitsClamp: lv >= 3 ? 'line-clamp-1' : c2,
     hideLimits: lv >= 4,
@@ -124,13 +127,13 @@ export function ContestTopCard({
   const nexts = st.next.filter((n) => !n.decision)
   const next = nexts[0] ?? st.next[0]
   const fit = useFit()
-  const { ref: regRef, lv: lv0 } = useFitLevel(`${info.id}|${fit}|${selected}|${appsForContest(targets, info.id).length}`, CARD_MAX_LV + 1)
+  const { ref: regRef, lv: lv0 } = useFitLevel(`${info.id}|${fit}|${selected}|${appsForContest(targets, info.id).length}|${planView(info.id, targets).state}`, CARD_MAX_LV + 1)
   const pl = cardPlan(fit ? lv0 - 1 : -1)
   const { hideSummary, sumClamp, hideCrit, critClamp, hideRules, nRules, rulesClamp, hideLimits, nLimits, limitsClamp, hideTargets, nAsks, nNext, cl, hideNext, nextClamp, hideAsks } = pl
-  const hideDiv = hideTargets
   const more = otherNextCount(info.id)
   const cols = columnsOf(info.id)
   const chosen = appsForContest(targets, info.id)
+  const plan = planView(info.id, targets)
   const focus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900'
   return (
     <article
@@ -208,15 +211,9 @@ export function ContestTopCard({
           items={info.limits.slice(0, nLimits).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（未確認）'}{r.text}</> }))}
           clamp={limitsClamp}
         />}
-        {info.id === 'ichibiz-2026' && !hideDiv && (
-          <p className="text-xs text-slate-800" data-testid="ichibiz-divisions" aria-label="3つの部門" title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')}>
-            {cols.map((c, i) => (
-              <span key={c.id}>
-                {i > 0 && '／'}
-                <span className="font-bold">{c.division}</span> {c.deadline.replace('2026-', '').replace('-', '/')}・{appsForColumn(targets, c.id).length}件
-              </span>
-            ))}
-          </p>
+        <PlanLine view={plan} contestId={info.id} hideParts={info.id === 'ichibiz-2026'} />
+        {info.id === 'ichibiz-2026' && !pl.hideDiv && (
+          <PlanDivisions view={plan} contestId={info.id} title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')} />
         )}
         {!hideTargets && (
         <p className="shrink-0 truncate" data-testid={`targets-${info.id}`} aria-live="polite" title={chosen.map(appName).join('、')}>
@@ -403,7 +400,7 @@ export function AppFitCard({
       className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${isNew ? 'border-slate-500' : 'border-slate-300'}`}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 text-xs">
-        <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title="いまの並びでの順位">{rank}位</span>
+        <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title="いまの並びでの位置（提出先を選んだ候補が先）">{rank}位</span>
         {isNew ? (
           <span className="rounded bg-slate-800 px-1.5 font-bold text-white" data-testid="new-plan-tag" title={NEW_PLAN_LABEL}>新しい案</span>
         ) : (

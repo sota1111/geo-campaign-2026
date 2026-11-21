@@ -61,7 +61,7 @@ describe('mapStyle / registry', () => {
     expect(CURRENT_APPS).toHaveLength(7)
     expect(APPS.filter(isNewPlan)).toHaveLength(13)
     expect(new Set(APPS.map((a) => a.id)).size).toBe(APPS.length)
-    expect(getApp('sat-a')?.dataKind).toBe('fictional')
+    expect(getApp('sat-a')?.dataKind).toBe('real')
     expect(appsByContest('ichibiz-2026').filter((a) => !isNewPlan(a))).toHaveLength(3)
   })
   it('新しい案は今の案の隣に並ぶ（pairWith が実在する今の案を指し、同じコンペ）', () => {
