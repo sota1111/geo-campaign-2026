@@ -87,6 +87,8 @@ describe('提出先の選択', () => {
 describe('トップ画面の操作', () => {
   beforeEach(() => window.localStorage.clear())
   afterEach(cleanup)
+  // 提出先の選択は、カードの「提出先を選ぶ」で開くポップオーバーの中にある
+  const openPick = (id: string) => fireEvent.click(screen.getByTestId(`pick-targets-${id}`))
   const order = () => [...document.querySelectorAll('[data-testid="app-row"] > li')].map((e) => e.getAttribute('data-app-card'))
 
   it('コンペ4枚とアプリ19枚。コンペを選ぶと並び替わり、関連の行が強調される', () => {
@@ -98,7 +100,9 @@ describe('トップ画面の操作', () => {
     expect(order()).not.toEqual(before)
     expect(order().slice(0, 2)).toEqual(['sat-a', 'sat-b'])
     expect(document.querySelector('[data-contest-card="satellite-2026"]')!.getAttribute('data-selected')).toBe('true')
-    expect(document.querySelector('[data-app-card="sat-a"] [data-fit-row="satellite-2026"]')!.getAttribute('data-emph')).toBe('true')
+    expect(document.querySelector('[data-app-card="sat-a"] [data-fit-mini="satellite-2026"]')!.getAttribute('data-emph')).toBe('true')
+    openPick('sat-a')
+    expect(document.querySelector('[data-fit-row="satellite-2026"]')!.getAttribute('data-emph')).toBe('true')
     fireEvent.click(screen.getByTestId('pick-satellite-2026'))
     expect(order()).toEqual(before)
   })
@@ -111,6 +115,7 @@ describe('トップ画面の操作', () => {
   })
   it('× は選べず理由が出る。選ぶとコンペ側に「このコンペに出すアプリ n件」が出て、localStorage に保存される', () => {
     render(<Portal />)
+    openPick('sat-b')
     const x = screen.getByTestId('t-sat-b-udc-2026') as HTMLInputElement
     expect(x.disabled).toBe(true)
     expect(screen.getByTestId('why-sat-b-udc-2026').textContent).toContain('選べません')
@@ -118,18 +123,32 @@ describe('トップ画面の操作', () => {
     expect(screen.getByTestId('targets-satellite-2026').textContent).toContain('このコンペに出すアプリ 1件')
     expect(loadTargets()).toEqual({ 'sat-b': ['satellite-2026'] })
     expect(window.localStorage.getItem(TARGETS_KEY)).toContain('satellite-2026')
+    openPick('sat-alpha')
     fireEvent.click(screen.getByTestId('t-sat-alpha-satellite-2026'))
-    expect(within(document.querySelector('[data-app-card="sat-b"]') as HTMLElement).getByTestId('card-cautions').textContent).toContain('失格級')
+    expect(within(document.querySelector('[data-app-card="sat-b"]') as HTMLElement).getByTestId('caution-tag-sat-b').textContent).toContain('注意')
+    openPick('sat-b')
+    expect(within(screen.getByTestId('popover-sat-b')).getByTestId('card-cautions').textContent).toContain('失格級')
     expect(screen.getByTestId('cautions').textContent).toContain('該当するカードの中')
     // 注意はアプリの行の上に差し込まない（押したカードの位置がずれない）
     expect(document.querySelector('[data-testid="app-section"]')!.innerHTML.indexOf('data-testid="cautions"')).toBeGreaterThan(document.querySelector('[data-testid="app-section"]')!.innerHTML.indexOf('data-testid="app-row"'))
     expect(screen.getByTestId('draft-note').textContent).toContain('このブラウザだけの下書きです。正式な提出先は総司令官が参謀長に指示してください')
+  })
+  it('選んだ提出先は、カードの小さな表に ✓ で出る。記号の凡例は常に出ている', () => {
+    render(<Portal />)
+    expect(screen.getByTestId('mark-legend').textContent).toContain('◎ このコンペ向け')
+    const mini = () => document.querySelector('[data-app-card="sat-b"] [data-fit-mini="satellite-2026"]')!.textContent
+    expect(mini()).not.toContain('✓')
+    openPick('sat-b')
+    fireEvent.click(screen.getByTestId('t-sat-b-satellite-2026'))
+    expect(mini()).toContain('✓')
+    expect(mini()).toContain('選択済み')
   })
   it('localStorage が使えなくても画面は動く', () => {
     const orig = Storage.prototype.setItem
     Storage.prototype.setItem = () => { throw new Error('denied') }
     try {
       render(<Portal />)
+      openPick('sat-b')
       fireEvent.click(screen.getByTestId('t-sat-b-satellite-2026'))
       expect(screen.getByTestId('targets-satellite-2026').textContent).toContain('1件')
       expect(screen.getByTestId('draft-note').textContent).toContain('保存できず')
@@ -144,13 +163,18 @@ describe('トップ画面の操作', () => {
     expect(order().length).toBeLessThan(19)
     expect(order()).toContain('sat-b')
     fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '' } })
-    for (const li of document.querySelectorAll('[data-testid="app-row"] > li')) {
-      const stops = [...li.querySelectorAll<HTMLInputElement>('input[type=checkbox]')].filter((i) => !i.disabled && i.tabIndex === 0)
+    for (const id of ['odpt', 'sat-b']) {
+      openPick(id)
+      const stops = [...screen.getByTestId(`popover-${id}`).querySelectorAll<HTMLInputElement>('input[type=checkbox]')].filter((i) => !i.disabled && i.tabIndex === 0)
       expect(stops).toHaveLength(1)
     }
+    // カードには提出先の選択欄を置かない
+    expect(document.querySelector('[data-testid="app-row"] input[type=checkbox]')).toBeNull()
+    if (!screen.queryByTestId('mark-odpt-udc-2026')) openPick('odpt')
     expect(screen.getByTestId('mark-odpt-udc-2026').textContent).toContain('このコンペ向けに作った')
     expect(document.body.textContent).not.toContain('今の応募先')
     // × の理由は折りたたみの中（既定で閉じている）
+    if (!screen.queryByTestId('why-sat-b-udc-2026')) openPick('sat-b')
     expect(screen.getByTestId('why-sat-b-udc-2026').closest('details')!.hasAttribute('open')).toBe(false)
   })
   it('契約: 全コンペ名が registry にある', () => {
