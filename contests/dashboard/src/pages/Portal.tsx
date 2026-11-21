@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { MotionConfig } from 'motion/react'
 import { APPS, CONTESTS, isNewPlan, type ContestId } from '@/apps/registry'
 import { contestsByDeadline } from '@/apps/contests-info'
@@ -26,7 +26,26 @@ export default function Portal() {
     setSaved(saveTargets(targets))
   }, [targets])
 
-  const sortedAll = useMemo(() => sortApps(APPS, contest), [contest])
+  const sortedAll = useMemo(() => sortApps(APPS, contest, targets), [contest, targets])
+  const nChosen = Object.keys(targets).length
+  // 提出先を選んだ・外した直後に並びが変わる。操作したカードが見える位置へ横スクロールし、キーボードの焦点も戻す
+  const touched = useRef<string | null>(null)
+  const orderKey = sortedAll.map((a) => a.id).join(',')
+  useLayoutEffect(() => {
+    const id = touched.current
+    if (!id) return
+    touched.current = null
+    const card = document.querySelector<HTMLElement>(`[data-app-card="${id}"]`)
+    const row = card?.parentElement
+    if (!card || !row) return
+    const cr = card.getBoundingClientRect()
+    const rr = row.getBoundingClientRect()
+    if (cr.left < rr.left) row.scrollLeft += cr.left - rr.left - 8
+    else if (cr.right > rr.right) row.scrollLeft += cr.right - rr.right + 8
+    // 並べ替えで焦点が外れたら、操作したカードの「提出先を選ぶ」へ戻す（ポップオーバーの中にあるときは動かさない）
+    const ae = document.activeElement
+    if (!ae || ae === document.body) card.querySelector<HTMLElement>(`[data-testid="pick-targets-${id}"]`)?.focus({ preventScroll: true })
+  }, [orderKey])
   const apps = useMemo(() => sortedAll.filter((a) => matchesAppQuery(a, q)), [sortedAll, q])
   const cautions = useMemo(() => activeCautions(targets), [targets])
   const contestName = contest ? CONTESTS.find((c) => c.id === contest)!.name : null
@@ -53,7 +72,7 @@ export default function Portal() {
             <span className="ml-2 text-xs font-normal text-slate-700 lg:hidden">横にスクロールして4枚を見られます</span>
           </h2>
           <p className="text-slate-700">
-            {asOf} 時点。カードを選ぶと、アプリがそのコンペとの関連の強い順に並びます　<span aria-hidden>？</span> 総司令官の判断待ち
+            {asOf} 時点。提出先を選んだアプリが左に並び、コンペを選ぶとそのコンペとの関連の強い順に並びます　<span aria-hidden>？</span> 総司令官の判断待ち
           </p>
           <ul data-testid="progress-overall">
             <li className="flex gap-1.5">
@@ -86,9 +105,9 @@ export default function Portal() {
             <h2 id="h-apps" className="text-sm font-bold">
               アプリ（{APPS.length}件・今の案{APPS.filter((a) => !isNewPlan(a)).length}＋新しい案{APPS.filter(isNewPlan).length}）
               <span className="ml-2 text-xs font-normal" data-testid="sort-note" role="status">
-                {contestName
-                  ? `「${contestName}」との関連が強い順（1位: ${sortedAll[0].name}。◎→○→△→×・？の順、同じ強さは登録順。イチBiz は3部門のうち最も強い関連）`
-                  : '並び順: 全コンペ（6列）の関連の強さの合計が高い順（同じなら登録順）'}
+                {(contestName
+                  ? `並び順: 選んだ候補（${nChosen}件）が先、各群は「${contestName}」との関連が強い順`
+                  : `並び順: 選んだ候補（${nChosen}件）が先、各群は全コンペの関連の合計が高い順`)}
               </span>
             </h2>
         {/* 下書きの注意・JSON 書き出し・凡例・全体の状況・出典は1行に畳む（開くとアプリの行の上に重ねて出す） */}
@@ -175,7 +194,10 @@ export default function Portal() {
                 rank={sortedAll.indexOf(a) + 1}
                 contest={contest}
                 targets={targets}
-                onToggle={(app, col) => setTargets((t) => toggleTarget(t, app, col))}
+                onToggle={(app, col) => {
+                  touched.current = app
+                  setTargets((t) => toggleTarget(t, app, col))
+                }}
                 cautions={cautions.filter((c) => c.apps.includes(a.id))}
               />
             ))}

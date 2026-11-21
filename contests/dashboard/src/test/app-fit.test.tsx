@@ -53,6 +53,19 @@ describe('並び順', () => {
     const s = ids.map((id) => contestScore(id, 'satellite-2026'))
     for (let i = 1; i < s.length; i++) expect(s[i - 1]).toBeGreaterThanOrEqual(s[i])
   })
+  it('提出先を選んだアプリが先頭に来て、各群の中は元の並びを保つ。コンペを選んでいても同じ', () => {
+    const none = sortApps(APPS, null).map((a) => a.id)
+    const pick = [none[7], none[3]]
+    const t: Record<string, string[]> = {}
+    for (const id of pick) t[id] = [FIT_COLUMNS.find((c) => isSelectable(cellOf(id, c.id)))!.id]
+    for (const contest of [null, 'satellite-2026' as const]) {
+      const base = sortApps(APPS, contest).map((a) => a.id)
+      const ids = sortApps(APPS, contest, t).map((a) => a.id)
+      expect(ids.slice(0, 2)).toEqual(base.filter((id) => pick.includes(id)))
+      expect(ids.slice(2)).toEqual(base.filter((id) => !pick.includes(id)))
+      expect(sortApps(APPS, contest, {}).map((a) => a.id)).toEqual(base)
+    }
+  })
   it('イチBiz は3部門のうち最大の score で並べる', () => {
     expect(contestScore('biz-realestate', 'ichibiz-2026')).toBe(3)
     expect(contestScore('sat-b', 'ichibiz-2026')).toBe(2)
