@@ -80,7 +80,7 @@
     return { per, bad: per < PER_UNIT_SQM.min || per > PER_UNIT_SQM.max };
   }
   /** 似た建物。階数（推定）の差が±2以内で、延床（推定）の比が近い順。築年は PLATEAU に入っていないので使えない。 */
-  function similar(list, target, n, storeyH) {
+  function similar(list, target, n, storeyH, bonus) {
     const out = [];
     const seen = new Set();
     for (const b of list) {
@@ -96,6 +96,7 @@
       if (target.per > 0 && e.per > 0) dist += 0.3 * Math.abs(Math.log(e.per / target.per));
       let km = null;
       if (isFinite(target.lat) && isFinite(e.lat)) { km = Math.hypot((e.lon - target.lon) * 90.3, (e.lat - target.lat) * 111); dist += 0.01 * km; }
+      if (bonus) dist -= bonus(e); // 名前の分かる建物をわずかに先にする等（呼び出し側が決める）
       out.push({ b: e, df, ratio, dist, km });
     }
     out.sort((a, b) => a.dist - b.dist || a.b.id.localeCompare(b.b.id));

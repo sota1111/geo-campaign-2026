@@ -30,7 +30,8 @@
     <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
       <div class="box key" role="note">
         <button id="go-diag" type="button" class="primary">設備を診断する（条件を入れて理由と対策を見る）</button>
-        <p class="big"><b>色＝県警の地区単位の被害実績＋人口密度による仮の目安</b>。被害の予測ではなく、メッシュごとの実績でもありません。</p>
+        <p class="big"><b>色＝県警の地区単位の被害実績＋人口密度による仮の目安</b>。被害の予測ではなく、四角・円ごとの実績でもありません。</p>
+        <div id="theft"></div>
       </div>
       <details class="box" id="det-basis">
         <summary>色の根拠と限界（照合は独立の検証ではない）</summary>
@@ -119,7 +120,11 @@
   </section>
 
   <section id="mapwrap">
-    <div id="map" aria-label="茨城県の集計メッシュの地図"></div>
+    <div id="map" aria-label="茨城県の集計地図（四角または町字の円）"></div>
+    <div id="mapctl" role="group" aria-label="地図の表示">
+      <span class="mc"><span class="mcl">表示</span><span id="ctl-view"><button type="button" data-v="mesh" aria-pressed="true">四角</button><button type="button" data-v="dots" aria-pressed="false">散布図</button></span></span>
+      <span class="mc"><span class="mcl">背景</span><span id="ctl-base"><button type="button" data-v="pale" aria-pressed="true">地図</button><button type="button" data-v="photo" aria-pressed="false">空中写真</button></span></span>
+    </div>
     <div id="legend"></div>
     <button type="button" id="go-diag2" class="primary fab">設備を診断する</button>
   </section>

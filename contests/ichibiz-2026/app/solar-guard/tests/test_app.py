@@ -17,6 +17,9 @@ WEB = HERE / "web"
 DATA = WEB / "data"
 
 
+C = json.loads((DATA / "cells.json").read_text(encoding="utf-8"))["cell"]  # 集計メッシュの一辺（1kmメッシュの数）
+
+
 def J(name):
     return json.loads((DATA / name).read_text(encoding="utf-8"))
 
@@ -60,7 +63,7 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(b.locate("柳川", towns)[3], 0)
         self.assertEqual(b.locate("柳川字若松", towns)[3], 0)
         # 大字名だけ（小地域名より短い）→ 大字で始まる小地域の代表点の平均
-        lon, lat, area, prec = b.locate("波崎字古野山", towns)
+        lon, lat, area, prec, key, pop = b.locate("波崎字古野山", towns)
         self.assertEqual(prec, 1)
         self.assertAlmostEqual(lon, 140.75)
         self.assertIsNone(b.locate("存在しない", towns))
@@ -68,7 +71,9 @@ class TestParsing(unittest.TestCase):
     def test_cell_pop(self):
         import build_data as b
         pops = {(5, 5): 10, (6, 6): 7, (100, 100): 3}
-        self.assertEqual(b.cell_pop(pops, (1, 1)), 17)  # CELL=5: (5..9, 5..9)
+        self.assertEqual(b.CELL, 2)
+        pops = {(2, 2): 10, (3, 3): 7, (100, 100): 3}
+        self.assertEqual(b.cell_pop(pops, (1, 1)), 17)  # CELL=2: (2..3, 2..3)
         self.assertEqual(b.cell_pop(pops, (0, 0)), 0)
 
 
@@ -134,7 +139,7 @@ class TestData(unittest.TestCase):
             self.assertFalse(has(*p), p)
         # 公開済みの集計メッシュはすべて県内
         for r in self.cells["rows"]:
-            ok = any((r[0] * 5 + dx, r[1] * 5 + dy) in meshes for dx in range(5) for dy in range(5))
+            ok = any((r[0] * C + dx, r[1] * C + dy) in meshes for dx in range(C) for dy in range(C))
             self.assertTrue(ok, r)
 
     def test_totals_consistent(self):
@@ -156,7 +161,7 @@ class TestData(unittest.TestCase):
         grid = {(r[0], r[1]): r[2] for r in self.pops["rows"]}
         self.assertTrue(all(v > 0 for v in grid.values()))
         for r in self.cells["rows"]:
-            tot = sum(grid.get((r[0] * 5 + dx, r[1] * 5 + dy), 0) for dx in range(5) for dy in range(5))
+            tot = sum(grid.get((r[0] * C + dx, r[1] * C + dy), 0) for dx in range(C) for dy in range(C))
             self.assertEqual(r[5], tot)
         # 茨城県の人口（2020年国勢調査 2,867,009人）に対し、県＋周辺の1kmメッシュ合計は同程度以上
         total = sum(grid.values())
@@ -164,7 +169,7 @@ class TestData(unittest.TestCase):
 
     def test_cells_inside_ibaraki_area(self):
         for r in self.cells["rows"]:
-            lat, lon = (r[1] * 5 + 2.5) / 120, 100 + (r[0] * 5 + 2.5) / 80
+            lat, lon = (r[1] * C + C / 2) / 120, 100 + (r[0] * C + C / 2) / 80
             self.assertTrue(35.6 <= lat <= 37.1 and 139.5 <= lon <= 141.1, (lat, lon))
 
     def test_no_personal_columns_or_ids(self):
@@ -179,6 +184,41 @@ class TestData(unittest.TestCase):
         for r in self.cells["rows"]:
             self.assertTrue(all(isinstance(x, int) for x in (r[0], r[1], r[2], r[4], r[5], r[6])))
             self.assertEqual(len(r), 7)  # 設備単位の列（ID・名称・座標）は無い。地区は5つのどれかの番号だけ
+
+    def test_cell_is_finer_than_before(self):
+        self.assertEqual(self.cells["cell"], 2, "集計メッシュは1kmメッシュ×2（約2km）。前の約5kmより細かい")
+        self.assertGreater(len(self.cells["rows"]), 600)
+
+    def test_towns_for_scatter(self):
+        """散布図用の町字の集計: 秘匿のしきい値・列・整合・個別設備の位置でないこと"""
+        t = J("towns.json")
+        k = self.meta["k_min"]
+        self.assertEqual(t["cols"], ["lon", "lat", "n", "kw", "small", "dens", "region", "approx", "city", "name"])
+        self.assertIn("個別の設備の位置ではない", t["note"])
+        rows = t["rows"]
+        self.assertEqual(len(rows), self.st["towns_visible"])
+        self.assertEqual(self.st["towns_all"], self.st["towns_visible"] + self.st["towns_hidden"])
+        self.assertGreater(self.st["towns_hidden"], 0)
+        self.assertEqual(sum(r[2] for r in rows) + self.st["plants_in_hidden_towns"], self.st["placed"])
+        keys = [(r[8], r[9]) for r in rows]
+        self.assertEqual(len(keys), len(set(keys)))
+        for r in rows:
+            self.assertGreaterEqual(r[2], k, "しきい値未満の町字が出力に残っている")
+            self.assertLessEqual(r[4], r[2])
+            self.assertTrue(r[2] >= self.meta["dom_n"] or r[2] - r[4] > 1, "大きな設備が1件だけの町字が残っている")
+            self.assertEqual(r[3] % self.meta["kw_round"], 0)
+            self.assertTrue(35.6 <= r[1] <= 37.1 and 139.5 <= r[0] <= 141.1)
+            self.assertEqual(len(r), 10)
+        dist = J("districts.json")["regions"]
+        names = list(dist)
+        for r in rows:
+            if r[6] >= 0:
+                self.assertIn(r[8], dist[names[r[6]]], "町字の地区が市町村の地区と食い違う")
+        # 代表点は町字ごとの共有の点: 同じ点に複数の町字があってよいが、点の数は町字より多い設備数の桁にならない（設備ごとの点ではない）
+        self.assertLess(len({(r[0], r[1]) for r in rows}), sum(r[2] for r in rows) / 5)
+        # 県警の地区別の件数を、町字・メッシュの列に按分して入れていない
+        self.assertNotIn("theft", json.dumps(t["cols"]))
+        self.assertNotIn("theft", json.dumps(self.cells["cols"]))
 
     def test_raw_values_absent_from_public_files(self):
         raw = HERE / "raw" / "ibaraki.xlsx"

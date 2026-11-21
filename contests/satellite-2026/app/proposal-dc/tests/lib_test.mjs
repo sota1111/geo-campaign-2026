@@ -141,3 +141,117 @@ test('文言: 場面の ID と日付、出典の表記が定義されている',
   assert.match(L.SRC.flood.lic, /CC BY 4\.0/);
   assert.match(L.SRC.sub.lic, /ODbL/);
 });
+
+// ---- 優先値（利用者の重みによる一次スクリーニングの目安）----
+const W = L.defaultWeights();
+const allF = (v) => Object.assign(Object.fromEntries(L.FACTOR_KEYS.map((k) => [k, v])), { hz: 0 });
+
+test('優先値: 初期の重みは 8 要素とも 5（均等）', () => {
+  assert.deepEqual(Object.keys(W), L.FACTOR_KEYS);
+  assert.ok(Object.values(W).every((w) => w === 5));
+});
+
+test('優先値: 重み付き平均（手計算と一致）・寄与の合計が優先値', () => {
+  const f = allF(0); f.flood = 1; f.lst = 0.5;
+  const r = L.priorityOf(f, { ...W, flood: 3, lst: 1, slide: 0, tsunami: 0, surge: 0, insar: 0, power: 0, land: 0 });
+  assert.ok(Math.abs(r.value - (100 * (3 * 1 + 1 * 0.5)) / 4) < 1e-9, String(r.value)); // 87.5
+  assert.ok(Math.abs(r.parts.reduce((a, p) => a + (p.contrib || 0), 0) - r.value) < 1e-9);
+  const eq = L.priorityOf(allF(0.4), W);
+  assert.ok(Math.abs(eq.value - 40) < 1e-9);
+});
+
+test('優先値: 重み 0 の要素は計算から外れる（値が何でも結果が変わらない）', () => {
+  const a = allF(1), b = allF(1); b.flood = 0;
+  const w = { ...W, flood: 0 };
+  assert.equal(L.priorityOf(a, w).value, L.priorityOf(b, w).value);
+  assert.notEqual(L.priorityOf(a, W).value, L.priorityOf(b, W).value);
+  assert.equal(L.priorityOf(b, w).parts.find((p) => p.key === 'flood').used, false);
+});
+
+test('優先値: 重みがすべて 0 なら値なし（0 除算にならない）。負・非数の重みは 0 扱い', () => {
+  const z = Object.fromEntries(L.FACTOR_KEYS.map((k) => [k, 0]));
+  const r = L.priorityOf(allF(1), z);
+  assert.equal(r.value, null); assert.equal(r.excluded, false);
+  assert.equal(L.priorityOf(allF(1), { ...z, flood: -3, lst: NaN }).value, null);
+});
+
+test('優先値: 値のない要素（null）は分母からも外す（0 点扱いにしない）', () => {
+  const f = allF(0.8); f.insar = null;
+  assert.ok(Math.abs(L.priorityOf(f, W).value - 80) < 1e-9);
+  assert.equal(L.priorityOf(f, W).parts.find((p) => p.key === 'insar').used, false);
+});
+
+test('優先値: 重みを増やした要素の望ましさが高ければ優先値は上がり、低ければ下がる', () => {
+  const f = allF(0.5); f.flood = 1; f.slide = 0;
+  const base = L.priorityOf(f, W).value;
+  assert.ok(L.priorityOf(f, { ...W, flood: 10 }).value > base);
+  assert.ok(L.priorityOf(f, { ...W, slide: 10 }).value < base);
+  assert.ok(base >= 0 && base <= 100);
+});
+
+test('優先値: 「除外」は区域が半分以上の格子だけ。切替がなければ除外しない', () => {
+  const f = allF(0.5); f.hz = 0.5;
+  assert.equal(L.priorityOf(f, W, { exclude: true }).excluded, true);
+  assert.equal(L.priorityOf(f, W, { exclude: true }).value, null);
+  assert.ok(L.priorityOf(f, W, {}).value > 0);
+  f.hz = 0.49;
+  assert.ok(L.priorityOf(f, W, { exclude: true }).value > 0);
+});
+
+test('変換: 距離・温度・沈下の階級に対して望ましさは単調（遠い・熱い・動きが大きいほど下がる）で 0〜1', () => {
+  let prev = 2;
+  for (const d of [0, 200, 500, 1000, 2500, 5000, 9000]) { const v = L.powerDesir(d); assert.ok(v <= prev && v >= 0 && v <= 1); prev = v; }
+  assert.equal(L.powerDesir(500), 1); assert.equal(L.powerDesir(5000), 0);
+  prev = 2;
+  for (const t of [25, 31, 35, 40, 50.1, 60]) { const v = L.lstDesir(t, 31, 50.1); assert.ok(v <= prev && v >= 0 && v <= 1); prev = v; }
+  assert.equal(L.lstDesir(31, 31, 50.1), 1); assert.equal(L.lstDesir(50.1, 31, 50.1), 0);
+  // 干渉SAR: 符号 8・9（±3.75 mm/年以内）が 1。0 から離れるほど下がり、±15 mm/年以上で 0。沈下側・隆起側で対称
+  assert.equal(L.insarDesir(8), 1); assert.equal(L.insarDesir(9), 1);
+  for (let c = 1; c <= 7; c++) assert.ok(L.insarDesir(c) <= L.insarDesir(c + 1), `沈下側 ${c}`);
+  for (let c = 9; c <= 15; c++) assert.ok(L.insarDesir(c) >= L.insarDesir(c + 1), `隆起側 ${c}`);
+  assert.equal(L.insarDesir(1), 0); assert.equal(L.insarDesir(16), 0);
+  for (let c = 1; c <= 16; c++) assert.ok(Math.abs(L.insarDesir(c) - L.insarDesir(17 - c)) < 1e-9);
+});
+
+test('範囲の望ましさ: 区域内=0・外=1、2020 植生→2026 裸地等は土地で 1、植生は 0.2', () => {
+  const n = 4, ly = Object.fromEntries(Object.keys(LY).map((k) => [k, new Uint8Array(n)]));
+  const data = { stats: D.stats, substations: [{ lon: 130.7, lat: 33.8, voltage: '66000' }], lines: [] };
+  const cells = [0, 1, 2, 3];
+  ly.flood[0] = 1; ly.flood[1] = 2; // 4 格子のうち 2 つが洪水の区域内
+  ly.land.fill(1); // 植生
+  let f = L.factorsOfCells(data, ly, cells, 130.7, 33.8);
+  assert.equal(f.flood, 0.5); assert.equal(f.slide, 1); assert.equal(f.tsunami, 1); assert.equal(f.surge, 1);
+  assert.equal(f.hz, 0.5); assert.ok(Math.abs(f.land - 0.2) < 1e-9);
+  assert.equal(f.insar, null); assert.equal(f.lst, null); // 値なしは null
+  assert.equal(f.power, 1); // 変電所の真上
+  ly.land.fill(2); ly.chg[0] = 1;
+  f = L.factorsOfCells(data, ly, cells, 130.7, 33.8);
+  assert.ok(Math.abs(f.land - (1 + 0.8 * 3) / 4) < 1e-9);
+  assert.equal(L.factorsOfCells({ ...data, substations: [] }, ly, cells, 130.7, 33.8).power, null);
+});
+
+test('格子: 全体の優先値（約 250 m 区画）。重みで値が変わり、重み 0 の要素は影響しない', () => {
+  const fg = L.buildFactorGrid(D, LY);
+  assert.equal(fg.nbx * L.PRI.B, g.nx); assert.equal(fg.nby * L.PRI.B, g.ny);
+  const p = L.priorityGrid(fg, W, {});
+  assert.equal(p.length, fg.nbx * fg.nby);
+  const vals = [...p].filter((v) => !Number.isNaN(v));
+  assert.ok(vals.length > 0.95 * p.length && vals.every((v) => v >= 0 && v <= 100));
+  const only = (k) => Object.fromEntries(L.FACTOR_KEYS.map((x) => [x, x === k ? 7 : 0]));
+  const pf = L.priorityGrid(fg, only('flood'), {});
+  assert.deepEqual([...pf], [...L.priorityGrid(fg, { ...only('flood'), flood: 1 }, {})]); // 単独なら重みの大きさに依らない
+  assert.notDeepEqual([...pf], [...L.priorityGrid(fg, only('lst'), {})]);
+  const ex = L.priorityGrid(fg, W, { exclude: true });
+  assert.ok([...ex].some((v) => v === -1) && [...ex].every((v, i) => v === -1 || Object.is(v, p[i])));
+  const edges = L.priEdges(p);
+  assert.equal(edges.length, 4); assert.ok(edges.every((e, i) => i === 0 || e >= edges[i - 1]));
+  assert.equal(L.priBin(edges[0] - 1, edges), 0); assert.equal(L.priBin(101, edges), 4);
+});
+
+test('格子: 区画の位置と中心・地点の区画', () => {
+  const b = L.blockOf(g, L.PRI.B, 130.75, 33.8);
+  const [x, y] = L.blockCenter(g, L.PRI.B, b.bi, b.bj);
+  assert.ok(Math.abs(x - 130.75) <= (g.d * L.PRI.B) / 2 + 1e-9 && Math.abs(y - 33.8) <= (g.d * L.PRI.B) / 2 + 1e-9);
+  assert.equal(L.blockCells(g, L.PRI.B, b.bi, b.bj).length, L.PRI.B * L.PRI.B);
+  assert.equal(L.blockOf(g, L.PRI.B, 129, 33.8), null);
+});

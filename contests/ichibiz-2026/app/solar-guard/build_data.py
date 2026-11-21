@@ -29,7 +29,7 @@ import xlsx_min  # noqa: E402
 
 RAW = HERE / "raw"
 OUT = HERE / "web" / "data"
-CELL = 5                      # 公開する集計メッシュの一辺（1kmメッシュ×5＝5倍地域メッシュ。約5km、東西約5.6km×南北約4.6km）
+CELL = 2                      # 公開する集計メッシュの一辺（1kmメッシュ×5＝5倍地域メッシュ。約5km、東西約5.6km×南北約4.6km）
 K_MIN = 3                     # これ未満の設備数のメッシュ・市町村は隠す（根拠は README「秘匿のしきい値」）
 DOM_N = 10                    # 設備が DOM_N 件未満のメッシュは、50kW以上の設備が1件以下なら隠す（件数・出力計・50kW未満の件数から、その1件の出力が割り出せるため。README「秘匿のしきい値」）
 KW_ROUND = 10                 # メッシュの出力計は10kW単位に丸めて公開する
@@ -180,7 +180,7 @@ def parse_address(addr, cities):
 
 
 def locate(rest, towns):
-    """町字の代表点を返す: (lon, lat, 面積m2, 精度) か None。
+    """町字の代表点を返す: (lon, lat, 面積m2, 精度, 町字のキー, 小地域の人口合計) か None。
     精度0: 町字名（丁目を除く）が小地域名と一致。 精度1: 一致する小地域がなく、大字名で始まる小地域の代表点の平均（大字の中心の目安）。"""
     r = rest.replace("字", "")
     best = None
@@ -189,12 +189,12 @@ def locate(rest, towns):
             best = base
     if best:
         e = towns[best]
-        return (sum(x[1] for x in e) / len(e), sum(x[2] for x in e) / len(e), sum(x[4] for x in e), 0)
+        return (sum(x[1] for x in e) / len(e), sum(x[2] for x in e) / len(e), sum(x[4] for x in e), 0, best, sum(x[3] for x in e))
     head = rest.split("字")[0] if not rest.startswith("字") else rest[1:].split("字")[0]
     if len(head) >= 2:
         es = [x for b, e in towns.items() if b.startswith(head) for x in e]
         if es:
-            return (sum(x[1] for x in es) / len(es), sum(x[2] for x in es) / len(es), sum(x[4] for x in es), 1)
+            return (sum(x[1] for x in es) / len(es), sum(x[2] for x in es) / len(es), sum(x[4] for x in es), 1, head, sum(x[3] for x in es))
     return None
 
 
@@ -242,6 +242,7 @@ def main():
     areas = []
     cells = collections.defaultdict(lambda: [0, 0.0, 0])  # (ix,iy) → [件数, 容量kW, うち50kW未満の件数]
     munis = collections.defaultdict(lambda: {"n": 0, "kw": 0.0, "small": 0, "placed": 0})
+    towns = collections.defaultdict(lambda: {"n": 0, "kw": 0.0, "small": 0, "lon": 0.0, "lat": 0.0, "area": 0.0, "pop": 0, "exact": 0})  # (市町村, 町字のキー) → 町字ごとの集計（散布図用）
     cell_reg = collections.defaultdict(collections.Counter)  # (ix,iy) → {地区の番号: 設備数}。メッシュの地区＝設備が最も多い地区（同数は番号が小さい方）
     for r in data:
         if not r[c["start"]] or r[c["start"]] == "-":
@@ -265,6 +266,12 @@ def main():
             continue
         stat["placed_exact" if loc[3] == 0 else "placed_ohaza"] += 1
         areas.append(loc[2] / 1e6)
+        t = towns[(city, loc[4])]
+        t["n"] += 1
+        t["kw"] += kw
+        t["small"] += kw < SMALL_KW
+        t["lon"], t["lat"], t["area"], t["pop"] = loc[0], loc[1], loc[2], loc[5]
+        t["exact"] = loc[3] == 0
         m["placed"] += 1
         ix, iy = to_cell(loc[1], loc[0])
         k = (ix // CELL, iy // CELL)
@@ -291,6 +298,13 @@ def main():
     stat["cells_hidden_small_n"] = sum(1 for v in cells.values() if v[0] < K_MIN)
     stat["cells_hidden_dominant"] = stat["cells_hidden"] - stat["cells_hidden_small_n"]
     stat["plants_in_hidden_cells"] = sum(v[0] for v in cells.values() if not shown(v))
+
+    tvis = sorted(((c, k), v) for (c, k), v in towns.items() if shown([v["n"], v["kw"], v["small"]]))
+    stat["towns_all"] = len(towns)
+    stat["towns_visible"] = len(tvis)
+    stat["towns_hidden"] = len(towns) - len(tvis)
+    stat["plants_in_hidden_towns"] = sum(v["n"] for v in towns.values() if not shown([v["n"], v["kw"], v["small"]]))
+    stat["towns_approx"] = sum(1 for _, v in tvis if not v["exact"])
 
     def region_of(k):
         cnt = cell_reg[k]
@@ -322,6 +336,11 @@ def main():
     dump("cells.json", {"meta": meta, "cell": CELL, "cols": ["cx", "cy", "n", "kw", "small", "pop", "region"],
                          "regions": REGION_NAMES,
                          "rows": [[k[0], k[1], v[0], int(round(v[1] / KW_ROUND)) * KW_ROUND, v[2], cell_pop(pops, k), region_of(k)] for k, v in visible]})
+    # 散布図用: 町字ごとの集計（代表点は e-Stat 小地域の代表点。個別設備の位置ではない）。K_MIN・DOM_N は上のメッシュと同じ
+    dump("towns.json", {"note": "町字ごとの集計。位置は e-Stat 小地域の代表点（個別の設備の位置ではない）。設備が%d件未満などの町字は含めない。出力計は%dkW単位に丸める。dens は町字の人口÷面積（人/km2。面積は水面を含みうる）、approx=1 は町字名が一致せず大字名で始まる小地域の代表点の平均" % (K_MIN, KW_ROUND),
+                        "cols": ["lon", "lat", "n", "kw", "small", "dens", "region", "approx", "city", "name"], "regions": REGION_NAMES,
+                        "rows": [[round(v["lon"], 4), round(v["lat"], 4), v["n"], int(round(v["kw"] / KW_ROUND)) * KW_ROUND, v["small"],
+                                  int(round(v["pop"] / (v["area"] / 1e6))) if v["area"] else 0, CITY_REGION.get(c, -1), 0 if v["exact"] else 1, c, k] for (c, k), v in tvis]})
     dump("pops.json", {"meta": {"source": meta["mesh_source"], "note": "人口0または秘匿('*')のメッシュは含めない。秘匿は近隣メッシュに合算されている（e-Stat）"}, "cols": ["ix", "iy", "pop"], "rows": pop_rows})
     dump("munis.json", {"k_min": K_MIN, "rows": mrows})
     land = load_land()
@@ -329,7 +348,7 @@ def main():
                        "rows": [[iy] + [x for r in runs for x in r] for iy, runs in sorted(land.items())]})
     dump("districts.json", {"note": "茨城県の地域区分（県北・県央・鹿行・県南・県西）の市町村。県警 Metal News の5地区が同じ区分かは誌面に記載がなく、推測。", "regions": {k: v.split() for k, v in REGIONS.items()}})
     print("stats:", json.dumps(stat, ensure_ascii=False))
-    print("cells visible:", len(visible), "munis:", len(mrows), "pop cells:", len(pop_rows))
+    print("towns visible:", len(tvis), "cells visible:", len(visible), "munis:", len(mrows), "pop cells:", len(pop_rows))
     print("wrote", OUT)
 
 
