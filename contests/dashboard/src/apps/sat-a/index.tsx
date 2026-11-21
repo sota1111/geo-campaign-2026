@@ -14,46 +14,48 @@ import { dataUrl } from '@/lib/data'
 import { isSampleMode } from '@/lib/sample'
 import { SatMap } from './SatMap'
 import {
-  ApplyPanel, PickPanel, Round2Panel, ScanPanel, TopPanel, WeightPanel, type CalibResult, type PrevInfo,
+  ApplyPanel, PickPanel, Round2Panel, ScanPanel, TopPanel, WeightPanel, type CalibResult, type LoadInfo, type PrevInfo,
 } from './Steps'
+import { VerifyPanel, type VerifyData } from './Verify'
 import { SOURCES } from './About'
 import {
-  NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, rank, satNorm, selectByBudget, totalKm,
-  applyOutcomes, sampleOutcomes, type Outcome, type OutcomeInput, type SampleData, type Segment,
+  NOW_YEAR, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, totalKm,
+  type DataFile, type DemoData, type Scanned, type Segment,
 } from './logic'
 
-type StepId = 'top' | 'weight' | 'pick' | 'scan' | 'apply' | 'round2'
+type StepId = 'top' | 'weight' | 'pick' | 'scan' | 'apply' | 'round2' | 'verify'
 const pct = (x: number) => Math.round(x * 100)
+const W0 = 0.1 // この地区は衛星でほとんど絞れないため、台帳中心（衛星10%）から始める
+const yearTxt = (y: number | null) => (y == null ? '不明' : `${y}年`)
 
 const TITLES: Record<StepId, string> = {
   top: '候補区間の点数を見る',
   weight: '衛星指標の重みを変えてみる（任意）',
   pick: '予算（走行延長）内で調査対象を選ぶ',
-  scan: '調査結果を入力する',
+  scan: '調査結果（CSV）を入れる',
   apply: '較正を反映して第2回へ進む',
   round2: '第2回の順位を確かめる',
+  verify: '実データで確かめる（参考）',
 }
 const HINTS: Record<StepId, string> = {
-  top: '最も点数の高い区間を確かめる（データはすべて架空）',
+  top: '豊中市北東部の実データで点数を付けた候補区間を見る',
   weight: 'スライダーで点数と順位が変わる',
   pick: '「点数の上位から自動で選ぶ」か、地図・表で手直し',
-  scan: '結果を手で入力（サンプル一括入力も可）',
-  apply: '重みが更新され、順位が作り直される',
+  scan: '一次審査後に GMS3 の結果を入れる枠（CSV。説明用デモは既定オフ）',
+  apply: '結果が入ると重みを較正し、順位を作り直す',
   round2: '第1回との対比を見る',
+  verify: '陥没の件数との照合・全国の文脈（因果・精度は言わない）',
 }
 
-/** 第1回の走査: 選んだ区間を走査済みにして、較正の結果を作る（通常操作と実行サンプルで共通） */
-function scanOf(segs: Segment[], outcomes: OutcomeInput, results: Map<string, boolean>, cellSat: Record<string, number>, w: number) {
-  const { segs: nextSegs, results: nextResults, done } = applyOutcomes(segs, outcomes, results)
-  const data3 = nextSegs.filter((s) => s.surveyed).map((s) => ({ ...s, hit: s.sim_cavity }))
-  const c = calibrate(data3, cellSat)
-  const calib: CalibResult = {
+/** 入った結果（空洞あり/なし）から較正の結果を作る */
+function calibOf(scanned: Scanned[], cellSat: Record<string, number>, w: number): CalibResult {
+  const c = calibrate(scanned, cellSat)
+  return {
     ...c,
-    ex0: exclusionAccuracy(data3, cellSat, w),
-    ex1: c.w === null ? null : exclusionAccuracy(data3, cellSat, c.w),
-    pastCount: data3.length - nextResults.size,
+    ex0: exclusionAccuracy(scanned, cellSat, w),
+    ex1: c.w === null ? null : exclusionAccuracy(scanned, cellSat, c.w),
+    n: scanned.length,
   }
-  return { nextResults, nextSegs, calib, done }
 }
 
 /** 較正の反映: 次回の重み・比較用の情報・説明文を作る */
@@ -70,62 +72,79 @@ function applyOf(segs: Segment[], cellSat: Record<string, number>, w: number, ro
   }
   let msg: string
   if (calib && calib.w !== null) {
-    msg = `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（調査結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `走査した区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `走査した区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
+    msg = `${newW === w ? `衛星指標の重みは ${pct(w)}% のまま（入った結果に照らしても最も当たりやすい重みでした）。` : `衛星指標の重みを ${pct(w)}% から ${pct(newW)}% に更新しました。`}${before[0]?.id === after[0]?.id ? `結果が入った区間を除く候補の1位は変わらず ${after[0]?.id}（2位以下が入れ替わり）` : `結果が入った区間を除く候補の1位は ${before[0]?.id} から ${after[0]?.id} に変わり`}、上位10区間のうち ${changed} 区間で順位が入れ替わっています。`
   } else {
-    msg = '較正に使える結果が不足していたため、重みは変えていません（調査した区間が候補から外れた分だけ順位が繰り上がります）。'
+    msg = '較正に使える結果が不足していたため、重みは変えていません（結果が入った区間が候補から外れた分だけ順位が繰り上がります）。'
   }
   return { prev, msg, newW }
 }
 
+async function readFileText(file: File): Promise<string> {
+  const buf = await file.arrayBuffer()
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf)
+  } catch {
+    return new TextDecoder('shift_jis').decode(buf)
+  }
+}
+
 export default function App() {
-  const [data, setData] = useState<SampleData | null>(null)
+  const [data, setData] = useState<DataFile | null>(null)
+  const [verify, setVerify] = useState<VerifyData | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [segs, setSegs] = useState<Segment[]>([])
   const [step, setStep] = useState<StepId>('top')
-  const [w, setW] = useState(0.5)
+  const [w, setW] = useState(W0)
   const [budgetKm, setBudgetKm] = useState(3)
   const [round, setRound] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // 空洞の結果。既定では空（実データには空洞の結果が無い）。利用者の CSV か、説明用デモ（架空）でだけ入る
   const [results, setResults] = useState<Map<string, boolean>>(new Map())
-  const [outcomes, setOutcomes] = useState<OutcomeInput>({})
-  const [lastBatch, setLastBatch] = useState<string[]>([])
-  const [revealed, setRevealed] = useState(false)
-  const [calib, setCalib] = useState<CalibResult | null>(null)
+  const [demo, setDemo] = useState(false)
+  const [demoData, setDemoData] = useState<DemoData | null>(null)
+  const [loadInfo, setLoadInfo] = useState<LoadInfo | null>(null)
+  const [roundAdded, setRoundAdded] = useState(0)
   const [focus, setFocus] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
   const [prev, setPrev] = useState<PrevInfo | null>(null)
   const [viewedTop, setViewedTop] = useState(false)
   const [wTouched, setWTouched] = useState(false)
   const [viewedR2, setViewedR2] = useState(false)
+  const [viewedVerify, setViewedVerify] = useState(false)
 
   useEffect(() => {
     if (round > 1 && step === 'round2') setViewedR2(true)
   }, [round, step])
+  useEffect(() => {
+    if (step === 'verify') setViewedVerify(true)
+  }, [step])
 
   useEffect(() => {
     let alive = true
-    fetch(dataUrl('sat-a', 'sample.json'))
+    fetch(dataUrl('sat-a', 'toyonaka.json'))
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<SampleData>
+        return r.json() as Promise<DataFile>
       })
-      .then((d) => {
+      .then(async (d) => {
         if (!alive) return
         setData(d)
-        const base = d.segments.map((s) => ({ ...s }))
-        if (!isSampleMode()) {
-          setSegs(base)
-          return
-        }
-        // 実行サンプル: 被験者の操作（初期の重み 50%・予算 3.0 km で「点数の上位から自動で選ぶ」→ 走査 → 較正を反映 →
-        // 第2回の順位を確認）を、実データで同じ計算にかけて再現する。表示値は直書きしない。
+        if (!isSampleMode()) return
+        // 実行サンプル: 説明用デモ（架空の結果）で、初期の重み・予算 3.0 km のまま「点数の上位から自動で選ぶ」→ 走査 → 較正を反映 →
+        // 第2回の順位を確認、の流れを同じ計算にかけて再現する。表示値は直書きしない。地図には常に「架空」と出る。
+        const dm = (await (await fetch(dataUrl('sat-a', 'demo_sim.json'))).json()) as DemoData
+        if (!alive) return
+        const hit = new Set(dm.hit)
         const cs = Object.fromEntries(d.cells.map((c) => [c.id, satNorm(c.disp)]))
-        const w0 = 0.5
-        const ids = new Set(selectByBudget(rank(base, cs, w0), 3))
-        const sc = scanOf(base, sampleOutcomes(base, ids), new Map(), cs, w0)
-        const ap = applyOf(sc.nextSegs, cs, w0, 1, sc.calib, sc.done.length)
-        setSegs(sc.nextSegs)
-        setResults(sc.nextResults)
+        const res = new Map<string, boolean>(dm.past.map((id) => [id, hit.has(id)]))
+        const withS = (m: Map<string, boolean>) => d.segments.map((s) => ({ ...s, surveyed: m.has(s.id) }))
+        const ids = selectByBudget(rank(withS(res), cs, W0), 3)
+        for (const id of ids) res.set(id, hit.has(id))
+        const segs2 = withS(res)
+        const calib = calibOf(scannedFrom(segs2, res), cs, W0)
+        const ap = applyOf(segs2, cs, W0, 1, calib, ids.length)
+        setDemoData(dm)
+        setDemo(true)
+        setResults(res)
         setPrev(ap.prev)
         setMsg(ap.msg)
         setW(ap.newW)
@@ -134,15 +153,24 @@ export default function App() {
         setStep('round2')
       })
       .catch((e) => alive && setError(String(e)))
+    fetch(dataUrl('sat-a', 'verify.json'))
+      .then((r) => (r.ok ? (r.json() as Promise<VerifyData>) : null))
+      .then((v) => alive && v && setVerify(v))
+      .catch(() => undefined)
     return () => {
       alive = false
     }
   }, [])
 
+  const baseSegs = data?.segments
+  // 結果が入った区間だけ surveyed（候補から外れる）
+  const segs = useMemo<Segment[]>(() => (baseSegs ?? []).map((s) => ({ ...s, surveyed: results.has(s.id) })), [baseSegs, results])
   const cellSat = useMemo(() => Object.fromEntries((data?.cells ?? []).map((c) => [c.id, satNorm(c.disp)])), [data])
+  const cellById = useMemo(() => Object.fromEntries((data?.cells ?? []).map((c) => [c.id, c])), [data])
   const ranked = useMemo(() => rank(segs, cellSat, w), [segs, cellSat, w])
   const candidates = useMemo(() => candidatesOf(ranked), [ranked])
-  const surveyedSet = () => segs.filter((s) => s.surveyed).map((s) => ({ ...s, hit: s.sim_cavity }))
+  const surveyedSet = useMemo(() => scannedFrom(segs, results), [segs, results])
+  const calibNow = useMemo(() => calibOf(surveyedSet, cellSat, w), [surveyedSet, cellSat, w])
 
   const toggle = (id: string) => {
     setSelected((cur) => {
@@ -157,15 +185,17 @@ export default function App() {
     // 手順1は、区間を1つ選んで点数の内訳を見たら済
     setViewedTop(true)
   }
+  const dataNote = demo ? '説明用デモ（結果は架空）' : '実データ（豊中市北東部。衛星・道路・台帳）'
   const exportTargets = () => {
     const rk = new Map(candidates.map((s, i) => [s.id, i + 1]))
+    const mid = (s: Segment, k: 0 | 1) => ((s.coords[0][k] + s.coords[1][k]) / 2).toFixed(6)
     const rows = [...selected].map((id) => ranked.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s)
       .sort((a, b) => (rk.get(a.id) ?? 999) - (rk.get(b.id) ?? 999))
-      .map((s) => [rk.get(s.id) ?? '', s.id, s.cell, s.lenM, s.year, s.score.toFixed(2), `${pct(w)}%`, '架空データ（サンプル市）'])
-    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
+      .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote])
+    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
   }
   const exportRound2 = () => {
-    const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year, s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, '架空データ（サンプル市）'])
+    const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, dataNote])
     downloadText(`round${round}-ranking.csv`, markCsv(toCsv([['rank', 'segment_id', 'cell', 'length_m', 'laid_year', 'score', 'previous_rank', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
   }
   const onSegmentClick = (id: string) => {
@@ -175,49 +205,74 @@ export default function App() {
     if (s && s.cls === 'life' && !s.surveyed) toggle(id)
   }
 
-  const setOutcome = (id: string, o: Outcome | undefined) => setOutcomes((cur) => ({ ...cur, [id]: o }))
-  const fillSample = () => setOutcomes((cur) => ({ ...cur, ...sampleOutcomes(segs, selected) }))
-
-  /** 入力された結果（空洞あり／なし）を反映する。選んだ区間のうち入力済みのものだけが対象 */
-  const doScan = () => {
-    const input: OutcomeInput = {}
-    for (const id of selected) input[id] = outcomes[id]
-    const { nextResults, nextSegs, calib: c, done } = scanOf(segs, input, results, cellSat, w)
-    if (done.length === 0) return
-    setCalib(c)
-    setResults(nextResults)
-    setSegs(nextSegs)
-    setLastBatch(done)
-    setSelected((cur) => new Set([...cur].filter((id) => !done.includes(id))))
-    setOutcomes({})
-    setRevealed(true)
+  /** 結果を足す（累計）。同じ区間は上書き。足した区間は選択から外す */
+  const addResults = (add: Map<string, boolean>) => {
+    let fresh = 0
+    for (const id of add.keys()) if (!results.has(id)) fresh++
+    setRoundAdded((n) => n + fresh)
+    setResults(new Map([...results, ...add]))
+    setSelected((cur) => new Set([...cur].filter((id) => !add.has(id))))
+  }
+  /** 調査結果の CSV を取り込む（区間ID または緯度・経度。処理はブラウザ内だけ） */
+  const onFile = async (file: File) => {
+    if (demo) return
+    const text = await readFileText(file)
+    const r = parseOutcomes(text, baseSegs ?? [])
+    setLoadInfo({ name: file.name, error: r.error, summary: r.summary })
+    if (!r.error) addResults(r.results)
+  }
+  const clearResults = () => {
+    setResults(new Map())
+    setLoadInfo(null)
+    setRoundAdded(0)
+  }
+  /** 説明用デモの切替。入れた結果・較正・回は初めからにする（実の結果と架空を混ぜない） */
+  const onDemo = async (on: boolean) => {
+    let dm = demoData
+    if (on && !dm) {
+      dm = (await (await fetch(dataUrl('sat-a', 'demo_sim.json'))).json()) as DemoData
+      setDemoData(dm)
+    }
+    setDemo(on)
+    setLoadInfo(null)
+    setSelected(new Set())
+    setW(W0)
+    setRound(1)
+    setMsg('')
+    setPrev(null)
+    setRoundAdded(0)
+    setResults(on && dm ? new Map(dm.past.map((id) => [id, new Set(dm.hit).has(id)])) : new Map())
+  }
+  const onDemoScan = () => {
+    if (!demo || !demoData) return
+    const hit = new Set(demoData.hit)
+    addResults(new Map([...selected].map((id) => [id, hit.has(id)])))
   }
 
   const applyCalib = () => {
-    // 反映前の順位（走査済みを除いた候補の順位）を記録して、第2回との比較に使う
-    const r = applyOf(segs, cellSat, w, round, calib, lastBatch.length)
+    // 反映前の順位（結果が入った区間を除いた候補の順位）を記録して、第2回との比較に使う
+    const r = applyOf(segs, cellSat, w, round, calibNow, roundAdded)
     setPrev(r.prev)
     setMsg(r.msg)
     setW(r.newW)
     setRound(round + 1)
-    setRevealed(false)
-    setCalib(null)
-    setLastBatch([])
+    setRoundAdded(0)
     setFocus(null)
   }
 
-  const scanned = results.size > 0
+  const hasResults = results.size > 0
   useAppSteps(
     [
-      { id: 'top', title: '候補区間の点数を見る', hint: '表の行を選んで内訳を見る（データは架空）', action: '表の行を1つ選ぶと完了', done: viewedTop },
+      { id: 'top', title: '候補区間の点数を見る', hint: '表の行を選んで内訳を見る（豊中市の実データ）', action: '表の行を1つ選ぶと完了', done: viewedTop },
       { id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで順位が変わる', action: 'スライダーを動かすと完了', optional: true, done: wTouched },
       {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
-        done: scanned || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
+        done: roundAdded > 0 || round > 1 || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
-      { id: 'scan', title: '調査結果を入力する', hint: '区間ごとに空洞の疑いあり／異常なし／未調査を入れる', done: scanned },
-      { id: 'apply', title: '較正を反映して第2回へ進む', hint: '重みが更新され順位が作り直される', action: revealed ? 'ボタンを押すと完了' : undefined, done: round > 1 },
+      { id: 'scan', title: '調査結果（CSV）を入れる', hint: '一次審査後に GMS3 の結果を入れる枠。区間ID または緯度・経度の CSV', action: 'CSV を入れると完了', done: roundAdded > 0 || round > 1 },
+      { id: 'apply', title: '較正を反映して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
       { id: 'round2', title: '第2回の順位を確かめる', hint: '第1回との対比を見る', action: round > 1 ? '第2回の順位ができました。ここを押して確かめる' : undefined, done: round > 1 && viewedR2 },
+      { id: 'verify', title: '実データで確かめる（参考）', hint: '陥没の件数との照合・全国の文脈', action: '開いて読むと完了', optional: true, done: viewedVerify },
     ],
     {
       activeId: step,
@@ -257,19 +312,23 @@ export default function App() {
 
   const focusSeg = focus ? ranked.find((s) => s.id === focus) : undefined
   const mapStep = step === 'top' || step === 'weight' ? '1' : '2'
+  const focusCell = focusSeg ? cellById[focusSeg.cell] : undefined
+  const fake = demo ? '（架空）' : ''
 
   const aside = data ? (
     <div className="flex h-full flex-col">
       <SatMap
         round={round}
+        bbox={data.area.bbox}
+        palette={data.satellite.palette}
         className="min-h-0 flex-1"
         cells={data.cells}
-        cellSat={cellSat}
         ranked={ranked}
         selected={selected}
         focus={focus}
         step={mapStep}
         results={results}
+        demo={demo}
         onSegmentClick={onSegmentClick}
       />
       <div className="shrink-0 border-t bg-card px-3 py-1.5 text-xs" aria-live="polite" data-testid="detail">
@@ -277,16 +336,18 @@ export default function App() {
           {focusSeg ? (
             <>
               <div>
-                <b>区間 {focusSeg.id}</b>（{focusSeg.cls === 'arterial' ? '幹線・調査済み' : '生活道路'}）／区画 {focusSeg.cell}／{focusSeg.lenM} m／布設 {focusSeg.year}年（経過 {NOW_YEAR - focusSeg.year}年）
+                <b>区間 {focusSeg.id}</b>{focusSeg.name ? `（${focusSeg.name}）` : ''}（{focusSeg.cls === 'arterial' ? '幹線・この調査の対象外' : focusSeg.cls === 'noledger' ? '台帳に管渠が紐づかない道路' : '生活道路'}）／区画 {focusSeg.cell}
+                {focusCell ? `（階級 ${focusCell.range[0]}〜${focusCell.range[1]} mm/年）` : ''}／{focusSeg.lenM} m／竣工 {yearTxt(focusSeg.year)}{focusSeg.year != null ? `（経過 ${NOW_YEAR - focusSeg.year}年）` : '（台帳で不明。古さは中立の0.5）'}
               </div>
               <div>
-                点数 <b>{focusSeg.score.toFixed(2)}</b> ＝ 衛星 {pct(w)}% × 区画値 {cellSat[focusSeg.cell].toFixed(2)} ＋ 台帳 {pct(1 - w)}% × 古さ {ageNorm(focusSeg.year).toFixed(2)}
+                {focusSeg.cls === 'noledger' ? '点数の対象外' : (
+                  <>点数 <b>{focusSeg.score.toFixed(2)}</b> ＝ 衛星 {pct(w)}% × 区画値 {cellSat[focusSeg.cell].toFixed(2)} ＋ 台帳 {pct(1 - w)}% × 古さ {ageNorm(focusSeg.year).toFixed(2)}</>
+                )}
                 <span className="text-muted-foreground">
-                  ／{focusSeg.cls === 'arterial'
-                    ? '過去に調査済み（点数の対象外）'
-                    : focusSeg.surveyed
-                      ? results.has(focusSeg.id) ? `調査結果: ${results.get(focusSeg.id) ? "▲ 空洞の疑いあり" : "○ 異常なし"}（架空データ）` : '過去に調査済み'
-                      : selected.has(focusSeg.id) ? '選択中' : '未調査'}
+                  ／{results.has(focusSeg.id)
+                    ? `調査結果${fake}: ${results.get(focusSeg.id) ? '▲ 空洞あり' : '○ 空洞なし'}`
+                    : focusSeg.cls === 'arterial' ? '点数の対象外（生活道路が対象）'
+                      : selected.has(focusSeg.id) ? '選択中' : '結果は未入力'}
                 </span>
               </div>
             </>
@@ -294,20 +355,20 @@ export default function App() {
             <span className="text-muted-foreground">地図の道路、または表の行をタップすると、点数の内訳を表示します。</span>
           )}
         </div>
-
       </div>
       <div className="flex shrink-0 items-center gap-x-3 gap-y-1 overflow-x-auto whitespace-nowrap border-t bg-card px-3 py-1.5 text-[11px] md:flex-wrap md:overflow-visible md:whitespace-normal [&>*]:shrink-0" data-testid="legend">
         <span className="font-medium">凡例</span>
         <span className="flex items-center gap-1">点数 低<span className="inline-block h-2 w-14 rounded" style={{ background: 'linear-gradient(90deg,#dbe5ec,#f4b942,#8e1b6b)' }} />高</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-6 border-t-4 border-dashed border-[#6f7d86]" />調査済み・幹線</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-6 border-t-4 border-dashed border-[#6f7d86]" />結果が入った区間{fake}</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-6 border-t-2 border-[#9aa5ab]" />幹線（対象外）</span>
         <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-6 rounded bg-[#00a3c4]" />選択中</span>
         <span className="flex items-center gap-1">
-          <svg width="14" height="13" viewBox="0 0 26 24" aria-hidden><polygon points="13,2 24,22 2,22" fill="#d55e00" stroke="#fff" strokeWidth="2.5" strokeLinejoin="round" /></svg>空洞の疑い
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="6" fill="#d55e00" stroke="#fff" strokeWidth="2" /></svg>空洞あり{fake}
         </span>
         <span className="flex items-center gap-1">
-          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="5.5" fill="#fff" stroke="#0072b2" strokeWidth="2.5" /></svg>異常なし
+          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden><circle cx="8" cy="8" r="5" fill="#fff" stroke="#0072b2" strokeWidth="2.5" /></svg>空洞なし{fake}
         </span>
-        <span className="flex items-center gap-1"><span className="inline-block size-3 rounded bg-[#7fa3c0]" />区画の青み＝地表変位</span>
+        <span className="flex items-center gap-1"><span className="inline-block size-3 rounded bg-[#7fa3c0]" />区画の色＝衛星の階級（この地区は2階級のみ）</span>
       </div>
     </div>
   ) : (
@@ -349,33 +410,33 @@ export default function App() {
             )}
             {step === 'scan' && (
               <ScanPanel
-                segs={segs}
-                ranked={ranked}
+                demo={demo}
+                onDemo={onDemo}
                 selected={selected}
-                revealed={revealed}
-                lastBatch={lastBatch}
-                results={results}
-                outcomes={outcomes}
-                onOutcome={setOutcome}
-                onFillSample={fillSample}
-                onScan={doScan}
+                segs={segs}
+                resultsCount={results.size}
+                loadInfo={loadInfo}
+                onFile={onFile}
+                onClear={clearResults}
+                onDemoScan={onDemoScan}
               />
             )}
             {step === 'apply' && (
               <ApplyPanel
                 round={round}
-                revealed={revealed}
-                calib={calib}
-                surveyed={surveyedSet()}
+                calib={calibNow}
+                surveyed={surveyedSet}
                 cellSat={cellSat}
-                resultsCount={results.size}
-                applied={round > 1 ? prev : null}
+                resultsCount={hasResults ? results.size : 0}
+                demo={demo}
+                applied={round > 1 && roundAdded === 0 ? prev : null}
                 onApply={applyCalib}
               />
             )}
             {step === 'round2' && (
               <Round2Panel round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} onExport={exportRound2} />
             )}
+            {step === 'verify' && (verify ? <VerifyPanel v={verify} /> : <Skeleton className="h-40 w-full" />)}
           </>
         )}
       </StepLayout>

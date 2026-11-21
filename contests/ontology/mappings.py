@@ -26,6 +26,7 @@ APP_DIRS = {
     "biz-realestate": "contests/ichibiz-2026/app/realestate",
     "biz-realestate-rn1": "contests/ichibiz-2026/app/realestate-rn1",
     "biz-realestate-a4": "contests/ichibiz-2026/app/realestate-a4",
+    "biz-realestate-timeline": "contests/ichibiz-2026/app/realestate-timeline",
     "biz-solar-guard": "contests/ichibiz-2026/app/solar-guard",
 }
 
@@ -82,6 +83,7 @@ SUBMISSION_FILES = {
     ("biz-realestate", "ichibiz-2026"): [f"{_IZ}/realestate/{n}.md" for n in _FIELDS + ["reinfolib"]],
     ("biz-realestate-rn1", "ichibiz-2026"): [f"{_IZ}/realestate-rn1/{n}.md" for n in _FIELDS + ["reinfolib"]],
     ("biz-realestate-a4", "ichibiz-2026"): [f"{_IZ}/realestate-a4/{n}.md" for n in _FIELDS + ["reinfolib"]],
+    ("biz-realestate-timeline", "ichibiz-2026"): [f"{_IZ}/realestate-timeline/{n}.md" for n in _FIELDS + ["reinfolib"]],
 }
 # 提出文が無いと確認できる根拠（reports/command/merge-20261121.md PR #36、監査の範囲外の記載）
 NO_DRAFT_SOURCES = {

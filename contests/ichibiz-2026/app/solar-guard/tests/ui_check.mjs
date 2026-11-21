@@ -75,24 +75,20 @@ async function run(label, w, h, mobile) {
   if (st.overflowX) problems.push(label + ': 横スクロールが発生');
   await shot(c, `${label}-1-map.png`, mobile);
 
-  // 重みを変える → 目安が変わる、全0で警告
-  const before = await c.ev('SgApp.STATE.sc.map(c=>c.band).join(",")');
-  await c.ev(`(function(){var e=document.getElementById("w-quiet");e.value="5";e.dispatchEvent(new Event("input",{bubbles:true}));})()`);
-  const after = await c.ev('SgApp.STATE.sc.map(c=>c.band).join(",")');
-  if (before === after) problems.push(label + ': 重みを変えても目安が変わらない');
-  await c.ev(`["quiet","kw","small"].forEach(function(k){var e=document.getElementById("w-"+k);e.value="0";e.dispatchEvent(new Event("input",{bubbles:true}));})`);
-  const warn = await c.ev('document.getElementById("w-warn").innerText');
-  if (!warn.includes('0')) problems.push(label + ': 重み全0の警告が出ない');
-  // 重み全0: 凡例は無効表示で「色分け停止中」を明示（デザイン審査 M3）
+  // 重みの操作は廃止（実績に合わせて重みを選ぶことになるため）。規則・凡例・上部の推移が出る
+  if (await c.ev('!!document.getElementById("w-quiet") || !!document.getElementById("weights")')) problems.push(label + ': 廃止した重みの操作が残っている');
+  const rules = await c.ev('document.getElementById("rules").innerText');
+  for (const wd of ['2 × 地区の段階', '人目の少なさ', '仮', '規模', '逃げやすさ', '両論']) if (!rules.includes(wd)) problems.push(label + ': 色分けの規則に「' + wd + '」がない');
+  const trend = await c.ev('document.getElementById("trend").innerText');
+  for (const wd of ['2,889', '3,628', '1,766', '91.8%', '出典', '金属盗対策法']) if (!trend.includes(wd)) problems.push(label + ': 盗難の件数・推移に「' + wd + '」がない');
   const lg = await c.ev('({cls: document.getElementById("legend").className, txt: document.getElementById("legend").innerText})');
-  if (lg.cls !== 'off' || !lg.txt.includes('色分けを停止中') || /やや高/.test(lg.txt)) problems.push(label + ': 重み全0の凡例が停止中の表示になっていない: ' + lg.txt);
-  await c.ev(`["kw","small","quiet"].forEach(function(k){var e=document.getElementById("w-"+k);e.value=k==="quiet"?"0":"1";e.dispatchEvent(new Event("input",{bubbles:true}));})`);
-  const lg2 = await c.ev('({cls: document.getElementById("legend").className, txt: document.getElementById("legend").innerText})');
-  if (lg2.cls === 'off' || !lg2.txt.includes('やや高')) problems.push(label + ': 重みを戻しても凡例が戻らない');
-  // 県警の被害実績との並置（致命的1）: 食い違いを隠さない
+  if (lg.cls === 'off' || !/低.*中.*やや高.*高/.test(lg.txt) || !lg.txt.includes('被害の予測ではありません')) problems.push(label + ': 凡例が4段階・予測でない旨になっていない: ' + lg.txt);
+  const lv = await c.ev('SgApp.STATE.sc.map(c=>c.band)');
+  for (let l = 0; l < 4; l++) if (!lv.includes(l)) problems.push(label + ': メッシュの色に段階' + l + 'がない');
+  // 県警の被害実績との照合（致命的1）: 当たっているか・逆になっていないかを隠さない
   const dc = await c.ev('document.getElementById("dist-compare").innerText');
-  if (!dc.includes('一致していません') && !dc.includes('逆向き')) problems.push(label + ': 県警の被害実績との食い違いが画面に出ていない');
-  if (!dc.includes('推測') || !dc.includes('順位相関') || !dc.includes('県南')) problems.push(label + ': 地区別の比較に推測の注記・順位相関・地区がない');
+  if (!dc.includes('独立の検証ではありません') || !dc.includes('逆向き')) problems.push(label + ': 照合が、独立の検証でないこと・人目の逆向きを開示していない');
+  if (!dc.includes('推測') || !dc.includes('順位相関') || !dc.includes('県南') || !dc.includes('令和8年9月末') || !dc.includes('令和7年11月末')) problems.push(label + ': 地区別の照合に推測の注記・順位相関・地区・期間がない');
 
   // 個別設備・順位の表示が無い: 表は市町村のみ、メッシュ別の一覧ボタンなし
   const tables = await c.ev('document.querySelectorAll("#pane-map table").length');
@@ -105,13 +101,14 @@ async function run(label, w, h, mobile) {
   if (csv < 270) problems.push(label + ': CSVの行が少ない ' + csv);
   if (/設備ID|代表者|電話|株式会社/.test(csvText)) problems.push(label + ': CSVに個人・事業者を示す語がある');
   if (/目安スコア|の位置/.test(csvText)) problems.push(label + ': CSVに連続のスコア・指標の位置の列がある');
-  if (!csvText.includes('一致していません')) problems.push(label + ': CSVに県警の実績との食い違いの注記がない');
+  if (!csvText.includes('独立の検証ではありません') || !csvText.includes('逆向き')) problems.push(label + ': CSVに県警の実績との照合の注記がない');
+  if (!csvText.includes('リスクの色（仮）')) problems.push(label + ': CSVにリスクの色の列がない');
   if (!csvText.includes('国が作成したものではありません')) problems.push(label + ': CSVに出典・加工の明記がない');
   const dl = await c.ev('(function(){try{document.getElementById("btn-csv").click();return "ok"}catch(e){return String(e)}})()');
   if (dl !== 'ok') problems.push(label + ': CSV ' + dl);
 
   // 市町村表の並べ替え
-  await click(c, '#muni-table th button[data-sort="score"]');
+  await click(c, '#muni-table th button[data-sort="risk"]');
   const first = await c.ev('document.querySelector("#muni-table tr:nth-child(2) td").innerText');
   if (!first) problems.push(label + ': 並べ替え後の表が空');
 
@@ -127,6 +124,18 @@ async function run(label, w, h, mobile) {
   await sleep(300);
   let res = await c.ev('document.getElementById("diag-result").innerText');
   if (!res.includes('周囲の目安') || !res.includes('人の少なさ')) problems.push(label + ': 診断の周囲の目安が出ない');
+  if (!res.includes('この設備のリスク') || !res.includes('地区') || !res.includes('令和7年11月末')) problems.push(label + ': 診断にリスクの色・地区の実績が出ない');
+  const nrows = await c.ev('document.querySelectorAll("#diag-result table.cond tr").length');
+  if (nrows !== 8) problems.push(label + ': 条件の表が7行（見出し込み8）でない ' + nrows);
+  const whys = await c.ev('document.querySelectorAll("#diag-result table.cond td.why .src a").length');
+  if (whys < 7) problems.push(label + ': 条件ごとの出典リンクが足りない ' + whys);
+  // 現場の条件に答えると、色の点数が上がる（下限）。わからないが残る間は上限も出る
+  const sc0 = await c.ev('SgApp.STATE.res.scoreMin');
+  await click(c, '#conds .cd-item:nth-child(2) .seg button[data-v="yes"]');
+  const sc1 = await c.ev('SgApp.STATE.res.scoreMin');
+  if (!(sc1 > sc0 || (await c.ev('SgApp.STATE.res.conds.find(function(x){return x.id==="hidden"}).state')) === 'risk')) problems.push(label + ': 現場の条件の回答が点数に反映されない ' + sc0 + '→' + sc1);
+  if (sc1 !== sc0 + 1) problems.push(label + ': 条件1つ分（+1）上がらない ' + sc0 + '→' + sc1);
+  await click(c, '#conds .cd-item:nth-child(2) .seg button[data-v="unknown"]');
   // 診断直後の受付欄に要約と「結果を見る」（デザイン審査 M2）。勝手にスクロールしない
   const sm = await c.ev('({t: document.getElementById("pos-msg").innerText, y: window.scrollY, a: !!document.getElementById("go-result")})');
   if (!sm.a || !sm.t.includes('結果を見る') || !/実施していない\d+件/.test(sm.t)) problems.push(label + ': 診断直後の受付欄に要約と「結果を見る」がない: ' + sm.t);
@@ -137,7 +146,7 @@ async function run(label, w, h, mobile) {
   if (!cr.t.includes('編集・加工して作成') || cr.top < 0 || cr.bottom > cr.h + 1) problems.push(label + ': 出典・加工の明記が見えない ' + JSON.stringify(cr));
   await click(c, '#tab-diag');
   await click(c, '#ctl-class button:nth-child(1)'); // 低圧
-  await click(c, '.cl-item .seg button[data-v="yes"]');
+  await click(c, '#checklist .cl-item .seg button[data-v="yes"]');
   await click(c, '.cl-group + .cl-item + .cl-item .seg button[data-v="no"]');
   await sleep(200);
   res = await c.ev('document.getElementById("diag-result").innerText');
@@ -148,7 +157,7 @@ async function run(label, w, h, mobile) {
   let sn = await sumNums();
   if (!sn.a || sn.a !== sn.b || !sn.link) problems.push(label + ': 回答変更後に要約と結果の件数が一致しない ' + JSON.stringify(sn));
   await click(c, '#ctl-class button:nth-child(2)');
-  await click(c, '.cl-item .seg button[data-v="no"]');
+  await click(c, '#checklist .cl-item .seg button[data-v="no"]');
   await sleep(200);
   sn = await sumNums();
   if (!sn.a || sn.a !== sn.b || !sn.link) problems.push(label + ': 区分・回答変更後に要約と結果の件数が一致しない ' + JSON.stringify(sn));
@@ -156,6 +165,10 @@ async function run(label, w, h, mobile) {
   await click(c, '#ctl-class button:nth-child(1)');
   await c.ev('window.scrollTo(0,0)');
   await shot(c, `${label}-2-diag.png`, false);  // 入力が正常な状態（警告表示中でない）で、最初の画面を撮る
+  // 結果（リスクの色・条件の表）が見える位置のスクリーンショット
+  await c.ev('document.getElementById("box-result").scrollIntoView({block:"start"})');
+  await shot(c, `${label}-2b-diag-result.png`, mobile);
+  await c.ev('window.scrollTo(0,0);document.getElementById("panel").scrollTo(0,0)');
   // 範囲外・不正入力
   await c.ev(`document.getElementById("in-lat").value="34.0";document.getElementById("in-lon").value="135.0";`);
   await click(c, '#btn-set');
@@ -209,7 +222,7 @@ async function run(label, w, h, mobile) {
   await shot(c, `${label}-3-reality.png`, mobile);
   await click(c, '#tab-about');
   const ab = await c.ev('document.getElementById("about").innerText');
-  for (const wd of ['加工して作成', '悪用を防ぐ設計', '限界・要確認', '利用ルール', '3件未満', '資源エネルギー庁', '一致していません', '推測', '送信も保存もしない', '地理院が受け取る']) if (!ab.includes(wd)) problems.push(label + ': 出典・限界に「' + wd + '」がない');
+  for (const wd of ['加工して作成', '悪用を防ぐ設計', '限界・要確認', '利用ルール', '3件未満', '資源エネルギー庁', '独立の検証ではありません', '推測', '送信も保存もしない', '地理院が受け取る']) if (!ab.includes(wd)) problems.push(label + ': 出典・限界に「' + wd + '」がない');
   await shot(c, `${label}-4-about.png`, mobile);
   if (await c.ev('document.documentElement.scrollWidth > window.innerWidth + 2')) problems.push(label + ': 横スクロール（出典タブ）');
   // 出典表: スマホ幅ではカード（デザイン審査 M2）
@@ -232,7 +245,7 @@ async function run(label, w, h, mobile) {
   c.close();
 }
 
-await run('desktop', 1280, 765, false);
+await run('desktop', 1513, 784, false);
 await run('mobile390', 390, 844, true);
 console.log(problems.length ? 'PROBLEMS\n' + problems.join('\n') : 'ui_check OK');
 process.exit(problems.length ? 1 : 0);

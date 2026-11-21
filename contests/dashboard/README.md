@@ -40,6 +40,7 @@ node scripts/roundtrip.mjs http://127.0.0.1:8840/                            # �
 | `apps/biz-business-nb/` | 使用済み太陽光パネルの回収圏計画（新しい案。biz-business の隣） |
 | `apps/biz-realestate-rn1/` | 住む場所の先行き（新しい案。biz-realestate の隣） |
 | `apps/biz-realestate-a4/` | 同じ土地、四つの値段（新しい案。biz-realestate の隣） |
+| `apps/biz-realestate-timeline/` | 23区、値段の年表（新しい案。biz-realestate の隣。マンション価格と家賃を地図で時間を動かして見る） |
 | `apps/odpt-teiji/` | バス定時性カルテ（新しい案。odpt の隣） |
 
 仕組み: `apps/<id>/index.html` が `src/standalone/<id>.tsx` を読み、`src/apps/<id>/index.tsx` を `StandaloneShell`（ヘッダー・Toaster・TooltipProvider）で包んで描画します。HTML の `#root` の `data-root="../../"` がサイトルートへの相対パスで、`@/lib/data` の `dataUrl`/`fetchData`（`../../data/<id>/…`）、`portalUrl`、`appUrl` が使います。ハッシュが空なら起動時に `#/` にします。共有リンク（`useHashState` や `location.href`）は、そのアプリ独立ページの URL になります。
@@ -182,7 +183,7 @@ export default function App() {
 |---|---|
 | odpt | index.json, {iida,kumamoto,tokushima,tokyo,toyama}.json, whatif_{同}.json |
 | udc-moritsuchi | fills.geojson |
-| sat-a | sample.json |
+| sat-a | toyonaka.json, demo_sim.json, verify.json, format_sample_*.csv（実データ版。2026-11-21 に旧 sample.json から付け替え） |
 | sat-b | real.json, sample.json |
 | biz-business | odpt と同じ（index.json, 5地域, whatif_ 5地域） |
 | biz-idea | lore.json, samples.json |

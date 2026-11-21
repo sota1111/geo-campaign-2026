@@ -95,7 +95,18 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 765, false], ['mobile', 3
   await pick('pick'); await clickSel('[data-testid=auto]'); r.auto = [await txt('sel-count'), await txt('sel-km'), await txt('sel-breakdown')]
   await clickSel('[role=checkbox]'); r.uncheck = await txt('sel-count'); await clickSel('[role=checkbox]'); r.recheck = await txt('sel-count')
   await shot(`${label}-s3-pick.png`); r.log.push(['pick', await stat()])
-  await pick('scan'); await shot(`${label}-s4-scan-before.png`); await clickSel('[data-testid=scan-sample]'); await clickSel('[data-testid=scan]'); r.s3hit = await txt('s3-hit'); await shot(`${label}-s4-scan.png`); r.log.push(['scan', await stat()])
+  await pick('scan'); await shot(`${label}-s4-scan-before.png`)
+  r.noFakeDefault = await ev(`!document.body.innerText.replace(/説明用デモをオンにする（架空の結果で動きを見る）。既定はオフ。/g,'').replace(/（架空の結果で動きを見る）/g,'').includes('説明用デモ中')`)
+  // 検査用の CSV（台帳の竣工年が 1975 年以前の区間を「あり」にした検査用の値。実際の調査結果ではない）をファイル入力から入れる
+  await ev(`(async () => {
+    const d = await (await fetch(new URL('../../', document.baseURI).href + 'data/sat-a/toyonaka.json')).json()
+    const life = d.segments.filter(s => s.cls === 'life').filter((_, i) => i % 40 === 0).slice(0, 40)
+    const csv = 'segment_id,cavity\\n' + life.map(s => s.id + ',' + (s.year != null && s.year <= 1975 ? 'あり' : 'なし')).join('\\n') + '\\n'
+    const dt = new DataTransfer(); dt.items.add(new File([csv], 'by_id.csv', { type: 'text/csv' }))
+    const i = document.querySelector('[data-testid=csv-file]'); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true }))
+  })()`)
+  await sleep(800)
+  r.loadOk = await txt('load-ok'); r.resTotal = await txt('res-total'); await shot(`${label}-s4-scan.png`); r.log.push(['scan', await stat()])
   await pick('apply'); await shot(`${label}-s5-apply-before.png`); r.auc = await txt('auc-adopted'); await clickSel('[data-testid=apply]'); await shot(`${label}-s5-apply.png`); r.log.push(['apply', await stat()])
   r.round = true
   await pick('round2'); r.what = await txt('what-changed'); r.changed = await txt('changed'); await shot(`${label}-s6-round2.png`); r.log.push(['round2', await stat()])

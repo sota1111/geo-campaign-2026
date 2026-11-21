@@ -1,30 +1,57 @@
-// 二段階調査のロジック（純関数）。元アプリ proposal-a/logic.js の TypeScript 移植。
-// 数値はすべて架空サンプルデータに対する計算であり、実在の精度・効果を示さない。
+// 二段階調査のロジック（純関数）。元アプリ proposal-a/logic.js の TypeScript 移植（2026-11-21、実データ版）。
+// 点数は「衛星の階級（国土地理院の干渉SAR成果）」と「下水道台帳の竣工年（豊中市）」から計算する。
+// 空洞の有無は、利用者が CSV で入れた調査結果（parseOutcomes）だけを使う。同梱の実データには空洞の結果が無い。
+// 説明用デモ（架空の結果。既定オフ）を使ったときの AUC などの数字は、実在の精度・効果を示さない。
 
 export const NOW_YEAR = 2026
 export const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 
+export type SegClass = 'life' | 'arterial' | 'noledger'
 export interface Segment {
   id: string
-  cls: 'life' | 'arterial'
+  cls: SegClass
   cell: string
-  year: number
+  /** 竣工年（台帳で不明なら null） */
+  year: number | null
+  dia?: number | null
   lenM: number
-  surveyed: boolean
-  sim_cavity: boolean
+  hw?: string
+  name?: string
   coords: [number, number][]
+  /** 実行時: 調査結果が入った区間 */
+  surveyed?: boolean
 }
 export interface Cell {
   id: string
   cx: number
   cy: number
+  k: number
+  /** 階級の中央値 mm/年（負=沈下） */
   disp: number
+  dispW: number
+  range: [number, number]
   ring: [number, number][]
 }
-export interface SampleData {
+export interface DataFile {
   note: string
+  area: { name: string; bbox: [number, number, number, number] }
+  satellite: { name: string; class_width_mm_yr: number; layer: string; palette: string[] }
+  stats: {
+    segments: number
+    segments_by_cls: Record<string, number>
+    life_year_unknown: number
+    match_rate_by_threshold: Record<string, { matched: number; of: number; rate: number }>
+    cell_with_roads_class_counts: Record<string, number>
+    sewer_total_records: number
+    sewer_unknown_year_all: number
+  }
   cells: Cell[]
   segments: Segment[]
+}
+export interface DemoData {
+  note: string
+  past: string[]
+  hit: string[]
 }
 export type Scored = Segment & { score: number }
 export type CellSat = Record<string, number>
@@ -43,10 +70,12 @@ export interface Exclusion {
   rate: number
 }
 
+/** 台帳で竣工年が不明な管の古さ。中立の 0.5（画面では「不明」と表示） */
+export const AGE_UNKNOWN = 0.5
 /** 管の経過年数 → 0〜1（60年で1。画面上の便宜的な正規化で、標準耐用年数50年とは別） */
-export const ageNorm = (year: number, now = NOW_YEAR) => clamp01((now - year) / 60)
+export const ageNorm = (year: number | null | undefined, now = NOW_YEAR) => (year == null ? AGE_UNKNOWN : clamp01((now - year) / 60))
 
-/** 地表変位（mm/年, 負=沈下）→ 0〜1（-8mm/年以下で1。サンプル上の正規化） */
+/** 地表変位（階級の中央値 mm/年, 負=沈下）→ 0〜1（-8mm/年以下で1。デモ上の正規化） */
 export const satNorm = (dispMmYr: number) => clamp01(-dispMmYr / 8)
 
 /** 区間の点数。w は衛星指標の重み（0=台帳のみ, 1=衛星のみ） */
@@ -61,10 +90,10 @@ export function rank(segs: Segment[], cellSat: CellSat, w: number): Scored[] {
     .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
 }
 
-/** 未調査の生活道路（候補）だけを取り出す（順位順を保つ） */
+/** 結果が未入力の生活道路（候補）だけを取り出す（順位順を保つ） */
 export const candidatesOf = (ranked: Scored[]) => ranked.filter((s) => s.cls === 'life' && !s.surveyed)
 
-/** 未調査の生活道路の上位から、予算（km）を超えない範囲で貪欲に選ぶ */
+/** 結果が未入力の生活道路の上位から、予算（km）を超えない範囲で貪欲に選ぶ */
 export function selectByBudget(ranked: Scored[], budgetKm: number): string[] {
   const out: string[] = []
   let m = 0
@@ -113,46 +142,6 @@ export function calibrate(scanned: Scanned[], cellSat: CellSat, minEach = 3): Ca
   return { w: cands[0].w, reason: null, pos, neg, table, ledgerOnly: table[0].auc, satOnly: table[10].auc }
 }
 
-/** 調査結果の入力値。hit=空洞あり, none=空洞なし, unknown=未調査（今回は走らなかった） */
-export type Outcome = 'hit' | 'none' | 'unknown'
-export type OutcomeInput = Record<string, Outcome | undefined>
-
-/** サンプル（架空）の結果を、選んだ区間すべてに対して作る（sim_cavity を結果とみなす） */
-export function sampleOutcomes(segs: Segment[], ids: Iterable<string>): OutcomeInput {
-  const set = new Set(ids)
-  const out: OutcomeInput = {}
-  for (const s of segs) if (set.has(s.id)) out[s.id] = s.sim_cavity ? 'hit' : 'none'
-  return out
-}
-
-/** 手入力された結果を区間に反映する。
- *  - hit/none を入力した区間だけ「調査済み」になり、その結果が sim_cavity（結果の値）に入る
- *  - unknown・未入力の区間は未調査のまま（次回も候補に残る）
- *  戻り値: 更新後の区間、結果マップ（既存＋今回）、今回調査済みになった区間ID・未調査のままの区間ID */
-export function applyOutcomes(
-  segs: Segment[],
-  outcomes: OutcomeInput,
-  prevResults: Map<string, boolean> = new Map(),
-): { segs: Segment[]; results: Map<string, boolean>; done: string[]; skipped: string[] } {
-  const results = new Map(prevResults)
-  const done: string[] = []
-  const skipped: string[] = []
-  const next = segs.map((s) => {
-    const o = outcomes[s.id]
-    if (o === undefined) return s
-    if (o === 'unknown') {
-      skipped.push(s.id)
-      return s
-    }
-    if (s.cls !== 'life' || s.surveyed) return s
-    const hit = o === 'hit'
-    results.set(s.id, hit)
-    done.push(s.id)
-    return { ...s, surveyed: true, sim_cavity: hit }
-  })
-  return { segs: next, results, done, skipped }
-}
-
 /** 点数が下位の半分を「異常なし」と判定したとき、その中で実際に異常なしだった割合。件数が minN 未満なら null */
 export function exclusionAccuracy(scanned: Scanned[], cellSat: CellSat, w: number, minN = 5): Exclusion | null {
   const arr = scanned
@@ -162,4 +151,169 @@ export function exclusionAccuracy(scanned: Scanned[], cellSat: CellSat, w: numbe
   if (low.length < minN) return null
   const ok = low.filter((x) => !x.hit).length
   return { n: low.length, ok, rate: ok / low.length }
+}
+
+/** 重み w で並べたときの上位 n 区間のうち、台帳のみ（w=0）の上位 n 区間に無いものの数 */
+export function topShift(segs: Segment[], cellSat: CellSat, w: number, n = 20): number {
+  const top = (ww: number) => candidatesOf(rank(segs, cellSat, ww)).slice(0, n).map((s) => s.id)
+  const base = new Set(top(0))
+  return top(w).filter((id) => !base.has(id)).length
+}
+
+/** 区間と結果（Map: 区間ID → 空洞あり）から、較正に使う形（hit 付き）を作る */
+export const scannedFrom = (segs: Segment[], results: Map<string, boolean>): (Segment & Scanned)[] =>
+  segs.filter((s) => results.has(s.id)).map((s) => ({ ...s, hit: results.get(s.id) as boolean }))
+
+// ---------------------------------------------------------------------------
+// 調査結果（空洞あり/なし）の CSV の取り込み。処理はブラウザ内だけ。
+// 受け付ける書き方は2つ（GMS3 の出力書式は未確認のため、どちらでも受けられるようにしてある）:
+//   (1) 区間ID ＋ 空洞あり/なし        例: segment_id,cavity
+//   (2) 緯度・経度の点 ＋ 空洞あり/なし  例: lat,lon,cavity   （近い区間に結び付ける）
+// ---------------------------------------------------------------------------
+
+/** 点を区間に結び付ける最大距離（m）。デモ上の仮の値 */
+export const LINK_MAX_M = 20
+
+const COL_ID = ['segment_id', 'segmentid', 'id', '区間id', '区間', '区間番号']
+const COL_LAT = ['lat', 'latitude', '緯度', 'y']
+const COL_LON = ['lon', 'lng', 'long', 'longitude', '経度', 'x']
+const COL_RES = ['cavity', 'result', 'hit', '空洞', '空洞の有無', '空洞有無', '結果', '有無']
+const YES = new Set(['1', 'true', 'yes', 'y', 'あり', '有', '有り', '空洞あり', '空洞有り', '空洞有', '疑い', '疑いあり', 'hit', 'positive', 'pos'])
+const NO = new Set(['0', 'false', 'no', 'n', 'なし', '無', '無し', '空洞なし', '空洞無し', '空洞無', '異常なし', '異常無し', 'none', 'ok', 'negative', 'neg'])
+const squash = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/[\s　]/g, '')
+
+/** 空洞の有無の表記を true/false にする。分からなければ null */
+export function parseCavity(v: unknown): boolean | null {
+  const k = squash(v)
+  if (YES.has(k)) return true
+  if (NO.has(k)) return false
+  return null
+}
+
+/** 最小の CSV パーサ（カンマまたはタブ区切り、引用符、BOM、CRLF） */
+export function parseCsv(text: string): string[][] {
+  const t = String(text).replace(/^﻿/, '')
+  const first = t.split(/\r?\n/, 1)[0] || ''
+  const delim = (first.match(/\t/g) || []).length > (first.match(/,/g) || []).length ? '\t' : ','
+  const rows: string[][] = []
+  let row: string[] = []
+  let cell = ''
+  let q = false
+  const flush = () => {
+    row.push(cell)
+    cell = ''
+    if (row.some((x) => x.trim() !== '')) rows.push(row)
+    row = []
+  }
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i]
+    if (q) {
+      if (c === '"') {
+        if (t[i + 1] === '"') { cell += '"'; i++ } else q = false
+      } else cell += c
+    } else if (c === '"') q = true
+    else if (c === delim) { row.push(cell); cell = '' }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; flush() }
+    else cell += c
+  }
+  if (cell !== '' || row.length) flush()
+  return rows
+}
+
+const findCol = (hdr: string[], names: string[]) => hdr.findIndex((h) => names.includes(h))
+
+/** 点（経度・緯度）から区間（2点の線分）までの距離（m）。区間の近くだけで使う平面近似 */
+export function distToSegM(lon: number, lat: number, coords: [number, number][]): number {
+  const kx = 111320 * Math.cos((lat * Math.PI) / 180)
+  const ky = 110540
+  const px = lon * kx
+  const py = lat * ky
+  const [a, b] = coords
+  const ax = a[0] * kx, ay = a[1] * ky, bx = b[0] * kx, by = b[1] * ky
+  const dx = bx - ax, dy = by - ay
+  const L2 = dx * dx + dy * dy
+  const t = L2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2))
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+}
+
+/** 点に最も近い区間（台帳なしの道路は除く）。しきい値より遠ければ null */
+export function nearestSegment(lon: number, lat: number, segs: Segment[], maxM = LINK_MAX_M) {
+  let best: Segment | null = null
+  let bd = maxM
+  for (const s of segs) {
+    if (s.cls === 'noledger') continue
+    const d = distToSegM(lon, lat, s.coords)
+    if (d <= bd) { bd = d; best = s }
+  }
+  return best ? { seg: best, distM: bd } : null
+}
+
+export interface OutcomeSummary {
+  rows: number
+  byId: number
+  byPoint: number
+  unknownId: number
+  unmatched: number
+  invalid: number
+  merged: number
+  conflicts: number
+  segments: number
+  hit: number
+  none: number
+}
+export interface ParsedOutcomes {
+  error: string | null
+  results: Map<string, boolean>
+  summary: OutcomeSummary
+}
+const EMPTY: OutcomeSummary = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 }
+
+/**
+ * 調査結果の CSV を、区間ごとの空洞の有無（Map: 区間ID → true/false）にする。
+ * 1つの区間に複数行（または複数の点）があるときは「1つでもあり」なら あり。
+ */
+export function parseOutcomes(text: string, segs: Segment[], maxM = LINK_MAX_M): ParsedOutcomes {
+  const fail = (error: string): ParsedOutcomes => ({ error, results: new Map(), summary: { ...EMPTY } })
+  const rows = parseCsv(text)
+  if (rows.length < 2) return fail('見出し行とデータ行が必要です。')
+  const hdr = rows[0].map(squash)
+  const ci = findCol(hdr, COL_ID), cla = findCol(hdr, COL_LAT), clo = findCol(hdr, COL_LON), cr = findCol(hdr, COL_RES)
+  if (cr < 0) return fail('空洞の有無の列がありません（見出し: cavity / 空洞 / 結果 など）。')
+  if (ci < 0 && (cla < 0 || clo < 0)) return fail('区間ID の列（segment_id / 区間ID）か、緯度・経度の列（lat,lon / 緯度,経度）が必要です。')
+  const byId = new Map(segs.map((s) => [s.id, s]))
+  const sm: OutcomeSummary = { ...EMPTY }
+  const seen = new Map<string, Set<boolean>>()
+  for (const r of rows.slice(1)) {
+    sm.rows++
+    const v = parseCavity(r[cr])
+    if (v === null) { sm.invalid++; continue }
+    let id: string | null = null
+    const rawId = ci >= 0 ? (r[ci] || '').trim() : ''
+    if (rawId) {
+      const s = byId.get(rawId)
+      if (!s) { sm.unknownId++; continue }
+      id = s.id
+      sm.byId++
+    } else if (cla >= 0 && clo >= 0) {
+      const sLat = (r[cla] || '').trim(), sLon = (r[clo] || '').trim()
+      const lat = Number(sLat), lon = Number(sLon)
+      if (sLat === '' || sLon === '' || !Number.isFinite(lat) || !Number.isFinite(lon)) { sm.invalid++; continue }
+      const n = nearestSegment(lon, lat, segs, maxM)
+      if (!n) { sm.unmatched++; continue }
+      id = n.seg.id
+      sm.byPoint++
+    } else { sm.invalid++; continue }
+    if (!seen.has(id)) seen.set(id, new Set())
+    else sm.merged++
+    ;(seen.get(id) as Set<boolean>).add(v)
+  }
+  const results = new Map<string, boolean>()
+  for (const [id, set] of seen) {
+    if (set.size > 1) sm.conflicts++
+    results.set(id, set.has(true))
+  }
+  sm.segments = results.size
+  sm.hit = [...results.values()].filter(Boolean).length
+  sm.none = sm.segments - sm.hit
+  return { error: null, results, summary: sm }
 }

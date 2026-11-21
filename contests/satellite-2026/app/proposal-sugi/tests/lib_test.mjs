@@ -104,9 +104,9 @@ test('データの整合: 範囲・コード・風向・衛星の出典', () => 
   assert.match(D.meta.scenes.s.id, /^S2[AB]_54SUE_/);
 });
 test('画面の表示規約: 実データ・仮置きの明示、外部送信なし、色の指定', () => {
-  const html = read('index.html'), app = read('app.js');
+  const html = read('ome.html'), app = read('ome.js');
   assert.ok(html.includes('実データ') && html.includes('仮置き'));
   assert.ok(!/<script[^>]+src="https?:/.test(html));
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|method:\s*'POST'/.test(app));
-  assert.ok(!/#0f0|#00ff00|green/.test(read('style.css')));
+  assert.ok(!/#0f0|#00ff00|green/.test(read('ome.css')));
 });

@@ -1,6 +1,7 @@
 // 19アプリ×6列（UDC・衛星・イチBiz 3部門・ODPT）の適合表。正本は reports/intel/app-contest-fit-20261121.json（情報部）。
 // 2026-11-21: 総司令官の追加情報（UDC は登録完了・提出時にテーマ変更可）を UDC 列と注意 C2 に反映済み。正本の JSON・md にも参謀長が反映した。
 // 2026-11-21: 新案 biz-realestate-a4（19アプリ目）の6セルを足した（不動産部門 ◎ score 3「このコンペ向けに作った」・他は ？ 未判定 score 0）。正本の JSON への反映は情報部が行う（書き込み範囲外）。
+// 2026-11-21: 新案 biz-realestate-timeline（20アプリ目）の6セルを足した（不動産部門 ◎ score 3・他は ？ 未判定 score 0）。正本の JSON への反映は参謀長が行う（工兵は reports/ に書けない）。
 // 文言は正本のまま。ここで判定（mark・score）を変えない（src/test/app-fit.test.ts が正本との一致を検査する）。
 export const FIT_AS_OF = "2026-11-21"
 export const FIT_SOURCE = 'reports/intel/app-contest-fit-20261121.json'
@@ -991,6 +992,54 @@ export const FIT_CELLS: FitCell[] = [
     "score": 0,
     "reason": "必須データ（公共交通オープンデータセンター／GTFSデータリポジトリ）を使っていない。要項は応募資格（必須）としてその活用を求める",
     "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
+  },
+  {
+    "app": "biz-realestate-timeline",
+    "contest": "udc-2026",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "biz-realestate-timeline",
+    "contest": "satellite-2026",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "biz-realestate-timeline",
+    "contest": "ichibiz-2026-business",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "biz-realestate-timeline",
+    "contest": "ichibiz-2026-idea",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "biz-realestate-timeline",
+    "contest": "ichibiz-2026-realestate",
+    "mark": "◎",
+    "score": 3,
+    "reason": "このコンペ向けに作った（不動産情報活用部門向けの新案・時間地図）",
+    "source": "contests/ichibiz-2026/app/realestate-timeline/README.md"
+  },
+  {
+    "app": "biz-realestate-timeline",
+    "contest": "odpt-2026",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
   }
 ]
 

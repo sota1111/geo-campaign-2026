@@ -1,3 +1,4 @@
+import { CONTEST_INFO, type PlannedCount } from '@/apps/contests-info'
 import { APPS, type AppMeta, type ContestId } from '@/apps/registry'
 import { FIT_CAUTIONS, FIT_CELLS, FIT_COLUMNS, type FitCaution, type FitCell, type FitColumn, type FitMark } from '@/data/app-fit'
 
@@ -47,13 +48,18 @@ export function totalScore(appId: string): number {
 }
 
 /**
- * アプリの並び。コンペを選んだらそのコンペとの score の高い順、未選択なら全列の score 合計の高い順。
- * 同点は registry の並び（APPS の順）。
+ * アプリの並び。先頭に来るのは「選んだアプリ」。
+ *  - コンペを選んでいるとき: そのコンペ（イチBiz は3部門のどれか）を提出先に選んだアプリだけを先頭にする。他のコンペ向けに選んだアプリは先頭にせず、通常の並びに混ぜる。
+ *  - コンペを選んでいないとき: 何かを提出先に選んだアプリを先頭にする。
+ * それぞれの中は、コンペを選んだらそのコンペとの score の高い順、未選択なら全列の score 合計の高い順。
+ * 同点は registry の並び（APPS の順）。targets を渡さなければ（選択なしとして）関連の強さだけで並べる。
  */
-export function sortApps(apps: AppMeta[], contest: ContestId | null): AppMeta[] {
+export function sortApps(apps: AppMeta[], contest: ContestId | null, targets: Targets = {}): AppMeta[] {
   const idx = (a: AppMeta) => APPS.findIndex((x) => x.id === a.id)
   const key = (a: AppMeta) => (contest ? contestScore(a.id, contest) : totalScore(a.id))
-  return [...apps].sort((a, b) => key(b) - key(a) || idx(a) - idx(b))
+  const forContest = contest ? new Set(appsForContest(targets, contest)) : null
+  const chosen = (a: AppMeta) => ((forContest ? forContest.has(a.id) : (targets[a.id]?.length ?? 0) > 0) ? 1 : 0)
+  return [...apps].sort((a, b) => chosen(b) - chosen(a) || key(b) - key(a) || idx(a) - idx(b))
 }
 
 /** 提出先の選択: アプリ id → 列 id の配列 */
@@ -85,6 +91,15 @@ export function toggleTarget(t: Targets, appId: string, columnId: string): Targe
 export function appsForContest(t: Targets, contest: ContestId): string[] {
   const cols = columnsOf(contest).map((c) => c.id)
   return APPS.filter((a) => (t[a.id] ?? []).some((c) => cols.includes(c))).map((a) => a.id)
+}
+
+/**
+ * 「選んだ N件」の数え方（並び順の説明と提出予定数の比べで共通）。
+ * コンペを渡せば、そのコンペ（イチBiz は3部門）の列に選んだ（アプリ×列）の組の数。渡さなければ全部の組の数。
+ */
+export function selectedCount(t: Targets, contest: ContestId | null): number {
+  if (!contest) return Object.values(t).reduce((n, v) => n + v.length, 0)
+  return columnsOf(contest).reduce((n, c) => appsForColumn(t, c.id).length + n, 0)
 }
 
 export function appsForColumn(t: Targets, columnId: string): string[] {
@@ -189,4 +204,57 @@ export function targetsJson(t: Targets): string {
     null,
     2,
   )
+}
+
+// ---- 提出予定数（総司令官の決定）と、選んだ件数の比べ ----------------------------------------
+
+export type PlanState = 'undecided' | 'match' | 'short' | 'over'
+
+/** 状態の記号と言葉（色だけに頼らない） */
+export function planStateText(state: PlanState, diff: number): { mark: string; word: string } {
+  switch (state) {
+    case 'match': return { mark: '✓', word: '予定どおり' }
+    case 'short': return { mark: '▼', word: `あと${-diff}件で予定` }
+    case 'over': return { mark: '▲', word: `予定より${diff}件多い` }
+    default: return { mark: '', word: '' }
+  }
+}
+
+export interface PlanPartView {
+  label: string
+  planned: number
+  /** 区分ごとに数えられるとき（下書きに列がある）だけ数を持つ。持たない区分は null */
+  chosen: number | null
+  state: PlanState
+  diff: number
+}
+
+export interface PlanView {
+  planned: number | null
+  chosen: number
+  state: PlanState
+  /** 選んだ − 予定。undecided のときは 0 */
+  diff: number
+  parts: PlanPartView[]
+  src: string
+}
+
+function stateOf(planned: number, chosen: number): { state: PlanState; diff: number } {
+  const diff = chosen - planned
+  return { state: diff === 0 ? 'match' : diff < 0 ? 'short' : 'over', diff }
+}
+
+/**
+ * 提出予定数と、いま提出先に選んでいる件数（下書き）を比べる。
+ * 選んだ件数 = そのコンペの列に選んだ（アプリ×列）の組の数。衛星のスポンサー向け／一般は下書きに区別がないので、合計だけで比べる。
+ */
+export function planView(contestId: ContestId, t: Targets, plan?: PlannedCount): PlanView {
+  const p = plan ?? CONTEST_INFO.find((c) => c.id === contestId)!.planned
+  const chosen = selectedCount(t, contestId)
+  const parts: PlanPartView[] = p.parts.map((x) => {
+    const got = x.columnId ? appsForColumn(t, x.columnId).length : null
+    return { label: x.label, planned: x.count, chosen: got, ...(got === null ? { state: 'undecided' as PlanState, diff: 0 } : stateOf(x.count, got)) }
+  })
+  if (p.total === null) return { planned: null, chosen, state: 'undecided', diff: 0, parts, src: p.src }
+  return { planned: p.total, chosen, ...stateOf(p.total, chosen), parts, src: p.src }
 }

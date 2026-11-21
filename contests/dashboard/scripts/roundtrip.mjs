@@ -8,11 +8,11 @@ import path from 'node:path'
 const base = process.argv[2]
 const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'biz-realestate-a4', 'odpt-teiji', 'udc-aed',
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'biz-realestate-a4', 'biz-realestate-timeline', 'odpt-teiji', 'udc-aed',
   // 審査待ちだった案（ソースが無いビルドでは「審査待ち」の案内ページ。ある checkout を CONTESTS_ROOT で指したビルドでは実物）
   'sat-yabu', 'sat-sugi', 'odpt-kankou', 'odpt-kansui', 'odpt-kodure', 'biz-solar-guard']
 // ポータルは選んだ1コンペの詳細だけを出す。アプリのカードがあるコンペを開いて始める
-const contestOf = { odpt: 'odpt-2026', 'udc-moritsuchi': 'udc-2026', 'sat-a': 'satellite-2026', 'sat-b': 'satellite-2026', 'biz-business': 'ichibiz-2026', 'biz-idea': 'ichibiz-2026', 'biz-realestate': 'ichibiz-2026', 'sat-alpha': 'satellite-2026', 'biz-business-nb': 'ichibiz-2026', 'biz-realestate-rn1': 'ichibiz-2026', 'biz-realestate-a4': 'ichibiz-2026', 'odpt-teiji': 'odpt-2026', 'udc-aed': 'ichibiz-2026', 'sat-yabu': 'satellite-2026', 'sat-sugi': 'satellite-2026', 'odpt-kankou': 'odpt-2026', 'odpt-kansui': 'odpt-2026', 'odpt-kodure': 'odpt-2026', 'biz-solar-guard': 'ichibiz-2026' }
+const contestOf = { odpt: 'odpt-2026', 'udc-moritsuchi': 'udc-2026', 'sat-a': 'satellite-2026', 'sat-b': 'satellite-2026', 'biz-business': 'ichibiz-2026', 'biz-idea': 'ichibiz-2026', 'biz-realestate': 'ichibiz-2026', 'sat-alpha': 'satellite-2026', 'biz-business-nb': 'ichibiz-2026', 'biz-realestate-rn1': 'ichibiz-2026', 'biz-realestate-a4': 'ichibiz-2026', 'biz-realestate-timeline': 'ichibiz-2026','odpt-teiji': 'odpt-2026', 'udc-aed': 'ichibiz-2026', 'sat-yabu': 'satellite-2026', 'sat-sugi': 'satellite-2026', 'odpt-kankou': 'odpt-2026', 'odpt-kansui': 'odpt-2026', 'odpt-kodure': 'odpt-2026', 'biz-solar-guard': 'ichibiz-2026' }
 const contests = ['udc-2026', 'satellite-2026', 'ichibiz-2026', 'odpt-2026']
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)

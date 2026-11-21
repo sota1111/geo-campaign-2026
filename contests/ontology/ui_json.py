@@ -20,6 +20,16 @@ def build(now):
     rep = NA.build_report(g, now, ids)
     rep["dataImpactAll"] = rep.pop("dataImpact")
     rep["unitLabels"] = NA.unit_labels(g)
+    # 提出予定数（総司令官の決定 2026-11-21。要項の上限とは別）。コンペ id → {total, parts}。未定のコンペは含めない
+    planned = {}
+    for r in NA.q(g, "q11_planned_counts"):
+        cid = NA.short(r["contest"]).replace("id:contest/", "")
+        e = planned.setdefault(cid, {"total": None, "parts": {}})
+        if r.get("plannedLabel"):
+            e["parts"][r["plannedLabel"]] = int(r["count"])
+        else:
+            e["total"] = int(r["count"])
+    rep["plannedSubmissions"] = planned
     return rep
 
 

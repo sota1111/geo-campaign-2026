@@ -23,7 +23,7 @@ const SOURCES = {
     ],
   },
   'udc-moritsuchi': { src: 'udc-2026/app/moritsuchi-watch/data', files: ['fills.geojson'] },
-  'sat-a': { src: 'satellite-2026/app/proposal-a/data', files: ['sample.json'] },
+  'sat-a': { src: 'satellite-2026/app/proposal-a/data', files: ['toyonaka.json', 'demo_sim.json', 'verify.json', 'format_sample_by_segment.csv', 'format_sample_by_point.csv'] },
   'sat-b': {
     src: 'satellite-2026/app/proposal-b/data',
     files: [
@@ -74,13 +74,14 @@ const EMBEDS = {
   'biz-business-nb': { src: 'ichibiz-2026/app/business-nb/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'biz-realestate-rn1': { src: 'ichibiz-2026/app/realestate-rn1/web', files: ['index.html', 'app.js', 'lib.js', 'life.js', 'style.css', 'layout.css', 'data'] },
   'biz-realestate-a4': { src: 'ichibiz-2026/app/realestate-a4/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'biz-realestate-timeline': { src: 'ichibiz-2026/app/realestate-timeline/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-teiji': { src: 'odpt-2026/app-teiji/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   // ---- 審査待ちの案（元のソースが、憲兵監査前の PR にだけある）。ソースが無いビルドでは含めず、画面に「PR #xx で審査待ち」と出す。
   //      PR がマージされれば、次のビルドで自動的に含まれる。ソースのある checkout で見るときは CONTESTS_ROOT を指す。
   //      optional: データ等、無くてもよいもの（子連れお出かけ診断は、利用条件の確認中で行き先データをブランチから外してある）
   'sat-yabu': { pending: 'PR #36', src: 'satellite-2026/app/proposal-yabu', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data', 'vendor'] },
-  'sat-sugi': { pending: 'PR #36', src: 'satellite-2026/app/proposal-sugi', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data', 'vendor'] },
+  'sat-sugi': { pending: 'PR #36', src: 'satellite-2026/app/proposal-sugi', files: ['index.html', 'kanto.js', 'kanto-lib.js', 'kanto.css', 'ome.html', 'ome.js', 'ome.css', 'lib.js', 'data', 'vendor'] },
   'odpt-kankou': { pending: 'PR #36', src: 'odpt-2026/app-kankou/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-kansui': { pending: 'PR #36', src: 'odpt-2026/app-kansui/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-kodure': { pending: 'PR #19', src: 'odpt-2026/app-kodure/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'], optional: ['data'] },

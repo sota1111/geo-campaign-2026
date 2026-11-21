@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, ExternalLink, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataBadge } from '@/components/shared/DataBadge'
+import { PrizeBreakdown } from '@/components/shared/PrizeBreakdown'
 import { PendingNote } from '@/components/shared/PendingNote'
 import { useIsPending } from '@/lib/availability'
 import { CARDS_ONLY, CONTESTS, NEW_PLAN_LABEL, getApp, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
@@ -19,6 +20,8 @@ import { contestColor } from '@/data/colors'
 import { CONTEST_INFO } from '@/apps/contests-info'
 import { appUrl, portalUrl } from '@/lib/data'
 import { asOf } from '@/pages/Progress'
+import { PlanDivisions, PlanLine } from '@/components/shared/PlanCount'
+import { loadTargets, planView } from '@/lib/fit'
 
 const NO_DESC = '要項に説明の記載なし。'
 
@@ -104,6 +107,7 @@ export default function ContestPage({ contestId }: { contestId: string }) {
   const hasNew = apps.some(isNewPlan)
   const [evalOpen, setEvalOpen] = useState(false)
   const color = contestColor(meta.id)
+  const plan = planView(meta.id, loadTargets())
   // 今の案の直後に対になる新しい案を置く組。組ごとに囲んで見せる
   const groups = apps.filter((a) => !isNewPlan(a)).map((cur) => ({ cur, items: [cur, ...apps.filter((x) => isNewPlan(x) && x.pairWith === cur.id)] }))
   const grouped = new Set(groups.flatMap((g) => g.items.map((x) => x.id)))
@@ -123,6 +127,19 @@ export default function ContestPage({ contestId }: { contestId: string }) {
       <Section id="contest-overview" title="概要・目的">
         <p className="text-sm" data-testid="contest-summary">{info.summary}</p>
         <p className="text-sm text-muted-foreground">{implementation}</p>
+      </Section>
+
+      <Section id="contest-planned" title="提出予定数（総司令官が決めた、出すつもりの件数）">
+        <div className="text-sm">
+          <PlanLine view={plan} contestId={meta.id} />
+        </div>
+        {plan.parts.some((p) => p.chosen !== null) && <div className="text-sm"><PlanDivisions view={plan} contestId={meta.id} /></div>}
+        <p className="text-xs text-muted-foreground">
+          「選んだ」は、統合ダッシュボードで提出先に選んだ件数（このブラウザの下書き）です。
+          {meta.id === 'satellite-2026' && 'スポンサー向けと一般の区別は下書きに持たないため、合計の件数だけで比べます。'}
+          {plan.planned === null && '総司令官の指示がないため「未定」とし、数は作っていません。'}
+          これは要項の上限である下の「提出可能数」とは別です。［出典: {plan.src}］
+        </p>
       </Section>
 
       {/* 提出までの状況・判断待ち・次にやること・案ごとのチェックリスト（トップ画面の詳細欄から移した） */}
@@ -206,8 +223,8 @@ export default function ContestPage({ contestId }: { contestId: string }) {
             <Bullets items={info.afterAward} />
           </>
         )}
-        <h3 className="text-sm font-medium">賞</h3>
-        <p className="text-sm">{info.prize}</p>
+        <h3 className="text-sm font-medium" id="contest-prize">賞金・賞の内訳</h3>
+        <PrizeBreakdown prize={info.prize} />
       </Section>
 
       <Section id="contest-unconfirmed" title="未確認の事項">

@@ -12,7 +12,7 @@
 
 # --- 出典: すべての主要ノードに出典を要求する --------------------------------------------
 c:SourcedShape a sh:NodeShape ;
-    sh:targetClass c:Contest, c:Division, c:Theme, c:Deadline, c:Criterion, c:Rule, c:SubmissionLimit,
+    sh:targetClass c:PlannedSubmission, c:Contest, c:Division, c:Theme, c:Deadline, c:Criterion, c:Rule, c:SubmissionLimit,
         c:App, c:Submission, c:Fit, c:Dataset, c:Task, c:Decision, c:PullRequest, c:Audit,
         c:Finding, c:UnfilledField, c:UnconfirmedDataCondition, c:MissingDeliverable,
         c:Unit, c:Commander, c:Stage, c:MergeRecord, c:StageRecord, c:DelegationRule ;
@@ -122,6 +122,13 @@ c:ContestShape a sh:NodeShape ;
     sh:property [ sh:path c:hasDeadline ; sh:minCount 1 ] ;
     sh:property [ sh:path c:hasCriterion ; sh:minCount 1 ; sh:severity sh:Warning ;
                   sh:message "審査基準が取り出せていない（衛星アワードは registry.criteria が空）" ] .
+
+# --- 提出予定数: 件数（0以上の整数）とコンペが必須。要項の上限（SubmissionLimit）とは別 ---
+c:PlannedSubmissionShape a sh:NodeShape ;
+    sh:targetClass c:PlannedSubmission ;
+    sh:property [ sh:path c:plannedCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+                  sh:message "提出予定数は 0 以上の整数が 1 つ必要" ] ;
+    sh:property [ sh:path c:ofContest ; sh:minCount 1 ; sh:maxCount 1 ; sh:class c:Contest ] .
 
 # --- 代理マージ: 総司令官の指示（2026-11-21）。PR のマージは HumanGate ではなく、総司令官補佐が承認なしで行う委任の作業 ---
 c:MergeDelegationShape a sh:NodeShape ;
