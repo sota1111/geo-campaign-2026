@@ -101,6 +101,7 @@ async function printPages() {
   await send('Emulation.setDeviceMetricsOverride', { width: 794, height: 1123, deviceScaleFactor: 1, mobile: false });
   await sleep(500);
   const pdf = await send('Page.printToPDF', { paperWidth: 8.27, paperHeight: 11.69, printBackground: true, preferCSSPageSize: true });
+  if (process.env.DUMP_PDF) fs.writeFileSync(process.env.DUMP_PDF, Buffer.from(pdf.result.data, 'base64')); // 確認用: 最後の印刷結果を保存
   await send('Emulation.setEmulatedMedia', { media: 'screen' });
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   return pdf.result.data;

@@ -6,87 +6,150 @@
 <title>住む場所の先行き — 場所を指して、市の計画・推計人口・施設・災害の想定を1枚で見比べる（徳島市・東京23区・大阪市）</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="layout.css">
 </head>
 <body>
 <header id="top">
   <h1>住む場所の先行き</h1>
-  <p class="lead">家や土地を買う前に、その場所を地図で指すと、市の計画の区域・周りの将来人口（推計）・小学校区・直線800m以内の施設・災害の想定（洪水・津波・高潮・土砂・液状化）を1枚に並べます。結論は出さず、次に誰に何を聞くかを示します。</p>
-  <p class="warn"><strong>動く最小限のデモです。</strong>対象は徳島市・東京23区・大阪市（下で地域を選びます）。将来人口は国の推計で、実際の人口ではありません。「住める・住めない」「価値が上がる・下がる」といった結論は出さず、市や不動産会社に聞くことを示します。国が作成・監修したものではありません。</p>
+  <p class="lead">地図で場所を指すと、市の計画・将来人口（推計）・施設・災害の想定を1枚に並べます。物件の住所（10件まで）と勤務先（2か所）を入れると、生活に必要な場所への距離と通勤時間の目安が出ます。結論は出しません。<a href="#tab-info" id="aboutLink">動く最小限のデモです（注意と出典）</a></p>
 </header>
 
-<main>
-  <section id="step1" class="panel">
-    <h2>1. 場所を指す</h2>
-    <fieldset id="regionPick" class="row regions">
-      <legend>対象地域（選んだ地域のデータだけ読み込みます）</legend>
-      <label><input type="radio" name="region" value="tokushima" checked> 徳島市</label>
-      <label><input type="radio" name="region" value="tokyo23"> 東京23区</label>
-      <label><input type="radio" name="region" value="osaka"> 大阪市</label>
-    </fieldset>
-    <div id="loadbar" class="loadbar" role="status" hidden><span id="loadtext"></span> <progress id="loadprog" max="100" value="0"></progress></div>
-    <form id="search" class="row">
-      <label class="sr" for="q">住所・目印を検索</label>
-      <input id="q" type="search" placeholder="例: 徳島市役所、徳島市国府町府中" autocomplete="off">
-      <button type="submit">検索</button>
-    </form>
-    <div class="row examples" role="group" aria-label="例の場所">
-      <span class="hint">例の場所:</span>
-      <span id="exButtons"></span>
-    </div>
-    <div class="row opts" role="group" aria-label="地図に重ねる範囲">
-      <label id="lbRes"><input type="checkbox" id="tgResidential" checked> <span class="sw sw-res"></span>居住誘導区域</label>
-      <label id="lbCity"><input type="checkbox" id="tgCity" checked> <span class="sw sw-city"></span>都市機能誘導区域</label>
-      <label><input type="checkbox" id="tgFlood"> <span class="sw sw-flood"></span>洪水浸水想定区域<span class="nd" hidden></span></label>
-      <label><input type="checkbox" id="tgSediment"> <span class="sw sw-sed"></span>土砂災害警戒区域<span class="nd" hidden></span></label>
-      <label><input type="checkbox" id="tgTsunami"> <span class="sw sw-tsunami"></span>津波浸水想定<span class="nd" hidden></span></label>
-      <label><input type="checkbox" id="tgSurge"> <span class="sw sw-surge"></span>高潮浸水想定区域<span class="nd" hidden></span></label>
-      <label><input type="checkbox" id="tgLiq"> <span class="sw sw-liq"></span>液状化の発生傾向（しやすい区分を濃淡で塗る）<span class="nd" hidden></span></label>
-    </div>
-    <div id="map" role="application" aria-label="地図。クリックまたはタップで場所を指定" tabindex="0">
+<div id="app">
+  <div id="mapwrap">
+    <div id="pickbar" class="pickbar" role="status" hidden><span id="picktext"></span> <button type="button" id="pickCancel" class="secondary">やめる</button></div>
+    <div id="map" role="application" aria-label="地図。クリックまたはタップで場所を指定。物件・勤務先の印はキーボードでも選べます" tabindex="0">
       <div id="tiles"></div>
       <canvas id="over"></canvas>
       <div id="cross" aria-hidden="true"></div>
       <div id="pin" hidden></div>
+      <div id="marks"></div>
+      <div id="popup" class="popup" role="dialog" aria-label="物件・勤務先の情報" hidden></div>
       <div id="maploading" class="maploading" hidden></div>
       <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button></div>
-      <div class="attr">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工</div>
+      <div class="attr">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工／施設: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors（ODbL）</a>・国土数値情報</div>
     </div>
-    <p class="hint">地図をクリック（タップ）すると、その位置を土地として扱います。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心の十字の位置を指定します。東京23区・大阪市では、灰色に覆った範囲は対象外です（押してもシートは出ません）。実線の円は人口を集計する半径500m、破線の円は徒歩圏の半径800m（直線距離で、道路に沿った距離ではありません）です。</p>
-  </section>
+  </div>
 
-  <section id="step2" class="panel">
-    <h2>2. 先行きシートを見る・印刷する</h2>
-    <p id="status" role="status">地図で場所を指すか、例の場所を選ぶと、ここに状況が出ます。</p>
-    <p><button type="button" id="printBtn" disabled>印刷・PDFで保存する</button> <span class="hint">印刷画面で「PDFに保存」を選ぶとPDFになります（A4・1枚）。</span></p>
-    <div id="sheet" class="sheet" aria-live="polite"></div>
-  </section>
+  <aside id="side">
+    <div class="tabs" role="tablist" aria-label="操作の切り替え">
+      <button type="button" role="tab" id="t-place" aria-controls="tab-place" aria-selected="true">場所・重ね表示</button>
+      <button type="button" role="tab" id="t-props" aria-controls="tab-props" aria-selected="false">物件・勤務先</button>
+      <button type="button" role="tab" id="t-sheet" aria-controls="tab-sheet" aria-selected="false">先行きシート</button>
+      <button type="button" role="tab" id="t-info" aria-controls="tab-info" aria-selected="false">出典・注意</button>
+    </div>
 
-  <section id="step3" class="panel">
-    <h2>取得データの状況</h2>
-    <p class="hint">同梱した不動産情報ライブラリのデータの、項目ごとの状態です。「未取得」（取得に失敗）と「データ無し」（取得できたが0件。区域が無い、または収録が無い。安全という意味ではない）は、シートの該当欄にそのとおり出ます。</p>
-    <ul id="dataStatus" class="plain"></ul>
-  </section>
-</main>
+    <div class="tabpanel" id="tab-place" role="tabpanel" aria-labelledby="t-place">
+      <section id="step1" class="panel">
+        <fieldset id="regionPick" class="row regions">
+          <legend>対象地域（選んだ地域のデータだけ読み込みます）</legend>
+          <label><input type="radio" name="region" value="tokushima" checked> 徳島市</label>
+          <label><input type="radio" name="region" value="tokyo23"> 東京23区</label>
+          <label><input type="radio" name="region" value="osaka"> 大阪市</label>
+        </fieldset>
+        <div id="loadbar" class="loadbar" role="status" hidden><span id="loadtext"></span> <progress id="loadprog" max="100" value="0"></progress></div>
+        <form id="search" class="row">
+          <label class="sr" for="q">住所・目印を検索（地図を動かします）</label>
+          <input id="q" type="search" placeholder="例: 徳島市役所、徳島市国府町府中" autocomplete="off">
+          <button type="submit">地図を動かす</button>
+        </form>
+        <div class="row examples" role="group" aria-label="例の場所">
+          <span class="hint">例の場所:</span>
+          <span id="exButtons"></span>
+        </div>
+        <fieldset class="legend" id="lifeLegend">
+          <legend>生活に必要な場所（チェックで地図に表示）</legend>
+          <div id="lifeToggles" class="opts"></div>
+          <p class="hint" id="lifeNote"></p>
+        </fieldset>
+        <fieldset class="legend" id="hazLegend">
+          <legend>区域・災害の想定（チェックで地図に重ねる）</legend>
+          <div class="opts" role="group" aria-label="地図に重ねる範囲">
+            <label id="lbRes"><input type="checkbox" id="tgResidential" checked> <span class="sw sw-res"></span>居住誘導区域</label>
+            <label id="lbCity"><input type="checkbox" id="tgCity" checked> <span class="sw sw-city"></span>都市機能誘導区域</label>
+            <label><input type="checkbox" id="tgFlood"> <span class="sw sw-flood"></span>洪水浸水想定区域<span class="nd" hidden></span></label>
+            <label><input type="checkbox" id="tgSediment"> <span class="sw sw-sed"></span>土砂災害警戒区域<span class="nd" hidden></span></label>
+            <label><input type="checkbox" id="tgTsunami"> <span class="sw sw-tsunami"></span>津波浸水想定<span class="nd" hidden></span></label>
+            <label><input type="checkbox" id="tgSurge"> <span class="sw sw-surge"></span>高潮浸水想定区域<span class="nd" hidden></span></label>
+            <label><input type="checkbox" id="tgLiq"> <span class="sw sw-liq"></span>液状化の発生傾向（しやすい区分を濃淡で塗る）<span class="nd" hidden></span></label>
+          </div>
+        </fieldset>
+        <p class="hint">地図をクリック（タップ）すると、その位置を土地として扱い、先行きシートを出します。ドラッグで移動、ボタンで拡大縮小。キーボードでは、地図にフォーカスして矢印キーで移動、＋−で拡大縮小、Enter で中心の十字の位置を指定します。東京23区・大阪市では、灰色に覆った範囲は対象外です。実線の円は人口を集計する半径500m、破線の円は徒歩圏の半径800m（直線距離）です。</p>
+      </section>
+    </div>
 
-<footer>
-  <h2>出典・ライセンス・限界</h2>
-  <ul>
-    <li><strong>出典</strong>: <span id="attribution"></span>（<a id="libLink" href="https://www.reinfolib.mlit.go.jp/" rel="noopener">不動産情報ライブラリ（国土交通省）へのリンク</a>）。取得日: <span id="fetchedAt">—</span>。</li>
-    <li><strong>加工した旨</strong>: <span id="processed"></span>。</li>
-    <li><strong>国土数値情報の出典</strong>: <span id="nlni"></span>。</li>
-    <li><strong>原典の注意</strong>: <span id="orignote"></span></li>
-    <li><strong>クレジット</strong>: <span id="credit"></span>。</li>
-    <li><strong>責任</strong>: <span id="resp"></span>。</li>
-    <li><strong>将来人口</strong>: <span id="popnote"></span>。</li>
-    <li><strong>区域の位置</strong>: 市（区）が公表する図が正です。ここでは国の整備データ（令和7年度の都市計画決定GISデータ）を表示しており、市（区）の最新の公表と異なる場合があります。<span id="regionLink">徳島市の立地適正化計画の公表ページ: <a href="https://www.city.tokushima.tokushima.jp/shisei/machi_keikaku/townplanning/loa_rat_plan/" rel="noopener">徳島市</a>。</span></li>
-    <li><strong>地域ごとのデータ</strong>: <span id="regionNote"></span></li>
-    <li><strong>地図</strong>: 国土地理院タイル（標準地図）。住所検索は国土地理院の住所検索API。</li>
-    <li><strong>データの変換</strong>: 洪水浸水想定区域・津波浸水想定・高潮浸水想定区域・液状化の発生傾向は、原データの多角形が非常に多いため、約18mの格子（浸水深などの区分つき）に変換して同梱しています。境界付近は20m程度ずれることがあり、細い区域は欠けることがあります。境界から約20m以内の位置では、中か外かを言い切らず「境界付近」と出します。</li>
-    <li><strong>プライバシー</strong>: 指した位置はこの端末内だけで扱い、保存・送信しません。地図画像と住所検索の要求は国土地理院に届きます。この画面から不動産情報ライブラリのAPIは呼びません（同梱データのみ）。</li>
-  </ul>
-</footer>
+    <div class="tabpanel" id="tab-props" role="tabpanel" aria-labelledby="t-props" hidden>
+      <section class="panel" id="stepP">
+        <h2>物件の住所（最大10件）</h2>
+        <form id="propForm" class="row">
+          <label class="sr" for="propQ">物件の住所</label>
+          <input id="propQ" type="search" placeholder="例: 徳島市幸町2丁目" autocomplete="off">
+          <button type="submit" id="propAdd">追加</button>
+          <button type="button" id="propPick" class="secondary">地図で指定</button>
+        </form>
+        <p id="propMsg" class="msg" role="status"></p>
+        <ol id="propList" class="plist"></ol>
+
+        <h2>勤務先（2か所）</h2>
+        <div id="workForms"></div>
+        <p id="workMsg" class="msg" role="status"></p>
+
+        <h2>通勤時間の目安（物件×勤務先）</h2>
+        <div id="commuteBox"></div>
+        <details class="assump" open>
+          <summary>計算方法と前提（目安です）</summary>
+          <ul id="assump"></ul>
+        </details>
+        <p class="hint">入力した住所・勤務先は、この端末のブラウザ内（localStorage）だけに保存します。国土地理院の住所検索へ、入力した文字列だけを送ります（それ以外は送りません）。</p>
+        <p><button type="button" id="clearAll" class="secondary">入力をすべて消す</button></p>
+      </section>
+    </div>
+
+    <div class="tabpanel" id="tab-sheet" role="tabpanel" aria-labelledby="t-sheet" hidden>
+      <section id="step2" class="panel">
+        <h2>先行きシート</h2>
+        <p id="status" role="status">地図で場所を指すか、例の場所を選ぶと、ここに状況が出ます。</p>
+        <p><button type="button" id="printBtn" disabled>印刷・PDFで保存する</button> <span class="hint">印刷画面で「PDFに保存」を選ぶとPDFになります（A4・1枚）。</span></p>
+        <div id="sheet" class="sheet" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <div class="tabpanel" id="tab-info" role="tabpanel" aria-labelledby="t-info" hidden>
+      <section class="panel">
+        <p class="warn"><strong>動く最小限のデモです。</strong>対象は徳島市・東京23区・大阪市（地域を選びます）。将来人口は国の推計で、実際の人口ではありません。「住める・住めない」「価値が上がる・下がる」といった結論は出さず、市や不動産会社に聞くことを示します。国が作成・監修したものではありません。</p>
+      </section>
+      <section id="step3" class="panel">
+        <h2>取得データの状況</h2>
+        <p class="hint">同梱した不動産情報ライブラリのデータの、項目ごとの状態です。「未取得」（取得に失敗）と「データ無し」（取得できたが0件。区域が無い、または収録が無い。安全という意味ではない）は、シートの該当欄にそのとおり出ます。</p>
+        <ul id="dataStatus" class="plain"></ul>
+        <h2>生活に必要な場所のデータ</h2>
+        <ul id="lifeStatus" class="plain"></ul>
+      </section>
+      <footer>
+        <h2>出典・ライセンス・限界</h2>
+        <ul>
+          <li><strong>出典</strong>: <span id="attribution"></span>（<a id="libLink" href="https://www.reinfolib.mlit.go.jp/" rel="noopener">不動産情報ライブラリ（国土交通省）へのリンク</a>）。取得日: <span id="fetchedAt">—</span>。</li>
+          <li><strong>加工した旨</strong>: <span id="processed"></span>。</li>
+          <li><strong>国土数値情報の出典</strong>: <span id="nlni"></span>。</li>
+          <li><strong>原典の注意</strong>: <span id="orignote"></span></li>
+          <li><strong>クレジット</strong>: <span id="credit"></span>。</li>
+          <li><strong>責任</strong>: <span id="resp"></span>。</li>
+          <li><strong>将来人口</strong>: <span id="popnote"></span>。</li>
+          <li><strong>区域の位置</strong>: 市（区）が公表する図が正です。ここでは国の整備データ（令和7年度の都市計画決定GISデータ）を表示しており、市（区）の最新の公表と異なる場合があります。<span id="regionLink">徳島市の立地適正化計画の公表ページ: <a href="https://www.city.tokushima.tokushima.jp/shisei/machi_keikaku/townplanning/loa_rat_plan/" rel="noopener">徳島市</a>。</span></li>
+          <li><strong>地域ごとのデータ</strong>: <span id="regionNote"></span></li>
+          <li><strong>地図</strong>: 国土地理院タイル（標準地図）。住所検索は国土地理院の住所検索API。</li>
+          <li><strong>生活に必要な場所（スーパー・コンビニ・駅・薬局・郵便局・学童）</strong>: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>。<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">Open Database License（ODbL）</a>で提供。著作権とライセンスは <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">https://www.openstreetmap.org/copyright</a>。Overpass API から対象3地域の範囲を取得し、名称・位置だけに整えて同梱しました。登録漏れ・古い情報があります。</li>
+          <li><strong>学校・保育園・幼稚園・病院・診療所</strong>: 上の国土数値情報（不動産情報ライブラリ経由）。小学校・中学校は通学区域（学区）の学校とは限りません。</li>
+          <li><strong>住所から位置への変換</strong>: 国土地理院の住所検索API（<a href="https://msearch.gsi.go.jp/address-search/AddressSearch" rel="noopener">AddressSearch</a>）。位置は住所の代表点で、建物の位置とは限りません。利用は<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院の利用規約</a>に従います。</li>
+          <li><strong>データの変換</strong>: 洪水浸水想定区域・津波浸水想定・高潮浸水想定区域・液状化の発生傾向は、原データの多角形が非常に多いため、約18mの格子（浸水深などの区分つき）に変換して同梱しています。境界付近は20m程度ずれることがあり、細い区域は欠けることがあります。境界から約20m以内の位置では、中か外かを言い切らず「境界付近」と出します。</li>
+          <li><strong>プライバシー</strong>: 指した位置はこの端末内だけで扱い、送信しません。物件・勤務先の入力は端末内（localStorage）だけに保存します。地図画像と住所検索の要求（入力した文字列）は国土地理院に届きます。この画面から不動産情報ライブラリのAPIは呼びません（同梱データのみ）。</li>
+        </ul>
+      </footer>
+    </div>
+  </aside>
+</div>
 
 <script src="lib.js"></script>
+<script src="life.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
