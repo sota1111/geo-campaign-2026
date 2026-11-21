@@ -23,7 +23,7 @@ const SOURCES = {
     ],
   },
   'udc-moritsuchi': { src: 'udc-2026/app/moritsuchi-watch/data', files: ['fills.geojson'] },
-  'sat-a': { src: 'satellite-2026/app/proposal-a/data', files: ['sample.json'] },
+  'sat-a': { src: 'satellite-2026/app/proposal-a/data', files: ['toyonaka.json', 'demo_sim.json', 'verify.json', 'format_sample_by_segment.csv', 'format_sample_by_point.csv'] },
   'sat-b': {
     src: 'satellite-2026/app/proposal-b/data',
     files: [
