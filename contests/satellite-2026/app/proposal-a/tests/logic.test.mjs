@@ -200,7 +200,10 @@ test('同梱の書式見本が読める', () => {
   for (const f of ['format_sample_by_segment.csv', 'format_sample_by_point.csv']) {
     const t = fs.readFileSync(new URL('../data/' + f, import.meta.url), 'utf8');
     const r = parseOutcomes(t, data.segments);
-    assert.equal(r.error, null, f); assert.equal(r.results.size, 3, f);
+    assert.equal(r.error, null, f); assert.ok(r.results.size >= 10, f);
+    // 見本だけで較正まで進める（あり・なし各3件以上）。架空の見本であることがファイル内にある
+    assert.ok(r.summary.hit >= 3 && r.summary.none >= 3, f);
+    assert.ok(t.includes('架空'), f);
   }
 });
 

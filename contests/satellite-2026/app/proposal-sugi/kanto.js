@@ -228,7 +228,7 @@
       '<table class="small"><thead><tr><th>区分1の帯</th><th class="n">区分1 ha</th><th class="n">要確認 ha（見えた面積に対する割合）</th><th class="n">伐採候補 ha</th></tr></thead><tbody>' + rows +
       '<tr><th>計</th><th class="n">' + fmt(t.all) + '</th><th class="n">' + fmt(t.check) + '（' + pc(t.check, t.seen) + '）</th><th class="n">' + fmt(t.cut) + '</th></tr></tbody></table>' +
       '<p class="note">衛星で見えた区分1の面積 ' + fmt(t.seen) + ' ha（' + pc(t.seen, t.all) + '。雲・影・雪を除いた有効な画素が少ないメッシュは除く）。「伐採候補 ha」は NDVI が下がった画素の面積の合計で、しきい値 ' + p.cutMinHa + ' ha 以上のメッシュは ' + fmt(t.cutCells) + ' 個。区分1の中の、すでに伐採が進んだ場所を見つける目安です。</p>' +
-      '<div class="fact"><b>範囲（軽さのため、取得した衛星のタイルは8面）</b>: 区分1のうち衛星で見えた面積の割合は、' + esc(covTxt) + '。<b>栃木県は取得したタイルに入っておらず（未処理）、群馬県・茨城県は一部だけ</b>。埼玉・千葉・東京・神奈川は全域を見ています。見えない所は「要確認ではない」ではなく「未確認」です。</div>' +
+      '<div class="fact"><b>範囲（取得した衛星のタイルは ' + Object.keys(m.scenes).length + ' 面）</b>: 区分1のうち衛星で見えた面積の割合は、' + esc(covTxt) + '。関東1都6県の区分1をほぼ全域で見ています。見えない所（雲・影・雪などを除くと有効な画素が少ないメッシュ）は「要確認ではない」ではなく「未確認」です。</div>' +
       '<div class="warn"><b>しきい値は仮置き</b>（冬の NDVI ' + p.winterMin.toFixed(2) + '、緑とみなす ' + m.green + '、下がった幅 ' + m.drop + '、候補とする面積 ' + p.cutMinHa + ' ha）で、現地で確かめた値ではありません。<b>森林簿の年は2019〜2024年と地域で異なり</b>、古い冬（' + m.old + '）より前に伐られた所は「下がった」に出ません。冬の影・積雪・撮影日の違い・畑の耕起・間伐でも NDVI は下がります。範囲は<b>関東1都6県の区分1のスギ人工林メッシュ</b>で、40m の画素で数えるため 0.16 ha より小さな伐採は見えません。</div>' +
       '<details class="fold"><summary>使った衛星の場面（ID と日付）</summary><table class="small"><thead><tr><th>タイル</th><th>古い冬</th><th>新しい冬</th></tr></thead><tbody>' + sc + '</tbody></table><p class="note">Contains modified Copernicus Sentinel data（2022・2026）。Sentinel-2 L2A（ESA／Copernicus）を Element 84 Earth Search（STAC）の公開 COG から取得。雲量はタイル全体の値。雲・影・雪などはシーン分類（SCL）で除外。</p></details>';
   }

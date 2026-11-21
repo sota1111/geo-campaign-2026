@@ -110,6 +110,8 @@ export default function App() {
   const [wTouched, setWTouched] = useState(false)
   const [viewedR2, setViewedR2] = useState(false)
   const [viewedVerify, setViewedVerify] = useState(false)
+  // 手順2「選ぶ」は、区間を選んだときだけ完了にする（CSV を入れただけでは完了にしない）
+  const [pickedOnce, setPickedOnce] = useState(false)
 
   useEffect(() => {
     if (round > 1 && step === 'round2') setViewedR2(true)
@@ -150,6 +152,7 @@ export default function App() {
         setW(ap.newW)
         setRound(2)
         setViewedTop(true)
+        setPickedOnce(true)
         setStep('round2')
       })
       .catch((e) => alive && setError(String(e)))
@@ -165,6 +168,9 @@ export default function App() {
   const baseSegs = data?.segments
   // 結果が入った区間だけ surveyed（候補から外れる）
   const segs = useMemo<Segment[]>(() => (baseSegs ?? []).map((s) => ({ ...s, surveyed: results.has(s.id) })), [baseSegs, results])
+  useEffect(() => {
+    if (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9) setPickedOnce(true)
+  }, [selected, budgetKm, segs])
   const cellSat = useMemo(() => Object.fromEntries((data?.cells ?? []).map((c) => [c.id, satNorm(c.disp)])), [data])
   const cellById = useMemo(() => Object.fromEntries((data?.cells ?? []).map((c) => [c.id, c])), [data])
   const ranked = useMemo(() => rank(segs, cellSat, w), [segs, cellSat, w])
@@ -235,7 +241,9 @@ export default function App() {
     }
     setDemo(on)
     setLoadInfo(null)
-    setSelected(new Set())
+    // 選択は残す（過去の調査済みになった区間だけ外す）
+    const pastIds = on && dm ? new Set(dm.past) : new Set<string>()
+    setSelected((cur) => new Set([...cur].filter((id) => !pastIds.has(id))))
     setW(W0)
     setRound(1)
     setMsg('')
@@ -261,13 +269,14 @@ export default function App() {
   }
 
   const hasResults = results.size > 0
+  const pastIds = useMemo(() => (demo && demoData ? new Set(demoData.past) : undefined), [demo, demoData])
   useAppSteps(
     [
       { id: 'top', title: '候補区間の点数を見る', hint: '表の行を選んで内訳を見る（豊中市の実データ）', action: '表の行を1つ選ぶと完了', done: viewedTop },
       { id: 'weight', title: '衛星指標の重みを変えてみる', hint: 'スライダーで順位が変わる', action: 'スライダーを動かすと完了', optional: true, done: wTouched },
       {
         id: 'pick', title: '予算（走行延長）内で調査対象を選ぶ', hint: '「点数の上位から自動で選ぶ」',
-        done: roundAdded > 0 || round > 1 || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
+        done: pickedOnce || (selected.size > 0 && totalKm(segs, selected) <= budgetKm + 1e-9),
       },
       { id: 'scan', title: '調査結果（CSV）を入れる', hint: '一次審査後に GMS3 の結果を入れる枠。区間ID または緯度・経度の CSV', action: 'CSV を入れると完了', done: roundAdded > 0 || round > 1 },
       { id: 'apply', title: '較正を反映して第2回へ進む', hint: '結果が入ると重みが更新され順位が作り直される', action: calibNow.w !== null && round === 1 ? 'ボタンを押すと完了' : undefined, done: round > 1 },
@@ -286,6 +295,7 @@ export default function App() {
     <PageHeader
       appId="sat-a"
       compact
+      badge={demo ? { kind: 'fictional', label: '架空を含む（説明用デモ）' } : undefined}
       actions={
         <>
           <BusinessDialog />
@@ -329,6 +339,7 @@ export default function App() {
         step={mapStep}
         results={results}
         demo={demo}
+        pastIds={pastIds}
         onSegmentClick={onSegmentClick}
       />
       <div className="shrink-0 border-t bg-card px-3 py-1.5 text-xs" aria-live="polite" data-testid="detail">
@@ -419,6 +430,7 @@ export default function App() {
                 onFile={onFile}
                 onClear={clearResults}
                 onDemoScan={onDemoScan}
+                onGoPick={() => setStep('pick')}
               />
             )}
             {step === 'apply' && (
@@ -431,10 +443,12 @@ export default function App() {
                 demo={demo}
                 applied={round > 1 && roundAdded === 0 ? prev : null}
                 onApply={applyCalib}
+                onGoScan={() => setStep('scan')}
+                onDemoOn={() => onDemo(true)}
               />
             )}
             {step === 'round2' && (
-              <Round2Panel round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} onExport={exportRound2} />
+              <Round2Panel demo={demo} onGoScan={() => setStep('scan')} onDemoOn={() => onDemo(true)} round={round} msg={msg} prev={prev} candidates={candidates} focus={focus} onFocus={focusRow} onExport={exportRound2} />
             )}
             {step === 'verify' && (verify ? <VerifyPanel v={verify} /> : <Skeleton className="h-40 w-full" />)}
           </>

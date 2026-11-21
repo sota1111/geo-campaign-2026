@@ -138,6 +138,14 @@ test('衛星データは kanto.js のメッシュと同じ件数で、場面（I
   const S = c2.window.SUGI_SAT, n = D.cells.n.length;
   for (const k of ['wNew', 'wOld', 'nValid', 'nBoth', 'nDrop']) assert.equal(S[k].length, n);
   const sc = Object.values(S.meta.scenes);
-  assert.ok(sc.length >= 5);
+  assert.ok(sc.length >= 10);
+  for (const id of ['54SUG', '54SVG', '54STF', '54SUF', '54SVF']) assert.ok(S.meta.scenes['MGRS-' + id], id);
   for (const v of sc) { assert.match(v.new.id, /^S2[AB]_54S/); assert.match(v.new.date, /^2026-/); assert.match(v.old.date, /^2022-/); }
+});
+test('衛星で見えた区分1の面積の割合は、どの都県も95%以上（北側のタイルの取りこぼしを防ぐ）', () => {
+  const c2 = { window: {} }; vm.createContext(c2); vm.runInContext(read('data/sat.js'), c2);
+  const S = c2.window.SUGI_SAT, cls = K.classifyAll(D, K.DEFAULTS);
+  const cov = D.meta.prefs.map(() => [0, 0]);
+  for (let i = 0; i < cls.length; i++) if (cls[i] === 1) { const q = cov[D.munis[D.cells.muni[i]][1]]; q[0] += D.cells.n[i]; if (S.wNew[i] > -900) q[1] += D.cells.n[i]; }
+  cov.forEach((q, i) => assert.ok(q[1] / q[0] >= 0.95, D.meta.prefs[i] + ' ' + (q[1] / q[0])));
 });

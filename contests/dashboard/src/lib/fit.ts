@@ -1,5 +1,5 @@
 import { CONTEST_INFO, type PlannedCount } from '@/apps/contests-info'
-import { APPS, type AppMeta, type ContestId } from '@/apps/registry'
+import { APPS, isNewPlan, type AppMeta, type ContestId } from '@/apps/registry'
 import { FIT_CAUTIONS, FIT_CELLS, FIT_COLUMNS, type FitCaution, type FitCell, type FitColumn, type FitMark } from '@/data/app-fit'
 
 /** 記号の言葉（正本 app-contest-fit-20261121.md の「判定の規則」の意味欄どおり） */
@@ -51,15 +51,18 @@ export function totalScore(appId: string): number {
  * アプリの並び。先頭に来るのは「選んだアプリ」。
  *  - コンペを選んでいるとき: そのコンペ（イチBiz は3部門のどれか）を提出先に選んだアプリだけを先頭にする。他のコンペ向けに選んだアプリは先頭にせず、通常の並びに混ぜる。
  *  - コンペを選んでいないとき: 何かを提出先に選んだアプリを先頭にする。
+ * コンペ未選択のときは、選んだ候補の次に、判定が大半「？」の新しい案を置く。
  * それぞれの中は、コンペを選んだらそのコンペとの score の高い順、未選択なら全列の score 合計の高い順。
  * 同点は registry の並び（APPS の順）。targets を渡さなければ（選択なしとして）関連の強さだけで並べる。
  */
 export function sortApps(apps: AppMeta[], contest: ContestId | null, targets: Targets = {}): AppMeta[] {
   const idx = (a: AppMeta) => APPS.findIndex((x) => x.id === a.id)
   const key = (a: AppMeta) => (contest ? contestScore(a.id, contest) : totalScore(a.id))
+  // 判定が大半「？」の新しい案は、コンペを選んでいないとき、選んだ候補の次に置く（合計が低く並びの最後に埋もれないように）。コンペを選んだときは、そのコンペとの関連の強さで並べる
+  const unjudged = (a: AppMeta) => (!contest && isNewPlan(a) && FIT_COLUMNS.filter((c) => cellOf(a.id, c.id)?.mark === '？').length >= 4 ? 1 : 0)
   const forContest = contest ? new Set(appsForContest(targets, contest)) : null
   const chosen = (a: AppMeta) => ((forContest ? forContest.has(a.id) : (targets[a.id]?.length ?? 0) > 0) ? 1 : 0)
-  return [...apps].sort((a, b) => chosen(b) - chosen(a) || key(b) - key(a) || idx(a) - idx(b))
+  return [...apps].sort((a, b) => chosen(b) - chosen(a) || unjudged(b) - unjudged(a) || key(b) - key(a) || idx(a) - idx(b))
 }
 
 /** 提出先の選択: アプリ id → 列 id の配列 */
@@ -213,9 +216,10 @@ export type PlanState = 'undecided' | 'match' | 'short' | 'over'
 /** 状態の記号と言葉（色だけに頼らない） */
 export function planStateText(state: PlanState, diff: number): { mark: string; word: string } {
   switch (state) {
-    case 'match': return { mark: '✓', word: '予定どおり' }
-    case 'short': return { mark: '▼', word: `あと${-diff}件で予定` }
-    case 'over': return { mark: '▲', word: `予定より${diff}件多い` }
+    // 予定数には記号を使わない（▲は判断待ち・注意、✓は選んだ提出先の意味で使うため）。言葉と枠で区別する
+    case 'match': return { mark: '', word: '予定どおり' }
+    case 'short': return { mark: '', word: `あと${-diff}件で予定` }
+    case 'over': return { mark: '', word: `予定より${diff}件多い` }
     default: return { mark: '', word: '' }
   }
 }

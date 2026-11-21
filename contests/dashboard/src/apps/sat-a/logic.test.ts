@@ -185,7 +185,9 @@ describe('sat-a 調査結果 CSV の取り込み（GMS3 の書式は未確認。
     for (const f of ['format_sample_by_segment.csv', 'format_sample_by_point.csv']) {
       const r = parseOutcomes(fs.readFileSync(path.join(dir, f), 'utf8'), data.segments)
       expect(r.error).toBeNull()
-      expect(r.results.size).toBe(3)
+      expect(r.results.size).toBeGreaterThanOrEqual(10)
+      expect(r.summary.hit).toBeGreaterThanOrEqual(3)
+      expect(r.summary.none).toBeGreaterThanOrEqual(3)
     }
   })
 })
