@@ -84,6 +84,8 @@ class B:
         if key in self._src:
             return self._src[key]
         iri = ID["src/" + slug(f"{path or url}-{locator or ''}")]
+        if iri in self._src.values():  # 日本語だけが違う出典の IRI が衝突したら、内容の短いハッシュを付けて分ける
+            iri = ID["src/" + slug(f"{path or url}-{locator or ''}") + "-" + hashlib.md5(repr(key).encode()).hexdigest()[:6]]
         self.g.add((iri, RDF.type, C.Source))
         label = (path or url) + (f" {locator}" if locator else "")
         self.g.add((iri, RDFS.label, Literal(label, lang="ja")))
@@ -964,9 +966,12 @@ def build(offline=False):
     rule = b.node(ID["rule/merge-delegation"], "DelegationRule", "代理マージの規則（総司令官補佐が承認なしでマージ）")
     g.add((rule, C.delegatedTo, agent("commander-aide")))
     b.add(rule, C.approvalRequired, False)
-    b.add(rule, C.condition, "マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情報の混入・ページ削除を含む（PageDeletion は総司令官の判断）・提出物を含む PR でその戦域の最新の監査に失格級が残る・画面を含む PR で最新のデザイン審査に重大が残る。満たさなければマージしない")
-    b.add(rule, C.note, "注記: 「以降は指示なしでも代理でマージ」（総司令官 2026-11-21）を、失格級・重大が残っていてもマージできる意味にするかは、総司令官本人の確認待ち（PR #46）。確認が取れるまで、現行の SOP（失格級・重大が残ればマージしない）を規則とする")
-    b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「代理マージは承認なしで行うこと。Claude.mdやオントロジーに記載すること。」")
+    b.add(rule, C.condition, "マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情報の混入・ページ削除を含む（PageDeletion は総司令官の判断）だけ。憲兵の監査の失格級・デザイン審査の重大が残っていてもマージは止めないが、残っていれば記録し、提出可能・完成とは報告しない")
+    b.add(rule, C.note, "確定: 総司令官本人が PR #46 をマージした（2026-11-21 13:41 UTC）。補佐の SOP は「失格級・重大は記録するがマージを止めない」。.claude/agents/commander-aide.md・CLAUDE.md・doctrine/roe.md に反映済み")
+    b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「代理マージは承認なしで行うこと」")
+    b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「以降は指示なしでも代理でマージを行う仕組みにすること」")
+    b.cite(rule, url="https://github.com/sota1111/geo-campaign-2026/pull/46")
+    b.cite(rule, path="doctrine/roe.md", locator="表の「総司令官補佐は条件を満たす PR を指示なしでマージ可」の行")
     b.cite(rule, path="CLAUDE.md", locator="成果の返し方 4")
     for p in prs:
         if p["state"] != "OPEN":

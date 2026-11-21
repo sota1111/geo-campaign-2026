@@ -267,11 +267,13 @@ def test_merge_delegation_rule_in_graph(g):
     assert "総司令官の指示" in srcs and "CLAUDE.md" in srcs
     cond = str(g.value(rule, C.condition))
     assert "CI" in cond and "registry" in cond and "競合" in cond and "秘密情報" in cond and "ページ削除" in cond
-    assert "最新の監査に失格級が残る" in cond and "最新のデザイン審査に重大が残る" in cond  # 現行の SOP
+    assert "止めないが、残っていれば記録し、提出可能・完成とは報告しない" in cond  # 確定した SOP
+    assert "最新の監査に失格級が残る" not in cond and "最新のデザイン審査に重大が残る" not in cond
     note = str(g.value(rule, C.note))
-    assert "PR #46" in note and "確認待ち" in note  # 「失格級・重大は止めない」は注記だけ
-    assert "止めない" not in cond and "マージできる" not in cond
-    assert len(list(g.objects(rule, C.hasSource))) >= 2
+    assert "PR #46" in note and "確認待ち" not in note  # 確認待ちの注記は外れている
+    urls = " ".join(str(o) for s in g.objects(rule, C.hasSource) for o in g.objects(s, C.url))
+    assert "/pull/46" in urls and "以降は指示なしでも代理でマージ" in " ".join(str(g.value(s, C.locator)) for s in g.objects(rule, C.hasSource))
+    assert len(list(g.objects(rule, C.hasSource))) >= 4
 
 
 def test_shacl_rejects_merge_delegation_assigned_to_other(tmp_path):

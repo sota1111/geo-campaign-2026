@@ -110,6 +110,7 @@ AUDITS = {
     "odpt-2026-kodure-20261114": {"apps": ["odpt-kodure"], "supersedes": []},
     "odpt-2026-teiji-20261115": {"apps": ["odpt-teiji"], "supersedes": []},
     "satellite-2026-20261109": {"apps": ["sat-a", "sat-b"], "supersedes": []},
+    "satellite-2026-proposal-a-realdata-20261121": {"apps": ["sat-a"], "supersedes": []},
     "satellite-2026-alpha-20261113": {"apps": ["sat-alpha"], "supersedes": []},
     "udc-2026-20261109": {"apps": ["odpt", "udc-moritsuchi"], "supersedes": []},
     "udc-2026-aed-20261113": {"apps": ["udc-aed"], "supersedes": []},
