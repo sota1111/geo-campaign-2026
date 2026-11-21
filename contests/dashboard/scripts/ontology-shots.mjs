@@ -110,6 +110,15 @@ for (const [label, w, h, mobile] of sizes) {
   // 凡例とヘッダーの現在地
   r.legend = await ev(`!!document.querySelector('[data-testid=legend]') && document.querySelector('[data-testid=legend]').getBoundingClientRect().top < innerHeight`)
   r.headerCurrent = await ev(`document.querySelector('[data-testid=ontology-link]').getAttribute('aria-current')`)
+  // ヘッダーの2つのリンク（つながり図・図解）が切れずに並ぶか、図解ページの全体
+  const hdr = `(() => { const hs = [...document.querySelectorAll('header a')].filter((a) => /つながり図|図解/.test(a.textContent)); return hs.map((a) => { const r = a.getBoundingClientRect(); return { t: a.textContent.trim().slice(0, 14), left: Math.round(r.left), right: Math.round(r.right), h: Math.round(r.height), inView: r.right <= innerWidth && r.left >= 0 } }) })()`
+  r.headerOntology = await ev(hdr)
+  await shot(`${label}-8-header.png`)
+  await send('Page.navigate', { url: base + 'ontology-figures/' })
+  await sleep(2500)
+  r.figuresHeader = await ev(hdr)
+  r.figuresHscroll = await ev('document.documentElement.scrollWidth > innerWidth')
+  await shot(`${label}-9-figures.png`)
   r.errors = errs.splice(0)
   result.push(r)
 }

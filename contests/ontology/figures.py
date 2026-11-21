@@ -170,7 +170,9 @@ class Defs:
         assert self.n_data_all - len(self.data_no_sub) == self.n_data, "未確認のデータ条件の全体と応募についた件数が合わない"
         # 次の行動
         lab = na["unitLabels"]
-        self.unit_rows = [(u, lab.get(u, u), na["unitActions"][u]) for u in ["engineer", "intelligence", "military-police", "aggressor"] if u in na["unitActions"]]
+        main_units = ["engineer", "intelligence", "military-police", "aggressor"]
+        others = [u for u in na["unitActions"] if u not in main_units and u != "commander"]  # 例: 総司令官補佐の代理マージ判断
+        self.unit_rows = [(u, lab.get(u, u), na["unitActions"][u]) for u in main_units + others if u in na["unitActions"]]
         self.n_unit = sum(len(a) for _, _, a in self.unit_rows)
         assert self.n_unit == sum(len(v) for u, v in na["unitActions"].items() if u != "commander"), "部隊の作業の数え漏れ"
         self.cmd_actions = na["unitActions"].get("commander", [])

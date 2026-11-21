@@ -227,7 +227,7 @@ def build_report(g, now, datasets=None):
     for v in t_by.values():
         v.sort(key=lambda x: (x["due"] is None, x["due"] or ""))
     for ag in unit_actions:
-        unit_actions[ag].sort(key=lambda x: (x["_k"], x["app"], x["action"]))
+        unit_actions[ag].sort(key=lambda x: (x["_k"], x["app"] or "", x["action"]))
         for a in unit_actions[ag]:
             a.pop("_k", None)
     subs.sort(key=lambda s: (s["deadline"]["at"] is None, s["deadline"]["at"] or "", s["app"]))

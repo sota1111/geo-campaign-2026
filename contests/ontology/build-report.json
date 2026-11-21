@@ -29,11 +29,23 @@
    "what": "audience・purpose（registry.ts に未登録）"
   },
   {
+   "node": "id:app/biz-realestate-a4",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
    "node": "id:app/biz-idea-in1",
    "what": "アプリ×コンペの適合（適合 JSON に行がない）"
   },
   {
+   "node": "id:app/biz-realestate-a4",
+   "what": "アプリ×コンペの適合（適合 JSON に行がない）"
+  },
+  {
    "node": "id:app/sat-a",
+   "what": "使うデータ（README に出典・ライセンス表がなく、registry.ts にも sources がない）"
+  },
+  {
+   "node": "id:app/biz-realestate-a4",
    "what": "使うデータ（README に出典・ライセンス表がなく、registry.ts にも sources がない）"
   },
   {
@@ -91,39 +103,40 @@
  ],
  "counts": {
   "units": 10,
-  "apps": 19,
+  "apps": 20,
   "fits": 108,
   "datasets": 34,
   "licenses": 29,
-  "submissions": 19,
+  "submissions": 20,
   "selection_decisions": 7,
-  "unfilled_placeholders": 41,
+  "unfilled_placeholders": 44,
   "unconfirmed_data_conditions": 7,
-  "audits": 16,
-  "findings": 115,
+  "audits": 17,
+  "findings": 122,
   "findings_by_severity": {
-   "sev-disqualifying": 15,
-   "sev-fix": 71,
+   "sev-disqualifying": 16,
+   "sev-fix": 77,
    "sev-minor": 29
   },
   "tasks": 91,
   "open_tasks": 43,
   "decisions_from_status": 11,
-  "escalations": 13,
-  "pull_requests": 39
+  "escalations": 17,
+  "pull_requests": 45
  },
  "notes": [],
  "apps_without_dataset_rows": [
-  "sat-a"
+  "sat-a",
+  "biz-realestate-a4"
  ],
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
- "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
- "triples": 9790,
+ "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
+ "triples": 10136,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
-  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
+  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
  },
- "gap_count": 22
+ "gap_count": 25
 }
