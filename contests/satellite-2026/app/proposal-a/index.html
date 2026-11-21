@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>路面下リスクの二段階調査｜衛星で絞り、地中レーダで確かめる（デモ・架空データ）</title>
-<meta name="description" content="衛星由来の指標と下水道台帳で道路区間に点数を付け、地中レーダを投入する区間を選び、結果を点数に戻す流れを体験するデモです。表示はすべてサンプル（架空）データです。">
+<title>路面下リスクの二段階調査｜衛星で絞り、地中レーダで確かめる（デモ・実データ。レーダ結果のみ架空）</title>
+<meta name="description" content="国土地理院の干渉SAR成果・OpenStreetMap の道路・豊中市の下水道台帳で道路区間に点数を付け、地中レーダを投入する区間を選び、結果を点数に戻す流れを体験するデモです。地中レーダの結果だけは架空です。">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="map" aria-label="道路区間の地図（架空の市）"></div>
-<div id="badge" role="note">サンプル（架空）データ</div>
+<div id="map" aria-label="道路区間の地図（豊中市北東部）"></div>
+<div id="badge" role="note">実データ（衛星・道路・台帳）／レーダ結果のみ架空</div>
 
 <aside id="panel">
   <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
@@ -25,7 +25,10 @@
     <button type="button" role="tab" id="tab-3" data-step="3" aria-selected="false"><b>3</b>戻す</button>
   </nav>
   <div id="panel-body">
-    <div class="fake" role="note">このデモの道路・衛星指標・レーダ結果は<b>すべて架空のサンプル</b>です。実在の場所・精度・効果を示すものではありません。</div>
+    <div class="fake" role="note"><b>地中レーダの結果だけは架空</b>です（衛星・道路・下水道台帳は実データ）。画面の精度・効果の数字は実在のものではありません。</div>
+    <details class="sat" id="sat-note"><summary>衛星はだいち2号・4号（国土地理院）で代用。提案書の主想定は Sentinel-1（詳細）</summary>
+      <p>衛星は <b>ALOS-2/4（Lバンド）、国土地理院解析、約90m、階級 3.75 mm/年幅</b>。提案書は Sentinel-1 の解析を主に想定（ALOS-4 は比較検証）していますが、このデモは公開済みの国土地理院の成果（だいち2号・4号）で代用しています。解析：国土地理院 原初データ所有：JAXA。</p>
+    </details>
     <section id="s1" class="step" aria-labelledby="tab-1"></section>
     <section id="s2" class="step" hidden aria-labelledby="tab-2"></section>
     <section id="s3" class="step" hidden aria-labelledby="tab-3"></section>

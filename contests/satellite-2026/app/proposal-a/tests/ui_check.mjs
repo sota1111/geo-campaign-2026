@@ -45,9 +45,13 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await shot(c, `${label}_1_score.png`);
     r.info.scrollW = await c.ev('document.documentElement.scrollWidth');
     if (r.info.scrollW > w) r.fail.push('横スクロール発生 ' + r.info.scrollW);
+    r.info.badge = await c.ev('document.getElementById("badge").innerText');
+    r.info.sat_note = await c.ev('document.getElementById("sat-note").innerText.slice(0,160)');
+    r.info.w_shift_0 = await c.ev('document.getElementById("w-shift").innerText');
     r.info.top_before = await c.ev('[...document.querySelectorAll("#s1 tbody tr td:first-child")].map(e=>e.innerText).join(",")');
     await c.ev('(()=>{const e=document.getElementById("w");e.value=100;e.dispatchEvent(new Event("input"))})()');
     r.info.top_sat_only = await c.ev('[...document.querySelectorAll("#s1 tbody tr td:first-child")].map(e=>e.innerText).join(",")');
+    r.info.w_shift_100 = await c.ev('document.getElementById("w-shift").innerText');
     await c.ev('(()=>{const e=document.getElementById("w");e.value=50;e.dispatchEvent(new Event("input"))})()');
     await c.ev('document.getElementById("to2").click()');
     await c.ev('document.getElementById("auto").click()');
@@ -65,7 +69,7 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await c.ev('(()=>{const e=document.getElementById("bud");e.value=3;e.dispatchEvent(new Event("input"));e.dispatchEvent(new Event("change"))})()');
     await shot(c, `${label}_2_select.png`);
     // 地図上の実クリック（座標から）で選択が切り替わるか
-    const pt = await c.ev(`(()=>{const s=App.STATE.segs.find(x=>x.cls==="life"&&!x.surveyed&&!App.STATE.selected.has(x.id));const m=App.getMap();const p=m.project([(s.coords[0][0]+s.coords[1][0])/2,(s.coords[0][1]+s.coords[1][1])/2]);const rc=m.getCanvas().getBoundingClientRect();return {x:p.x+rc.left,y:p.y+rc.top,id:s.id,inView:p.x>0&&p.y>0&&p.x<rc.width&&p.y<rc.height}})()`);
+    const pt = await c.ev(`(()=>{const m=App.getMap();const rc=m.getCanvas().getBoundingClientRect();const vis=(s)=>{const p=m.project([(s.coords[0][0]+s.coords[1][0])/2,(s.coords[0][1]+s.coords[1][1])/2]);return p.x>rc.width*0.45&&p.y>60&&p.x<rc.width-20&&p.y<rc.height*0.5};const s=App.STATE.segs.find(x=>x.cls==="life"&&!x.surveyed&&!App.STATE.selected.has(x.id)&&vis(x))||App.STATE.segs.find(x=>x.cls==="life"&&!x.surveyed&&!App.STATE.selected.has(x.id));const p=m.project([(s.coords[0][0]+s.coords[1][0])/2,(s.coords[0][1]+s.coords[1][1])/2]);return {x:p.x+rc.left,y:p.y+rc.top,id:s.id,inView:p.x>0&&p.y>0&&p.x<rc.width&&p.y<rc.height}})()`);
     r.info.click_target = pt;
     r.info.sel_before_click = await c.ev('App.STATE.selected.size');
     if (pt.inView) {
@@ -88,6 +92,10 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     r.info.top_after = await c.ev('[...document.querySelectorAll("#s1 tbody tr td:first-child")].map(e=>e.innerText).join(",")');
     await shot(c, `${label}_4_round2.png`);
     await c.ev('document.getElementById("btn-about").click()');
+    r.info.about_has_sentinel_note = await c.ev('document.getElementById("about-body").innerText.includes("Sentinel-1 の解析を主に想定")');
+    if (!r.info.about_has_sentinel_note) r.fail.push('出典モーダルに Sentinel-1 の説明がない');
+    r.info.about_has_credit = await c.ev('["解析：国土地理院 原初データ所有：JAXA","© OpenStreetMap contributors","CC BY 4.0"].every(t=>document.getElementById("about-body").innerText.includes(t))');
+    if (!r.info.about_has_credit) r.fail.push('出典モーダルにクレジットが揃っていない');
     r.info.modal_overflow = await c.ev('(()=>{const b=document.querySelector(".modal-box");return b.scrollWidth-b.clientWidth})()');
     await shot(c, `${label}_5_about.png`);
     r.info.small_targets = await c.ev(`[...document.querySelectorAll('#panel button, #panel input')].filter(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.height>0&&b.height<32&&e.id!=="sheet-toggle"}).map(e=>(e.id||e.tagName)+':'+Math.round(e.getBoundingClientRect().height))`);

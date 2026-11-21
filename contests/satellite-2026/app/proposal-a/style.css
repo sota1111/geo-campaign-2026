@@ -16,6 +16,10 @@ body{overflow:hidden}
 #steps button[aria-selected=true]{background:var(--bg);color:var(--acc-d)}
 #steps button[aria-selected=true] b{background:var(--acc-d);color:#fff}
 #panel-body{flex:1;overflow:auto;padding:10px 16px 20px}
+.sat{font-size:12px;margin:0 0 10px;background:#fff;border:1px solid var(--line);border-radius:4px;padding:4px 10px}
+.sat summary{cursor:pointer;font-weight:700;min-height:28px;line-height:28px}
+.sat p{margin:2px 0 6px}
+.sw.sq{height:12px;border:1px solid #7a8a80}
 .fake{background:#fff3e0;border-left:4px solid var(--warn);padding:6px 10px;font-size:12px;margin-bottom:10px}
 .step h2{font-size:15px;margin:4px 0 4px}
 .step p{margin:4px 0}
@@ -47,7 +51,7 @@ tr.pick{background:#dff0f4}
 .cell-label{background:rgba(255,255,255,.88);border:1px solid var(--sub);border-radius:3px;padding:0 5px;font-size:11px;font-weight:700;color:var(--ink);pointer-events:none;white-space:nowrap}
 #modal{position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px}
 #modal[hidden]{display:none}
-.modal-box{background:#fff;max-width:640px;max-height:90vh;overflow:auto;padding:16px 18px;border-radius:8px;width:100%}
+.modal-box{overflow-wrap:anywhere;background:#fff;max-width:640px;max-height:90vh;overflow:auto;padding:16px 18px;border-radius:8px;width:100%}
 .modal-box h2{margin-top:0;font-size:17px}
 .modal-box h3{font-size:14px;margin:12px 0 2px}
 .modal-box ul{margin:2px 0;padding-left:20px}
