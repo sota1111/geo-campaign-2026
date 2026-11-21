@@ -871,6 +871,54 @@
       "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
     },
     {
+      "app": "biz-realestate-a4",
+      "contest": "udc-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "satellite-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "ichibiz-2026-business",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "ichibiz-2026-idea",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "◎",
+      "score": 3,
+      "reason": "このコンペ向けに作った（不動産情報活用部門向けの新案A4）",
+      "source": "contests/ichibiz-2026/app/realestate-a4/README.md"
+    },
+    {
+      "app": "biz-realestate-a4",
+      "contest": "odpt-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
       "app": "biz-solar-guard",
       "contest": "udc-2026",
       "mark": "△",
@@ -919,7 +967,7 @@
       "source": "reports/intel/odpt-2026-20261109.md §確定事項3"
     },
     {
-      "app": "biz-realestate-a4",
+      "app": "biz-realestate-timeline",
       "contest": "udc-2026",
       "mark": "？",
       "score": 0,
@@ -927,7 +975,7 @@
       "source": "なし（情報部の判定前）"
     },
     {
-      "app": "biz-realestate-a4",
+      "app": "biz-realestate-timeline",
       "contest": "satellite-2026",
       "mark": "？",
       "score": 0,
@@ -935,7 +983,7 @@
       "source": "なし（情報部の判定前）"
     },
     {
-      "app": "biz-realestate-a4",
+      "app": "biz-realestate-timeline",
       "contest": "ichibiz-2026-business",
       "mark": "？",
       "score": 0,
@@ -943,7 +991,7 @@
       "source": "なし（情報部の判定前）"
     },
     {
-      "app": "biz-realestate-a4",
+      "app": "biz-realestate-timeline",
       "contest": "ichibiz-2026-idea",
       "mark": "？",
       "score": 0,
@@ -951,15 +999,15 @@
       "source": "なし（情報部の判定前）"
     },
     {
-      "app": "biz-realestate-a4",
+      "app": "biz-realestate-timeline",
       "contest": "ichibiz-2026-realestate",
       "mark": "◎",
       "score": 3,
-      "reason": "このコンペ向けに作った（不動産情報活用部門向けの新案A4）",
-      "source": "contests/ichibiz-2026/app/realestate-a4/README.md"
+      "reason": "このコンペ向けに作った（不動産情報活用部門向けの新案・時間地図）",
+      "source": "contests/ichibiz-2026/app/realestate-timeline/README.md"
     },
     {
-      "app": "biz-realestate-a4",
+      "app": "biz-realestate-timeline",
       "contest": "odpt-2026",
       "mark": "？",
       "score": 0,
