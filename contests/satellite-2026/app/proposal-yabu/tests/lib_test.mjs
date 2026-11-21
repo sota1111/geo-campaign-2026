@@ -124,3 +124,37 @@ test('画面ファイル: 必須の注記（架空でない・最新でない・
   assert.ok(!/https?:\/\/(?!cyberjapandata\.gsi\.go\.jp|maps\.gsi\.go\.jp)/.test(app.replace(/\/\/.*$/gm, '')), '外部URLは地理院タイルのみ');
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon/.test(app), '外部送信なし');
 });
+
+// ---- 出没しやすさ（論文ベース）----
+test('出没しやすさ: 林縁20m・100m の選択度が論文の値（3.74・1.81）と一致する', () => {
+  assert.ok(Math.abs(L.habSelect(20, false) - 3.74) < 1e-9);
+  assert.ok(Math.abs(L.habSelect(100, false) - 1.81) < 0.01);
+  assert.equal(L.habSelect(10, true), 21.45);       // 川に接する林縁
+  assert.ok(L.habSelect(300, false) < L.habSelect(100, false) && L.habSelect(300, false) >= 1);
+});
+test('出没しやすさ: 等級は選択度の境目（3.74・1.81）で分かれ、集落係数・市街地係数が掛かる', () => {
+  assert.equal(L.habTier(3.74), 2); assert.equal(L.habTier(3.73), 1); assert.equal(L.habTier(1.81), 1); assert.equal(L.habTier(1.8), 0);
+  assert.equal(L.habTier(L.habScore(L.habSelect(20, false), 400, false)), 2);   // 林縁20m・人家500m圏内 = 高
+  assert.equal(L.habTier(L.habScore(L.habSelect(20, false), 800, false)), 1);   // 人家から遠い = 中に下がる
+  assert.equal(L.habTier(L.habScore(L.habSelect(100, false), 800, false)), 0);
+  assert.equal(L.habTier(L.habScore(L.habSelect(20, false), 100, true)), 1);    // 市街地 = 下がる
+});
+test('出没しやすさ: データの整合（候補区画すべてに付与・検証値が揃う・基準との比較がある）', () => {
+  const Hb = JSON.parse(fs.readFileSync(path.join(root, 'data/habitat.json'), 'utf8'));
+  assert.equal(Object.keys(Hb.cand).length, D.cells.length);
+  D.cells.forEach((c) => { const v = Hb.cand[c.id]; assert.ok(v && v[0] >= 0 && v[0] <= 2, c.id); assert.equal(L.habTier(v[1]), v[0], c.id); });
+  assert.ok(Hb.show.every((h) => h[2] >= 1) && Hb.show.length > 0);
+  assert.ok(Math.abs(Hb.meta.r100 - 1.81) < 0.01);
+  for (const p of ['all', 'all_no2010', 'first', 'first_no2010', 'second']) for (const z of ['land', 'near500']) {
+    const e = Hb.val[p + '|' + z]; assert.ok(e, p + z);
+    for (const k of ['S', 'R', 'base']) assert.ok(e.auc[k] >= 0 && e.auc[k] <= 1, p + z + k);
+    assert.equal(['高', '中', '低'].reduce((a, t) => a + e.tiers[t].n_cells, 0), e.n_cells);
+  }
+  const js = fs.readFileSync(path.join(root, 'data/habitat.js'), 'utf8');
+  assert.ok(js.startsWith('window.HABITAT='));
+});
+test('画面ファイル: 検証の折りたたみ・目撃の偏りの注記・出典（Takahata）が入っている', () => {
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.ok(html.includes('この判定は当たっているか') && html.includes('人の多い所に偏ります'));
+  assert.ok(app.includes('Takahata ほか 2014') && app.includes('人家からの距離だけ'));
+});

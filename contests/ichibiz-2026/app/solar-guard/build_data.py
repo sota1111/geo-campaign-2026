@@ -161,6 +161,9 @@ REGIONS = {  # 茨城県の地域区分（県の「県北・県央・鹿行・�
     "県西": "古河市 結城市 下妻市 常総市 筑西市 坂東市 桜川市 八千代町 五霞町 境町",
 }
 
+REGION_NAMES = list(REGIONS)
+CITY_REGION = {c: i for i, (_, cs) in enumerate(REGIONS.items()) for c in cs.split()}
+
 ADDR_FIELDS = {"kind": "発電設備区分", "kw": "発電出力", "addr": "発電設備の所在地", "pv": "太陽電池の合計出力", "start": "運転開始報告年月"}
 
 
@@ -239,6 +242,7 @@ def main():
     areas = []
     cells = collections.defaultdict(lambda: [0, 0.0, 0])  # (ix,iy) → [件数, 容量kW, うち50kW未満の件数]
     munis = collections.defaultdict(lambda: {"n": 0, "kw": 0.0, "small": 0, "placed": 0})
+    cell_reg = collections.defaultdict(collections.Counter)  # (ix,iy) → {地区の番号: 設備数}。メッシュの地区＝設備が最も多い地区（同数は番号が小さい方）
     for r in data:
         if not r[c["start"]] or r[c["start"]] == "-":
             stat["not_started"] += 1  # 運転開始前
@@ -268,6 +272,8 @@ def main():
         cl[0] += 1
         cl[1] += kw
         cl[2] += kw < SMALL_KW
+        if city in CITY_REGION:
+            cell_reg[k][CITY_REGION[city]] += 1
     areas.sort()
     stat["town_area_km2_median"] = round(areas[len(areas) // 2], 1)
     stat["town_area_km2_p90"] = round(areas[int(len(areas) * 0.9)], 1)
@@ -286,6 +292,11 @@ def main():
     stat["cells_hidden_dominant"] = stat["cells_hidden"] - stat["cells_hidden_small_n"]
     stat["plants_in_hidden_cells"] = sum(v[0] for v in cells.values() if not shown(v))
 
+    def region_of(k):
+        cnt = cell_reg[k]
+        return min(cnt, key=lambda r: (-cnt[r], r)) if cnt else -1
+
+    stat["cells_visible_mixed_region"] = sum(1 for k, _ in visible if len(cell_reg[k]) > 1)
     pops = load_pops()
     pop_rows = sorted([ix, iy, p] for (ix, iy), p in pops.items() if p > 0)
 
@@ -308,8 +319,9 @@ def main():
     }
     OUT.mkdir(parents=True, exist_ok=True)
     dump = lambda name, obj: (OUT / name).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    dump("cells.json", {"meta": meta, "cell": CELL, "cols": ["cx", "cy", "n", "kw", "small", "pop"],
-                         "rows": [[k[0], k[1], v[0], int(round(v[1] / KW_ROUND)) * KW_ROUND, v[2], cell_pop(pops, k)] for k, v in visible]})
+    dump("cells.json", {"meta": meta, "cell": CELL, "cols": ["cx", "cy", "n", "kw", "small", "pop", "region"],
+                         "regions": REGION_NAMES,
+                         "rows": [[k[0], k[1], v[0], int(round(v[1] / KW_ROUND)) * KW_ROUND, v[2], cell_pop(pops, k), region_of(k)] for k, v in visible]})
     dump("pops.json", {"meta": {"source": meta["mesh_source"], "note": "人口0または秘匿('*')のメッシュは含めない。秘匿は近隣メッシュに合算されている（e-Stat）"}, "cols": ["ix", "iy", "pop"], "rows": pop_rows})
     dump("munis.json", {"k_min": K_MIN, "rows": mrows})
     land = load_land()

@@ -33,7 +33,7 @@ const shot = async (name) => { await sleep(500); const s = await send('Page.capt
 let fails = 0, total = 0;
 const ok = (name, cond) => { total++; if (!cond) fails++; console.log(cond ? 'ok  ' : 'FAIL', name); };
 
-for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 390, 844, true]]) {
+for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 390, 844, true]]) {
   await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile });
   await send('Page.navigate', { url: base }); await sleep(1500);
   await ev('localStorage.clear(); location.reload()'); await sleep(2500);
@@ -41,6 +41,11 @@ for (const [label, w, h, mobile] of [['desktop', 1280, 900, false], ['mobile', 3
   ok(label + ': 起動時にエラーなし', logs.length === 0); if (logs.length) console.log(logs.splice(0));
   ok(label + ': バナーに「架空のデータは使っていません」と「最新ではありません」', await ev(`(()=>{const t=document.querySelector('#banner').textContent;return t.includes('架空のデータは使っていません')&&t.includes('最新ではありません')&&t.includes('仮置き')})()`));
   ok(label + ': 地図のキャンバスがある', await ev(`!!document.querySelector('#map canvas')`));
+  ok(label + ': 地図が画面の6〜7割（デスクトップは幅、スマホは高さ）', await ev(`(()=>{const r=document.querySelector('#map').getBoundingClientRect();return ${mobile} ? (r.height/innerHeight>=0.55 && r.height/innerHeight<=0.72 && r.width/innerWidth>0.9) : (r.width/innerWidth>=0.58 && r.width/innerWidth<=0.70 && r.height/innerHeight>=0.55)})()`));
+  ok(label + ': 出没しやすい範囲（高・中）の層が地図にある', await ev(`(async()=>{for(let i=0;i<30&&!(YabuApp.state.mapReady&&YabuApp.state.map.getLayer('hab-high'));i++)await new Promise(r=>setTimeout(r,200));const m=YabuApp.state.map;return !!m.getLayer('hab-high')&&!!m.getLayer('hab-mid')&&m.getLayer('hab-high').visibility!=='none'})()`));
+  ok(label + ': 凡例に高・中・低と根拠（Takahata）がある', await ev(`(()=>{const t=document.querySelector('#hab-legend').textContent;return t.includes('高')&&t.includes('中')&&t.includes('低')&&t.includes('3.74')&&t.includes('Takahata')&&t.includes('偏ります')})()`));
+  ok(label + ': 「この判定は当たっているか」は初期は閉じていて、開くと表が5つ以上・AUCと基準の比較が出る', await ev(`(()=>{const d=document.querySelector('#validation');const closed=!d.open;d.open=true;const n=d.querySelectorAll('table').length;const t=d.textContent;const r=closed&&n>=5&&/AUC/.test(t)&&t.includes('人家からの距離だけ（基準）')&&t.includes('2010年度を除く')&&t.includes('人の多い所');d.open=false;return r})()`));
+  ok(label + ': 順位表に出没しやすさの列がある', await ev(`document.querySelector('#ranktable thead').textContent.includes('クマの出没しやすさ')`));
   ok(label + ': 順位表が50行', (await ev(`document.querySelectorAll('#ranktable tbody tr[data-id]').length`)) === 50);
   ok(label + ': 横スクロールなし', await ev(`document.documentElement.scrollWidth <= window.innerWidth`));
   await shot(label + '_1_rank.png');

@@ -1,0 +1,30 @@
+{
+ "note": "リスクの色分けの条件は、JPEA・REASP と茨城県警の資料が挙げる「盗まれやすい条件」だけから作った。条件ごとの重みや閾値に公的な数値の根拠はなく、点数と色の切り方は仮。規模（出力）は点数に使わない（下の scale）。取得日 2026-11-21（情報部の報告 reports/intel/ichibiz-2026-solar-theft-risk-factors-20261121.md に依拠）。",
+ "sources": {
+  "JPEA": {"name": "JPEA・REASP「太陽光発電のケーブル盗難削減に向けて」2024-09-30 p.9「狙われやすい発電所に共通する特色」", "url": "https://www.jpea.gr.jp/wp-content/uploads/20240930npa_jpea_reasp.pdf"},
+  "KMS": {"name": "茨城県警察「小規模太陽光発電所を運用している方へ」", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/documents/syoukibohatudensyo.pdf"},
+  "IBF": {"name": "茨城県警察「太陽光発電所の窃盗対策 ～ケーブルへの3つの対策～」（令和8年4月）", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/documents/taiyoukoutounantaisaku_r0804.pdf"},
+  "IBP": {"name": "茨城県警察「金属盗難に注意！」", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/kinzoku.html"},
+  "SIZAI": {"name": "茨城県警察「建設中・稼働前の太陽光発電所の資材も狙われています」", "url": "https://www.pref.ibaraki.jp/kenkei/a01_safety/street/documents/sizai.pdf"}
+ },
+ "conds": [
+  {"id": "quiet", "label": "人目につきにくい立地", "auto": "quiet", "ask": "周囲に民家や通行がほとんどなく、夜間は人の目がない", "src": ["JPEA", "IBP"],
+   "why": "JPEA・REASPは「狙われやすい発電所に共通する特色」の1つ目に人目につきにくい立地を挙げ、夜間は無人で運営されるとする。県警も「人や交通量の多くない場所」が狙われやすいとする。数値の基準は資料にない。答えないときは、約5kmメッシュの常住人口密度が県内の低い方から1/3なら「当てはまる」とみなす（仮の切り方）。答えた場合は、その回答を使う。"},
+  {"id": "hidden", "label": "外から見えにくい", "ask": "道路や隣の土地から、敷地や設備が見えにくい（林・擁壁・高い植栽・盛土など）", "src": ["JPEA"],
+   "why": "JPEA・REASPの「特色」の2つ目。公開データでは再現できないので、本人の回答だけで判定する。"},
+  {"id": "upkeep", "label": "保守点検が不十分に見える", "derive": {"items": ["weed_fence", "patrol"], "risk": "any_no", "ok": "all_yes"}, "src": ["JPEA", "IBP"],
+   "why": "JPEA・REASPの「特色」の3つ目。県警も、雑草が茂りフェンスの手入れが悪いと管理されていないように見える趣旨を述べる。下の対策の「雑草・フェンスの管理」「定期巡回・草刈り・点検」のどちらかが『実施していない』なら当てはまる、両方『実施している』なら当てはまらない、それ以外は不明。"},
+  {"id": "nosec", "label": "防犯・警備の設備がない", "derive": {"items": ["fence_sensor", "machine_security", "camera", "alarm"], "risk": "none_yes_some_no", "ok": "any_yes"}, "src": ["JPEA", "KMS"],
+   "why": "JPEA・REASPの「特色」の4つ目。県警は「犯人は、防犯対策をしていない銅線ケーブルを狙います」とし、JPEA・REASPは下見の段階で防犯・警備の弱さを確認する例が増えたとする。下の対策のセンサー・機械警備・カメラ・警報のどれも『実施している』でなく、1つ以上が『実施していない』なら当てはまる。どれか1つでも『実施している』なら当てはまらない。"},
+  {"id": "exposed", "label": "転がし配管・むき出しのケーブル", "derive": {"items": ["pipes_buried", "collector_cover"], "risk": "any_no", "ok": "all_yes"}, "src": ["JPEA", "IBF"],
+   "why": "JPEA・REASPの「特色」の5つ目（転がし配管）。県警は、転がし配線は盗難リスクが高く、集電箱付近のケーブルが露出しているとそこから切断されると述べる。下の対策の「転がし配管・むき出しの配線がない」「引込柱・集電箱付近を覆う」のどちらかが『実施していない』なら当てはまる。"},
+  {"id": "escape", "label": "逃げやすい（側道などがある）", "ask": "敷地のすぐそばに、車で出入りしやすい側道や幹線道路がある", "src": ["JPEA", "KMS"],
+   "why": "JPEA・REASPの「特色」の6つ目。複数犯が下見で侵入経路を決め、短時間で逃げるとする。県警は山間部では車止めで近づけさせない対策を挙げる。距離の基準は資料になく、公開データでも再現できないので、本人の回答だけで判定する。"},
+  {"id": "stock", "label": "建設中・稼働前で資材を屋外に置いている", "ask": "建設中または稼働前で、ケーブルドラムなどの資材を屋外に置いている", "src": ["SIZAI"],
+   "why": "県警は、設置前に資材をまとめて屋外に保管していると被害に遭いやすい、外から見える場所に保管していると狙われやすいとする（数値はない）。運転中の設備のケーブル盗難とは別の被害。"}
+ ],
+ "scale": {
+  "note": "規模（出力）は色の点数に使わない。JPEA・REASPのアンケート（313設備）の1設備あたり平均被害額は特別高圧4,330万円・高圧2,560万円・低圧150万円（p.14）、2023年5月のアンケート（194設備）では被害設備の約5割が高圧クラス（1〜2MW）（ソーウィークセミナー2024 p.7）。一方、茨城県警は「小規模太陽光発電施設での発生が多い」とする（Metal News 令和7年・8年の各号）。標本の取り方が違い（協会の会員の報告と、県内の発生件数）、設備数で割った被害率の公表も見つからなかったので、どちらも採用せず両論を併記する。",
+  "url": "https://www.jpea.gr.jp/wp-content/uploads/20240930npa_jpea_reasp.pdf"
+ }
+}
