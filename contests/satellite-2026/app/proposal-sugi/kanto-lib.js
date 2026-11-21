@@ -22,7 +22,15 @@
   };
   // 出典が割れている林齢のしきい値。主流は26年生以上（森林総研 2000・2009）。20・21・25年の説もある。
   const AGES = [26, 21];
-  const DEFAULTS = { slopeMax: PROVISIONAL.slopeMax.value, minHa: PROVISIONAL.minHa.value, age: 26, radiusKm: 50, matureShare: 0.5 };
+  const DEFAULTS = { slopeMax: PROVISIONAL.slopeMax.value, minHa: PROVISIONAL.minHa.value, age: 26, radiusKm: 50, matureShare: 0.5, rankKm: 20, winterMin: 0.4, cutMinHa: 1 };
+  // 区分1の中の順位（作成者の式。仮）。S_i = a_i × Σ_j Pop_j×K(d_ij)、K は半径 R km 以内なら1。R の初期値20km（仮）。
+  const RANK_RADII = [10, 20, 30];
+  const RANK_BANDS = [
+    { k: 1, upto: 0.10, name: '上位10%', short: '最優先' },
+    { k: 2, upto: 0.30, name: '上位10〜30%', short: '優先' },
+    { k: 3, upto: 0.60, name: '上位30〜60%', short: '次点' },
+    { k: 4, upto: 1.01, name: '残り（下位40%）', short: '後回し' },
+  ];
 
   // 列指向データ D.cells の i 番目のメッシュを区分する。戻り値 1..4。
   function classify(D, i, p) {
@@ -87,7 +95,76 @@
     return s;
   }
 
+  // 半径内人口 X_i（人）。POP（data/pop.js）があれば人口、無ければ代替 max(0, 1−dist/50)（画面に「人口は使っていない」と出す）。
+  function exposure(D, POP, p) {
+    const n = D.cells.n.length, out = new Float64Array(n);
+    const col = POP && POP.x && POP.x[String(p.rankKm)];
+    if (col && col.length === n) { for (let i = 0; i < n; i++) out[i] = col[i] * POP.meta.unit; return { x: out, pop: true }; }
+    for (let i = 0; i < n; i++) out[i] = Math.max(0, 1 - D.cells.dist[i] / 50);
+    return { x: out, pop: false };
+  }
+  // 区分1のメッシュの点数 S_i = a_i（林齢しきい値以上のスギ人工林 ha）× X_i。区分1以外は 0。a_i は林齢で重み付けしない。
+  function scores(D, POP, p, cls) {
+    const c = D.cells, n = c.n.length, S = new Float64Array(n), ex = exposure(D, POP, p);
+    for (let i = 0; i < n; i++) if (cls[i] === 1) S[i] = (p.age === 21 ? c.n21[i] : c.n26[i]) * CELL_HA * ex.x[i];
+    return { S, x: ex.x, pop: ex.pop };
+  }
+  // 区分1の面積（ha）で数えた百分位の帯。同点は同じ帯。戻り値 band: 区分1は 1..4（1=上位10%）、他は 0。
+  function rankBands(D, cls, S) {
+    const c = D.cells, n = cls.length, band = new Uint8Array(n), pct = new Float32Array(n);
+    const idx = []; let tot = 0;
+    for (let i = 0; i < n; i++) if (cls[i] === 1) { idx.push(i); tot += c.n[i] * CELL_HA; }
+    idx.sort((a, b) => S[b] - S[a]);
+    let cum = 0;
+    for (let a = 0; a < idx.length;) {
+      let b = a; while (b + 1 < idx.length && S[idx[b + 1]] === S[idx[a]]) b++;
+      const f = tot ? cum / tot : 0, bd = RANK_BANDS.find((r) => f < r.upto).k;
+      for (let k = a; k <= b; k++) { band[idx[k]] = bd; pct[idx[k]] = f; cum += c.n[idx[k]] * CELL_HA; }
+      a = b + 1;
+    }
+    return { band, pct, tot };
+  }
+  // 帯ごとの区分1の面積（ha）。市町村ごと・都県ごと。
+  function bandSummary(D, cls, band) {
+    const c = D.cells, tot = [0, 0, 0, 0, 0];
+    const byMuni = D.munis.map(() => [0, 0, 0, 0, 0]), byPref = D.meta.prefs.map(() => [0, 0, 0, 0, 0]);
+    for (let i = 0; i < cls.length; i++) {
+      if (cls[i] !== 1) continue;
+      const ha = c.n[i] * CELL_HA, m = c.muni[i], b = band[i];
+      tot[b] += ha; byMuni[m][b] += ha; byPref[D.munis[m][1]][b] += ha;
+    }
+    return { tot, byMuni, byPref };
+  }
+  // 地点（lon, lat）の半径 R km 以内にある、区分1のメッシュの点数の合計。
+  function siteScore(D, S, lon, lat, R) { return haWithin(D, lon, lat, R, (i) => S[i]); }
+
+  // ---- 衛星（Sentinel-2 の冬の NDVI。data/sat.js）。樹種・林齢・雄花の量は判別できない。しきい値は仮 ----
+  // 要確認: 冬の NDVI の500mメッシュ平均が winterMin 未満（常緑の林が今も残っているか疑わしい。伐採跡・森林簿とのずれ・広葉樹の混在・影などの可能性）。
+  // 伐採・植え替えの候補: 古い冬に緑だった40m画素のうち NDVI が大きく下がった画素の面積（ha）。cutMinHa 以上のメッシュを「進んだ」とする。
+  function satInfo(SAT, i, p) {
+    if (!SAT) return null;
+    const w = SAT.wNew[i], ok = w > -900, cutHa = SAT.nDrop[i] * SAT.meta.pixelHa;
+    return { ndvi: ok ? w / 100 : null, check: ok && w / 100 < p.winterMin, cutHa, cut: cutHa >= p.cutMinHa, both: SAT.nBoth[i] * SAT.meta.pixelHa };
+  }
+  // 区分1の帯（band 1..4）ごと・市町村ごとの 要確認 の面積（ha, スギ人工林の面積）と 伐採候補の面積（ha）、衛星で見えたメッシュ数。
+  function satSummary(D, SAT, p, cls, band) {
+    const c = D.cells, z = () => ({ check: 0, cut: 0, cutCells: 0, seen: 0, all: 0 });
+    const byBand = [0, 1, 2, 3, 4].map(z), byMuni = D.munis.map(z), tot = z();
+    if (!SAT) return { byBand, byMuni, tot };
+    for (let i = 0; i < cls.length; i++) {
+      if (cls[i] !== 1) continue;
+      const si = satInfo(SAT, i, p), ha = c.n[i] * CELL_HA, m = c.muni[i];
+      for (const o of [byBand[band[i]], byMuni[m], tot]) {
+        o.all += ha;
+        if (si.ndvi != null) o.seen += ha;
+        if (si.check) o.check += ha;
+        o.cut += si.cutHa; if (si.cut) o.cutCells++;
+      }
+    }
+    return { byBand, byMuni, tot };
+  }
+
   function cellLonLat(D, i) { return [(D.cells.ix[i] + 0.5) / 160, (D.cells.iy[i] + 0.5) / 240]; }
 
-  return { CELL_HA, CLASSES, PROVISIONAL, AGES, DEFAULTS, classify, classifyAll, summarize, spearman, haWithin, cellLonLat };
+  return { satInfo, satSummary, RANK_RADII, RANK_BANDS, exposure, scores, rankBands, bandSummary, siteScore, CELL_HA, CLASSES, PROVISIONAL, AGES, DEFAULTS, classify, classifyAll, summarize, spearman, haWithin, cellLonLat };
 });
