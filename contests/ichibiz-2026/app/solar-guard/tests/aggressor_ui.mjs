@@ -1,6 +1,6 @@
 // アグレッサーの失敗テスト（画面）: 悪用・入力の境界・スマホ表示。既存の ui_check.mjs とは別。
 // usage: node tests/aggressor_ui.mjs <base_url>   （要 google-chrome、サーバー起動後）
-// 原本は reports/aggressor/ichibiz-2026-solar-guard-tests/。工兵が tests/ へ移した版（C の連続値の検査を、保持していない場合も動くように変えた）。
+// 原本は reports/aggressor/ichibiz-2026-solar-guard-tests/。工兵が tests/ へ移した版（C の連続値の検査を、保持していない場合も動くように変えた。2026-11-21 のリスク色分けの作り直しで、診断の呼び出しを新しい仕様に合わせた）。
 // 既定では見つけた弱点を表示して終了コード0。AGGRESSOR_STRICT=1 のとき弱点があれば終了コード1。
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -119,7 +119,7 @@ const setXY = (c, lat, lon) => c.ev(`document.getElementById("tab-diag").click()
     if (k.expectAccept && !accepted) findings.push(`B[軽微] ${k.name} を受け付けない（日本語入力の利用者は全角で入れやすい）`);
   }
   // quietPos が 0〜100 を超えないこと
-  const qp = await c.ev(`(function(){var r=Sg.diagnose({lon:140.85,lat:36.0,cls:'unknown',answers:{}},{cells:SgApp.STATE.cells,pops:SgApp.STATE.pops,items:SgApp.STATE.items,weights:SgApp.STATE.weights});return r.quietPos;})()`);
+  const qp = await c.ev(`(function(){var r=Sg.diagnose({lon:140.85,lat:36.0,cls:'unknown',answers:{},cond:{}},{cells:SgApp.STATE.cells,pops:SgApp.STATE.pops,items:SgApp.STATE.items,conds:SgApp.STATE.risk.conds,tiers:SgApp.STATE.tiers,regionNames:SgApp.STATE.areaNames});return r.quietPos;})()`);
   console.log('B: 人口0のメッシュの quietPos', qp);
   if (qp > 100) findings.push(`B[軽微] 人口0のメッシュで「人の少なさの位置」が ${qp.toFixed(2)}（0〜100の範囲外。画面では丸めて100と表示）`);
 
