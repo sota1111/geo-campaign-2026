@@ -4,7 +4,7 @@
   AGGRESSOR_STRICT=1 python3 tests/test_aggressor.py   # 弱点があれば失敗
 
 原本: reports/aggressor/ichibiz-2026-solar-guard-tests/（アグレッサーの報告 reports/aggressor/ichibiz-2026-solar-guard-20261113.md）。
-工兵が変えた点（報告に記載）: APP のパス、F1 の判定（下記）、重みを初期値（G.defaultWeights）に。
+工兵が変えた点（報告に記載）: APP のパス、F1 の判定（下記）。2026-11-21 のリスク色分けの作り直し（重み・5段階の帯を廃止）に合わせて、診断・F1・容量の検査を新しい仕様に置き換えた。
 F1（県警の5地区別の被害と目安の順位相関）について: 工兵は実績に合わせて重みを調整しない方針（総司令官の指示）。
 そのため、相関が負でも「README と画面が食い違いを開示している」なら弱点としない。開示が無ければ弱点。
 """
@@ -27,8 +27,10 @@ def J(name):
 
 def node(js):
     """lib.js とデータを読み込んだ node で js を評価し、JSON で受け取る"""
-    prog = "const Sg=require(%s);const C=require(%s);const P=require(%s);const K=require(%s);const M=require(%s);\n" % tuple(
-        json.dumps(str(p)) for p in (WEB / "lib.js", DATA / "cells.json", DATA / "pops.json", DATA / "checklist.json", DATA / "munis.json"))
+    prog = "const Sg=require(%s);const C=require(%s);const P=require(%s);const K=require(%s);const M=require(%s);const RK=require(%s);const RE=require(%s);const DI=require(%s);\n" % tuple(
+        json.dumps(str(p)) for p in (WEB / "lib.js", DATA / "cells.json", DATA / "pops.json", DATA / "checklist.json", DATA / "munis.json", DATA / "risk.json", DATA / "reality.json", DATA / "districts.json"))
+    prog += ("const D711=Sg.districtStats(DI.regions,RE.areas711.rows,M.rows);const TIERS=C.regions.map(function(nm){return D711.rows.filter(function(r){return r.area===nm})[0].tier});"
+             "const CTX=function(){return {cells:C.rows,pops:Sg.popGrid(P.rows),items:K.items,conds:RK.conds,tiers:TIERS,regionNames:C.regions}};\n")
     r = subprocess.run(["node", "-e", prog + "console.log(JSON.stringify((function(){" + js + "})()))"], capture_output=True, text=True, timeout=120)
     if r.returncode:
         raise RuntimeError(r.stderr)
@@ -81,7 +83,7 @@ class TestAbuse(Weakness):
     def test_mesh_score_is_not_exposed_as_rankable_values(self):
         """「順位は出さない・色は五分位」の主張: CSV とポップアップにメッシュ別の連続値（順位に直せる値）が無いこと"""
         js = (WEB / "app.js").read_text(encoding="utf-8")
-        self.weak("'目安スコア'" in js, "CSV のメッシュ別に『目安スコア』列がある（並べ替えれば235メッシュの順位表）")
+        self.weak("'目安スコア'" in js or "score:" in js, "CSV のメッシュ別に『目安スコア』列がある（並べ替えれば235メッシュの順位表）")
         self.weak("'人の少なさの位置', '容量の位置', '低圧割合の位置'" in js, "CSV のメッシュ別に3指標の位置（0〜100の百分位順位）がある")
         self.weak("指標の位置（0〜100）" in js, "地図ポップアップに各メッシュの指標の位置（0〜100）が出る。位置×234/100 で県内順位が復元できる")
 
@@ -89,7 +91,7 @@ class TestAbuse(Weakness):
         """件数3以上でも、件数・出力計・50kW未満の件数の3つから、1件だけの大きな設備の出力が狭い幅で割り出せるメッシュが無いこと。
         n - small == 1 なら、その1件の出力は [kw - 50*small, kw - 20*small]（認定情報は20kW以上）に入る。"""
         bad = []
-        for cx, cy, n, kw, small, pop in J("cells.json")["rows"]:
+        for cx, cy, n, kw, small, pop, _region in J("cells.json")["rows"]:
             if n - small == 1 and n < 10:
                 bad.append(f"({cx},{cy}) n={n} 出力計{kw}kW 50kW未満{small} → 残る1件は{kw - 50 * small:.0f}〜{kw - 20 * small:.0f}kW")
         self.weak(bad, "1件の大きな設備の出力が割り出せる少数メッシュ: " + " / ".join(bad))
@@ -97,15 +99,15 @@ class TestAbuse(Weakness):
     def test_diagnosis_uses_only_the_5km_cell(self):
         """画面・README『位置は約5kmメッシュに直して使い、正確な地点は使いません』: 同じ5kmメッシュ内の2点で結果が同じこと"""
         r = node("""
-          var pops=Sg.popGrid(P.rows), ctx={cells:C.rows,pops:pops,items:K.items,weights:Sg.defaultWeights()};
+          var ctx=CTX(), inp=function(lon,lat){return {lon:lon,lat:lat,cls:'unknown',answers:{camera:'no'},cond:{hidden:'yes'}}};
           var m=Sg.toMesh(140.4468,36.3418), b=Sg.cellBounds(m.cx,m.cy);
-          var a=Sg.diagnose({lon:b[0]+0.005,lat:b[1]+0.005,cls:'unknown',answers:{}},ctx), z=Sg.diagnose({lon:b[2]-0.005,lat:b[3]-0.005,cls:'unknown',answers:{}},ctx);
-          return [a.localPop3km, z.localPop3km, a.code, z.code];""")
-        self.weak(r[0] != r[1] or r[2] != r[3], f"同じ5kmメッシュの2点で『周囲3km四方の人口』が {r[0]} と {r[1]}（1kmメッシュ {r[2]} / {r[3]}）。実際は1km単位の位置を使っている")
+          var a=Sg.diagnose(inp(b[0]+0.005,b[1]+0.005),ctx), z=Sg.diagnose(inp(b[2]-0.005,b[3]-0.005),ctx);
+          return [[a.cellPopulation,a.scoreMin,a.scoreMax,JSON.stringify(a.region)].join('|'), [z.cellPopulation,z.scoreMin,z.scoreMax,JSON.stringify(z.region)].join('|'), a.code, z.code];""")
+        self.weak(r[0] != r[1] or r[2] != r[3], f"同じ5kmメッシュの2点で診断の結果（人口|点数|地区）が {r[0]} と {r[1]}（1kmメッシュ {r[2]} / {r[3]}）。実際は1km単位の位置を使っている")
 
     def test_quiet_position_in_range(self):
         """人の少なさの位置は0〜100（人口0のメッシュ＝海上・山林でも）"""
-        q = node("""var pops=Sg.popGrid(P.rows);return Sg.diagnose({lon:140.85,lat:36.0,cls:'unknown',answers:{}},{cells:C.rows,pops:pops,items:K.items,weights:Sg.defaultWeights()}).quietPos;""")
+        q = node("""return Sg.diagnose({lon:140.85,lat:36.0,cls:'unknown',answers:{},cond:{}},CTX()).quietPos;""")
         self.weak(not (0 <= q <= 100), f"人口0のメッシュで quietPos={q:.2f}（0〜100の外）")
 
     def test_diagnosis_rejects_outside_ibaraki(self):
@@ -119,37 +121,37 @@ class TestAbuse(Weakness):
 
 @unittest.skipUnless(shutil.which("node"), "node が無い")
 class TestJudge(Weakness):
-    def test_score_agrees_with_police_district_counts(self):
-        """県警の5地区別の太陽光被害（R8.9月末・暫定）と、市町村の目安（初期の重み）の地区平均の順位相関。
-        工兵の方針: 実績に合わせて重みを調整しない。負の相関は、README と画面が食い違いを開示していれば弱点としない。
-        前提（推測）: 5地区は茨城県の地域区分と同じ。"""
-        theft = {r["area"]: r["n"] for r in J("reality.json")["areas"]["rows"]}
+    def test_color_agrees_with_police_district_counts(self):
+        """県警の5地区別の太陽光被害（R7.11末＝色の根拠、R8.9末＝別の期間）と、メッシュの色の地区平均の順位相関。
+        人目の少ないメッシュの割合と被害率の相関（地区間で逆向きなら、人目は実績の裏づけが無い）も見る。
+        工兵の方針: 実績に合わせて規則を調整しない。逆向き・独立でないことは、README と画面が開示していれば弱点としない。"""
         regions = J("districts.json")["regions"]
         self.assertEqual({k: " ".join(v) for k, v in regions.items()}, REGIONS, "districts.json が地域区分と一致しない")
-        ms = node("return Sg.scoreMunis(M.rows,Sg.defaultWeights()).map(function(m){return [m.name,m.n,m.score];});")
-        by = {m[0]: m for m in ms}
-        names = [n for v in REGIONS.values() for n in v.split()]
-        self.assertEqual(sorted(names), sorted(by), "地域区分の市町村名が munis.json と一致しない")
+        ml = node("return Sg.meshLevels(C.rows,TIERS).map(function(c){return [c.region,c.level,c.quiet?1:0];});")
         keys = list(REGIONS)
-        rate, score = [], []
-        for k in keys:
-            mm = [by[n] for n in REGIONS[k].split()]
-            rate.append(theft[k] / sum(m[1] for m in mm) * 1000)
-            score.append(sum(m[2] for m in mm) / len(mm))
-        rho = spearman(score, rate)
-        detail = " / ".join(f"{k}: 目安平均{s:.1f}・被害{theft[k]}件(設備千件あたり{r:.1f})" for k, s, r in zip(keys, score, rate))
+        t711 = {r["area"]: r["n"] for r in J("reality.json")["areas711"]["rows"]}
+        t89 = {r["area"]: r["n"] for r in J("reality.json")["areas"]["rows"]}
+        munis = {m["name"]: m["n"] or 0 for m in J("munis.json")["rows"]}
+        plants = {k: sum(munis[n] for n in REGIONS[k].split()) for k in keys}
+        rate711 = [t711[k] / plants[k] * 1000 for k in keys]
+        rate89 = [t89[k] / plants[k] * 1000 for k in keys]
+        mean = [sum(m[1] for m in ml if m[0] == i) / sum(1 for m in ml if m[0] == i) for i in range(5)]
+        quiet = [sum(m[2] for m in ml if m[0] == i) / sum(1 for m in ml if m[0] == i) for i in range(5)]
+        r1, r2, r3 = spearman(mean, rate711), spearman(mean, rate89), spearman(quiet, rate711)
         readme = (APP / "README.md").read_text(encoding="utf-8")
         screen = (WEB / "app.js").read_text(encoding="utf-8") + (WEB / "index.html").read_text(encoding="utf-8")
-        disclosed = all(w in readme for w in ("県警", "一致していません", "順位相関", "推測")) and all(w in screen for w in ("一致していません", "順位相関", "推測", "dist-compare"))
-        print(f"\n[F1] 順位相関 {rho:.2f}（開示 {'あり' if disclosed else 'なし'}）。{detail}")
-        self.weak(rho < 0 and not disclosed, f"市町村の目安の地区平均と被害の順位相関が {rho:.2f}（逆向き）なのに、README か画面が開示していない")
+        disclosed = all(w in readme for w in ("独立の検証ではありません", "逆向き", "推測", "仮")) and all(w in screen for w in ("独立の検証ではありません", "逆向き", "推測", "dist-compare"))
+        print(f"\n[F1] 色の平均×R7.11 {r1:.2f} / ×R8.9 {r2:.2f} / 人目の少ない割合×被害率 {r3:.2f}（開示 {'あり' if disclosed else 'なし'}）")
+        self.weak((r3 < 0 or r1 < 0) and not disclosed, f"色の地区平均や人目の指標が実績と逆向き（{r1:.2f} / {r3:.2f}）なのに、README か画面が開示していない")
 
-    def test_capacity_indicator_is_not_just_plant_count(self):
-        """『設備容量のまとまり』（出力合計kW）が、ほぼ設備の件数の言い換えになっていないこと"""
-        rho = node("""var s=Sg.scoreCells(C.rows,Sg.defaultWeights());var a=s.map(function(c){return c.parts.kw}),b=Sg.percentRank(s.map(function(c){return c.n}));
-          var n=a.length,ma=a.reduce(function(x,y){return x+y})/n,mb=b.reduce(function(x,y){return x+y})/n,c=0,va=0,vb=0;
-          for(var i=0;i<n;i++){c+=(a[i]-ma)*(b[i]-mb);va+=(a[i]-ma)*(a[i]-ma);vb+=(b[i]-mb)*(b[i]-mb);}return c/Math.sqrt(va*vb);""")
-        self.weak(rho > 0.7, f"容量の位置と件数の位置の相関が {rho:.2f}。目安の3分の1が『設備が多い所』を測っており、手薄さの代理として弱い")
+    def test_scale_is_not_used_for_color(self):
+        """規模は JPEA・REASP と県警で向きが食い違うので色に使わない。使っていれば弱点（両論併記の主張と矛盾）"""
+        lib = (WEB / "lib.js").read_text(encoding="utf-8")
+        a = lib.index("function mapLevel")
+        line = lib[a:lib.index("\n", a)]
+        body = line + lib[lib.index("var base = rows.map", lib.index("function meshLevels")):lib.index("return base;", lib.index("function meshLevels"))].split("base.forEach")[1]
+        self.weak(".kw" in body or ".small" in body or ".share" in body, "メッシュの色の計算に出力・低圧割合が入っている")
+
 
 
 if __name__ == "__main__":

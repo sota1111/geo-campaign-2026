@@ -83,7 +83,7 @@ class TestData(unittest.TestCase):
     def test_small_cells_hidden(self):
         k = self.meta["k_min"]
         self.assertGreaterEqual(k, 3)
-        self.assertEqual(self.cells["cols"], ["cx", "cy", "n", "kw", "small", "pop"])
+        self.assertEqual(self.cells["cols"], ["cx", "cy", "n", "kw", "small", "pop", "region"])
         for r in self.cells["rows"]:
             self.assertGreaterEqual(r[2], k, "しきい値未満のメッシュが出力に残っている")
             self.assertLessEqual(r[4], r[2])
@@ -177,7 +177,8 @@ class TestData(unittest.TestCase):
                 self.assertNotIn(w, txt, f"{f.name} に {w} が含まれる")
         # 個別設備の位置（緯度経度の小数）が cells に無い: 行は整数だけ（kw 以外）
         for r in self.cells["rows"]:
-            self.assertTrue(all(isinstance(x, int) for x in (r[0], r[1], r[2], r[4], r[5])))
+            self.assertTrue(all(isinstance(x, int) for x in (r[0], r[1], r[2], r[4], r[5], r[6])))
+            self.assertEqual(len(r), 7)  # 設備単位の列（ID・名称・座標）は無い。地区は5つのどれかの番号だけ
 
     def test_raw_values_absent_from_public_files(self):
         raw = HERE / "raw" / "ibaraki.xlsx"
@@ -233,7 +234,7 @@ class TestUiCode(unittest.TestCase):
         """「順位は出さない」: 連続のスコア・各指標の位置（0〜100）を、画面・CSV・公開 JSON に出さない"""
         for w in ["目安スコア", "指標の位置（0〜100）", "人の少なさの位置", "容量の位置", "低圧割合の位置"]:
             self.assertNotIn(w, self.js + self.html, w)
-        self.assertIn("delete c.score; delete c.parts;", self.js)
+        self.assertNotIn("score", self.js.replace("scoreMin", "").replace("scoreMax", ""))
         for f in DATA.glob("*.json"):
             self.assertNotIn("score", f.read_text(encoding="utf-8").lower().replace("scored", ""), f.name)
 
@@ -259,11 +260,53 @@ class TestUiCode(unittest.TestCase):
                 self.assertTrue(ck["sources"][s]["url"].startswith("https://"), s)
             self.assertTrue(set(it["cls"]) <= {"all", "low", "high", "special"})
         r = J("reality.json")
-        for k in ("yearly", "solar", "areas"):
+        for k in ("yearly", "solar", "areas", "areas711", "nation", "law"):
             self.assertTrue(r[k]["url"].startswith("https://") and r[k]["source"])
+        self.assertEqual(sum(a["n"] for a in r["areas711"]["rows"]), 1009)  # 令和7年11月末の5地区の合計＝県の太陽光（情報部が確認）
+        self.assertEqual([a["area"] for a in r["areas711"]["rows"]], [a["area"] for a in r["areas"]["rows"]])
         self.assertEqual(sum(a["n"] for a in r["areas"]["rows"]), r["solar"]["rows"][-1]["solar"])  # 5地区の合計＝9月末の太陽光
         for row in r["solar"]["rows"]:
             self.assertLessEqual(row["solar"], row["metal"])
+
+
+class TestRisk(unittest.TestCase):
+    """リスクの色分けの根拠（出典・仮の明記）と、公開物に個別設備の情報が出ないこと"""
+
+    def test_conditions_have_sources_and_why(self):
+        rk = J("risk.json")
+        self.assertEqual(len(rk["conds"]), 7)
+        self.assertIn("仮", rk["note"])
+        for c in rk["conds"]:
+            self.assertTrue(c["why"] and c["src"] and c["label"], c["id"])
+            for s in c["src"]:
+                self.assertTrue(rk["sources"][s]["url"].startswith("https://"), s)
+        ck = {i["id"] for i in J("checklist.json")["items"]}
+        for c in rk["conds"]:
+            for i in (c.get("derive") or {}).get("items", []):
+                self.assertIn(i, ck)
+        self.assertIn("両論", rk["scale"]["note"])  # 規模は両論併記
+        # 国土数値情報 N06 は使わない（利用条件が未確認）
+        self.assertNotIn("N06", json.dumps(rk, ensure_ascii=False))
+
+    def test_regions_in_cells_match_districts(self):
+        cells = J("cells.json")
+        regs = J("districts.json")["regions"]
+        self.assertEqual(cells["regions"], list(regs))
+        import build_data as b
+        self.assertEqual(b.REGION_NAMES, list(regs))
+        self.assertEqual({c: i for i, (_, cs) in enumerate(regs.items()) for c in cs}, b.CITY_REGION)
+        self.assertGreater(cells["meta"]["stats"]["cells_visible_mixed_region"], 0)
+
+    def test_public_html_states_provisional_and_no_individual(self):
+        html = (WEB / "index.html").read_text(encoding="utf-8") + (WEB / "app.js").read_text(encoding="utf-8")
+        for w in ["仮", "独立の検証ではありません", "本人のブラウザ内だけ", "県警の被害実績との照合", "金属盗対策法", "規模（出力）"]:
+            self.assertIn(w, html, w)
+        # 公開の地図・CSV の側に、個別の設備の位置・ID・名称の列が無い
+        js = (WEB / "app.js").read_text(encoding="utf-8")
+        a = js.index("function buildCsvRows()")
+        csv = js[a:js.index("function downloadCsv()")]
+        for w in ["設備ID", "事業者", "緯度", "経度"]:
+            self.assertNotIn(w, csv, w)
 
 
 if __name__ == "__main__":
