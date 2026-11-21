@@ -20,6 +20,11 @@ export function fromContest(): string | undefined {
   return v && ['odpt-2026', 'udc-2026', 'satellite-2026', 'ichibiz-2026'].includes(v) ? v : undefined
 }
 
+/** コンペの概要ページ（contest/<id>/index.html）の URL。サイドバーのコンペ名・アプリのヘッダーから入る */
+export function contestUrl(contestId: string): string {
+  return `${siteRoot()}contest/${contestId}/index.html`
+}
+
 /** 各アプリの独立ページの URL */
 export function appUrl(appId: string): string {
   return `${siteRoot()}apps/${appId}/index.html`

@@ -9,6 +9,7 @@ const base = process.argv[2]
 const ids = ['odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定）
   'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed']
+const contests = ['udc-2026', 'satellite-2026', 'ichibiz-2026', 'odpt-2026']
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const port = 9300 + Math.floor(Math.random() * 500)
 const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'))
@@ -41,6 +42,29 @@ for (const id of ids) {
   const url2 = await ev('location.pathname + location.hash'); const openRows = await ev("document.querySelectorAll('[data-testid^=row-][aria-expanded=true]').length")
   out.push({ id, opened: url1, back: url2, openRows, errs: errs.splice(0) })
 }
-console.log(JSON.stringify({ out, errs }, null, 2))
+// サイドバーのコンペ名 → コンペ画面 → アプリカード → アプリ → 「○○の概要」 → 戻る
+const cout = []
+for (const c of contests) {
+  await send('Page.navigate', { url: base })
+  await sleep(1500)
+  await ev(`document.querySelector('[data-contest-link="${c}"]').click()`)
+  await sleep(1500)
+  const page = await ev('location.pathname')
+  const apps = await ev("document.querySelectorAll('[data-app-card]').length")
+  const sidebar = await ev("document.querySelectorAll('[data-contest-link]').length")
+  const first = await ev("document.querySelector('[data-app-card] a[data-app-link]').dataset.appLink")
+  await ev(`document.querySelector('[data-app-card] a[data-app-link]').click()`)
+  await sleep(2500)
+  const appPage = await ev('location.pathname')
+  await ev(`document.querySelector('[data-testid=contest-link]').click()`)
+  await sleep(1500)
+  const back = await ev('location.pathname')
+  await ev(`document.querySelector('[data-testid=back-portal]').click()`)
+  await sleep(1500)
+  const portal = await ev('location.pathname')
+  const sw = await ev('document.documentElement.scrollWidth <= window.innerWidth')
+  cout.push({ c, page, apps, sidebar, first, appPage, back, portal, noHScroll: sw, errs: errs.splice(0) })
+}
+console.log(JSON.stringify({ out, cout, errs }, null, 2))
 ws.close(); chrome.kill()
 try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }) } catch { /* ignore */ }
