@@ -1,0 +1,13 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q5 このデータの利用条件が×（使えない）なら影響を受けるアプリ・応募。?dataset を束縛して呼ぶ（束縛しなければ全データ）。
+SELECT ?dataset ?datasetLabel ?app ?appLabel ?sub ?contest ?division
+WHERE {
+  ?dataset a c:Dataset ; rdfs:label ?datasetLabel .
+  ?app c:usesDataset ?dataset ; rdfs:label ?appLabel .
+  OPTIONAL { ?app c:hasSubmission ?sub . ?sub c:toContest ?contest .
+             OPTIONAL { ?sub c:toDivision ?division } }
+}
+ORDER BY ?dataset ?app

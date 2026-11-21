@@ -1,0 +1,124 @@
+@prefix c:    <https://geo-campaign-2026.example/ontology#> .
+@prefix id:   <https://geo-campaign-2026.example/id/> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+# 必須の関係の検査。Violation は失敗（exit 1）、Warning は「未抽出・記載なし」の可視化で失敗にしない。
+
+<https://geo-campaign-2026.example/shapes> a owl:Ontology ;
+    sh:declare [ sh:prefix "c" ; sh:namespace "https://geo-campaign-2026.example/ontology#"^^xsd:anyURI ] .
+
+# --- 出典: すべての主要ノードに出典を要求する --------------------------------------------
+c:SourcedShape a sh:NodeShape ;
+    sh:targetClass c:Contest, c:Division, c:Theme, c:Deadline, c:Criterion, c:Rule, c:SubmissionLimit,
+        c:App, c:Submission, c:Fit, c:Dataset, c:Task, c:Decision, c:PullRequest, c:Audit,
+        c:Finding, c:UnfilledField, c:UnconfirmedDataCondition, c:MissingDeliverable,
+        c:Unit, c:Commander, c:Stage, c:MergeRecord, c:StageRecord ;
+    sh:property [ sh:path c:hasSource ; sh:minCount 1 ; sh:class c:Source ;
+                  sh:message "出典（hasSource）がない" ] ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:message "ラベルがない" ] .
+
+c:SourceShape a sh:NodeShape ;
+    sh:targetClass c:Source ;
+    sh:or ( [ sh:path c:path ; sh:minCount 1 ] [ sh:path c:url ; sh:minCount 1 ] ) ;
+    sh:message "Source に path も url もない" .
+
+# --- 指摘: 重大度と監査 -----------------------------------------------------------------
+c:FindingShape a sh:NodeShape ;
+    sh:targetClass c:Finding ;
+    sh:property [ sh:path c:severity ; sh:minCount 1 ; sh:maxCount 1 ; sh:class c:Severity ;
+                  sh:message "Finding に重大度（severity）が 1 つ必要" ] ;
+    sh:property [ sh:path c:raisedIn ; sh:minCount 1 ; sh:maxCount 1 ; sh:class c:Audit ;
+                  sh:message "Finding は raisedIn の監査が必要" ] .
+
+c:DisqualifyingCertaintyShape a sh:NodeShape ;
+    sh:targetClass c:Finding ;
+    sh:sparql [ sh:message "失格級の指摘に certainty（確定/要確認）がない" ;
+                sh:prefixes <https://geo-campaign-2026.example/shapes> ;
+                sh:select """SELECT $this WHERE { $this c:severity c:sev-disqualifying .
+                             FILTER NOT EXISTS { $this c:certainty ?x } }""" ] .
+
+c:AuditShape a sh:NodeShape ;
+    sh:targetClass c:Audit ;
+    sh:property [ sh:path c:auditDate ; sh:minCount 1 ; sh:severity sh:Warning ; sh:message "監査日が取れていない" ] .
+
+# --- アプリ・応募 -----------------------------------------------------------------------
+c:AppShape a sh:NodeShape ;
+    sh:targetClass c:App ;
+    sh:property [ sh:path c:sourceId ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path c:usesDataset ; sh:minCount 1 ; sh:severity sh:Warning ;
+                  sh:message "使うデータが取り出せていない（未抽出）" ] ;
+    sh:property [ sh:path c:hasSubmission ; sh:minCount 1 ; sh:severity sh:Warning ;
+                  sh:message "応募（Submission）がない" ] .
+
+c:SubmissionShape a sh:NodeShape ;
+    sh:targetClass c:Submission ;
+    sh:property [ sh:path c:ofApp ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path c:toContest ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path c:slotKey ; sh:minCount 1 ] .
+
+c:FitShape a sh:NodeShape ;
+    sh:targetClass c:Fit ;
+    sh:property [ sh:path c:fitApp ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path c:fitTarget ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path c:mark ; sh:minCount 1 ; sh:in ( "◎" "○" "△" "×" "？" ) ] ;
+    sh:property [ sh:path c:score ; sh:minCount 1 ; sh:datatype xsd:integer ] .
+
+# --- データ ----------------------------------------------------------------------------
+c:DatasetShape a sh:NodeShape ;
+    sh:targetClass c:Dataset ;
+    sh:property [ sh:path c:hasLicense ; sh:minCount 1 ; sh:severity sh:Warning ;
+                  sh:message "ライセンスが取り出せていない（ライセンス欄が空）" ] .
+
+c:LicenseShape a sh:NodeShape ;
+    sh:targetClass c:License ;
+    sh:property [ sh:path c:conditionStatus ; sh:minCount 1 ] .
+
+# --- 人間の関門は自動で進めない（doctrine/roe.md） -----------------------------------------
+c:HumanGateStageShape a sh:NodeShape ;
+    sh:targetClass c:Stage ;
+    sh:sparql [ sh:message "人間の関門の段階の担当は総司令官でなければならない" ;
+                sh:prefixes <https://geo-campaign-2026.example/shapes> ;
+                sh:select """SELECT $this WHERE { $this c:isHumanGate true ; c:performedBy ?p .
+                             FILTER NOT EXISTS { ?p a c:Commander } }""" ] .
+
+c:HumanGateDecisionShape a sh:NodeShape ;
+    sh:targetClass c:HumanGate ;
+    sh:sparql [ sh:message "人間の関門（案の選定・提出・registry・ページ削除）を自動化された部隊が決めている" ;
+                sh:prefixes <https://geo-campaign-2026.example/shapes> ;
+                sh:select """SELECT $this WHERE { $this c:decidedBy ?p .
+                             FILTER NOT EXISTS { ?p a c:Commander } }""" ] .
+
+c:NoTaskForGateShape a sh:NodeShape ;
+    sh:targetClass c:Task ;
+    sh:sparql [ sh:message "未完了の作業が部隊に割り当てられているのに、内容が人間の関門（提出・登録・選定）である" ;
+                sh:severity sh:Warning ;
+                sh:prefixes <https://geo-campaign-2026.example/shapes> ;
+                sh:select """SELECT $this WHERE { $this c:status "open" ; c:assignedTo ?u ; c:description ?t .
+                             ?u a c:Unit . FILTER(REGEX(?t, "(提出|登録|選定)（総司令官")) }""" ] .
+
+# --- 作業・判断 -------------------------------------------------------------------------
+c:OpenTaskShape a sh:NodeShape ;
+    sh:targetClass c:Task ;
+    sh:property [ sh:path c:status ; sh:minCount 1 ; sh:in ( "open" "done" ) ] .
+
+c:DecisionShape a sh:NodeShape ;
+    sh:targetClass c:Decision ;
+    sh:property [ sh:path c:status ; sh:minCount 1 ] .
+
+c:PRShape a sh:NodeShape ;
+    sh:targetClass c:PullRequest ;
+    sh:property [ sh:path c:prNumber ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path c:prState ; sh:minCount 1 ] .
+
+c:BlockerShape a sh:NodeShape ;
+    sh:targetClass c:UnfilledField, c:UnconfirmedDataCondition, c:MissingDeliverable ;
+    sh:property [ sh:path c:affects ; sh:minCount 1 ; sh:message "どのアプリを止めているかがない" ] .
+
+c:ContestShape a sh:NodeShape ;
+    sh:targetClass c:Contest ;
+    sh:property [ sh:path c:hasDeadline ; sh:minCount 1 ] ;
+    sh:property [ sh:path c:hasCriterion ; sh:minCount 1 ; sh:severity sh:Warning ;
+                  sh:message "審査基準が取り出せていない（衛星アワードは registry.criteria が空）" ] .

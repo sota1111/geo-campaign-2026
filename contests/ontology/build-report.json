@@ -1,0 +1,129 @@
+{
+ "gaps": [
+  {
+   "node": "id:contest/udc-2026",
+   "what": "テーマ・作品タイプの一覧（要項の分類は contests-info.ts にない）"
+  },
+  {
+   "node": "id:app/odpt-kankou",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
+   "node": "id:app/odpt-kansui",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
+   "node": "id:app/odpt-kodure",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
+   "node": "id:app/sat-yabu",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
+   "node": "id:app/sat-sugi",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
+   "node": "id:app/biz-solar-guard",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
+   "node": "id:app/biz-idea-in1",
+   "what": "アプリ×コンペの適合（適合 JSON に行がない）"
+  },
+  {
+   "node": "id:app/sat-a",
+   "what": "使うデータ（README に出典・ライセンス表がなく、registry.ts にも sources がない）"
+  },
+  {
+   "node": "id:sub/sat-sugi/satellite-2026",
+   "what": "出すテーマ枠（未決。fit 注意 C3）"
+  },
+  {
+   "node": "id:sub/sat-yabu/satellite-2026",
+   "what": "出すテーマ枠（未決。fit 注意 C3）"
+  },
+  {
+   "node": "id:audit/ichibiz-2026-20261109",
+   "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
+  },
+  {
+   "node": "id:audit/ichibiz-2026-recheck-20261109",
+   "what": "個別の指摘（見出し・太字の ID が見つからない形式）"
+  },
+  {
+   "node": "id:task/5",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/29",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/43",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/44",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/52",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/63",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/70",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/76",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  },
+  {
+   "node": "id:task/77",
+   "what": "担当（文面に部隊名・総司令官の語がない）"
+  }
+ ],
+ "counts": {
+  "units": 10,
+  "apps": 19,
+  "fits": 108,
+  "datasets": 34,
+  "licenses": 28,
+  "submissions": 19,
+  "selection_decisions": 7,
+  "unfilled_placeholders": 41,
+  "unconfirmed_data_conditions": 7,
+  "audits": 16,
+  "findings": 115,
+  "findings_by_severity": {
+   "sev-disqualifying": 15,
+   "sev-fix": 71,
+   "sev-minor": 29
+  },
+  "tasks": 83,
+  "open_tasks": 39,
+  "decisions_from_status": 10,
+  "escalations": 10,
+  "pull_requests": 37
+ },
+ "notes": [],
+ "apps_without_dataset_rows": [
+  "sat-a"
+ ],
+ "status_file": "reports/ops/status-20261113.md",
+ "status_asof": "2026-11-14",
+ "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
+ "triples": 9478,
+ "meta": {
+  "asOf": "2026-11-21",
+  "fit_source": "contests/ontology/data/app-contest-fit-20261121.json",
+  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
+ },
+ "gap_count": 22
+}
