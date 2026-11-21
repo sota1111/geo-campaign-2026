@@ -11,7 +11,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { pendingLabel, useIsPending } from '@/lib/availability'
 import { CONTESTS, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
-import { appUrl, contestUrl, portalUrl } from '@/lib/data'
+import { appUrl, contestUrl, ontologyFiguresUrl, ontologyUrl, portalUrl } from '@/lib/data'
 import { contestsByDeadline } from '@/apps/contests-info'
 import { asOf } from '@/pages/Progress'
 
@@ -141,7 +141,7 @@ function MenuToggle() {
   )
 }
 
-export function AppShell({ children, activeContest }: { children: React.ReactNode; activeContest?: string }) {
+export function AppShell({ children, activeContest, ontologyActive }: { children: React.ReactNode; activeContest?: string; ontologyActive?: boolean }) {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
@@ -154,11 +154,18 @@ export function AppShell({ children, activeContest }: { children: React.ReactNod
         </a>
         <PortalSidebar activeContest={activeContest} />
         <SidebarInset className="min-w-0">
-          <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
+          <header className="sticky top-0 z-20 flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 border-b bg-background px-3">
             <MenuToggle />
-            <Separator orientation="vertical" className="h-5" />
+            <Separator orientation="vertical" className="data-[orientation=vertical]:h-5" />
             <a href={portalUrl()} className="whitespace-nowrap text-sm font-medium hover:underline">統合ダッシュボード</a>
-            <span className="hidden text-xs text-muted-foreground sm:inline">提出状況は {asOf} 時点の記録</span>
+            <a href={ontologyUrl()} aria-current={ontologyActive ? 'page' : undefined} className={`whitespace-nowrap py-2 text-sm hover:underline ${ontologyActive ? 'font-bold underline underline-offset-4' : 'font-medium'}`} data-testid="ontology-link" title="コンペ・案・データ・止めているもの・作業・判断のつながりを図とカードで見る">
+              <span className="sm:hidden">つながり図</span>
+              <span className="hidden sm:inline">つながり図（オントロジー）</span>
+            </a>
+            <a href={ontologyFiguresUrl()} className="whitespace-nowrap py-2 text-sm font-medium hover:underline" data-testid="ontology-figures-link" title="オントロジーを、型・提出を止めているもの・次の行動・データ条件・適合の図で読む">
+              図解（要約）
+            </a>
+            <span className="hidden text-xs text-muted-foreground lg:inline">提出状況は {asOf} 時点の記録</span>
           </header>
           <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-3 outline-none md:p-6">{children}</main>
         </SidebarInset>

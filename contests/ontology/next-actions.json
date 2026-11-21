@@ -1,0 +1,3543 @@
+{
+ "asOf": "2026-11-21",
+ "generatedBy": "contests/ontology/next_actions.py（SPARQL: contests/ontology/queries/*.rq）",
+ "notes": [
+  "『提出可能な状態』は憲兵の失格級・未記入欄・データ条件・提出文の欠落がなく、要修正が残らず、監査があり、案の選定が済んでいること。提出・案の選定は総司令官が決める（自動では進めない）。",
+  "止めているものの担当は規則による割当（推定）。指摘の解消の記録は無いため、現行の監査に残る指摘は未解消として数える。",
+  "進捗一覧（reports/ops/status-*.md）は作成日以降の変化を含まない。",
+  "PR のマージは総司令官補佐（commander-aide）が承認なしで行う委任の作業で、総司令官の判断待ちには入れない（総司令官 2026-11-21 の指示、CLAUDE.md 成果の返し方 4）。ページ削除を含む PR だけは総司令官の許可が要る。"
+ ],
+ "summary": {
+  "提出不可": 18,
+  "要修正あり": 2
+ },
+ "submissions": [
+  {
+   "submission": "id:sub/sat-a/satellite-2026",
+   "label": "路面下リスクの二段階調査 → 衛星データ活用アワード2026–2027",
+   "app": "id:app/sat-a",
+   "contest": "id:contest/satellite-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 3,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 3,
+    "要修正": 5,
+    "未記入欄ファイル": 1,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 0
+   },
+   "deadline": {
+    "at": "2026-11-30T12:00:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "1-1 重複応募（FAQ7）【要確認・失格級の可能性】",
+     "source": "reports/audit/satellite-2026-20261109.md L19",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "1-2 .docx の実体の検査ができていない【要確認】",
+     "source": "reports/audit/satellite-2026-20261109.md L28",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "1-3 registry.json の satellite-2026 が未整備【要確認】",
+     "source": "reports/audit/satellite-2026-20261109.md L44",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-1 事業化の意思の記述が総司令官の事実に依存する【要修正・総司令官作業と連動】",
+     "source": "reports/audit/satellite-2026-20261109.md L51",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-2 提案A: 下水道管きょの老朽化の数字【要修正】",
+     "source": "reports/audit/satellite-2026-20261109.md L55",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-3 提案A: 市場の母数（950億〜1,900億円）の前提が本文に書かれていない【要修正】",
+     "source": "reports/audit/satellite-2026-20261109.md L62",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-5 協賛企業との関係の書き方【要修正（軽微に近い）】",
+     "source": "reports/audit/satellite-2026-20261109.md L74",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-6 出典のない事実の記述【要修正（軽微に近い）】",
+     "source": "reports/audit/satellite-2026-20261109.md L79",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入 3か所: contests/satellite-2026/submission/proposal-A.md",
+     "source": "contests/satellite-2026/submission/proposal-A.md L10",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/sat-alpha/satellite-2026",
+   "label": "配電線沿いの優先伐採地図 → 衛星データ活用アワード2026–2027",
+   "app": "id:app/sat-alpha",
+   "contest": "id:contest/satellite-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 3,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 3,
+    "要修正": 3,
+    "未記入欄ファイル": 1,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 2
+   },
+   "deadline": {
+    "at": "2026-11-30T12:00:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "F-1 共通テーマ2の枠（要項 p6「各テーマへの応募は1提案まで」）",
+     "source": "reports/audit/satellite-2026-alpha-20261113.md L9",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "F-2 同一代表者の重複応募（FAQ7）",
+     "source": "reports/audit/satellite-2026-alpha-20261113.md L14",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "F-3 未記入欄",
+     "source": "reports/audit/satellite-2026-alpha-20261113.md L23",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M-1 デモ画面の誤差表記が旧文言のまま（確定）",
+     "source": "reports/audit/satellite-2026-alpha-20261113.md L30",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M-2 .docx の実体と字数の上限（要確認）",
+     "source": "reports/audit/satellite-2026-alpha-20261113.md L37",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M-3 「年間2,500件前後」の根拠（要確認）",
+     "source": "reports/audit/satellite-2026-alpha-20261113.md L44",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入 3か所: contests/satellite-2026/submission/proposal-alpha.md",
+     "source": "contests/satellite-2026/submission/proposal-alpha.md L10",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/sat-b/satellite-2026",
+   "label": "盛土巡視台帳 → 衛星データ活用アワード2026–2027",
+   "app": "id:app/sat-b",
+   "contest": "id:contest/satellite-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 3,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 3,
+    "要修正": 4,
+    "未記入欄ファイル": 1,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-11-30T12:00:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "1-1 重複応募（FAQ7）【要確認・失格級の可能性】",
+     "source": "reports/audit/satellite-2026-20261109.md L19",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "1-2 .docx の実体の検査ができていない【要確認】",
+     "source": "reports/audit/satellite-2026-20261109.md L28",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "1-3 registry.json の satellite-2026 が未整備【要確認】",
+     "source": "reports/audit/satellite-2026-20261109.md L44",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-1 事業化の意思の記述が総司令官の事実に依存する【要修正・総司令官作業と連動】",
+     "source": "reports/audit/satellite-2026-20261109.md L51",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-4 提案B: GMS3による盛土内部の確認【要修正】",
+     "source": "reports/audit/satellite-2026-20261109.md L68",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-5 協賛企業との関係の書き方【要修正（軽微に近い）】",
+     "source": "reports/audit/satellite-2026-20261109.md L74",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2-6 出典のない事実の記述【要修正（軽微に近い）】",
+     "source": "reports/audit/satellite-2026-20261109.md L79",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入 3か所: contests/satellite-2026/submission/proposal-B.md",
+     "source": "contests/satellite-2026/submission/proposal-B.md L10",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/sat-sugi/satellite-2026",
+   "label": "スギ植え替えの優先地 → 衛星データ活用アワード2026–2027",
+   "app": "id:app/sat-sugi",
+   "contest": "id:contest/satellite-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 0,
+    "データ条件": 0,
+    "提出文なし": 1,
+    "監査記録": 0,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-11-30T12:00:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "弱点・失敗テスト",
+    "unit": "アグレッサー",
+    "agent": "aggressor",
+    "humanGate": false
+   },
+   "blockerOwners": [
+    "engineer"
+   ],
+   "blockers": [
+    {
+     "type": "MissingDeliverable",
+     "severity": null,
+     "certainty": null,
+     "label": "提出文が未作成: sat-sugi → satellite-2026",
+     "source": "reports/command/merge-20261121.md",
+     "owner": "engineer",
+     "action": "提出文の作成"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/sat-yabu/satellite-2026",
+   "label": "クマ対策：藪払いの優先地図 → 衛星データ活用アワード2026–2027",
+   "app": "id:app/sat-yabu",
+   "contest": "id:contest/satellite-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 0,
+    "データ条件": 0,
+    "提出文なし": 1,
+    "監査記録": 0,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-11-30T12:00:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "弱点・失敗テスト",
+    "unit": "アグレッサー",
+    "agent": "aggressor",
+    "humanGate": false
+   },
+   "blockerOwners": [
+    "engineer"
+   ],
+   "blockers": [
+    {
+     "type": "MissingDeliverable",
+     "severity": null,
+     "certainty": null,
+     "label": "提出文が未作成: sat-yabu → satellite-2026",
+     "source": "reports/command/merge-20261121.md",
+     "owner": "engineer",
+     "action": "提出文の作成"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-business/ichibiz-2026/business",
+   "label": "バス路線見直し案の比較 → イチBizアワード2026 ビジネス部門",
+   "app": "id:app/biz-business",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 5,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-11-30T20:00:00+09:00",
+    "label": "ビジネス部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander"
+   ],
+   "blockers": [
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 5 ファイル: business/background.md、business/problem.md、business/challenges.md、business/service.md、business/market.md",
+     "source": "contests/ichibiz-2026/submission/business/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+   "label": "使用済み太陽光パネルの回収圏計画 → イチBizアワード2026 ビジネス部門",
+   "app": "id:app/biz-business-nb",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 1,
+    "失格級（確定）": 1,
+    "失格級（要確認）": 0,
+    "要修正": 4,
+    "未記入欄ファイル": 5,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-11-30T20:00:00+09:00",
+    "label": "ビジネス部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "確定",
+     "label": "F1 未記入の穴が8箇所残り、背景欄は実質空欄。字数検査はこれを検知しない",
+     "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L15",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M1 生成AI条項（要項 p.7-8）：AIの文が4欄で約6〜7割残る【要確認：解釈が割れる】",
+     "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L32",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M2 「推定した拠点」の書き方が実態より軽く、結果への影響も画面に出ない",
+     "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L48",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M3 数値の出典・前提が提出文から検証できない：約41〜61億円の試算ほか",
+     "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L60",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "M4 画面に残る誤出典・循環の説明（廃棄時期25年）と、冒頭の事実と合わない説明",
+     "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L70",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 5 ファイル: business-nb/background.md、business-nb/problem.md、business-nb/challenges.md、business-nb/market.md、business-nb/service.md",
+     "source": "contests/ichibiz-2026/submission/business-nb/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-idea/ichibiz-2026/idea",
+   "label": "地名の記憶マップ → イチBizアワード2026 アイデア部門",
+   "app": "id:app/biz-idea",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 3,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-12-10T20:00:00+09:00",
+    "label": "アイデア部門・不動産情報活用部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander"
+   ],
+   "blockers": [
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 3 ファイル: idea/background.md、idea/service.md、idea/problem.md",
+     "source": "contests/ichibiz-2026/submission/idea/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-idea-in1/ichibiz-2026/idea",
+   "label": "「いま使えるAED」地図　夜間・施錠で使えない場所を、時間帯別のカバー率にする → イチBizアワード2026 アイデア部門",
+   "app": "id:app/biz-idea-in1",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 3,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 0,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-12-10T20:00:00+09:00",
+    "label": "アイデア部門・不動産情報活用部門"
+   },
+   "nextStage": {
+    "stage": "弱点・失敗テスト",
+    "unit": "アグレッサー",
+    "agent": "aggressor",
+    "humanGate": false
+   },
+   "blockerOwners": [
+    "commander"
+   ],
+   "blockers": [
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 3 ファイル: idea-in1/background.md、idea-in1/problem.md、idea-in1/service.md",
+     "source": "contests/ichibiz-2026/submission/idea-in1/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+   "label": "相談前の1枚シート → イチBizアワード2026 不動産情報活用部門",
+   "app": "id:app/biz-realestate",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 1,
+    "未記入欄ファイル": 3,
+    "データ条件": 1,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-12-10T20:00:00+09:00",
+    "label": "アイデア部門・不動産情報活用部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R1 R1（未解消）",
+     "source": "reports/audit/api-integration-20261113-r2.md L47",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "UnconfirmedDataCondition",
+     "severity": null,
+     "certainty": null,
+     "label": "データ利用条件が未確認: 国土数値情報 用途地域 A29",
+     "source": "contests/ichibiz-2026/app/realestate/README.md L26（データと出典（実データかサンプルか））",
+     "owner": "intelligence",
+     "action": "データ利用条件の確認"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 3 ファイル: realestate/background.md、realestate/problem.md、realestate/service.md",
+     "source": "contests/ichibiz-2026/submission/realestate/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+   "label": "同じ土地、四つの値段 → イチBizアワード2026 不動産情報活用部門",
+   "app": "id:app/biz-realestate-a4",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 1,
+    "失格級（確定）": 1,
+    "失格級（要確認）": 0,
+    "要修正": 6,
+    "未記入欄ファイル": 3,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-12-10T20:00:00+09:00",
+    "label": "アイデア部門・不動産情報活用部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "確定",
+     "label": "D1 本人欄が未記入のまま（穴は3か所。background.md は全文が穴）",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L23",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "G1 同梱データ（web/data/fukuoka.json）の二次配布の条文が未確認",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L35",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "G2 提出文の「公示価格」は XPT002 の当年価格が判定価格に当たる確証がない",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L41",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "G3 提出文が「鑑定評価書の記録ごとに値がある」「試算価格」と断定している",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L47",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H1 生成AI条項: AI文の比率（解釈が割れる。要確認）",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L55",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H2 service.md の字数の余白が少ない（本人加筆後に超過する恐れ）",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L60",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H3 reinfolib 欄の字数上限が要項で未確定",
+     "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L65",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 3 ファイル: realestate-a4/background.md、realestate-a4/problem.md、realestate-a4/service.md",
+     "source": "contests/ichibiz-2026/submission/realestate-a4/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+   "label": "住む場所の先行き → イチBizアワード2026 不動産情報活用部門",
+   "app": "id:app/biz-realestate-rn1",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 1,
+    "失格級（確定）": 1,
+    "失格級（要確認）": 0,
+    "要修正": 5,
+    "未記入欄ファイル": 3,
+    "データ条件": 1,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-12-10T20:00:00+09:00",
+    "label": "アイデア部門・不動産情報活用部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "確定",
+     "label": "D1 本人欄が3か所とも未記入（前回 D1 の継続）",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L23",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R1 【本人加筆】の指示文で数えているため、本人の文を入れると problem・service が上限を超える（新規・重大）",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L31",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R2 reinfolib 欄が398〜399/400で、上限は未確定（前回 G1 の継続）",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L41",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R3 reinfolib.md の「API12種（地域で11〜12種。全14種中）」は、実数とは合うが、「全14種中」が誤解を招く",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L46",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R4 同梱データの再配布と、XKT001〜003・025 の利用条件が未確認のまま（前回 G2・G3 の継続・拡大）",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L55",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R5 同一部門への2案（現行案 realestate と RN1）の重複応募（前回 m6 の継続）",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L64",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "UnconfirmedDataCondition",
+     "severity": null,
+     "certainty": null,
+     "label": "データ利用条件が未確認: 不動産情報ライブラリ（国土交通省）API（biz-realestate-rn1）",
+     "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md",
+     "owner": "intelligence",
+     "action": "データ利用条件の確認"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入欄 3 ファイル: realestate-rn1/background.md、realestate-rn1/problem.md、realestate-rn1/service.md",
+     "source": "contests/ichibiz-2026/submission/realestate-rn1/background.md L1",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+   "label": "太陽光発電所の盗難対策マップ → イチBizアワード2026 アイデア部門",
+   "app": "id:app/biz-solar-guard",
+   "contest": "id:contest/ichibiz-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 1,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 1,
+    "要修正": 6,
+    "未記入欄ファイル": 0,
+    "データ条件": 1,
+    "提出文なし": 1,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2026-12-10T20:00:00+09:00",
+    "label": "アイデア部門・不動産情報活用部門"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "D1 認定情報の利用ルール「国家・国民の安全に脅威を与える利用」の禁止に、この用途が当たらないか未確認",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L16",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H1 「メッシュの順位は作れない」という主張が、実装より強い",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L31",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H2 「盗難の実態」タブの注記が、同じタブの表と矛盾している",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L40",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H3 中心の数値（Metal News 第10号の5地区別・R8.9月末）と対策の出典に、一次確認の記録がない",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L45",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H4 根拠が見つからない数値の記述",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L54",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H5 同一人物の複数応募と NB との類似",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L59",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "H6 生成 AI の利用に関する条項への備え（提出文の段階）",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L64",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "MissingDeliverable",
+     "severity": null,
+     "certainty": null,
+     "label": "提出文が未作成: biz-solar-guard → ichibiz-2026",
+     "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md 提出文なしの記載",
+     "owner": "engineer",
+     "action": "提出文の作成"
+    },
+    {
+     "type": "UnconfirmedDataCondition",
+     "severity": null,
+     "certainty": null,
+     "label": "データ利用条件が未確認: 再エネ事業計画認定情報（資源エネルギー庁）（biz-solar-guard）",
+     "source": "reports/escalations/20261114-solar-guard-data-terms.md",
+     "owner": "commander",
+     "action": "データ利用条件の確認"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/odpt/udc-2026",
+   "label": "生活アクセス診断マップ → アーバンデータチャレンジ2026（UDC）",
+   "app": "id:app/odpt",
+   "contest": "id:contest/udc-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 4,
+    "未記入欄ファイル": 1,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 0
+   },
+   "deadline": {
+    "at": "2026-12-27T23:59:00+09:00",
+    "label": "本応募"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R-1 ①の「データなし」表示は実装に無い（約束しすぎ）",
+     "source": "reports/audit/udc-2026-20261109.md L30",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R-2 ①の記述が現行実装より古く、機能の説明が逆転している",
+     "source": "reports/audit/udc-2026-20261109.md L36",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R-3 ①の使用データ表が実装の実データと異なる",
+     "source": "reports/audit/udc-2026-20261109.md L41",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R-4 東京都区部追加に伴う記述の確認（要確認を含む）",
+     "source": "reports/audit/udc-2026-20261109.md L48",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入 1か所: contests/udc-2026/submission/entry-1-app.md",
+     "source": "contests/udc-2026/submission/entry-1-app.md L33",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/udc-moritsuchi/udc-2026",
+   "label": "みんなの盛土ウォッチ → アーバンデータチャレンジ2026（UDC）",
+   "app": "id:app/udc-moritsuchi",
+   "contest": "id:contest/udc-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 2,
+    "未記入欄ファイル": 1,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 0
+   },
+   "deadline": {
+    "at": "2026-12-27T23:59:00+09:00",
+    "label": "本応募"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R-4 東京都区部追加に伴う記述の確認（要確認を含む）",
+     "source": "reports/audit/udc-2026-20261109.md L48",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R-5 README §4 の他コンテスト回答例（②）が未確定事項を事実として書いている",
+     "source": "reports/audit/udc-2026-20261109.md L53",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "UnfilledField",
+     "severity": null,
+     "certainty": null,
+     "label": "未記入 1か所: contests/udc-2026/submission/entry-2-idea.md",
+     "source": "contests/udc-2026/submission/entry-2-idea.md L32",
+     "owner": "commander",
+     "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/odpt/odpt-2026",
+   "label": "生活アクセス診断マップ → 公共交通オープンデータチャレンジ2026",
+   "app": "id:app/odpt",
+   "contest": "id:contest/odpt-2026",
+   "readiness": "要修正あり",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 5,
+    "未記入欄ファイル": 0,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2027-01-11T23:59:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "A A. 再ビルド後に description の数値を突合し直す（データの期限と数値の一致）",
+     "source": "reports/audit/odpt-2026-20261109.md L55",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "B B. データ利用規約の未確認（ODPTセンター、e-Stat、国土数値情報）",
+     "source": "reports/audit/odpt-2026-20261109.md L63",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "C C. フォームの字数・項目の未確認",
+     "source": "reports/audit/odpt-2026-20261109.md L68",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "D D. 作品名・説明文の整合の最終確認",
+     "source": "reports/audit/odpt-2026-20261109.md L73",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R1 R1（未解消）",
+     "source": "reports/audit/api-integration-20261113-r2.md L47",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/odpt-kankou/odpt-2026",
+   "label": "観光バスを避ける生活ルート → 公共交通オープンデータチャレンジ2026",
+   "app": "id:app/odpt-kankou",
+   "contest": "id:contest/odpt-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 0,
+    "データ条件": 1,
+    "提出文なし": 1,
+    "監査記録": 0,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2027-01-11T23:59:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "弱点・失敗テスト",
+    "unit": "アグレッサー",
+    "agent": "aggressor",
+    "humanGate": false
+   },
+   "blockerOwners": [
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "MissingDeliverable",
+     "severity": null,
+     "certainty": null,
+     "label": "提出文が未作成: odpt-kankou → odpt-2026",
+     "source": "reports/command/merge-20261121.md",
+     "owner": "engineer",
+     "action": "提出文の作成"
+    },
+    {
+     "type": "UnconfirmedDataCondition",
+     "severity": null,
+     "certainty": null,
+     "label": "データ利用条件が未確認: 国土数値情報 観光資源 P12",
+     "source": "contests/odpt-2026/app-kankou/README.md L17（使ったデータと出典・ライセンス）",
+     "owner": "intelligence",
+     "action": "データ利用条件の確認"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/odpt-kansui/odpt-2026",
+   "label": "大雨のときに避けたい駅の出入口と迂回 → 公共交通オープンデータチャレンジ2026",
+   "app": "id:app/odpt-kansui",
+   "contest": "id:contest/odpt-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 0,
+    "未記入欄ファイル": 0,
+    "データ条件": 0,
+    "提出文なし": 1,
+    "監査記録": 0,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2027-01-11T23:59:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "弱点・失敗テスト",
+    "unit": "アグレッサー",
+    "agent": "aggressor",
+    "humanGate": false
+   },
+   "blockerOwners": [
+    "engineer"
+   ],
+   "blockers": [
+    {
+     "type": "MissingDeliverable",
+     "severity": null,
+     "certainty": null,
+     "label": "提出文が未作成: odpt-kansui → odpt-2026",
+     "source": "reports/command/merge-20261121.md",
+     "owner": "engineer",
+     "action": "提出文の作成"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/odpt-kodure/odpt-2026",
+   "label": "子連れお出かけ診断 → 公共交通オープンデータチャレンジ2026",
+   "app": "id:app/odpt-kodure",
+   "contest": "id:contest/odpt-2026",
+   "readiness": "提出不可",
+   "counts": {
+    "失格級": 2,
+    "失格級（確定）": 1,
+    "失格級（要確認）": 1,
+    "要修正": 7,
+    "未記入欄ファイル": 0,
+    "データ条件": 2,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 2
+   },
+   "deadline": {
+    "at": "2027-01-11T23:59:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "commander",
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "要確認",
+     "label": "B1 【失格級の候補・情報部の結果待ち】国土数値情報 P13（都市公園）・P27（文化施設）の「非商用」条件が未確認で、行き先 356か所の全部がこの2データでできている",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L44",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "失格級",
+     "certainty": "確定",
+     "label": "B2 【失格級・全案共通の既知事項】本人が記入する欄が未記入",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L58",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R1 国土数値情報の許諾の表示と、説明文の「今後」の書き方が、解決前の状態をそのまま応募資料に出している",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L68",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R2 時刻表データの有効期限が、締切（2027-01-11）や審査より前に切れる",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L73",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R3 公開前に必要な確認が複数残っている（README「未確認事項」）",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L79",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R4 作品名・説明文の主張が、実装が評価していないことより強く読める",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L84",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R5 【要確認】同一コンペ（odpt-2026）への複数作品の応募",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L91",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R6 個人の連絡先メールアドレスが公開サイトのコードに入っている（意図的な記入の確認）",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L97",
+     "owner": "commander",
+     "action": "総司令官の記入・判断が要る指摘の解消"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "R7 重大指摘が未解消、または skip で隠れているものが残っている",
+     "source": "reports/audit/odpt-2026-kodure-20261114.md L102",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "UnconfirmedDataCondition",
+     "severity": null,
+     "certainty": null,
+     "label": "データ利用条件が未確認: 国土数値情報 文化施設 P27",
+     "source": "contests/odpt-2026/app-kodure/README.md L34（使用データと出典・ライセンス）",
+     "owner": "intelligence",
+     "action": "データ利用条件の確認"
+    },
+    {
+     "type": "UnconfirmedDataCondition",
+     "severity": null,
+     "certainty": null,
+     "label": "データ利用条件が未確認: 国土数値情報 都市公園 P13",
+     "source": "contests/odpt-2026/app-kodure/README.md L33（使用データと出典・ライセンス）",
+     "owner": "intelligence",
+     "action": "データ利用条件の確認"
+    }
+   ]
+  },
+  {
+   "submission": "id:sub/odpt-teiji/odpt-2026",
+   "label": "バス定時性カルテ → 公共交通オープンデータチャレンジ2026",
+   "app": "id:app/odpt-teiji",
+   "contest": "id:contest/odpt-2026",
+   "readiness": "要修正あり",
+   "counts": {
+    "失格級": 0,
+    "失格級（確定）": 0,
+    "失格級（要確認）": 0,
+    "要修正": 3,
+    "未記入欄ファイル": 0,
+    "データ条件": 0,
+    "提出文なし": 0,
+    "監査記録": 1,
+    "選定待ち": 1
+   },
+   "deadline": {
+    "at": "2027-01-11T23:59:00+09:00",
+    "label": "応募締切"
+   },
+   "nextStage": {
+    "stage": "提出",
+    "unit": "総司令官",
+    "agent": "id:commander",
+    "humanGate": true
+   },
+   "blockerOwners": [
+    "engineer",
+    "intelligence"
+   ],
+   "blockers": [
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "1 特徴3が実装と一致しない（画面に無い機能の記載）",
+     "source": "reports/audit/odpt-2026-teiji-20261115.md L21",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "2 静的 GTFS の CC BY 4.0 確認が未了なのに、description が「CC BY 4.0 のデータだけ」と読める",
+     "source": "reports/audit/odpt-2026-teiji-20261115.md L26",
+     "owner": "intelligence",
+     "action": "要項・事実の確認"
+    },
+    {
+     "type": "Finding",
+     "severity": "要修正",
+     "certainty": null,
+     "label": "3 必須データ「GTFSデータリポジトリ」の扱いが説明されていない",
+     "source": "reports/audit/odpt-2026-teiji-20261115.md L31",
+     "owner": "engineer",
+     "action": "指摘の修正"
+    }
+   ]
+  }
+ ],
+ "unitActions": {
+  "commander": [
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入 3か所: contests/satellite-2026/submission/proposal-A.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/satellite-2026/submission/proposal-A.md L10"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: 1-1 重複応募（FAQ7）【要確認・失格級の可能性】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L19"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: 2-1 事業化の意思の記述が総司令官の事実に依存する【要修正・総司令官作業と連動】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L51"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入 3か所: contests/satellite-2026/submission/proposal-alpha.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/satellite-2026/submission/proposal-alpha.md L10"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: F-2 同一代表者の重複応募（FAQ7）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-alpha-20261113.md L14"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: F-3 未記入欄",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-alpha-20261113.md L23"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入 3か所: contests/satellite-2026/submission/proposal-B.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/satellite-2026/submission/proposal-B.md L10"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: 1-1 重複応募（FAQ7）【要確認・失格級の可能性】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L19"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: 2-1 事業化の意思の記述が総司令官の事実に依存する【要修正・総司令官作業と連動】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L51"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business",
+    "submission": "id:sub/biz-business/ichibiz-2026/business",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 5 ファイル: business/background.md、business/problem.md、business/challenges.md、business/service.md、business/market.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/business/background.md L1"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 5 ファイル: business-nb/background.md、business-nb/problem.md、business-nb/challenges.md、business-nb/market.md、business-nb/service.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/business-nb/background.md L1"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "総司令官の記入・判断が要る指摘の解消: F1 未記入の穴が8箇所残り、背景欄は実質空欄。字数検査はこれを検知しない",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L15"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "総司令官の記入・判断が要る指摘の解消: M1 生成AI条項（要項 p.7-8）：AIの文が4欄で約6〜7割残る【要確認：解釈が割れる】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L32"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-idea",
+    "submission": "id:sub/biz-idea/ichibiz-2026/idea",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 3 ファイル: idea/background.md、idea/service.md、idea/problem.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/idea/background.md L1"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-idea-in1",
+    "submission": "id:sub/biz-idea-in1/ichibiz-2026/idea",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 3 ファイル: idea-in1/background.md、idea-in1/problem.md、idea-in1/service.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/idea-in1/background.md L1"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate",
+    "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 3 ファイル: realestate/background.md、realestate/problem.md、realestate/service.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/realestate/background.md L1"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 3 ファイル: realestate-a4/background.md、realestate-a4/problem.md、realestate-a4/service.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/realestate-a4/background.md L1"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "総司令官の記入・判断が要る指摘の解消: D1 本人欄が未記入のまま（穴は3か所。background.md は全文が穴）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L23"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "総司令官の記入・判断が要る指摘の解消: H1 生成AI条項: AI文の比率（解釈が割れる。要確認）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L55"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "総司令官の記入・判断が要る指摘の解消: H2 service.md の字数の余白が少ない（本人加筆後に超過する恐れ）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L60"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入欄 3 ファイル: realestate-rn1/background.md、realestate-rn1/problem.md、realestate-rn1/service.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/ichibiz-2026/submission/realestate-rn1/background.md L1"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "総司令官の記入・判断が要る指摘の解消: D1 本人欄が3か所とも未記入（前回 D1 の継続）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L23"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "総司令官の記入・判断が要る指摘の解消: R1 【本人加筆】の指示文で数えているため、本人の文を入れると problem・service が上限を超える（新規・重大）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L31"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "総司令官の記入・判断が要る指摘の解消: R5 同一部門への2案（現行案 realestate と RN1）の重複応募（前回 m6 の継続）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L64"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "データ利用条件の確認: データ利用条件が未確認: 再エネ事業計画認定情報（資源エネルギー庁）（biz-solar-guard）",
+    "why": "UnconfirmedDataCondition（規則による割当）",
+    "source": "reports/escalations/20261114-solar-guard-data-terms.md"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/udc-2026",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入 1か所: contests/udc-2026/submission/entry-1-app.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/udc-2026/submission/entry-1-app.md L33"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/udc-moritsuchi",
+    "submission": "id:sub/udc-moritsuchi/udc-2026",
+    "action": "未記入欄を書く（部隊は代筆しない。生成AI条項）: 未記入 1か所: contests/udc-2026/submission/entry-2-idea.md",
+    "why": "UnfilledField（規則による割当）",
+    "source": "contests/udc-2026/submission/entry-2-idea.md L32"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: B2 【失格級・全案共通の既知事項】本人が記入する欄が未記入",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L58"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "総司令官の記入・判断が要る指摘の解消: R6 個人の連絡先メールアドレスが公開サイトのコードに入っている（意図的な記入の確認）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L97"
+   }
+  ],
+  "engineer": [
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "指摘の修正: 2-2 提案A: 下水道管きょの老朽化の数字【要修正】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L55"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "指摘の修正: 2-3 提案A: 市場の母数（950億〜1,900億円）の前提が本文に書かれていない【要修正】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L62"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "指摘の修正: 2-5 協賛企業との関係の書き方【要修正（軽微に近い）】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L74"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "指摘の修正: 2-6 出典のない事実の記述【要修正（軽微に近い）】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L79"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "指摘の修正: F-1 共通テーマ2の枠（要項 p6「各テーマへの応募は1提案まで」）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-alpha-20261113.md L9"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "指摘の修正: M-1 デモ画面の誤差表記が旧文言のまま（確定）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-alpha-20261113.md L30"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "指摘の修正: 2-5 協賛企業との関係の書き方【要修正（軽微に近い）】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L74"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "指摘の修正: 2-6 出典のない事実の記述【要修正（軽微に近い）】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L79"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-sugi",
+    "submission": "id:sub/sat-sugi/satellite-2026",
+    "action": "提出文の作成: 提出文が未作成: sat-sugi → satellite-2026",
+    "why": "MissingDeliverable（規則による割当）",
+    "source": "reports/command/merge-20261121.md"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-yabu",
+    "submission": "id:sub/sat-yabu/satellite-2026",
+    "action": "提出文の作成: 提出文が未作成: sat-yabu → satellite-2026",
+    "why": "MissingDeliverable（規則による割当）",
+    "source": "reports/command/merge-20261121.md"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "指摘の修正: M2 「推定した拠点」の書き方が実態より軽く、結果への影響も画面に出ない",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L48"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "指摘の修正: M3 数値の出典・前提が提出文から検証できない：約41〜61億円の試算ほか",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L60"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "指摘の修正: M4 画面に残る誤出典・循環の説明（廃棄時期25年）と、冒頭の事実と合わない説明",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-business-nb-20261113.md L70"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "指摘の修正: G2 提出文の「公示価格」は XPT002 の当年価格が判定価格に当たる確証がない",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L41"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "指摘の修正: G3 提出文が「鑑定評価書の記録ごとに値がある」「試算価格」と断定している",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L47"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "指摘の修正: H3 reinfolib 欄の字数上限が要項で未確定",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L65"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "指摘の修正: R2 reinfolib 欄が398〜399/400で、上限は未確定（前回 G1 の継続）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L41"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "指摘の修正: R3 reinfolib.md の「API12種（地域で11〜12種。全14種中）」は、実数とは合うが、「全14種中」が誤解を招く",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L46"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "指摘の修正: H1 「メッシュの順位は作れない」という主張が、実装より強い",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L31"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "指摘の修正: H2 「盗難の実態」タブの注記が、同じタブの表と矛盾している",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L40"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "指摘の修正: H4 根拠が見つからない数値の記述",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L54"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "指摘の修正: H5 同一人物の複数応募と NB との類似",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L59"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "指摘の修正: H6 生成 AI の利用に関する条項への備え（提出文の段階）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L64"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "提出文の作成: 提出文が未作成: biz-solar-guard → ichibiz-2026",
+    "why": "MissingDeliverable（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md 提出文なしの記載"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/udc-2026",
+    "action": "指摘の修正: R-1 ①の「データなし」表示は実装に無い（約束しすぎ）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/udc-2026-20261109.md L30"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/udc-2026",
+    "action": "指摘の修正: R-2 ①の記述が現行実装より古く、機能の説明が逆転している",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/udc-2026-20261109.md L36"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/udc-2026",
+    "action": "指摘の修正: R-3 ①の使用データ表が実装の実データと異なる",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/udc-2026-20261109.md L41"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/udc-moritsuchi",
+    "submission": "id:sub/udc-moritsuchi/udc-2026",
+    "action": "指摘の修正: R-5 README §4 の他コンテスト回答例（②）が未確定事項を事実として書いている",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/udc-2026-20261109.md L53"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/odpt-2026",
+    "action": "指摘の修正: A A. 再ビルド後に description の数値を突合し直す（データの期限と数値の一致）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-20261109.md L55"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kankou",
+    "submission": "id:sub/odpt-kankou/odpt-2026",
+    "action": "提出文の作成: 提出文が未作成: odpt-kankou → odpt-2026",
+    "why": "MissingDeliverable（規則による割当）",
+    "source": "reports/command/merge-20261121.md"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kansui",
+    "submission": "id:sub/odpt-kansui/odpt-2026",
+    "action": "提出文の作成: 提出文が未作成: odpt-kansui → odpt-2026",
+    "why": "MissingDeliverable（規則による割当）",
+    "source": "reports/command/merge-20261121.md"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "指摘の修正: R1 国土数値情報の許諾の表示と、説明文の「今後」の書き方が、解決前の状態をそのまま応募資料に出している",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L68"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "指摘の修正: R2 時刻表データの有効期限が、締切（2027-01-11）や審査より前に切れる",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L73"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "指摘の修正: R4 作品名・説明文の主張が、実装が評価していないことより強く読める",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L84"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-teiji",
+    "submission": "id:sub/odpt-teiji/odpt-2026",
+    "action": "指摘の修正: 1 特徴3が実装と一致しない（画面に無い機能の記載）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-teiji-20261115.md L21"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-teiji",
+    "submission": "id:sub/odpt-teiji/odpt-2026",
+    "action": "指摘の修正: 3 必須データ「GTFSデータリポジトリ」の扱いが説明されていない",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-teiji-20261115.md L31"
+   }
+  ],
+  "military-police": [
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-11-30T20:00:00+09:00",
+    "app": "id:app/biz-business-nb",
+    "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/udc-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/udc-moritsuchi",
+    "submission": "id:sub/udc-moritsuchi/udc-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/odpt-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-teiji",
+    "submission": "id:sub/odpt-teiji/odpt-2026",
+    "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
+    "why": "憲兵の SOP"
+   }
+  ],
+  "aggressor": [
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-sugi",
+    "submission": "id:sub/sat-sugi/satellite-2026",
+    "action": "標準の流れの次: 弱点・失敗テスト",
+    "why": "記録のある最後の段階の次（Q3）"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-yabu",
+    "submission": "id:sub/sat-yabu/satellite-2026",
+    "action": "標準の流れの次: 弱点・失敗テスト",
+    "why": "記録のある最後の段階の次（Q3）"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-idea-in1",
+    "submission": "id:sub/biz-idea-in1/ichibiz-2026/idea",
+    "action": "標準の流れの次: 弱点・失敗テスト",
+    "why": "記録のある最後の段階の次（Q3）"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kankou",
+    "submission": "id:sub/odpt-kankou/odpt-2026",
+    "action": "標準の流れの次: 弱点・失敗テスト",
+    "why": "記録のある最後の段階の次（Q3）"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kansui",
+    "submission": "id:sub/odpt-kansui/odpt-2026",
+    "action": "標準の流れの次: 弱点・失敗テスト",
+    "why": "記録のある最後の段階の次（Q3）"
+   }
+  ],
+  "intelligence": [
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "要項・事実の確認: 1-2 .docx の実体の検査ができていない【要確認】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L28"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-a",
+    "submission": "id:sub/sat-a/satellite-2026",
+    "action": "要項・事実の確認: 1-3 registry.json の satellite-2026 が未整備【要確認】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L44"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "要項・事実の確認: M-2 .docx の実体と字数の上限（要確認）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-alpha-20261113.md L37"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-alpha",
+    "submission": "id:sub/sat-alpha/satellite-2026",
+    "action": "要項・事実の確認: M-3 「年間2,500件前後」の根拠（要確認）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-alpha-20261113.md L44"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "要項・事実の確認: 1-2 .docx の実体の検査ができていない【要確認】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L28"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "要項・事実の確認: 1-3 registry.json の satellite-2026 が未整備【要確認】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L44"
+   },
+   {
+    "due": "2026-11-30T12:00:00+09:00",
+    "app": "id:app/sat-b",
+    "submission": "id:sub/sat-b/satellite-2026",
+    "action": "要項・事実の確認: 2-4 提案B: GMS3による盛土内部の確認【要修正】",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/satellite-2026-20261109.md L68"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate",
+    "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+    "action": "データ利用条件の確認: データ利用条件が未確認: 国土数値情報 用途地域 A29",
+    "why": "UnconfirmedDataCondition（規則による割当）",
+    "source": "contests/ichibiz-2026/app/realestate/README.md L26（データと出典（実データかサンプルか））"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate",
+    "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+    "action": "要項・事実の確認: R1 R1（未解消）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/api-integration-20261113-r2.md L47"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-a4",
+    "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+    "action": "要項・事実の確認: G1 同梱データ（web/data/fukuoka.json）の二次配布の条文が未確認",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-a4-20261121.md L35"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "データ利用条件の確認: データ利用条件が未確認: 不動産情報ライブラリ（国土交通省）API（biz-realestate-rn1）",
+    "why": "UnconfirmedDataCondition（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-realestate-rn1",
+    "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+    "action": "要項・事実の確認: R4 同梱データの再配布と、XKT001〜003・025 の利用条件が未確認のまま（前回 G2・G3 の継続・拡大）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-realestate-rn1-regions-20261114.md L55"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "要項・事実の確認: D1 認定情報の利用ルール「国家・国民の安全に脅威を与える利用」の禁止に、この用途が当たらないか未確認",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L16"
+   },
+   {
+    "due": "2026-12-10T20:00:00+09:00",
+    "app": "id:app/biz-solar-guard",
+    "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+    "action": "要項・事実の確認: H3 中心の数値（Metal News 第10号の5地区別・R8.9月末）と対策の出典に、一次確認の記録がない",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/ichibiz-2026-solar-guard-20261113.md L45"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/udc-2026",
+    "action": "要項・事実の確認: R-4 東京都区部追加に伴う記述の確認（要確認を含む）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/udc-2026-20261109.md L48"
+   },
+   {
+    "due": "2026-12-27T23:59:00+09:00",
+    "app": "id:app/udc-moritsuchi",
+    "submission": "id:sub/udc-moritsuchi/udc-2026",
+    "action": "要項・事実の確認: R-4 東京都区部追加に伴う記述の確認（要確認を含む）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/udc-2026-20261109.md L48"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/odpt-2026",
+    "action": "要項・事実の確認: B B. データ利用規約の未確認（ODPTセンター、e-Stat、国土数値情報）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-20261109.md L63"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/odpt-2026",
+    "action": "要項・事実の確認: C C. フォームの字数・項目の未確認",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-20261109.md L68"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/odpt-2026",
+    "action": "要項・事実の確認: D D. 作品名・説明文の整合の最終確認",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-20261109.md L73"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt",
+    "submission": "id:sub/odpt/odpt-2026",
+    "action": "要項・事実の確認: R1 R1（未解消）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/api-integration-20261113-r2.md L47"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kankou",
+    "submission": "id:sub/odpt-kankou/odpt-2026",
+    "action": "データ利用条件の確認: データ利用条件が未確認: 国土数値情報 観光資源 P12",
+    "why": "UnconfirmedDataCondition（規則による割当）",
+    "source": "contests/odpt-2026/app-kankou/README.md L17（使ったデータと出典・ライセンス）"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "データ利用条件の確認: データ利用条件が未確認: 国土数値情報 文化施設 P27",
+    "why": "UnconfirmedDataCondition（規則による割当）",
+    "source": "contests/odpt-2026/app-kodure/README.md L34（使用データと出典・ライセンス）"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "データ利用条件の確認: データ利用条件が未確認: 国土数値情報 都市公園 P13",
+    "why": "UnconfirmedDataCondition（規則による割当）",
+    "source": "contests/odpt-2026/app-kodure/README.md L33（使用データと出典・ライセンス）"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "要項・事実の確認: B1 【失格級の候補・情報部の結果待ち】国土数値情報 P13（都市公園）・P27（文化施設）の「非商用」条件が未確認で、行き先 356か所の全部がこの2データでできている",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L44"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "要項・事実の確認: R3 公開前に必要な確認が複数残っている（README「未確認事項」）",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L79"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "要項・事実の確認: R5 【要確認】同一コンペ（odpt-2026）への複数作品の応募",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L91"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-kodure",
+    "submission": "id:sub/odpt-kodure/odpt-2026",
+    "action": "要項・事実の確認: R7 重大指摘が未解消、または skip で隠れているものが残っている",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-kodure-20261114.md L102"
+   },
+   {
+    "due": "2027-01-11T23:59:00+09:00",
+    "app": "id:app/odpt-teiji",
+    "submission": "id:sub/odpt-teiji/odpt-2026",
+    "action": "要項・事実の確認: 2 静的 GTFS の CC BY 4.0 確認が未了なのに、description が「CC BY 4.0 のデータだけ」と読める",
+    "why": "Finding（規則による割当）",
+    "source": "reports/audit/odpt-2026-teiji-20261115.md L26"
+   }
+  ],
+  "commander-aide": [
+   {
+    "due": null,
+    "app": null,
+    "submission": null,
+    "action": "代理マージを判断: PR #46（承認不要。条件: マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情…）",
+    "why": "総司令官の指示（2026-11-21）による委任の作業",
+    "source": "CLAUDE.md 成果の返し方 4",
+    "pr": "id:pr/46"
+   },
+   {
+    "due": null,
+    "app": null,
+    "submission": null,
+    "action": "代理マージを判断: PR #47（承認不要。条件: マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情…）",
+    "why": "総司令官の指示（2026-11-21）による委任の作業",
+    "source": "CLAUDE.md 成果の返し方 4",
+    "pr": "id:pr/47"
+   }
+  ]
+ },
+ "commanderDecisions": [
+  {
+   "decision": "id:decision/status/list-6",
+   "type": "SelectionDecision",
+   "label": "衛星: B とαのどちらを出すか、FAQ7 の確認、藪払い・スギ植え替えを候補に加えるか（11/30 12:00）",
+   "due": "2026-11-30T12:00:00+09:00",
+   "source": "reports/ops/status-20261121.md L86",
+   "includes": [
+    {
+     "decision": "id:decision/status/2",
+     "type": "SelectionDecision",
+     "label": "B とαのどちらを共通テーマ2に出すか（同時提出は不可）。FAQ7（同じ代表者の2提案）を事務局に確認するか",
+     "source": "reports/ops/status-20261121.md L40"
+    },
+    {
+     "decision": "id:decision/status/1",
+     "type": "HumanGate",
+     "label": "今回の応募候補に加えるか",
+     "source": "reports/ops/status-20261121.md L35"
+    },
+    {
+     "decision": "id:decision/select/satellite-2026-common2",
+     "type": "SelectionDecision",
+     "label": "案の選定: satellite-2026/common2（2案）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    },
+    {
+     "decision": "id:decision/select/satellite-2026-sat-sugi",
+     "type": "SelectionDecision",
+     "label": "案の選定: satellite-2026/テーマ未決/sat-sugi（テーマ枠が未決）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    },
+    {
+     "decision": "id:decision/select/satellite-2026-sat-yabu",
+     "type": "SelectionDecision",
+     "label": "案の選定: satellite-2026/テーマ未決/sat-yabu（テーマ枠が未決）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    }
+   ]
+  },
+  {
+   "decision": "id:decision/status/list-7",
+   "type": "SelectionDecision",
+   "label": "イチBiz ビジネス部門: 今の案・NB・両方（11/30 20:00）",
+   "due": "2026-11-30T20:00:00+09:00",
+   "source": "reports/ops/status-20261121.md L87",
+   "includes": [
+    {
+     "decision": "id:decision/status/3",
+     "type": "SelectionDecision",
+     "label": "部門ごとに今の案・新しい案・両方のどれを出すか（同じ部門に複数件出せるかは要項に明記なし）",
+     "source": "reports/ops/status-20261121.md L65"
+    },
+    {
+     "decision": "id:decision/select/ichibiz-2026-business",
+     "type": "SelectionDecision",
+     "label": "案の選定: ichibiz-2026/business（2案）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    }
+   ]
+  },
+  {
+   "decision": "id:decision/status/list-8",
+   "type": "SelectionDecision",
+   "label": "イチBiz アイデア・不動産部門: 今の案・新しい案・両方、RN1 の利用条件の問い合わせと同梱データ（12/10）",
+   "due": "2026-12-10",
+   "source": "reports/ops/status-20261121.md L88",
+   "includes": [
+    {
+     "decision": "id:decision/select/ichibiz-2026-idea",
+     "type": "SelectionDecision",
+     "label": "案の選定: ichibiz-2026/idea（3案）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    },
+    {
+     "decision": "id:decision/select/ichibiz-2026-realestate",
+     "type": "SelectionDecision",
+     "label": "案の選定: ichibiz-2026/realestate（3案）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    }
+   ]
+  },
+  {
+   "decision": "id:decision/status/list-9",
+   "type": "HumanGate",
+   "label": "UDC 作品②: 本応募でアプリケーションに変えるか（12/27）",
+   "due": "2026-12-27",
+   "source": "reports/ops/status-20261121.md L89",
+   "includes": []
+  },
+  {
+   "decision": "id:decision/status/list-10",
+   "type": "HumanGate",
+   "label": "ODPT N2: 連続収集の場所と担当、区間ごとの遅れの公開（2027/1/11）",
+   "due": "2027-01-11",
+   "source": "reports/ops/status-20261121.md L90",
+   "includes": [
+    {
+     "decision": "id:decision/status/5",
+     "type": "SelectionDecision",
+     "label": "ODPT に出す作品（診断マップ・N2・子連れお出かけ診断・観光系統・冠水）",
+     "source": "reports/ops/status-20261121.md L83"
+    },
+    {
+     "decision": "id:decision/status/4",
+     "type": "HumanGate",
+     "label": "区間ごとの遅れを公開するか",
+     "source": "reports/ops/status-20261121.md L74"
+    },
+    {
+     "decision": "id:decision/select/odpt-2026",
+     "type": "SelectionDecision",
+     "label": "案の選定: odpt-2026（5案）",
+     "source": "CLAUDE.md 「標準の流れ」"
+    }
+   ]
+  },
+  {
+   "decision": "id:decision/status/list-11",
+   "type": "RegistryChange",
+   "label": "registry.json: UDC の作品概要の上限 100字を登録するか",
+   "due": null,
+   "source": "reports/ops/status-20261121.md L91",
+   "includes": []
+  }
+ ],
+ "statusTasksByAgent": {
+  "commander": [
+   {
+    "text": "資源エネルギー庁への電話で利用ルールを確認（0570-057-333、台本は reports/command/decision-20261114-solar-guard.md。期限 12/02 18:00。確認できなければ 12/03 から認定情報を使わない版に作り替え、12/09 までに失格級0でなければ出さない）（総司令官）",
+    "app": "id:app/biz-solar-guard",
+    "due": "2026-12-02T18:00:00+09:00",
+    "source": "reports/ops/status-20261121.md L63"
+   },
+   {
+    "text": "国土数値情報事務局へ P13・P27 の利用可否を問い合わせ（文案は reports/command/decision-20261114-odpt-kodure.md。期限 12/11 18:00。可がなければ 12/12 から商用可データに差し替え、12/25 までに失格級0でなければ候補から外す）（総司令官）",
+    "app": "id:app/odpt-kodure",
+    "due": "2026-12-11T18:00:00+09:00",
+    "source": "reports/ops/status-20261121.md L82"
+   },
+   {
+    "text": "本人欄・背景欄（総司令官）",
+    "app": "id:app/biz-realestate",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L57"
+   },
+   {
+    "text": "本人欄（総司令官。失格級＝未記入）",
+    "app": "id:app/biz-business-nb",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L48"
+   },
+   {
+    "text": "同梱データ約4.5MBの承認（判断待ち）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "申請者欄・体制欄（総司令官）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   },
+   {
+    "text": "本応募の記入（総司令官）",
+    "app": "id:app/udc-moritsuchi",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L19"
+   },
+   {
+    "text": "東京都「緑のオープンデータ」のライセンス欄をブラウザで確認（部隊からはカタログが 403）（総司令官）",
+    "app": "id:app/odpt-kodure",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L82"
+   },
+   {
+    "text": "本人欄・背景欄（総司令官）",
+    "app": "id:app/biz-idea",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L51"
+   },
+   {
+    "text": "XKT003・XKT025 の利用条件の問い合わせ（判断待ち）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "本人欄（総司令官。憲兵の失格級＝未記入）",
+    "app": "id:app/sat-alpha",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L39"
+   },
+   {
+    "text": "申請者欄・体制欄の記入（総司令官）",
+    "app": "id:app/sat-a",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "登録（総司令官）",
+    "app": "id:app/biz-idea",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L51"
+   },
+   {
+    "text": "本応募の記入（総司令官）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L15"
+   },
+   {
+    "text": "本人欄3か所（総司令官。失格級＝未記入。PR #27 は記入と憲兵の再監査までマージ保留）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "本人欄（総司令官）",
+    "app": "id:app/biz-idea-in1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L54"
+   },
+   {
+    "text": "登録（総司令官）",
+    "app": "id:app/biz-realestate",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L57"
+   },
+   {
+    "text": "フォームから提出（総司令官）",
+    "app": "id:app/sat-a",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "提出（総司令官）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   },
+   {
+    "text": "数週間の連続収集（判断待ち: 場所と担当）",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "アプリの公開（総司令官）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   },
+   {
+    "text": "本応募でアプリケーションに変えるか（判断待ち。対象自治体の選定が前提。11/30 以降に工兵が試作する予定）",
+    "app": "id:app/udc-moritsuchi",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L19"
+   },
+   {
+    "text": "本人欄・背景欄（総司令官。生成AI条項のため本人の書き換えが必須）",
+    "app": "id:app/biz-business",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L45"
+   },
+   {
+    "text": "Word での体裁確認（総司令官）",
+    "app": "id:app/sat-a",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "アプリの公開URL（総司令官。本応募に必要）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L15"
+   },
+   {
+    "text": "登録（総司令官）",
+    "app": "id:app/biz-business",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L45"
+   },
+   {
+    "text": "PPT の記入7か所（総司令官）",
+    "app": "id:app/biz-business",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L45"
+   }
+  ],
+  "未抽出": [
+   {
+    "text": "ライブラリ欄の字数上限（395/400、フォームで確認）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "本文の「現在地の案内」「住民の投稿」はアプリにない（本文を直すかアプリに足すか）",
+    "app": "id:app/biz-idea-in1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L54"
+   },
+   {
+    "text": "地理院の住所検索 API の利用条件",
+    "app": "id:app/biz-business-nb",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L48"
+   },
+   {
+    "text": "提案書（docx）がない",
+    "app": null,
+    "due": null,
+    "source": "reports/ops/status-20261121.md L34"
+   },
+   {
+    "text": "市場規模の金額がない",
+    "app": "id:app/sat-alpha",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L39"
+   },
+   {
+    "text": "応募フォーム各項目の下書き（PR #12 で作業中）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   },
+   {
+    "text": "実データでの精度確認",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "本応募フォームの案内を待つ（11月末、事務局から）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L15"
+   },
+   {
+    "text": "北部拠点の受け入れ確認",
+    "app": "id:app/biz-business-nb",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L48"
+   }
+  ],
+  "military-police": [
+   {
+    "text": "憲兵・デザイン審査が未実施（ODPT の2件だけ別 PR に分ければ衛星の監査と切り離して入れられる）",
+    "app": null,
+    "due": null,
+    "source": "reports/ops/status-20261121.md L78"
+   },
+   {
+    "text": "憲兵・デザイン審査が未実施",
+    "app": null,
+    "due": null,
+    "source": "reports/ops/status-20261121.md L34"
+   },
+   {
+    "text": "憲兵の監査（未実施）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   }
+  ],
+  "engineer": [
+   {
+    "text": "要修正3（必須データ「GTFSデータリポジトリ」の扱い）の要項確認（部隊）",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "軽微4件（部隊）",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "SAR の変位と後方散乱の書き方を揃える小修正（部隊。B を選んだ場合）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   }
+  ],
+  "aggressor": [
+   {
+    "text": "アグレッサーの失敗テスト2件（データの取り直しが必要）",
+    "app": "id:app/sat-alpha",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L39"
+   }
+  ]
+ },
+ "dataImpactAll": {
+  "id:dataset/aed-open": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "AED 設置の自治体オープンデータ",
+   "why": null
+  },
+  "id:dataset/bear-sightings": {
+   "apps": {
+    "id:app/sat-yabu": "クマ対策：藪払いの優先地図（提案yabu コンセプトデモ）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-yabu/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "クマ目撃情報（京都府・BODIK）",
+   "why": null
+  },
+  "id:dataset/biz-business-nb--99b6f20e": {
+   "apps": {
+    "id:app/biz-business-nb": "使用済み太陽光パネルの回収圏計画"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    }
+   ],
+   "label": "リサイクル施設（biz-business-nb 固有）",
+   "why": null
+  },
+  "id:dataset/biz-solar-guard--29da9528": {
+   "apps": {
+    "id:app/biz-solar-guard": "太陽光発電所の盗難対策マップ（イチBizアワード2026・新案・最小デモ・茨城県）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/idea"
+    }
+   ],
+   "label": "対策・実態（biz-solar-guard 固有）",
+   "why": null
+  },
+  "id:dataset/canopy-height": {
+   "apps": {
+    "id:app/sat-alpha": "配電線沿いの優先伐採地図"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-alpha/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "樹高マップ（Meta・WRI）",
+   "why": null
+  },
+  "id:dataset/estat-census": {
+   "apps": {
+    "id:app/biz-business": "バス路線見直し案の比較",
+    "id:app/biz-realestate": "相談前の1枚シート",
+    "id:app/biz-solar-guard": "太陽光発電所の盗難対策マップ（イチBizアワード2026・新案・最小デモ・茨城県）",
+    "id:app/odpt": "生活アクセス診断マップ",
+    "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）",
+    "id:app/sat-sugi": "案 sugi デモ: スギ植え替えの優先地（風下の人が多い人工林から）",
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/idea"
+    },
+    {
+     "submission": "id:sub/odpt/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kodure/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-sugi/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "e-Stat 国勢調査（人口・メッシュ）",
+   "why": null
+  },
+  "id:dataset/fit-certified": {
+   "apps": {
+    "id:app/biz-business-nb": "使用済み太陽光パネルの回収圏計画",
+    "id:app/biz-solar-guard": "太陽光発電所の盗難対策マップ（イチBizアワード2026・新案・最小デモ・茨城県）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/idea"
+    }
+   ],
+   "label": "再エネ事業計画認定情報（資源エネルギー庁）",
+   "why": null
+  },
+  "id:dataset/gsi-geocode": {
+   "apps": {
+    "id:app/biz-business-nb": "使用済み太陽光パネルの回収圏計画",
+    "id:app/biz-realestate": "相談前の1枚シート",
+    "id:app/odpt": "生活アクセス診断マップ",
+    "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/odpt/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kodure/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "国土地理院 住所検索・地名検索 API",
+   "why": null
+  },
+  "id:dataset/gsi-hazard": {
+   "apps": {
+    "id:app/biz-realestate": "相談前の1枚シート",
+    "id:app/odpt-kansui": "大雨のときに避けたい駅の出入口と迂回（比較用の案）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/odpt-kansui/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "ハザードマップ（洪水・高潮・浸水想定）",
+   "why": null
+  },
+  "id:dataset/gsi-lore": {
+   "apps": {
+    "id:app/biz-idea": "地名の記憶マップ"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-idea/ichibiz-2026/idea",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/idea"
+    }
+   ],
+   "label": "自然災害伝承碑（国土地理院）",
+   "why": null
+  },
+  "id:dataset/gsi-tiles": {
+   "apps": {
+    "id:app/biz-business": "バス路線見直し案の比較",
+    "id:app/biz-business-nb": "使用済み太陽光パネルの回収圏計画",
+    "id:app/biz-idea": "地名の記憶マップ",
+    "id:app/biz-realestate": "相談前の1枚シート",
+    "id:app/biz-realestate-a4": "同じ土地、四つの値段（イチBizアワード2026 不動産情報活用部門・新案 A4）",
+    "id:app/biz-realestate-rn1": "住む場所の先行き",
+    "id:app/biz-solar-guard": "太陽光発電所の盗難対策マップ（イチBizアワード2026・新案・最小デモ・茨城県）",
+    "id:app/odpt": "生活アクセス診断マップ",
+    "id:app/odpt-kankou": "観光バスを避ける生活ルート（odpt-2026 比較用の案）",
+    "id:app/odpt-kansui": "大雨のときに避けたい駅の出入口と迂回（比較用の案）",
+    "id:app/odpt-teiji": "バス定時性カルテ",
+    "id:app/sat-alpha": "配電線沿いの優先伐採地図",
+    "id:app/sat-b": "盛土巡視台帳",
+    "id:app/sat-sugi": "案 sugi デモ: スギ植え替えの優先地（風下の人が多い人工林から）",
+    "id:app/sat-yabu": "クマ対策：藪払いの優先地図（提案yabu コンセプトデモ）",
+    "id:app/udc-aed": "夜も使えるAED診断マップ",
+    "id:app/udc-moritsuchi": "みんなの盛土ウォッチ"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/biz-idea/ichibiz-2026/idea",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/idea"
+    },
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/idea"
+    },
+    {
+     "submission": "id:sub/odpt/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kankou/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kansui/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-teiji/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-alpha/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-b/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-sugi/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-yabu/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/udc-moritsuchi/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    }
+   ],
+   "label": "国土地理院 地理院タイル（背景地図・写真・標高）",
+   "why": null
+  },
+  "id:dataset/ksj-A29": {
+   "apps": {
+    "id:app/biz-realestate": "相談前の1枚シート"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    }
+   ],
+   "label": "国土数値情報 用途地域 A29",
+   "why": null
+  },
+  "id:dataset/ksj-A54": {
+   "apps": {
+    "id:app/sat-b": "盛土巡視台帳",
+    "id:app/udc-moritsuchi": "みんなの盛土ウォッチ"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-b/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/udc-moritsuchi/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 大規模盛土造成地 A54",
+   "why": null
+  },
+  "id:dataset/ksj-A56": {
+   "apps": {
+    "id:app/sat-b": "盛土巡視台帳"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-b/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 宅地造成等工事規制区域 A56",
+   "why": null
+  },
+  "id:dataset/ksj-N02": {
+   "apps": {
+    "id:app/biz-business": "バス路線見直し案の比較",
+    "id:app/biz-realestate": "相談前の1枚シート",
+    "id:app/odpt": "生活アクセス診断マップ",
+    "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/odpt/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kodure/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 鉄道駅 N02",
+   "why": null
+  },
+  "id:dataset/ksj-P12": {
+   "apps": {
+    "id:app/odpt-kankou": "観光バスを避ける生活ルート（odpt-2026 比較用の案）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/odpt-kankou/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 観光資源 P12",
+   "why": null
+  },
+  "id:dataset/ksj-P13": {
+   "apps": {
+    "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/odpt-kodure/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 都市公園 P13",
+   "why": null
+  },
+  "id:dataset/ksj-P27": {
+   "apps": {
+    "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/odpt-kodure/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 文化施設 P27",
+   "why": null
+  },
+  "id:dataset/ksj-hospital-school": {
+   "apps": {
+    "id:app/biz-business": "バス路線見直し案の比較",
+    "id:app/odpt": "生活アクセス診断マップ",
+    "id:app/odpt-kankou": "観光バスを避ける生活ルート（odpt-2026 比較用の案）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/odpt/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kankou/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "国土数値情報 病院・学校（P04・P29）",
+   "why": null
+  },
+  "id:dataset/odpt-gtfs": {
+   "apps": {
+    "id:app/biz-business": "バス路線見直し案の比較",
+    "id:app/odpt": "生活アクセス診断マップ",
+    "id:app/odpt-kankou": "観光バスを避ける生活ルート（odpt-2026 比較用の案）",
+    "id:app/odpt-kansui": "大雨のときに避けたい駅の出入口と迂回（比較用の案）",
+    "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）",
+    "id:app/odpt-teiji": "バス定時性カルテ"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-business/ichibiz-2026/business",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/business"
+    },
+    {
+     "submission": "id:sub/odpt/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt/udc-2026",
+     "contest": "id:contest/udc-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kankou/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kansui/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-kodure/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/odpt-teiji/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    }
+   ],
+   "label": "公共交通オープンデータ（ODPT センター・GTFS データリポジトリ）",
+   "why": null
+  },
+  "id:dataset/osm": {
+   "apps": {
+    "id:app/odpt-kansui": "大雨のときに避けたい駅の出入口と迂回（比較用の案）",
+    "id:app/sat-yabu": "クマ対策：藪払いの優先地図（提案yabu コンセプトデモ）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/odpt-kansui/odpt-2026",
+     "contest": "id:contest/odpt-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-yabu/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "OpenStreetMap",
+   "why": null
+  },
+  "id:dataset/reinfolib": {
+   "apps": {
+    "id:app/biz-realestate": "相談前の1枚シート",
+    "id:app/biz-realestate-a4": "同じ土地、四つの値段（イチBizアワード2026 不動産情報活用部門・新案 A4）",
+    "id:app/biz-realestate-rn1": "住む場所の先行き"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/biz-realestate-a4/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    },
+    {
+     "submission": "id:sub/biz-realestate-rn1/ichibiz-2026/realestate",
+     "contest": "id:contest/ichibiz-2026",
+     "division": "id:division/ichibiz-2026/realestate"
+    }
+   ],
+   "label": "不動産情報ライブラリ（国土交通省）API",
+   "why": null
+  },
+  "id:dataset/sat-alpha--8b28ca56": {
+   "apps": {
+    "id:app/sat-alpha": "配電線沿いの優先伐採地図"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-alpha/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "元画像の撮影日（sat-alpha 固有）",
+   "why": null
+  },
+  "id:dataset/sat-alpha--8e18f1eb": {
+   "apps": {
+    "id:app/sat-alpha": "配電線沿いの優先伐採地図"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-alpha/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "配電線・区間・点数・停電戸数・現地確認（①〜④）（sat-alpha 固有）",
+   "why": null
+  },
+  "id:dataset/sat-sugi--1410ff5d": {
+   "apps": {
+    "id:app/sat-sugi": "案 sugi デモ: スギ植え替えの優先地（風下の人が多い人工林から）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-sugi/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "風向（sat-sugi 固有）",
+   "why": null
+  },
+  "id:dataset/sat-sugi--b12c51e0": {
+   "apps": {
+    "id:app/sat-sugi": "案 sugi デモ: スギ植え替えの優先地（風下の人が多い人工林から）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-sugi/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "植林の位置（sat-sugi 固有）",
+   "why": null
+  },
+  "id:dataset/sentinel2": {
+   "apps": {
+    "id:app/sat-sugi": "案 sugi デモ: スギ植え替えの優先地（風下の人が多い人工林から）",
+    "id:app/sat-yabu": "クマ対策：藪払いの優先地図（提案yabu コンセプトデモ）"
+   },
+   "submissions": [
+    {
+     "submission": "id:sub/sat-sugi/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    },
+    {
+     "submission": "id:sub/sat-yabu/satellite-2026",
+     "contest": "id:contest/satellite-2026",
+     "division": null
+    }
+   ],
+   "label": "Sentinel-2（Copernicus）",
+   "why": null
+  },
+  "id:dataset/udc-aed--113880be": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "町田市（udc-aed 固有）",
+   "why": null
+  },
+  "id:dataset/udc-aed--42567efc": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "井原市（udc-aed 固有）",
+   "why": null
+  },
+  "id:dataset/udc-aed--6fe45f32": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "倉敷市（udc-aed 固有）",
+   "why": null
+  },
+  "id:dataset/udc-aed--99dab9b6": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "地図描画（udc-aed 固有）",
+   "why": null
+  },
+  "id:dataset/udc-aed--aa5ccb7c": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "福岡市（udc-aed 固有）",
+   "why": null
+  },
+  "id:dataset/udc-aed--da20fadf": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "井原市・倉敷市の出典表記（udc-aed 固有）",
+   "why": null
+  },
+  "id:dataset/udc-aed--dda064df": {
+   "apps": {
+    "id:app/udc-aed": "夜も使えるAED診断マップ"
+   },
+   "submissions": [],
+   "label": "市の境界（udc-aed 固有）",
+   "why": null
+  }
+ },
+ "unitLabels": {
+  "engineer": "工兵",
+  "intelligence": "情報部",
+  "design-reviewer": "デザイン審査班",
+  "commander": "総司令官",
+  "operations-research": "作戦研究班",
+  "aggressor": "アグレッサー",
+  "recon": "偵察隊",
+  "maintainer": "整備隊",
+  "relocator": "陣地転換隊",
+  "military-police": "憲兵",
+  "commander-aide": "総司令官補佐",
+  "未抽出": "担当 未抽出"
+ }
+}

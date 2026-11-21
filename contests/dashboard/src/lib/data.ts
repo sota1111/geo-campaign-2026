@@ -41,6 +41,21 @@ export function dataUrl(appId: string, file: string): string {
 }
 
 /** data/<appId>/<file> を JSON として読む */
+/** オントロジー（つながり図）ページの URL */
+export function ontologyUrl(): string {
+  return `${siteRoot()}ontology/index.html`
+}
+
+/** オントロジーの図解ページ（public/ontology-figures/。contests/ontology/figures.py が生成）の URL */
+export function ontologyFiguresUrl(): string {
+  return `${siteRoot()}ontology-figures/index.html`
+}
+
+/** ビルド時に public/ontology/ へ写した、オントロジーの JSON（graph.json・next-actions.json）の URL */
+export function ontologyDataUrl(file: string): string {
+  return `${siteRoot()}ontology/${file}`
+}
+
 export async function fetchData<T = unknown>(appId: string, file: string): Promise<T> {
   const res = await fetch(dataUrl(appId, file))
   if (!res.ok) throw new Error(`データを読み込めません: ${appId}/${file} (${res.status})`)

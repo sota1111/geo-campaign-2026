@@ -69,6 +69,27 @@ for (const c of contests) {
   const sw = await ev('document.documentElement.scrollWidth <= window.innerWidth')
   cout.push({ c, page, apps, sidebar, first, appPage, back, portal, noHScroll: sw, errs: errs.splice(0) })
 }
+// つながり図: ポータルのヘッダーのリンク → 図が出る → ノードを押すとカード → 次の行動から選ぶ → 統合ダッシュボードへ戻る
+const onto = { id: 'ontology' }
+await send('Page.navigate', { url: base })
+await sleep(1500)
+await ev(`document.querySelector('[data-testid=ontology-link]').click()`)
+await sleep(3500)
+onto.page = await ev('location.pathname')
+onto.nodes = await ev(`document.querySelectorAll('[data-node-id]').length`)
+await ev(`document.querySelector('[data-node-type=Submission]').click()`)
+await sleep(500)
+onto.cardTitle = await ev(`document.querySelector('[data-testid=node-card-title]')?.textContent ?? null`)
+await ev(`document.querySelector('[data-testid=sub-item] button').click()`)
+await sleep(800)
+onto.cardAfterAction = await ev(`document.querySelector('[data-testid=node-card-title]')?.textContent ?? null`)
+onto.selectedInGraph = await ev(`document.querySelectorAll('[data-node-id][aria-pressed=true]').length`)
+onto.noHScroll = await ev('document.documentElement.scrollWidth <= window.innerWidth')
+await ev(`document.querySelector('header a[href$="/index.html"]:not([data-testid])').click()`)
+await sleep(1500)
+onto.back = await ev('location.pathname')
+onto.errs = errs.splice(0)
+out.push(onto)
 console.log(JSON.stringify({ out, cout, errs }, null, 2))
 ws.close(); chrome.kill()
 try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }) } catch { /* ignore */ }
