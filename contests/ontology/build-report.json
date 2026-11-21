@@ -33,6 +33,10 @@
    "what": "audience・purpose（registry.ts に未登録）"
   },
   {
+   "node": "id:app/sat-dc",
+   "what": "audience・purpose（registry.ts に未登録）"
+  },
+  {
    "node": "id:app/biz-solar-guard",
    "what": "audience・purpose（registry.ts に未登録）"
   },
@@ -47,6 +51,10 @@
   {
    "node": "id:app/sat-a",
    "what": "使うデータ（README に出典・ライセンス表がなく、registry.ts にも sources がない）"
+  },
+  {
+   "node": "id:sub/sat-dc/satellite-2026",
+   "what": "出すテーマ枠（未決。fit 注意 C3）"
   },
   {
    "node": "id:sub/sat-sugi/satellite-2026",
@@ -115,14 +123,14 @@
  ],
  "counts": {
   "units": 10,
-  "apps": 22,
-  "fits": 126,
-  "datasets": 40,
-  "licenses": 38,
-  "submissions": 22,
-  "selection_decisions": 7,
+  "apps": 23,
+  "fits": 132,
+  "datasets": 41,
+  "licenses": 40,
+  "submissions": 23,
+  "selection_decisions": 8,
   "unfilled_placeholders": 47,
-  "unconfirmed_data_conditions": 8,
+  "unconfirmed_data_conditions": 28,
   "audits": 21,
   "findings": 128,
   "findings_by_severity": {
@@ -143,11 +151,11 @@
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
- "triples": 11213,
+ "triples": 12199,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
   "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
  },
- "gap_count": 28
+ "gap_count": 30
 }

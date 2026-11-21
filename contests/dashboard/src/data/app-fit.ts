@@ -1,8 +1,9 @@
-// 21アプリ×6列（UDC・衛星・イチBiz 3部門・ODPT）の適合表。正本は reports/intel/app-contest-fit-20261121.json（情報部）。
+// 22アプリ×6列（UDC・衛星・イチBiz 3部門・ODPT）の適合表。正本は reports/intel/app-contest-fit-20261121.json（情報部）。
 // 2026-11-21: 総司令官の追加情報（UDC は登録完了・提出時にテーマ変更可）を UDC 列と注意 C2 に反映済み。正本の JSON・md にも参謀長が反映した。
 // 2026-11-21: 新案 biz-realestate-a4（19アプリ目）の6セルを足した（不動産部門 ◎ score 3「このコンペ向けに作った」・他は ？ 未判定 score 0）。正本の JSON への反映は情報部が行う（書き込み範囲外）。
 // 2026-11-21: 新案 biz-realestate-timeline（20アプリ目）の6セルを足した（不動産部門 ◎ score 3・他は ？ 未判定 score 0）。正本の JSON への反映は参謀長が行う（工兵は reports/ に書けない）。
 // 2026-11-22: 新案 biz-repair（21アプリ目。大規模修繕プラットフォーム）の6セルを足した（アイデア部門 ◎ score 3「このコンペ向けに作った」・他は ？ 未判定 score 0）。正本の JSON への反映は参謀長が行う（工兵は reports/ に書けない）。
+// 2026-11-22: 新案 sat-dc（22アプリ目。データセンター候補地の一次スクリーニング）の6セルを足した（衛星 ◎ score 3「このコンペ向けに作った」・他は ？ 未判定 score 0）。正本の JSON への反映は参謀長が行う（工兵は reports/ に書けない）。
 // 文言は正本のまま。ここで判定（mark・score）を変えない（src/test/app-fit.test.ts が正本との一致を検査する）。
 export const FIT_AS_OF = "2026-11-21"
 export const FIT_SOURCE = 'reports/intel/app-contest-fit-20261121.json'
@@ -1084,6 +1085,54 @@ export const FIT_CELLS: FitCell[] = [
   },
   {
     "app": "biz-repair",
+    "contest": "odpt-2026",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "sat-dc",
+    "contest": "udc-2026",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "sat-dc",
+    "contest": "satellite-2026",
+    "mark": "◎",
+    "score": 3,
+    "reason": "このコンペ向けに作った（データセンター候補地の一次スクリーニング。衛星データを主役に、インフラのリスク可視化・防災・都市課題を見る新案。応募テーマは総司令官が選ぶ）",
+    "source": "contests/satellite-2026/app/proposal-dc/README.md; reports/intel/satellite-2026-datacenter-20261122.md"
+  },
+  {
+    "app": "sat-dc",
+    "contest": "ichibiz-2026-business",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "sat-dc",
+    "contest": "ichibiz-2026-idea",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "sat-dc",
+    "contest": "ichibiz-2026-realestate",
+    "mark": "？",
+    "score": 0,
+    "reason": "未判定（情報部の判定前）",
+    "source": "なし（情報部の判定前）"
+  },
+  {
+    "app": "sat-dc",
     "contest": "odpt-2026",
     "mark": "？",
     "score": 0,
