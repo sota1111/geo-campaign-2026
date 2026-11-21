@@ -41,6 +41,10 @@
    "what": "audience・purpose（registry.ts に未登録）"
   },
   {
+   "node": "id:app/biz-repair",
+   "what": "アプリ×コンペの適合（適合 JSON に行がない）"
+  },
+  {
    "node": "id:app/biz-idea-in1",
    "what": "アプリ×コンペの適合（適合 JSON に行がない）"
   },
@@ -107,14 +111,14 @@
  ],
  "counts": {
   "units": 10,
-  "apps": 21,
+  "apps": 22,
   "fits": 120,
-  "datasets": 39,
-  "licenses": 37,
-  "submissions": 21,
+  "datasets": 40,
+  "licenses": 38,
+  "submissions": 22,
   "selection_decisions": 7,
   "unfilled_placeholders": 47,
-  "unconfirmed_data_conditions": 7,
+  "unconfirmed_data_conditions": 8,
   "audits": 18,
   "findings": 122,
   "findings_by_severity": {
@@ -135,11 +139,11 @@
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
- "triples": 10849,
+ "triples": 10975,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
   "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
  },
- "gap_count": 26
+ "gap_count": 27
 }

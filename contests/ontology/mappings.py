@@ -28,6 +28,7 @@ APP_DIRS = {
     "biz-realestate-a4": "contests/ichibiz-2026/app/realestate-a4",
     "biz-realestate-timeline": "contests/ichibiz-2026/app/realestate-timeline",
     "biz-solar-guard": "contests/ichibiz-2026/app/solar-guard",
+    "biz-repair": "contests/ichibiz-2026/app/repair-platform",
 }
 
 # registry.ts に無い 6 件の所属コンテスト・部門（ディレクトリの contests/<id>/ と、
@@ -92,6 +93,7 @@ NO_DRAFT_SOURCES = {
     "odpt-kankou": "reports/command/merge-20261121.md",
     "odpt-kansui": "reports/command/merge-20261121.md",
     "biz-solar-guard": "reports/audit/ichibiz-2026-solar-guard-20261113.md",
+    "biz-repair": "contests/ichibiz-2026/app/repair-platform/README.md",
 }
 # 未記入の穴の記法（満たしたら消える指示文の括弧）
 PLACEHOLDER_RE = r"【(?:本人加筆|総司令官記入|提出時に記入|本人記入)"
