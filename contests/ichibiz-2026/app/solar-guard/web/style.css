@@ -198,3 +198,34 @@ button.mapsel { background: #eef6fc; border-color: #0072B2; color: #0b4f7c; font
 .dlabel { background: rgba(255,255,255,.88); border: 1px solid #14365d; border-radius: 3px; padding: 0 4px; font-size: 11.5px; font-weight: bold; color: #14365d; white-space: nowrap; pointer-events: none; }
 .dlabel small { font-weight: normal; font-size: 10.5px; }
 @media (max-width: 720px) { .dlabel { font-size: 10.5px; } .dlabel small { font-size: 9.5px; } }
+
+/* 評価ループ第5回 */
+.xbtn { float: right; margin: 0 0 4px 8px; padding: 1px 8px; font-size: 12px; background: #fff; color: #14365d; border-color: #fff; }
+.linkbtn { border: 0; background: none; padding: 0 2px; color: #0b4f7c; text-decoration: underline; font-size: inherit; font-weight: bold; cursor: pointer; }
+.why1 { margin: 2px 0; font-size: 13px; }
+.next { margin: 2px 0; font-size: 12.5px; color: #b03a00; }
+.next .linkbtn { color: #b03a00; }
+.sum1 { margin: 2px 0 4px; font-size: 13.5px; }
+.result details.more { margin-top: 2px; }
+ul.concl { margin: 4px 0 8px; padding-left: 18px; font-size: 13.5px; }
+details.sec { border-top: 1px solid #e3e7ec; padding: 6px 0; }
+details.sec > summary { font-size: 14.5px; }
+button.small { padding: 2px 8px; font-size: 12px; margin: 4px 0 2px; }
+.fab { display: none; }
+@media (max-width: 720px) {
+  body[data-tab=map] .fab { display: block; position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; z-index: 3; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+  body[data-tab=map] .key button.primary { display: none; }
+  body[data-tab=diag] footer#credit { position: static; white-space: normal; }
+  #legend { white-space: normal; }
+  #legend .lgt { font-size: 10.5px; }
+  #ctl-class { flex-wrap: nowrap; }
+  #ctl-class button { padding: 3px 5px; font-size: 12px; white-space: nowrap; }
+  #ctl-class button small { font-size: 9.5px; }
+}
+@media (max-width: 720px) {
+  #ctl-class { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+  #ctl-class button { white-space: normal; line-height: 1.25; padding: 3px 2px; }
+  #ctl-class button small { display: block; margin: 0; }
+  #box-pos .row:has(#ctl-class) { flex-wrap: nowrap; }
+}
+.lbl { white-space: nowrap; }

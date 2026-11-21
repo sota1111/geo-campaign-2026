@@ -12,8 +12,8 @@
 <header>
   <div class="hrow">
     <h1>太陽光発電所の盗難対策マップ <span class="tag">茨城県・デモ</span></h1>
-    <details class="aboutapp"><summary>このアプリについて</summary>
-      <p class="lead"><b>使う人</b>: 発電事業者・O&amp;M事業者・保険会社・自治体や警察の防犯担当。<br><b>できること</b>: 県内の盗難リスクの色（仮）を地図で見る／自分の設備の条件を入れて、色の理由と、まず取る対策を知る（本人のブラウザ内だけで計算）。<br><b>しないこと</b>: 公開の地図に個別の設備の順位・一覧・「狙われやすい設備」を出すこと、被害の予測。</p>
+    <details class="aboutapp" id="aboutapp"><summary>このアプリについて</summary>
+      <p class="lead"><button type="button" id="about-close" class="xbtn" aria-label="閉じる">× 閉じる</button><b>使う人</b>: 発電事業者・O&amp;M事業者・保険会社・自治体や警察の防犯担当。<br><b>できること</b>: 県内の盗難リスクの色（仮）を地図で見る／自分の設備の条件を入れて、色の理由と、まず取る対策を知る（本人のブラウザ内だけで計算）。<br><b>しないこと</b>: 公開の地図に個別の設備の順位・一覧・「狙われやすい設備」を出すこと、被害の予測。</p>
     </details>
   </div>
   <nav id="tabs" role="tablist" aria-label="画面の切り替え">
@@ -30,10 +30,10 @@
     <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
       <div class="box key" role="note">
         <button id="go-diag" type="button" class="primary">設備を診断する（条件を入れて理由と対策を見る）</button>
-        <p class="big"><b>色は県警の5地区の被害実績（地図の地区名）＋人口密度による仮の段階</b>で、被害の予測ではなく、メッシュごとの実績でもありません。</p>
+        <p class="big"><b>色＝県警の地区単位の被害実績＋人口密度による仮の目安</b>。被害の予測ではなく、メッシュごとの実績でもありません。</p>
       </div>
       <details class="box" id="det-basis">
-        <summary>色の根拠と限界（県警の被害実績との照合）</summary>
+        <summary>色の根拠と限界（照合は独立の検証ではない）</summary>
         <ul class="note dark">
           <li>設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。</li>
           <li><b>この色は的中を検証していません。</b>主な根拠は県警が公表した県内5地区の被害件数（設備あたり）で、地区内のメッシュごとの実績は公開されていません。点数の配分や切り方に公的な根拠はありません。</li>
@@ -42,16 +42,16 @@
         </ul>
         <h3>色分けの規則</h3>
         <div id="rules"></div>
-        <details id="det-verify"><summary>詳しい検証（県警の5地区の実績と色の照合）</summary>
+        <details id="det-verify"><summary>詳しい検証（県警の被害実績との照合）</summary>
           <div id="dist-compare"></div>
         </details>
       </details>
       <details class="box" id="det-trend">
-        <summary>茨城県の金属盗の件数と法令</summary>
+        <summary>件数と法令（茨城県の金属盗の推移）</summary>
         <div id="trend"></div>
       </details>
       <details class="box" id="det-munis">
-        <summary>市町村別の集計（表）</summary>
+        <summary>市町村別の表（色・設備数・人口密度）</summary>
         <p class="note" id="map-summary"></p>
         <div id="muni-table" class="scroll"></div>
         <p class="note">人口は2020年国勢調査、面積は小地域境界の面積（水面を含みうる）。市町村の色は、メッシュと同じ規則（地区の段階と、市町村の人口密度が低い方から1/3か）。</p>
@@ -87,9 +87,9 @@
         </details>
       </div>
       <div class="box" id="box-cond">
-        <h2><span class="step">2</span>立地の条件 <span class="sub">★＝色に影響</span></h2>
+        <h2><span class="step">2</span>立地の条件 <span class="sub">★に答えると判定の幅が絞られます</span></h2>
         <div id="conds"></div>
-        <details id="det-cl"><summary id="cl-sum">いまの対策（任意）</summary>
+        <details id="det-cl"><summary id="cl-sum">防犯対策</summary>
           <div id="checklist"></div>
         </details>
       </div>
@@ -121,6 +121,7 @@
   <section id="mapwrap">
     <div id="map" aria-label="茨城県の集計メッシュの地図"></div>
     <div id="legend"></div>
+    <button type="button" id="go-diag2" class="primary fab">設備を診断する</button>
   </section>
 </main>
 <footer id="credit"><span class="pc">出典: 資源エネルギー庁 再エネ認定情報、e-Stat 国勢調査2020、茨城県警察、地理院タイルを</span><span class="sp">出典: エネ庁・e-Stat・県警・地理院を</span><b>編集・加工して作成</b><span class="pc">（国が作成したものではありません）。詳しくは「出典・前提・限界」</span><span class="sp">（国の作成ではない）</span></footer>

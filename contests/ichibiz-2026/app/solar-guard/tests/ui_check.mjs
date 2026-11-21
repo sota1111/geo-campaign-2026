@@ -226,7 +226,7 @@ async function run(label, w, h, mobile) {
   if (rl.bars < 20 || !rl.txt.includes('茨城県警察')) problems.push(label + ': 盗難の実態の図・出典がない');
   await shot(c, `${label}-3-reality.png`, mobile);
   await click(c, '#tab-about');
-  const ab = await c.ev('document.getElementById("about").innerText');
+  const ab = await c.ev('document.getElementById("about").textContent');
   for (const wd of ['加工して作成', '悪用を防ぐ設計', '限界・要確認', '利用ルール', '3件未満', '資源エネルギー庁', '独立の検証ではありません', '推測', '送信も保存もしない', '地理院が受け取る']) if (!ab.includes(wd)) problems.push(label + ': 出典・限界に「' + wd + '」がない');
   await shot(c, `${label}-4-about.png`, mobile);
   if (await c.ev('document.documentElement.scrollWidth > window.innerWidth + 2')) problems.push(label + ': 横スクロール（出典タブ）');

@@ -34,6 +34,10 @@
     $('btn-set').addEventListener('click', function () { setPoint($('in-lon').value, $('in-lat').value); });
     $('btn-reset').addEventListener('click', resetDiag);
     $('go-diag').addEventListener('click', function () { setTab('diag'); });
+    $('go-diag2').addEventListener('click', function () { setTab('diag'); window.scrollTo(0, 0); });
+    /* 「このアプリについて」: 閉じるボタンと、外側を押したら閉じる（評価ループ第5回） */
+    $('about-close').addEventListener('click', function () { $('aboutapp').open = false; });
+    document.addEventListener('click', function (e) { var d = $('aboutapp'); if (d.open && !d.contains(e.target)) d.open = false; });
     $('btn-mapsel').addEventListener('click', function () { toggleMapSel(); });
     $('in-muni').addEventListener('change', function () { setMuni($('in-muni').value); });
     initMini();
@@ -137,7 +141,7 @@
   function buildLegend() {
     var el = $('legend');
     el.className = '';
-    var h = '<span class="lgt"><span class="pc">地区の目安（仮。</span>被害の予測ではありません<span class="pc">）</span></span> ';
+    var h = '<span class="lgt">実績に基づく地区の目安（仮・被害の予測ではありません）</span><br class="sp"> ';
     BAND_COLORS.forEach(function (c, i) { h += '<span class="sw" style="background:' + c + '"></span>' + BAND_LABELS[i]; });
     h += '<span class="sw" style="background:#fff"></span>色なし';
     el.innerHTML = h;
@@ -167,6 +171,9 @@
       map.addSource('cells', { type: 'geojson', data: { type: 'FeatureCollection', features: cellFeatures() } });
       map.addLayer({ id: 'cells-fill', type: 'fill', source: 'cells', filter: ['>=', ['get', 'band'], 0], paint: { 'fill-opacity': 0.62, 'fill-color': ['match', ['get', 'band'], 0, BAND_COLORS[0], 1, BAND_COLORS[1], 2, BAND_COLORS[2], 3, BAND_COLORS[3], '#cccccc'] } });
       map.addLayer({ id: 'cells-line', type: 'line', source: 'cells', filter: ['>=', ['get', 'band'], 0], paint: { 'line-color': '#555', 'line-width': 0.4, 'line-opacity': 0.6 } });
+      /* 評価ループ第5回: 地区の境目を太線で引き、色が地区単位の目安だと見た目でも分かるようにする */
+      map.addSource('borders', { type: 'geojson', data: { type: 'FeatureCollection', features: regionEdges() } });
+      map.addLayer({ id: 'border-line', type: 'line', source: 'borders', paint: { 'line-color': '#14365d', 'line-width': 2.5, 'line-opacity': 0.85 } });
       map.addLayer({ id: 'area-line', type: 'line', source: 'cells', filter: ['==', ['get', 'region'], -9], paint: { 'line-color': '#0072B2', 'line-width': 2 } });
       addAreaLabels();
       map.addSource('mine', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
@@ -181,6 +188,20 @@
       if (S.tab === 'diag') { setPoint(String(e.lngLat.lng), String(e.lngLat.lat)); return; }
       if (S.tab === 'map') cellPopup(e.lngLat);
     });
+  }
+  /* 色を付けたメッシュのうち、隣のメッシュと地区が違う辺だけを線にする（地区の境目） */
+  function regionEdges() {
+    var at = {}, out = [];
+    S.sc.forEach(function (c) { if (c.level != null) at[c.cx + ',' + c.cy] = c.region; });
+    S.sc.forEach(function (c) {
+      if (c.level == null) return;
+      var b = G.cellBounds(c.cx, c.cy);
+      [[1, 0, [[b[2], b[1]], [b[2], b[3]]]], [0, 1, [[b[0], b[3]], [b[2], b[3]]]]].forEach(function (d) {
+        var o = at[(c.cx + d[0]) + ',' + (c.cy + d[1])];
+        if (o != null && o !== c.region) out.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: d[2] } });
+      });
+    });
+    return out;
   }
   /* 地図に地区名と、県警の被害実績（設備1,000件あたり）の順位を重ねる（評価ループ第4回: 色の意味をひと目で）。位置は地区の公開メッシュの中心 */
   function addAreaLabels() {
@@ -215,9 +236,10 @@
     else {
       var c = S.sc[idx], t = c.region >= 0 ? areaOf(S.d711, S.areaNames[c.region]) : null;
       /* 評価ループ第4回: 地区の実績が県平均より上か下かを先に言葉で示し、人の少なさで足した段階は別の行に分ける */
-      h = '地区の目安（仮）: ' + bandChip(c.level) +
-        (t ? '<br><b>' + esc(t.area) + '</b>: 被害実績は<b>県平均' + (t.rate >= S.d711.avg ? '以上' : 'より低い') + '</b>（設備1,000件あたり' + n1(t.rate) + '件、県平均 ' + n1(S.d711.avg) + '）→ ' + bandChip(G.MAP_LEVEL[G.W_REGION * t.tier]) : '<br>地区 —') +
-        (c.quiet ? '<br>＋人が少ない（約' + n0(c.dens) + '人/km²）ため1段階上げ' : '') +
+      /* 評価ループ第5回: 「地区の色 → 人口密度で上げた色」を1本の流れで見せる（診断の「地図の色」と同じ値） */
+      h = '<b>地区の目安（仮）</b><br>' +
+        (t ? '<b>' + esc(t.area) + '</b> ' + bandChip(G.MAP_LEVEL[G.W_REGION * t.tier]) + (c.quiet ? ' → 人が少ない（約' + n0(c.dens) + '人/km²）ので ' + bandChip(c.level) : '') +
+          '<br><span class="src">県警の実績 5地区中' + districtRank(t.area) + '位（設備1,000件あたり' + n1(t.rate) + '件、県平均 ' + n1(S.d711.avg) + '）。地区単位の実績で、このメッシュの実績ではない</span>' : '地区 — ' + bandChip(c.level)) +
         '<br><span class="src">設備 ' + n0(c.n) + '件・出力計 約' + mw(c.kw) + ' MW</span>';
     }
     h += '<br><button type="button" class="primary pop-diag">この場所で診断する</button>';
@@ -260,7 +282,7 @@
       el.appendChild(b);
     });
     var sp = S.items.filter(function (it) { return S.diag.cls !== 'unknown' && it.cls.indexOf(S.diag.cls) >= 0; })[0];
-    $('cls-note').textContent = sp ? clsLabel(S.diag.cls) + 'の重点を対策の1件目に入れました（色には使いません）。' : '';
+    $('cls-note').textContent = sp ? '対策の1件目を' + clsLabel(S.diag.cls) + 'の重点に（色は変わりません）' : '';
   }
   /* 診断の「現場の条件」の質問（本人の回答で決まるもの。対策の回答から導く条件は、対策の回答で決まる） */
   var YN = [['yes', 'はい'], ['no', 'いいえ']];   // どちらも押していなければ「不明」
@@ -302,17 +324,21 @@
     });
     vis.forEach(function (it) { if (!af[it.id]) { rest += row(it); nRest++; } });
     var open = $('det-rest') && $('det-rest').open;
-    $('checklist').innerHTML = star +
+    $('checklist').innerHTML = '<button type="button" id="btn-allno" class="small">表示中の対策をすべて「未実施」にする</button>' + star +
       '<details id="det-rest"' + (open ? ' open' : '') + '><summary>ほかの対策 ' + nRest + '件（色には影響しません）</summary>' + rest + '</details>' +
       '<p class="note">項目は茨城県警・JPEA（太陽光発電協会）・REASP（再生可能エネルギー長期安定電源推進協会）の資料から。</p>';
     bindSeg($('checklist'), S.diag.answers);
+    $('btn-allno').addEventListener('click', function () {
+      visibleItems().forEach(function (it) { S.diag.answers[it.id] = 'no'; });
+      buildChecklist(); renderDiag();
+    });
     clSummary();
   }
 
   function clSummary() {
     var af = affects(), n = 0, d = 0, g = {};
     visibleItems().forEach(function (it) { if (!af[it.id]) return; n++; g[af[it.id]] = 1; if ((S.diag.answers[it.id] || 'unknown') !== 'unknown') d++; });
-    $('cl-sum').textContent = 'いまの対策（任意。★の' + Object.keys(g).length + '項目が色に影響・回答 ' + d + '/' + n + '）';
+    $('cl-sum').textContent = '防犯対策（★' + Object.keys(g).length + '項目に答えると判定が絞られます・回答 ' + d + '/' + n + '）';
   }
   /* 市町村の選択肢（地区のない市町村は無い。県の区分ごと） */
   var KANA = { '日立市': 'ひたち', '常陸太田市': 'ひたちおおた', '高萩市': 'たかはぎ', '北茨城市': 'きたいばらき', '常陸大宮市': 'ひたちおおみや', '大子町': 'だいご',
@@ -355,7 +381,7 @@
     }
     S.diag.lon = lon; S.diag.lat = lat; S.diag.muni = null; $('in-muni').value = '';
     $('in-lat').value = lat.toFixed(4); $('in-lon').value = lon.toFixed(4);
-    msg.textContent = '地図の位置を受け取りました（約5km四方の区画の単位で、この端末の中だけで使います）。'; msg.className = 'note';
+    msg.textContent = '地図の位置で診断します（約5km四方の単位。この端末の中だけで使用）'; msg.className = 'note';
     showPoint(); renderDiag();
   }
   function showPoint() {
@@ -400,10 +426,27 @@
     return WHY_TXT[p.why];
   }
   /* 出典は1項目に1つ（資料の短い名前をリンクにする。正式名は title） */
-  var SRC_SHORT = { IBF: '県警チラシの3対策', JPEA: 'JPEA・REASP p.9-10', KM4: '県警 Metal News 第4号', KM10: '県警 Metal News 第10号', IBP: '県警「金属盗難に注意！」' };
+  var SRC_SHORT = { IBF: '県警チラシ「3つの対策」', JPEA: 'JPEA・REASP 2024年資料', KM4: '県警 Metal News 令和8年第4号', KM10: '県警 Metal News 令和8年第10号', IBP: '県警「金属盗難に注意！」' };
   function prioSrc(p) {
     var k = p.why === 'flyer' ? 'IBF' : (p.why === 'class' || p.why === 'hit') && p.item.src.indexOf('JPEA') >= 0 ? 'JPEA' : p.item.src[0], s = S.ck.sources[k];
     return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener" title="' + esc(s.name) + '">' + esc(SRC_SHORT[k] || s.short) + '</a>';
+  }
+  /* 県警の被害実績（設備1,000件あたり、令和7年11月末）の5地区での順位 */
+  function districtRank(name) {
+    var ranked = S.d711.rows.filter(function (r) { return r.rate != null; }).sort(function (a, b) { return b.rate - a.rate; }).map(function (r) { return r.area; });
+    return ranked.indexOf(name) + 1;
+  }
+  /* 結果のカードのリンク: 押すと該当の欄を開いて、そこへ移る（タブは切り替えない） */
+  function bindOpeners(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('[data-open]'), function (b) {
+      b.addEventListener('click', function () {
+        var t = $(b.getAttribute('data-open'));
+        if (!t) return;
+        if (t.tagName === 'DETAILS') t.open = true;
+        if (t.id === 'det-cl') $('box-cond').open = true;
+        t.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+    });
   }
   function answered() {
     var a = S.diag.answers, c = S.diag.cond, k;
@@ -426,26 +469,34 @@
     var pr = G.priorities(items, S.diag.answers, S.risk.conds, cres, S.diag.cls);
     var reg = r && r.region, rt = reg ? areaOf(S.d711, reg.name) : null;
     var h = '', mini = '';
+    var mapLv = null;
     if (!r) {
-      h += '<p class="lv">あなたの設備: <span class="band" style="background:#fff">？</span> <span class="lvsub">場所（市町村か地図）を選ぶと色が出ます</span></p>';
+      h += '<p class="lv">あなたの設備: <span class="band" style="background:#fff">？</span> <span class="lvsub">市町村か地図で場所を選ぶと色と理由が出ます</span></p>';
       mini = '場所を選ぶと色が出ます';
     } else {
       var hits = S.risk.conds.filter(function (c, i) { return r.conds[i].state === 'risk'; }).map(function (c) { return c.label; });
       var unk = S.risk.conds.filter(function (c, i) { return r.conds[i].state === 'unknown'; }).map(function (c) { return c.label; });
-      var mapLv = mu ? mu.band : (function () { var x = S.sc.filter(function (c) { return c.cx === r.mesh.cx && c.cy === r.mesh.cy; })[0]; return x ? x.level : null; })();
+      mapLv = mu ? mu.band : (function () { var x = S.sc.filter(function (c) { return c.cx === r.mesh.cx && c.cy === r.mesh.cy; })[0]; return x ? x.level : null; })();
       var fixed = r.levelMax === r.levelMin;
-      /* 評価ループ第4回: 色と「あと N 項目で確定」だけを1行に（項目＝色に効く条件。立地の問いと★の対策のまとまりで同じ単位） */
-      var lv = !fixed && !answered() ? bandChip(r.levelMin) + '〜' + bandChip(r.levelMax) : bandChip(r.levelMin);
-      var left = fixed ? '<span class="lvsub"><b>確定</b></span>' : !reg ? '<span class="left">地区が不明のため幅あり</span>' : '<span class="left">あと' + unk.length + '項目で確定</span>';
+      /* 評価ループ第5回: 未確定の間は常に幅（下限〜上限）で出し、「未回答のため幅あり」と添える */
+      var lv = fixed ? bandChip(r.levelMin) : bandChip(r.levelMin) + '〜' + bandChip(r.levelMax);
+      var left = fixed ? '<span class="lvsub"><b>確定</b></span>' : '<span class="left">' + (reg ? '未回答のため幅あり' : '地区が不明のため幅あり') + '</span>';
       h += '<p class="lv">あなたの設備: ' + lv + ' ' + left + '</p>';
       mini = 'あなたの設備: ' + lv + (fixed ? ' 確定' : reg ? ' あと' + unk.length + '項目' : '');
-      var regTxt = reg ? esc(reg.name) + '（県平均' + (reg.tier === 2 ? '以上' : 'より少ない') + (reg.near ? '・近くで代用' : '') + '）' : '不明';
-      h += '<p class="note dark"><b>理由</b>: 地区 ' + regTxt + (hits.length ? '＋「' + esc(hits.join('」「')) + '」' : '') + '</p>';
-      var uA = S.risk.conds.filter(function (c, i) { return !c.derive && r.conds[i].state === 'unknown'; }).length, uD = unk.length - uA;
-      if (!fixed && reg) h += '<p class="note"><b>未回答</b>: ' + [uA ? '立地★' + uA + '問' : '', uD ? '対策★' + uD + '項目' : ''].filter(Boolean).join('・') + '（最大で' + BAND_LABELS[r.levelMax] + '）</p>';
-      h += '<p class="note">地図の色 ' + bandChip(mapLv) + ' は地区の傾向で、判定は設備ごと（仮。予測ではない）</p>';
+      /* 理由は1行: 地区の実績の順位（短い事実）＋当てはまる条件（2件まで名前） */
+      var regTxt = reg ? esc(reg.name) + '（県警の実績 5地区中' + districtRank(reg.name) + '位' + (reg.near ? '・近くで代用' : '') + '）' : '地区不明';
+      var hitTxt = hits.length ? '＋「' + esc(hits.slice(0, 2).join('」「')) + '」' + (hits.length > 2 ? 'ほか' + (hits.length - 2) + '件' : '') : '';
+      h += '<p class="why1"><b>理由</b>: ' + regTxt + hitTxt + ' <button type="button" class="linkbtn" data-open="box-detail">内訳</button></p>';
+      if (!fixed && reg) {
+        var uA = S.risk.conds.filter(function (c, i) { return !c.derive && r.conds[i].state === 'unknown'; }).length, uD = unk.length - uA;
+        /* 何に答えると何が変わるかを1文で（評価ループ第5回） */
+        h += '<p class="next">あと' + unk.length + '項目で確定: ' +
+          (uA ? '<button type="button" class="linkbtn" data-open="box-cond">立地★' + uA + '問</button>' : '') + (uA && uD ? '・' : '') +
+          (uD ? '<button type="button" class="linkbtn" data-open="det-cl">防犯対策★' + uD + '項目</button>' : '') +
+          'に答えると「' + BAND_LABELS[r.levelMax] + '」まで判定</p>';
+      }
     }
-    h += '<h3>まず取る対策</h3><p class="prio">優先の基準: 当てはまる条件→区分の重点→県警チラシ（仮。効果の比較ではない）</p>';
+    h += '<h3>まず取る対策' + (S.diag.cls === 'unknown' ? ' <span class="lvsub">（区分を選ぶと順番が変わります）</span>' : '') + '</h3>';
     if (!pr.length) h += '<p class="note dark">挙げた対策はすべて「実施」です。ただし資料は「完全に防ぐ方法があるわけではない」としています（JPEA・REASP p.9）。</p>';
     else {
       var pick = pr.slice(0, 3);
@@ -455,7 +506,12 @@
       }).join('') + '</ol>';
       mini += '｜まず: ' + esc(pr[0].item.short);
     }
+    /* 注記は1つの折りたたみにまとめる（地図の色との違い・推測・優先の基準） */
+    h += '<details class="more"><summary>この判定の前提（仮・予測ではない）</summary>' +
+      (r ? '<p>地図の色 ' + bandChip(mapLv) + ' は地区の目安（県警の地区単位の実績を市町村に当てはめた推測＋人口密度）。判定は、それにあなたの設備の条件を足したもの。</p>' : '') +
+      '<p>優先の基準: 当てはまる条件→区分の重点→県警チラシ（仮。効果の比較ではない）。</p></details>';
     el.innerHTML = h;
+    bindOpeners(el);
     $('diag-mini').innerHTML = mini;
     clSummary();
     renderDetail(r, rt);
@@ -465,8 +521,10 @@
     var el = $('diag-detail');
     if (!r) { el.innerHTML = '<p class="note">場所を選ぶと、色の内訳が出ます。</p>'; return; }
     var reg = r.region;
-    var h = '<p class="note dark"><b>この設備のリスク（仮の規則）の内訳</b>: 点数 ' + r.scoreMin + '＝地区 ' + (reg ? G.W_REGION * reg.tier : 0) + '＋当てはまる条件 ' + r.riskCount + '件' + (r.unknownCount ? '（わからない ' + r.unknownCount + '件がすべて当てはまると ' + r.scoreMax + '）' : '') + '。0〜3＝低、4〜6＝中、7〜8＝やや高、9以上＝高（仮の切り方）。</p>' +
-      '<p class="note dark"><b>地区</b>: ' + (reg ? esc(reg.name) + (reg.near ? '（近くの公開メッシュの地区で代用。推測）' : '（県の区分で推測）') + '。県警の令和7年11月末の件数は設備1,000件あたり' + n1(rt.rate) + '件（県全体 ' + n1(S.d711.avg) + '件）で段階' + reg.tier + '（' + link(S.reality.areas711.url, 'Metal News 令和7年第12号') + '）' : '近くに公開メッシュがなく不明（下限は0点、上限は4点を足す）') + '</p>';
+    /* 評価ループ第5回: 内訳は1行（地区の点＋条件の点＝点数（色））。切り方・地区の根拠は下の折りたたみ */
+    var h = '<p class="sum1"><b>この設備のリスク（仮）</b>: 地区 ' + (reg ? G.W_REGION * reg.tier : 0) + '点＋条件 ' + r.riskCount + '点＝' + r.scoreMin + '点（' + BAND_LABELS[r.levelMin] + '）' + (r.unknownCount ? '<span class="lvsub">　わからない' + r.unknownCount + '件が当てはまると' + r.scoreMax + '点</span>' : '') + '</p>' +
+      '<details class="more"><summary>切り方と地区の根拠</summary><p class="note dark">0〜3点＝低、4〜6点＝中、7〜8点＝やや高、9点以上＝高（仮の切り方）。</p>' +
+      '<p class="note dark"><b>地区</b>: ' + (reg ? esc(reg.name) + (reg.near ? '（近くの公開メッシュの地区で代用。推測）' : '（県の区分で推測）') + '。県警の令和7年11月末の件数は設備1,000件あたり' + n1(rt.rate) + '件（県全体 ' + n1(S.d711.avg) + '件）で段階' + reg.tier + '（' + link(S.reality.areas711.url, 'Metal News 令和7年第12号') + '）' : '近くに公開メッシュがなく不明（下限は0点、上限は4点を足す）') + '</p></details>';
     /* 評価ループ第4回: 当てはまる条件だけを表に（「詳しく」は閉じる）。わからない・当てはまらない条件は1行ずつにまとめ、条件名を出典へのリンクにする */
     var idx = S.risk.conds.map(function (c, i) { return i; });
     var of = function (st) { return idx.filter(function (i) { return r.conds[i].state === st; }); };
@@ -555,7 +613,13 @@
       '<li>位置は町字の代表点。町字の面積の中央値は' + st.town_area_km2_median + 'km²で、広い大字の設備は実際と別のメッシュに数えられることがある。約5kmメッシュにしたのはこのため。住所の町字が小地域名と一致しない' + n0(st.unplaced) + '件（' + n1(st.unplaced / st.counted * 100) + '%）は市町村の集計のみ。</li>' +
       '<li>人口は常住人口（2020年）で、夜間・休日の人通り、見通し、道路・側道の有無、防犯設備は反映しない。海に面したメッシュは海の面積を含むため人口密度が低く出る。県境のメッシュは隣の県の人口を含み、設備は茨城県だけを数える。</li>' +
       '<li>全国・県の件数と、本アプリの設備数は別の粒度で、設備単位・メッシュ単位の被害実績との突き合わせはしていない（公開データにその粒度がない）。</li>' +
-      '<li>e-Statの利用条件は情報部の確認（政府標準利用規約2.0準拠）による。公開前に最新の条件を確認すること。</li></ul></div>';
+      '<li>e-Statの利用条件は情報部の確認（政府標準利用規約2.0準拠）による。公開前に最新の条件を確認すること。</li></ul>';
+    /* 評価ループ第5回: 最初は結論3行だけ。各見出しは折りたたみにする（本文は変えない） */
+    var parts = h.split('<h2>');
+    h = parts[0] + '<ul class="concl"><li><b>何か</b>: 認定情報の集計と県警の地区別の被害件数から作った盗難リスクの目安（仮）。被害の予測ではありません。</li>' +
+      '<li><b>出典</b>: 資源エネルギー庁 再エネ認定情報・e-Stat 国勢調査2020・茨城県警察・地理院タイルを編集・加工して作成（国の作成ではありません）。</li>' +
+      '<li><b>限界</b>: 切り方に公的な根拠はなく未検証。5地区と市町村の対応は推測。認定情報の利用ルール禁止事項（イ）に当たるかは未確認。</li></ul>' +
+      parts.slice(1).map(function (p) { var i = p.indexOf('</h2>'); return '<details class="sec"><summary>' + p.slice(0, i) + '</summary>' + p.slice(i + 5) + '</details>'; }).join('') + '</div>';
     $('about').innerHTML = h;
     labelCells($('about'));
   }
