@@ -245,3 +245,72 @@ test('外部への送信がない: POST・sendBeacon・XMLHttpRequest を使っ�
   assert.ok(urls.length >= 1);
   assert.ok(urls.every((u) => /data\//.test(u) || /DATA|file/.test(u)), urls.join(' | '));
 });
+
+test('規模の検査: 超高層・大規模は目安を出さない。小さすぎる建物は警告', () => {
+  assert.equal(L.scaleCheck({ floors: 62, tfa: 1896890 }).blocked, true);
+  assert.equal(L.scaleCheck({ floors: 41, tfa: 20000 }).blocked, true);
+  assert.equal(L.scaleCheck({ floors: 10, tfa: 60000 }).blocked, true);
+  assert.equal(L.scaleCheck({ floors: 10, tfa: 4000 }).blocked, false);
+  assert.equal(L.scaleCheck({ floors: 4, tfa: 650 }).small, true);
+  assert.equal(L.unitsFromTfa(7000), 100);
+});
+
+test('戸数と延床の食い違い: 1戸あたり30〜150㎡の外なら、延床あたりの範囲と位置を出さず、戸あたりを主にする', () => {
+  // 60戸・650㎡（1戸11㎡）
+  let r = L.estimate({ units: 60, tfa: 650, count: '1', quote: 9500, quoteTaxIn: false }, S);
+  assert.ok(r.conflict && r.conflict.per < 30);
+  assert.ok(!r.ranges.some((x) => x.key === 'perSqm') && !r.positions.some((x) => x.key === 'perSqm'));
+  assert.equal(r.primary.key, 'perUnit');
+  assert.equal(r.primaryPos.key, 'perUnit');
+  // 60戸・23,474㎡（1戸391㎡）
+  r = L.estimate({ units: 60, tfa: 23474, count: '1', quote: 9500, quoteTaxIn: false }, S);
+  assert.ok(r.conflict && r.conflict.per > 150);
+  // 整合していれば両方出す
+  r = L.estimate({ units: 50, tfa: 4000, count: '1', quote: 6000, quoteTaxIn: false }, S);
+  assert.equal(r.conflict, null);
+  assert.ok(r.positions.some((x) => x.key === 'perSqm'));
+  // 延床だけなら延床あたりが主
+  r = L.estimate({ units: 0, tfa: 4000, count: '1', quote: 0 }, S);
+  assert.equal(r.primary.key, 'perSqm');
+  // 10倍を超える比率は「桁を確認」
+  assert.match(L.position(100, { q1: 0.9, median: 1.1, q3: 1.4 }).rel, /桁を確認/);
+});
+
+test('複数社の見積: 同じ主指標で位置づける。口コミは会社ごとに件数と利害関係ありの件数だけ', () => {
+  const inp = { units: 50, tfa: 0, count: '1' };
+  const c = L.compareQuotes([{ name: 'A', amount: 4000 }, { name: 'B', amount: 0 }, { name: 'C', amount: 7500 }], inp, S);
+  assert.equal(c.length, 2);
+  assert.equal(c[0].pos.band, 'below-q1');
+  assert.equal(c[1].pos.band, 'above-q3');
+  assert.ok(Math.abs(L.compareQuotes([{ name: 'A', amount: 6050, taxIn: true }], inp, S)[0].ex - 5500) < 1e-9);
+  const rc = L.reviewCounts(DEMO.reviews, DEMO.reviews[0].company);
+  assert.ok(rc.n >= 1 && rc.related >= 0 && !('avg' in rc));
+  assert.equal(L.reviewCounts(DEMO.reviews, '').n, 0);
+});
+
+test('似た建物: 対象外の規模を除き、同じ町・同じ規模の重複をまとめる', () => {
+  const list = [
+    { id: 't', h: 30, area: 400, per: 80, town: '甲' },
+    { id: 'x1', h: 30, area: 401, per: 80, town: '乙' },
+    { id: 'x2', h: 30, area: 401, per: 80, town: '乙' },
+    { id: 'big', h: 30, area: 6000, per: 300, town: '丙' },
+  ].map((b) => L.enrich(b, 3));
+  const out = L.similar(list, list[0], 10, 3);
+  assert.deepEqual(out.map((x) => x.b.id), ['x1']);
+});
+
+test('点群の見本: 選んだ建物の外形を低層部の高さまで測ったとみなすと、外周×高さに近い（凸形）', () => {
+  const lat = 35.71, lon = 139.81, kx = 111320 * Math.cos((lat * Math.PI) / 180), ky = 110540;
+  const ring = [[0, 0], [30, 0], [30, 15], [0, 15], [0, 0]].map(([x, y]) => [lon + x / kx, lat + y / ky]);
+  const a = L.analyzeCloud(L.synthCloudFor(ring, 9), 'z');
+  assert.ok(Math.abs(a.perimeter - 90) < 1.5, 'perimeter ' + a.perimeter);
+  assert.ok(Math.abs(a.wall - 90 * 9) / (90 * 9) < 0.05, 'wall ' + a.wall);
+});
+
+test('見積の位置の文言は平易（高め・やや高め・やや安め・安め）', () => {
+  const s = { q1: 90, median: 110, q3: 134 };
+  assert.match(L.position(140, s).text, /^高め/);
+  assert.match(L.position(120, s).text, /^やや高め/);
+  assert.match(L.position(100, s).text, /^やや安め/);
+  assert.match(L.position(80, s).text, /^安め/);
+});
