@@ -16,18 +16,18 @@
 <details id="legend-box"><summary>凡例</summary><section id="legend" aria-label="凡例"></section></details>
 
 <aside id="panel">
-  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
+  <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">▼ 地図を広く見る</button>
   <header id="head">
     <h1>路面下リスクの二段階調査<span class="round" id="round"></span></h1>
     <p class="sub">衛星で絞り、地中レーダ探査車（GMS3等）で確かめる</p>
-    <p id="status" role="note"></p>
-    <div id="demo-banner" role="alert" hidden>説明用デモ中：レーダの結果は<b>架空</b>（乱数）。実際の調査結果ではありません</div>
+    <p class="foot"><span id="status" role="note"></span><span class="note">衛星はだいち2号・4号で代用（主想定は Sentinel-1）</span><button id="btn-about" type="button">出典・限界</button></p>
+    <div id="demo-banner" role="alert" hidden><span><b>架空</b>の結果で表示中（説明用デモ）</span><button id="demo-off" class="bannerbtn" type="button">デモをやめる</button></div>
   </header>
   <nav id="steps" role="tablist" aria-label="調査の段階">
     <button type="button" role="tab" id="tab-1" data-step="1" aria-selected="true"><b>1</b>絞る</button>
     <button type="button" role="tab" id="tab-2" data-step="2" aria-selected="false"><b>2</b>選ぶ</button>
     <button type="button" role="tab" id="tab-3" data-step="3" aria-selected="false"><b>3</b>戻す</button>
-    <button type="button" role="tab" id="tab-4" data-step="4" aria-selected="false"><b>4</b>検証</button>
+    <button type="button" role="tab" id="tab-4" data-step="4" aria-selected="false"><b>4</b>参考</button>
   </nav>
   <div id="panel-body">
     <section id="detail" aria-live="polite"></section>
@@ -35,7 +35,6 @@
     <section id="s2" class="step" hidden aria-labelledby="tab-2"></section>
     <section id="s3" class="step" hidden aria-labelledby="tab-3"></section>
     <section id="s4" class="step" hidden aria-labelledby="tab-4"></section>
-    <p class="foot"><span class="note">衛星はだいち2号・4号で代用（提案書の主想定は Sentinel-1）。</span><button id="btn-about" type="button">出典・データの扱い・限界</button></p>
   </div>
 </aside>
 

@@ -181,7 +181,8 @@ export function TopPanel({
       </div>
       {ties.length > 1 && (
         <p className="rounded border-l-4 border-amber-600 bg-amber-50 px-2 py-1 text-xs" data-testid="tie-warn">
-          <b>上位{ties.length}区間が同点（{best.score.toFixed(2)}）</b>：台帳だけでは決まらず、衛星で入れ替わった区間は上位20のうち {satShift ?? 0}（この地区は衛星の差が小さい）。
+          <b>{(satShift ?? 0) === 0 ? 'この地区は衛星の差が小さく、台帳の古さで順位が決まっています。' : `衛星で上位20のうち ${satShift} 区間が入れ替わっています。`}</b>
+          <span className="block text-muted-foreground">上位{ties.length}区間が同点（{best.score.toFixed(2)}{ties.length > 10 ? `。表外にも${ties.length - 10}件` : ''}）。衛星で入れ替わり 上位20のうち {satShift ?? 0}。</span>
         </p>
       )}
       <div className="text-sm font-medium">点数の高い順 上位10区間（<b>行を1つ選ぶ</b>と地図に表示され、この手順が完了します）</div>
@@ -349,10 +350,11 @@ export function ScanPanel({
   if (sm?.unmatched) bad.push(`${LINK_MAX_M} m 以内に区間が無い点 ${sm.unmatched}`)
   return (
     <div className="space-y-3">
-      <p className="text-sm">
-        <b>一次審査を通った後、地中レーダ探査車（GMS3）のデータで較正します。</b>この手順はその結果を受け取る枠です。GMS3 のデータは現時点で手元になく、この画面は使っていません。同梱している実データに空洞の結果はありません。
-      </p>
-      <p className="text-xs font-medium" data-testid="flow3">① 書き出した CSV の空欄の cavity 列に あり／なし を記入 → ② 下で選ぶ（あり・なし各3件以上）→ ③ 次の回へ</p>
+      <ol className="list-decimal space-y-0 pl-5 text-sm" data-testid="flow3">
+        <li>書き出した CSV の cavity 列に あり／なし を書く</li>
+        <li>下でその CSV を選ぶ（あり・なし 各3件以上）</li>
+        <li>手順4で次の回へ進む</li>
+      </ol>
 
       {demo ? (
         <div className="space-y-2 rounded-md border-l-4 border-amber-600 bg-amber-50 p-2.5 text-sm text-amber-950" data-testid="demo-on">
@@ -415,7 +417,7 @@ export function ScanPanel({
 
       <FormatBox demo={demo}>
         <p className="text-xs text-muted-foreground">
-          GMS3 の出力の書式は<b>未確認</b>です。そこで次の<b>2つの書き方のどちらの CSV でも</b>受け付け、同じように較正します（1行目は見出し。区切りはカンマかタブ。処理はこのブラウザの中だけで、外へは送りません）。
+          GMS3 等の地中レーダの結果を入れる想定です（GMS3 のデータは手元になく、この画面は使っていません。同梱の実データに空洞の結果はありません）。GMS3 の出力の書式は<b>未確認</b>です。そこで次の<b>2つの書き方のどちらの CSV でも</b>受け付け、同じように較正します（1行目は見出し。区切りはカンマかタブ。処理はこのブラウザの中だけで、外へは送りません）。
         </p>
         <Table>
           <TableHeader><TableRow><TableHead>書き方</TableHead><TableHead>見出しの例</TableHead><TableHead>内容</TableHead></TableRow></TableHeader>
@@ -450,8 +452,9 @@ export function ScanPanel({
 
 /* ---------- 5 較正を反映して第2回へ ---------- */
 export function ApplyPanel({
-  round, calib, surveyed, cellSat, resultsCount, demo, sample, applied, onApply, onGoRound2, onGoScan, onDemoOn,
+  round, calib, surveyed, cellSat, resultsCount, demo, sample, applied, previewChanged, onApply, onGoRound2, onGoScan, onDemoOn,
 }: {
+  previewChanged?: number | null
   sample?: boolean
   round: number
   calib: CalibResult
@@ -500,9 +503,17 @@ export function ApplyPanel({
       )}
       {calib.w !== null && (
         <>
-          <p className="text-sm">
-            入った結果（{calib.n} 区間）に照らして、重みを探しました。{(demo || sample) && <b>空洞の有無はすべて架空です。</b>}
-          </p>
+          <div className={cn('rounded-md border-l-4 p-2 text-sm', calib.ad.adopt || calib.ad.reason === 'same' ? 'border-emerald-700 bg-emerald-50' : 'border-amber-600 bg-amber-50 text-amber-950')} data-testid={calib.ad.adopt ? 'adopt' : 'no-change'}>
+            {(demo || sample) && <b>（架空の結果）</b>}
+            {calib.ad.adopt
+              ? <b>重みを {pct(calib.ad.w)}% に更新します（当たりやすさ {calib.ad.cur?.toFixed(2)} → {calib.ad.best?.toFixed(2)}）。</b>
+              : calib.ad.reason === 'same'
+                ? <b>今の重み {pct(calib.ad.w)}% が最も当たりやすい重みでした（当たりやすさ {calib.ad.cur?.toFixed(2)}）。</b>
+                : <><b>この結果では重みを変えられません（{pct(calib.ad.w)}% のまま）</b>：{ADOPT_REASON[calib.ad.reason ?? 'same']}（当たりやすさ {calib.ad.cur?.toFixed(2)}、0.5＝当てずっぽう）。</>}
+            {previewChanged != null && <span className="block" data-testid="preview-changed">第{round + 1}回は調査した区間を除き、上位10のうち <b>{previewChanged}</b> 区間の順位が入れ替わります。</span>}
+          </div>
+          <details className="rounded-md border p-2 text-sm">
+          <summary className="cursor-pointer font-medium">詳しく（入った結果 {calib.n} 区間での当たりやすさ）</summary>
           <Table>
             <TableHeader>
               <TableRow><TableHead>点数のつけ方</TableHead><TableHead className="text-right">当たりやすさ（AUC。0.5＝当てずっぽう）</TableHead></TableRow>
@@ -519,15 +530,11 @@ export function ApplyPanel({
               </TableRow>
             </TableBody>
           </Table>
-          {!calib.ad.adopt && calib.ad.reason && calib.ad.reason !== 'same' && (
-            <div className="rounded-md border-l-4 border-amber-600 bg-amber-50 p-2 text-sm text-amber-950" data-testid="no-change">
-              <b>この結果では重みを変える根拠がありません</b>（{ADOPT_REASON[calib.ad.reason]}）。重みは今のままです。
-            </div>
-          )}
           <p className="text-xs text-muted-foreground">
             重みを変える条件（仮の基準）: AUC {MIN_AUC.toFixed(2)} 以上かつ今の重みより {MIN_GAIN.toFixed(2)} 以上高い。AUC＝空洞のあった区間が高い点数になる確率（0.5＝当てずっぽう）。
             {demo || sample ? '空洞の有無は架空で、精度や効果を示しません。' : '調査した区間の中での比較で、実際の精度・効果ではありません。'}
           </p>
+          </details>
         </>
       )}
       <div className="flex flex-wrap gap-2">

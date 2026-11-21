@@ -184,6 +184,8 @@ export default function App() {
   const candidates = useMemo(() => candidatesOf(ranked), [ranked])
   const surveyedSet = useMemo(() => scannedFrom(segs, results), [segs, results])
   const calibNow = useMemo(() => calibOf(surveyedSet, cellSat, w), [surveyedSet, cellSat, w])
+  // 較正を反映したら上位10が何区間入れ替わるか（反映前に結論として先に出す）
+  const previewChanged = useMemo(() => (calibNow.w !== null ? applyOf(segs, cellSat, w, 1, calibNow, 0).prev.changed : null), [segs, cellSat, w, calibNow])
 
   const toggle = (id: string) => {
     setSelected((cur) => {
@@ -480,6 +482,7 @@ export default function App() {
                 resultsCount={hasResults ? results.size : 0}
                 demo={demo}
                 applied={round > 1 && roundAdded === 0 ? prev : null}
+                previewChanged={previewChanged}
                 onApply={applyCalib}
                 onGoRound2={() => setStep('round2')}
                 onGoScan={() => setStep('scan')}

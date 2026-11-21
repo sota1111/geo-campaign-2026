@@ -102,8 +102,10 @@ for (const [label, w, h] of [['desktop', 1366, 800], ['mobile', 390, 844]]) {
     await noFake('第3');
     r.info.s3_default = (await c.ev('document.getElementById("s3").innerText')).slice(0, 300);
     const t3 = await c.ev('document.getElementById("s3").innerText');
-    need(t3.includes('一次審査を通った後') && t3.includes('GMS3'), 'GMS3 の受け皿の説明がない');
-    need(t3.includes('未確認'), 'GMS3 書式未確認の明記がない');
+    const t3all = await c.ev('document.getElementById("s3").textContent');
+    need(t3all.includes('GMS3'), 'GMS3 の受け皿の説明がない');
+    need(t3all.includes('未確認'), 'GMS3 書式未確認の明記がない');
+    need(t3.includes('各3件以上'), '較正に必要な件数が入力欄の近くに無い');
     await shot(c, `${label}_3a_empty.png`);
     const csvId = await c.ev(MK_ID);
     await c.ev(`(()=>{const dt=new DataTransfer();dt.items.add(new File([${JSON.stringify(csvId)}],'by_id.csv',{type:'text/csv'}));const i=document.getElementById('csv-file');i.files=dt.files;i.dispatchEvent(new Event('change'))})()`);
