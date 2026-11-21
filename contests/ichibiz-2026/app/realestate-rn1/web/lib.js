@@ -557,7 +557,7 @@
   /** 収録が少ない種類（東京23区の老人福祉施設は282件で、大阪市の約1/5）。0件を「該当なし」と読ませない */
   const sparse = (data, key) => !!(data.region.sparse && data.region.sparse.includes(key));
   function facSection(data, f) {
-    const sec = { id: 'fac', title: '4. 徒歩圏（直線800m）の生活施設', apis: ['XKT006', 'XKT007', 'XKT010', 'XKT011'], lines: [], ask: [], missing: unfetched(data, ['XKT006', 'XKT007', 'XKT010', 'XKT011']) };
+    const sec = { id: 'fac', title: '4. 徒歩圏の生活施設', apis: ['XKT006', 'XKT007', 'XKT010', 'XKT011'], lines: [], ask: [], missing: unfetched(data, ['XKT006', 'XKT007', 'XKT010', 'XKT011']) };
     const fac = f.fac;
     if (!fac) return sec;
     const apiOf = { elem: 'XKT006', junior: 'XKT006', pre: 'XKT007', hospital: 'XKT010', clinic: 'XKT010', elder: 'XKT011' };
@@ -581,7 +581,7 @@
   function rasterHazardText(spec, r, v) {
     const label = (lv) => (r.labels && r.labels[lv]) || '区分不明';
     if (v.mixed && !spec.noBoundary) {
-      return spec.title + ': 想定区域の境界付近にある（約20m以内に区域の内外の境界があり、中か外かは言い切れない' + (v.maxLevel ? '。付近の' + spec.depth + 'は最大で ' + label(v.maxLevel) : '') + '）。約18m格子に変換しているため、境界付近は±20m程度ずれる。';
+      return spec.title + ': 想定区域の境界付近にある' + (v.maxLevel ? '（付近の' + spec.depth + 'は最大 ' + label(v.maxLevel) + '）' : '') + '。';
     }
     if (v.level > 0) return spec.title + ': ' + (spec.noBoundary ? '' : '想定区域の中にある（') + spec.depth + ': ' + label(v.level) + (spec.noBoundary ? '' : spec.suffix + '）') + '。';
     return spec.title + ': ' + spec.out + '。';
@@ -595,6 +595,8 @@
     const yn = (v) => (v ? '想定区域の中にある' : '想定区域の外にある');
     if ('sediment' in h) sec.lines.push({ tag: 'XKT029', text: '土砂災害警戒区域: ' + yn(h.sediment) + '。このシートは警戒区域と特別警戒区域を区別していない（特別警戒区域は建築や開発に制限がかかる場合があるため、' + unitOf(data.region) + 'のハザードマップで確かめる）。' });
     for (const spec of RASTER_HAZARDS) if (spec.part in h) sec.lines.push({ tag: spec.api, text: rasterHazardText(spec, data.hazard[spec.part], h[spec.part]) });
+    // 境界付近の理由は節の中で1回だけ書く（項目ごとに繰り返さない）
+    if (RASTER_HAZARDS.some((spec) => !spec.noBoundary && h[spec.part] && h[spec.part].mixed)) sec.lines.push({ tag: '注意', text: '「境界付近」は、約20m以内に区域の内外の境界があり、中か外かは言い切れないもの（約18m格子に変換しているため、境界は±20m程度ずれる）。' });
     // 東京都は、国の想定とは別に、中小河川・内水も含めた「浸水予想区域図」を公表している（国土数値情報 洪水浸水想定区域（A31b）の注記。2026-11-14 に原ページで確認）
     if (data.region.id === 'tokyo23' && 'flood' in h) sec.lines.push({ tag: '注意', text: '東京都は別に、内水等も含む「浸水予想区域図」を公表しており、区のハザードマップと異なる場合がある（国土数値情報の注記）。' });
     if ('tsunami' in h) sec.lines.push({ tag: '注意', text: TSUNAMI_NOTE });

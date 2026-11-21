@@ -358,3 +358,29 @@ details.sec > summary h4 { white-space: nowrap; overflow: hidden; text-overflow:
   .chip { min-width: 26px; height: 26px; font-size: .74rem; }
   .chips { margin: 0 4px; }
 }
+/* ---- 評価ループ第5回: 凡例は1行・読める印・例の印・スマホは物件1件を低く ---- */
+p.tleg { margin: 2px 0; }
+.exm { display: inline-block; margin-left: 3px; padding: 0 3px; font-size: .6rem; line-height: 1.35; border: 1px dashed #6b7480; border-radius: 3px; color: #4a5560; background: #f4f5f7; font-weight: normal; vertical-align: middle; }
+button.wname { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline dotted; font-size: inherit; cursor: pointer; }
+#exFill:not([hidden]) { font-weight: bold; padding: 3px 10px; }
+.gist { margin: 2px 0 4px; font-size: .85rem; font-weight: bold; line-height: 1.4; }
+.gist .hsub { margin-left: 4px; }
+td.cmt .cm { font-weight: 600; }
+@media (max-width: 640px) {
+  /* 試算の種類（鉄道・徒歩）は列見出しの「直線×仮定速度」と title に任せ、行を1段にする */
+  #propList table.cmp td.cmt .md { display: none; }
+  #propList table.cmp th.pc .exm { display: none; }
+  #propList tr.brow td { line-height: 1.25; }
+  #propList tr.brow .pname { min-height: 0; }
+  #propList th.pc button.pname { min-height: 26px; }
+  #propList table.cmp thead th .hsub { display: none; }
+  .gist { font-size: .78rem; }
+}
+@media (min-width: 641px) {
+  /* 災害の印を語で書くため、物件の欄は折り返して横スクロールを出さない */
+  #propList table.cmp th.pc { max-width: 15em; min-width: 12.5em; }
+  #propList table.cmp th.pc button.pname { white-space: nowrap; }
+  #propList table.cmp td { padding: 1px 2px; }
+  #propList table.cmp th.pc .exm { margin-left: 2px; }
+  #propList .pbs { flex-wrap: wrap; }
+}

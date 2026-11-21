@@ -275,7 +275,9 @@
     if (s.outOfScope) body = '<p class="oos">' + esc(s.outOfScope) + '</p>';
     else {
       // 先頭に事実の要約（結論ではない）。計画と災害の節は開いておく。各節の見出し横に1行の結論
-      body = (sum ? '<table class="sum"><caption class="sr">この場所の要約（事実）</caption><tbody>' + sum.map((r) => '<tr><th scope="row">' + esc(r.k) + '</th><td>' + (r.parts ? hazBadges(r) : esc(r.v)) + '</td></tr>').join('') + '</tbody></table>' : '') +
+      // 要約の先頭に、事実を機械的に並べた1行（評価語は使わない）
+      const gist = sum ? (() => { const z = sum.find((r) => r.id === 'zone'), pp = sum.find((r) => /^人口/.test(r.k)), hz = sum.find((r) => /^災害/.test(r.k)); return [z && z.short.replace('居住誘導 内', '居住誘導区域の中').replace('居住誘導 外', '居住誘導区域の外'), pp && pp.short.replace('人口 ', '人口（2025→50年）'), hz && (hz.haz.length ? hz.haz.join('・') + 'の想定区域か付近' : '災害の想定区域の外')].filter(Boolean).join('／'); })() : '';
+      body = (gist ? '<p class="gist">' + esc(gist) + '<span class="hsub">（▶の節に詳細）</span></p>' : '') + (sum ? '<table class="sum"><caption class="sr">この場所の要約（事実）</caption><tbody>' + sum.map((r) => '<tr><th scope="row">' + esc(r.k) + '</th><td>' + (r.parts ? hazBadges(r) : esc(r.v)) + '</td></tr>').join('') + '</tbody></table>' : '') +
         '<div class="secs">' + s.sections.map((sec) => {
           const facts = sec.lines.filter((l) => l.tag !== '注意'), notes = sec.lines.filter((l) => l.tag === '注意');
           const hd = secHead(sec);
@@ -376,7 +378,11 @@
   $('backProps').addEventListener('click', () => selectTab('props', true));
   window.addEventListener('beforeprint', () => document.querySelectorAll('#sheet details').forEach((d) => { d.dataset.wasOpen = d.open ? '1' : ''; d.open = true; }));
   window.addEventListener('afterprint', () => document.querySelectorAll('#sheet details').forEach((d) => { d.open = d.dataset.wasOpen === '1'; }));
-  for (const t of TABS) $('t-' + t).addEventListener('click', () => selectTab(t));
+  for (const t of TABS) $('t-' + t).addEventListener('click', () => {
+    // 物件があるのにシートが空なら、選択中（なければ1件目）の物件のシートを出す（表に戻って名前を押す手間を省く）
+    if (t === 'sheet' && !state.facts && state.data && state.places.props.length) { openPropSheet(state.places.props[state.sel] ? state.sel : 0); return; }
+    selectTab(t);
+  });
   $('aboutLink').addEventListener('click', (e) => { e.preventDefault(); selectTab('info'); });
 
   // ---- 生活に必要な場所（凡例のチェック） ----
@@ -436,7 +442,10 @@
   function msg(el, text, err, warn) {
     const other = el.id === 'propMsg' ? $('workMsg') : el.id === 'workMsg' ? $('propMsg') : null;
     if (other && text) { other.textContent = ''; other.classList.remove('err', 'warnmsg'); } // 前の操作のメッセージを残さない
-    el.textContent = text; el.classList.toggle('err', !!err); el.classList.toggle('warnmsg', !!warn); }
+    el.textContent = text; el.classList.toggle('err', !!err); el.classList.toggle('warnmsg', !!warn);
+    // 住所が使えなかった時は入力欄を全選択にして、続けて打つと上書きになるようにする（文字が連結しない）
+    if (err && el.id === 'propMsg' && !$('propQ').disabled) $('propQ').select();
+  }
   async function resolveAddress(q, msgEl, host, done) {
     msg(msgEl, '住所を探しています…');
     const old = host.querySelector('.cands'); if (old) old.remove();
@@ -446,14 +455,18 @@
       const alt = Life.altQuery(q); // 「JR徳島駅」→「徳島駅」
       if (!list.length && alt) list = await gsiSearch(alt);
     } catch (e) { msg(msgEl, '住所検索に失敗しました（ネットワーク）。「地図で指定」で位置を指してください。', true); return; }
+    const bb = state.region.bbox, inb = (c) => c.lon >= bb[0] && c.lon <= bb[2] && c.lat >= bb[1] && c.lat <= bb[3];
+    const away = list.length && !list.some(inb);
+    const regionHint = away ? '対象地域は' + state.region.name + 'です。他の地域なら上の「対象地域」で切り替えてください。' : '';
     list = rankCands(list);
     // 市区町村の代表点だけの候補は、ほかに候補があれば外す
     const fine = list.filter((c) => !Life.isCoarse(c.title));
     if (fine.length) list = fine;
     if (!list.length) { msg(msgEl, '「' + q + '」は見つかりませんでした。町名・番地まで入れるか（駅は「徳島駅」の形）、「地図で指定」で位置を指してください。', true); return; }
     const pick = (c) => {
-      if (Life.isCoarse(c.title)) { msg(msgEl, '「' + c.title + '」は市区町村の中心点です。町名以下まで入れるか、「地図で指定」を使ってください（このままでは使いません）。', true); return; }
+      if (Life.isCoarse(c.title)) { msg(msgEl, '「' + c.title + '」は市区町村の中心点です。' + (regionHint || '町名以下まで入れるか、「地図で指定」を使ってください（このままでは使いません）。'), true); return; }
       msg(msgEl, ''); done(c);
+      if (!inb(c)) msg(msgEl, '「' + shortAddr(c.title) + '」は' + state.region.name + 'の外で、距離・シートは比べられません。' + regionHint, false, true);
     };
     const exact = list.filter((c) => c.title === q);
     if (list.length === 1 || exact.length === 1) { pick(exact[0] || list[0]); return; }
@@ -480,7 +493,7 @@
       if (!r.ok) { msg($('propMsg'), r.reason, true); return; }
       $('propQ').value = '';
       const mm = mismatchNote(q, c), n = state.places.props.length;
-      msg($('propMsg'), mm || (n + '件目を追加（' + shortAddr(c.title) + '・町丁の代表点）。ずれていれば「地図で指定」で。'), false, !!mm);
+      msg($('propMsg'), mm || (n + '件目を追加（' + shortAddr(c.title) + '・町丁の代表点）。' + (n >= Life.MAX_PROPS ? 'これで上限です。追加するには地図の番号を押して1件消してください。' : 'ずれていれば「地図で指定」で。')), false, !!mm);
       afterPlaceChange();
     });
   });
@@ -499,7 +512,7 @@
     if (p.kind === 'prop') {
       const r = Life.addProp(state.places, { label: '地図で指定', lon, lat, resolved: '' });
       if (!r.ok) { msg($('propMsg'), r.reason, true); return; }
-      msg($('propMsg'), state.places.props.length + '件目を地図の位置で追加しました。');
+      msg($('propMsg'), state.places.props.length + '件目を地図の位置で追加しました。' + (state.places.props.length >= Life.MAX_PROPS ? 'これで上限です。追加するには地図の番号を押して1件消してください。' : ''));
     } else {
       state.places.works[p.idx] = { label: '地図で指定', lon, lat, resolved: '' };
       msg($('workMsg'), '勤務先' + 'AB'[p.idx] + 'を地図の位置で設定しました。');
@@ -512,8 +525,10 @@
     const W = state.places.works, nw = W.filter(Boolean).length;
     const folded = !state.workOpen && nw === Life.MAX_WORKS; // Bが空のうちは入力欄を開いたままにする
     if (folded) {
-      box.innerHTML = '<p class="wfold"><span class="stepn" aria-hidden="true">1</span><strong>勤務先</strong> ' + [0, 1].map((i) => W[i]).map((w, i) => '<span class="num w" aria-hidden="true">' + 'AB'[i] + '</span>' + (w ? '<span title="' + esc(w.resolved || w.label) + '">' + esc(workName(w)) + '</span>' : '<span class="faint">未設定</span>')).join(' ') + ' <button type="button" class="secondary mini" id="workEdit">変更</button></p>';
-      $('workEdit').addEventListener('click', () => { state.workOpen = true; renderWorkForms(); const q = $('wq0'); if (q) q.focus(); });
+      box.innerHTML = '<p class="wfold"><span class="stepn" aria-hidden="true">1</span><strong>勤務先</strong> ' + [0, 1].map((i) => W[i]).map((w, i) => '<span class="num w" aria-hidden="true">' + 'AB'[i] + '</span>' + (w ? '<button type="button" class="wname" data-w="' + i + '" title="' + esc(w.resolved || w.label) + '（押すと変更）">' + esc(workName(w)) + (isEx(w, 'works') ? '<span class="exm">例</span>' : '') + '</button>' : '<span class="faint">未設定</span>')).join(' ') + ' <button type="button" class="secondary mini" id="workEdit">変更</button></p>';
+      const openW = (k) => { state.workOpen = true; renderWorkForms(); const q = $('wq' + k); if (q) { q.focus(); q.select(); } };
+      $('workEdit').addEventListener('click', () => openW(0));
+      box.querySelectorAll('.wname').forEach((b) => b.addEventListener('click', () => openW(Number(b.dataset.w))));
       return;
     }
     const h = document.createElement('h2'); h.innerHTML = '<span class="stepn" aria-hidden="true">1</span>勤務先（2か所まで）' + (nw ? ' <button type="button" class="secondary mini" id="workDone">閉じる</button>' : ''); box.appendChild(h);
@@ -528,6 +543,8 @@
         const q = row.querySelector('input').value.trim(); if (!q) return;
         resolveAddress(q, $('workMsg'), row, (c) => { state.places.works[i] = { label: q, lon: c.lon, lat: c.lat, resolved: c.title }; const mm = mismatchNote(q, c); msg($('workMsg'), mm || '勤務先' + L + '＝「' + q + '」（' + shortAddr(c.title) + '）。表の「' + L + '」列に出ます。', false, !!mm); if (state.places.works.filter(Boolean).length === Life.MAX_WORKS) state.workOpen = false; afterPlaceChange('w' + i); });
       });
+      // 入力しただけで「設定」を押していないと通勤列が出ない。その理由をその場で出す
+      row.querySelector('input').addEventListener('input', (e) => { const v = e.target.value.trim(); if (v && v !== (w && w.label)) msg($('workMsg'), '「設定」を押すと、表に勤務先' + L + 'への通勤時間が出ます。'); });
       row.querySelector('.wpick').addEventListener('click', () => startPick({ kind: 'work', idx: i }));
       const del = row.querySelector('.wdel'); if (del) del.addEventListener('click', () => { state.places.works[i] = null; msg($('workMsg'), ''); afterPlaceChange(); });
       box.appendChild(row);
@@ -551,12 +568,14 @@
     return h + (inReg ? '' : '<p class="hint">この物件は選択中の地域の外です。距離は選択中の地域のデータだけで測っています。</p>');
   }
   // 徒歩が鉄道以下・最寄駅が同じなら徒歩だけ。徒歩60分超は「現実的でない」として淡く出し、鉄道を主にする
+  // 表示は5分単位に丸める（直線×仮定速度の試算で、数分の差に意味はない）
+  function r5(m) { return m < 5 ? '5分未満' : '約' + Math.round(m / 5) * 5 + '分'; }
   function commuteCell(c) {
     const v = Life.commuteSummary(c);
-    if (v.mode === 'rail') return '<b class="cm">約' + v.min + '分</b><span class="md">鉄道試算</span>';
+    if (v.mode === 'rail') return '<b class="cm" title="鉄道＋徒歩の試算">' + r5(v.min) + '</b><span class="md">鉄道試算</span>';
     // 徒歩60分超でも概算の分と直線距離を出して比べられるようにする（鉄道の目安が出ない理由は title に）
-    if (v.walkOver) return '<b class="cm far" title="徒歩の概算（直線' + Life.fmtM(c.straightM) + '）。最寄駅が直線' + Life.fmtM(Life.MAX_STATION_M) + '超などで鉄道の目安なし">約' + c.walk + '分</b><span class="md">徒歩60分超</span>';
-    return '<b class="cm">約' + v.min + '分</b><span class="md">徒歩試算</span>';
+    if (v.walkOver) return '<b class="cm far" title="徒歩の概算（直線' + Life.fmtM(c.straightM) + '）。最寄駅が直線' + Life.fmtM(Life.MAX_STATION_M) + '超などで鉄道の目安なし">' + r5(c.walk) + '</b><span class="md">徒歩60分超</span>';
+    return '<b class="cm" title="徒歩の試算">' + r5(v.min) + '</b><span class="md">徒歩試算</span>';
   }
   function commuteDetail(c) {
     let t = '直線' + Life.fmtM(c.straightM) + '。';
@@ -608,7 +627,8 @@
     $('assump').innerHTML = [
       '<strong>徒歩</strong>: 直線距離×' + Life.DETOUR + '（道路距離の見積り。出典のない係数）÷分速' + Life.WALK_M_PER_MIN + 'm（不動産の表示に関する公正競争規約施行規則の「道路距離80mにつき1分」）。' + Life.WALK_MAX_MIN + '分超は「現実的でない」と表示。坂・信号は含みません。',
       '<strong>鉄道＋徒歩</strong>: 家から最寄駅まで徒歩（上の式）＋乗車＋勤務先の最寄駅から徒歩。乗車＝駅間の直線距離×' + Life.RAIL_DETOUR + '÷表定速度＋待ち' + Life.RAIL_WAIT_MIN + '分。表定速度<input id="railSpeed" type="number" min="10" max="120" step="1" value="' + state.places.speedKmh + '" aria-label="鉄道の表定速度（km/h）">km/h は出典のない仮定（初期値' + Life.RAIL_SPEED_KMH + '）。<strong>路線のつながり・乗換・時刻は見ていません</strong>。駅は OpenStreetMap（漏れあり）。最寄駅まで直線' + Life.MAX_STATION_M + 'm超・徒歩の方が早い・最寄駅が同じときは鉄道を出しません。',
-      '<strong>生活施設</strong>: ' + esc(Life.DISTANCE_NOTE + Life.SCHOOL_NOTE + Life.OSM_NOTE) + esc(Life.GAKUDO_NOTE),
+      '<strong>生活施設</strong>: ' + esc(Life.DISTANCE_NOTE + Life.SCHOOL_NOTE + Life.OSM_NOTE) + esc(Life.GAKUDO_NOTE) + ' 表の「?」は登録が少なく参考。',
+      '<strong>表の通勤</strong>: 5分単位に丸めた目安です（鉄道の本数・乗換・時刻は含みません）。',
     ].map((x) => '<li>' + x + '</li>').join('');
     const sp = $('railSpeed');
     if (sp) sp.addEventListener('change', () => { const v = Number(sp.value); if (v >= 10 && v <= 120) { state.places.speedKmh = v; savePlaces(); renderPlaces(); } else sp.value = state.places.speedKmh; });
@@ -627,11 +647,13 @@
     if (!sm) return '<span class="pb out">地域の外</span>';
     const z = sm.find((r) => r.id === 'zone'), pop = sm.find((r) => /^人口/.test(r.k)), hz = sm.find((r) => /^災害/.test(r.k));
     let h = '';
-    if (z) h += '<span class="pb' + (z.inRes ? ' in' : '') + '" title="' + esc(z.v) + '">' + esc(z.short.replace('居住誘導 ', '誘導').replace('計画データ無し', '計画無')) + '</span>';
-    if (pop) h += '<span class="pb" title="' + esc(pop.k + ': ' + pop.v) + '">' + esc(pop.short.replace('人口 ', '人')) + '</span>';
-    if (hz && hz.haz && hz.haz.length) h += '<span class="pb hz" title="' + esc(hz.v) + '">' + esc(hz.haz.map((x) => x[0]).join('')) + '</span>';
+    if (z) h += '<span class="pb' + (z.inRes ? ' in' : '') + '" title="区域: ' + esc(z.v) + '">' + esc(z.short.replace('居住誘導 ', '誘導').replace('計画データ無し', '計画無')) + '</span>';
+    if (pop) h += '<span class="pb" title="' + esc(pop.k + ': ' + pop.v) + '">' + esc(pop.short.replace('人口 ', '人口')) + '</span>';
+    if (hz && hz.haz && hz.haz.length) h += '<span class="pb hz" title="災害の想定区域か付近: ' + esc(hz.v) + '">' + esc(hz.haz.join('・')) + '</span>';
     return h;
   }
+  /** 例で入れた物件・勤務先か（実データと混同させない） */
+  function isEx(p, kind) { const fl = state.region.fill; return !!(fl && p && fl[kind].some((e) => e.label === p.label && e.lon === p.lon && e.lat === p.lat)); }
   function openPropSheet(i) {
     const p = state.places.props[i];
     state.sel = i;
@@ -650,17 +672,15 @@
     for (const id of ids) { const l = Life.LAYERS.find((x) => x.id === id); if (l.sparse) continue; const v = rows.map((r) => r[id] && r[id].m).filter((m) => m != null); if (v.length > 1) min[id] = Math.min(...v); }
     const wcols = ws.length ? ws : [null];
     const sp = state.places.speedKmh || Life.RAIL_SPEED_KMH;
-    // 凡例は表の直上に1行ずつ（札は押すと意味が出る）
-    let h = '<ul class="tleg"><li><b>通勤は目安</b>: 直線距離と徒歩' + Life.WALK_M_PER_MIN + 'm/分・鉄道' + sp + 'km/h（仮定）で試算。時刻・乗換なし</li>' +
-      '<li><span class="pb in">誘導内</span>居住誘導区域 <span class="pb">人−○%</span>2025→50年の人口推計 <span class="pb hz">洪津高土</span>洪水・津波・高潮・土砂の想定区域か付近</li>' +
-      '<li><b>学童</b>: ' + (gkFold ? '位置データが少なく比べられないため列を省略。' : '登録が少なく「要確認」は「無い」の意味ではない。') + '市区町村で確認</li></ul>';
+    // 常時出す注意は2点だけ（通勤は仮定の目安・学童は要確認）。物件名の横の印は押すと意味が出る
+    let h = '<p class="tleg"><b>通勤は目安</b>（直線距離・鉄道' + sp + 'km/hの仮定。時刻・乗換なし）。<b>学童</b>は' + (gkFold ? '位置データが少なく列を省略。' : '「要確認」＝登録が少ない。') + '市区町村で確認</p>';
     h += '<div class="tscroll"><table class="ct cmp"><caption class="sr">物件ごとの通勤時間の目安（概算）と、生活施設までの直線距離</caption><thead><tr><th rowspan="2" class="pc">物件<span class="hsub">押すとシート</span></th>' +
-      '<th colspan="' + wcols.length + '" class="grp">通勤の目安</th><th colspan="' + ids.length + '" class="grp">施設まで(直線)</th></tr><tr>' +
+      '<th colspan="' + wcols.length + '" class="grp">通勤の目安<span class="hsub">直線×仮定速度</span></th><th colspan="' + ids.length + '" class="grp">施設まで(直線)</th></tr><tr>' +
       wcols.map((x) => (x ? '<th scope="col" data-col="w' + x.j + '" title="勤務先' + 'AB'[x.j] + '：' + esc(workName(x.w)) + '（' + esc(x.w.resolved || '地図で指定した位置') + '）"><span class="num w">' + 'AB'[x.j] + '</span></th>' : '<th scope="col" class="na"><button type="button" class="mini gowork">勤務先を入れる</button></th>')).join('') +
       ids.map((id) => { const l = Life.LAYERS.find((x) => x.id === id); return '<th scope="col" title="' + esc(l.label) + (l.sparse ? '（登録が少なく参考）' : '') + '">' + esc(TINY[id]) + (l.sparse ? '<span class="wi" aria-label="登録が少なく参考">！</span>' : '') + '</th>'; }).join('') + '</tr></thead><tbody>';
     P.props.forEach((p, i) => {
       const mm = p.resolved && p.label !== '地図で指定' && Life.addressMismatch(p.label, p.resolved);
-      h += '<tr data-i="' + i + '"' + (state.sel === i ? ' class="sel"' : '') + '><th scope="row" class="pc"><button type="button" class="pname psheet" data-i="' + i + '" aria-label="物件' + (i + 1) + 'の先行きシートを見る"><span class="rowno">' + (i + 1) + '</span><span class="pnt">' + esc(shortAddr(p.resolved || p.label)) + '</span></button>' + (mm ? '<span class="warnmsg" title="入力「' + esc(p.label) + '」と違う">！入力と違う</span>' : '') + '<div class="pbs">' + propBadges(p) + '</div></th>';
+      h += '<tr data-i="' + i + '"' + (state.sel === i ? ' class="sel"' : '') + '><th scope="row" class="pc"><button type="button" class="pname psheet" data-i="' + i + '" aria-label="物件' + (i + 1) + 'の先行きシートを見る"><span class="rowno">' + (i + 1) + '</span><span class="pnt">' + esc(shortAddr(p.resolved || p.label)) + '</span></button>' + (isEx(p, 'props') ? '<span class="exm" title="例の物件（実在の物件ではありません）">例</span>' : '') + (mm ? '<span class="warnmsg" title="入力「' + esc(p.label) + '」と違う">！入力と違う</span>' : '') + '<div class="pbs">' + propBadges(p) + '</div></th>';
       h += wcols.map((x) => (x ? '<td class="cmt" data-col="w' + x.j + '">' + commuteCell(commuteOf(p, x.w)) + '</td>' : '<td class="na">—</td>')).join('');
       for (const id of ids) {
         const l = Life.LAYERS.find((x) => x.id === id), n = rows[i][id];
@@ -672,9 +692,9 @@
         else h += '<td' + (min[id] === c.m ? ' class="best"' : '') + ' title="' + esc(n.name) + '・' + Life.fmtM(c.m) + '・徒歩約' + Life.walkMin(c.m) + '分">' + (c.m < 100 ? '100m内' : Life.fmtM(c.m)) + '</td>';
       }
       // スマホでは場所の札を物件の下の行に横並びで出す（名前の欄を細くし、行を低くする）
-      h += '</tr><tr class="brow" data-i="' + i + '" aria-hidden="true"><td colspan="' + (1 + wcols.length + ids.length) + '"><button type="button" class="pname psheet" data-i="' + i + '" tabindex="-1">' + esc(shortAddr(p.resolved || p.label)) + '</button><span class="pbs">' + propBadges(p) + '</span></td></tr>';
+      h += '</tr><tr class="brow" data-i="' + i + '" aria-hidden="true"><td colspan="' + (1 + wcols.length + ids.length) + '"><button type="button" class="pname psheet" data-i="' + i + '" tabindex="-1">' + esc(shortAddr(p.resolved || p.label)) + '</button>' + (isEx(p, 'props') ? '<span class="exm">例</span>' : '') + '<span class="pbs">' + propBadges(p) + '</span></td></tr>';
     });
-    return h + '</tbody></table></div><p class="tnote">距離は住所の代表点から。太字＝最短、?＝登録が少なく参考、小中は学区と限りません（鉄道の本数・乗換・時刻は含みません）。</p>';
+    return h + '</tbody></table></div><p class="tnote">太字＝最短。距離は町丁の代表点から（ずれる時は地図の番号を押して消し「地図で指定」）。</p>';
   }
   function renderPlaces() {
     const P = state.places;
@@ -685,7 +705,7 @@
       box.innerHTML = nearTable(P, ws);
       box.querySelectorAll('.psheet').forEach((b) => b.addEventListener('click', () => openPropSheet(Number(b.dataset.i))));
       box.querySelectorAll('.pb[title]').forEach((b) => b.addEventListener('click', () => msg($('propMsg'), b.title)));
-      const gw = box.querySelector('.gowork'); if (gw) gw.addEventListener('click', () => { const q = $('wq0'); if (q) { q.scrollIntoView({ block: 'nearest' }); q.focus(); } });
+      const gw = box.querySelector('.gowork'); if (gw) gw.addEventListener('click', () => { state.workOpen = true; renderWorkForms(); const q = $('wq0'); if (q) { q.scrollIntoView({ block: 'nearest' }); q.focus(); } msg($('workMsg'), '勤務先の住所を入れて「設定」を押すと、通勤の列が出ます。'); });
       // 行を押すと、地図をその物件に寄せて番号を強調する（タブは切り替えない）
       box.querySelectorAll('tr[data-i]').forEach((tr) => tr.addEventListener('click', (e) => { if (e.target.closest('button')) return; focusProp(Number(tr.dataset.i)); }));
     }
@@ -693,8 +713,9 @@
     $('propAdd').disabled = $('propQ').disabled = $('propPick').disabled = full;
     $('propForm').hidden = full; // 10件入ったら入力欄をたたむ（消すと戻る）
     $('propFull').hidden = !full;
-    $('propQ').placeholder = full ? Life.MAX_PROPS + '件まで入りました（消すと追加できます）' : '例: ' + (state.region.id === 'tokushima' ? '徳島市幸町2丁目' : state.region.search);
+    $('propQ').placeholder = full ? Life.MAX_PROPS + '件まで入りました（消すと追加できます）' : '町丁まで（例: ' + (state.region.id === 'tokushima' ? '徳島市幸町2丁目' : state.region.search) + '）';
     $('exFill').hidden = P.props.length > 0 || !state.region.fill;
+    $('clearTop').hidden = !P.props.length;
     document.body.classList.toggle('has-props', P.props.length > 0);
     renderWorkForms();
     renderAssump();
@@ -708,7 +729,7 @@
     fl.works.forEach((e, j) => { if (!state.places.works[j]) state.places.works[j] = { label: e.label, lon: e.lon, lat: e.lat, resolved: e.label }; });
     for (const e of fl.props) Life.addProp(state.places, { label: e.label, lon: e.lon, lat: e.lat, resolved: e.label });
     state.workOpen = false;
-    msg($('propMsg'), '例の物件' + state.places.props.length + '件を入れました' + (kept ? '（入力済みの勤務先はそのまま）' : '（勤務先も例）') + '。');
+    msg($('propMsg'), '例の物件' + state.places.props.length + '件' + (kept ? 'を入れました（勤務先はそのまま）' : 'と勤務先を入れました') + '。「例」＝実在しない物件。');
     afterPlaceChange('w0');
   });
   function focusProp(i) {
@@ -717,6 +738,7 @@
     document.querySelectorAll('#propList tr[data-i]').forEach((tr) => tr.classList.toggle('sel', Number(tr.dataset.i) === i));
     render();
   }
+  $('clearTop').addEventListener('click', () => { if (window.confirm('物件と勤務先の入力をすべて消しますか？')) $('clearAll').click(); });
   $('clearAll').addEventListener('click', () => { state.places = Life.empty(); try { localStorage.removeItem(Life.KEY); } catch (e) { /* 無視 */ } msg($('propMsg'), '入力を消しました。'); msg($('workMsg'), ''); hidePopup(); renderPlaces(); placeMarks(); });
 
   // ---- 起動・地域の切り替え ----

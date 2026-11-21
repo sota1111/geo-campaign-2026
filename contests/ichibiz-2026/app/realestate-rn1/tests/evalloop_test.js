@@ -89,3 +89,19 @@ test('評価ループ第4回: 凡例は表の直上・「札」の字なし・�
   assert.ok(!/title: '1\. 市の計画/.test(fs.readFileSync(path.join(__dirname, '../web/lib.js'), 'utf8')));
   assert.ok(!/査定|適正料金|最適地/.test(app + html));
 });
+test('評価ループ第5回: 凡例は1行・災害の印は語で・通勤は5分単位・境界付近の注記は節で1回・例の印・シートタブで1件目', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
+  const lib = fs.readFileSync(path.join(__dirname, '../web/lib.js'), 'utf8');
+  assert.ok(!app.includes('洪津高土') && !app.includes('<ul class="tleg">'));
+  assert.ok(app.includes("hz.haz.join('・')") && app.includes('function r5(m)'));
+  assert.ok(app.includes('class="exm"') && app.includes("openPropSheet(state.places.props[state.sel] ? state.sel : 0)"));
+  assert.ok(!lib.includes('徒歩圏（直線800m）の生活施設'));
+  const dir = path.join(__dirname, '../web/data/tokushima');
+  const rd = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+  const d = Lib.assemble(rd('manifest.json'), { plan: rd('plan.json'), population: rd('population.json'), districts: rd('districts.json'), facilities: rd('facilities.json'), hazards: rd('hazards.json') }, Lib.REGIONS.tokushima);
+  const sec = Lib.buildSheet(d, Lib.collect(d, 134.5385, 34.0760)).sections.find((s) => s.id === 'hazard');
+  const t = sec.lines.map((l) => l.text).join('\n');
+  assert.ok(t.includes('境界付近にある'), t);
+  assert.strictEqual((t.match(/±20m程度ずれる/g) || []).length, 1, t);
+  assert.ok(!/査定|適正料金|最適地/.test(app + lib));
+});
