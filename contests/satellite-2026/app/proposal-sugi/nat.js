@@ -90,6 +90,7 @@
       state.mapReady = true;
       window.__natMap = map;
       paint();
+      fitCity();
       document.body.dataset.mapReady = '1';
     });
   }
@@ -143,7 +144,7 @@
   }
   function renderRules() {
     $('#rules').innerHTML = '<legend>配分ルール（5つを並べて比べます。地図は選んだルール）</legend>' + L.RULES.map((r) =>
-      '<label title="' + esc(r.desc) + '"><input type="radio" name="rule" value="' + r.id + '"' + (r.id === state.rule ? ' checked' : '') + '> <b>' + esc(r.name) + '</b><span class="d">' + esc(r.desc) + '</span></label>').join('');
+      '<label title="' + esc(r.desc) + '"><input type="radio" name="rule" value="' + r.id + '"' + (r.id === state.rule ? ' checked' : '') + '> <b>' + esc(r.short) + '</b></label>').join('') + '<p class="note" id="rule-desc">' + esc(L.RULES.find((r) => r.id === state.rule).desc) + '</p>';
     $('#mixrow').hidden = state.rule !== 'mix';
     $('#o-mix').textContent = 'A ' + state.mixAlpha + '% ＋ D ' + (100 - state.mixAlpha) + '%';
     $('#mix').value = state.mixAlpha;
@@ -186,6 +187,10 @@
     state.city = j;
     if (state.mode !== 'alloc') { state.mode = 'alloc'; document.querySelector('input[name=mode][value=alloc]').checked = true; }
     update(true);
+  }
+  function fitCity() {
+    const c = state.city, R = state.radiusKm, cos = Math.cos(U.lat[c] * Math.PI / 180);
+    state.map.fitBounds([[U.lon[c] - R * 1.1 / (L.KM_DEG * cos), U.lat[c] - R * 1.1 / L.KM_DEG], [U.lon[c] + R * 1.1 / (L.KM_DEG * cos), U.lat[c] + R * 1.1 / L.KM_DEG]], { padding: 20, duration: 0 });
   }
   function update(fly) {
     recompute(); legend(); renderCity(); renderRules(); renderRadii(); renderResult(); paint();
@@ -240,6 +245,7 @@
   about();
   bind();
   state.city = DEFAULT_CITY;
+  state.budget = L.DEFAULTS.budgetMan;
   update(false);
   initMap();
 })();

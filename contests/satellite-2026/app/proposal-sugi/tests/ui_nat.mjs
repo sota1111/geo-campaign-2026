@@ -81,7 +81,7 @@ for (const [label, w, h] of [['desktop', 1513, 784], ['mobile', 390, 844]]) {
     await sleep(1500);
     r.info.city2 = await c.ev('window.SUGI_NAT.u.name[window.__nat.city]');
     r.info.cand50 = await c.ev('window.__nat.cand.length');
-    await c.ev('(()=>{const e=document.querySelector("input[name=rad][value=100]");e.checked=true;e.dispatchEvent(new Event("change",{bubbles:true}))})()');
+    await c.ev("document.querySelector('input[name=rad][value=\"100\"]').click()");
     await sleep(1500);
     r.info.cand100 = await c.ev('window.__nat.cand.length');
     if (!(r.info.cand100 >= r.info.cand50)) r.fail.push('半径を広げても候補が増えない');

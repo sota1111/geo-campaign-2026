@@ -42,8 +42,8 @@ class Jouyo(unittest.TestCase):
 class Pop(unittest.TestCase):
     def test_center_of_1km_mesh(self):
         lat, lon = P.center('53394611')
-        self.assertAlmostEqual(lat, 53 * 40 / 60 + 3 * 5 / 60 + 6 * 30 / 3600 + 15 / 3600, places=6)
-        self.assertAlmostEqual(lon, 100 + 39 + 4 * 7.5 / 60 + 1 * 45 / 3600 + 22.5 / 3600, places=6)
+        self.assertAlmostEqual(lat, 53 * 40 / 60 + 4 * 5 / 60 + 1 * 30 / 3600 + 15 / 3600, places=6)
+        self.assertAlmostEqual(lon, 100 + 39 + 6 * 7.5 / 60 + 1 * 45 / 3600 + 22.5 / 3600, places=6)
 
 
 @unittest.skipIf(M is None, 'numpy / pyproj がない')
