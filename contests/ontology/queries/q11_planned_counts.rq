@@ -1,0 +1,11 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q11 提出予定数（総司令官の決定。要項の上限である SubmissionLimit とは別）。
+# plannedLabel の無い行がコンペ全体の件数、ある行が区分（スポンサー・一般・部門）の件数。未定のコンペは行がない（c:extracted の穴）。
+SELECT ?contest ?plannedLabel ?count
+WHERE {
+  ?p a c:PlannedSubmission ; c:ofContest ?contest ; c:plannedCount ?count .
+  OPTIONAL { ?p c:plannedLabel ?plannedLabel }
+}
+ORDER BY ?contest ?plannedLabel

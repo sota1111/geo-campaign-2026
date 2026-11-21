@@ -6,7 +6,7 @@ import Portal from '@/pages/Portal'
 import { APPS, CONTESTS } from '@/apps/registry'
 import { FIT_CELLS, FIT_COLUMNS } from '@/data/app-fit'
 import {
-  TARGETS_KEY, activeCautions, appsForContest, cellOf, contestScore, isSelectable, loadTargets, sanitizeTargets, sortApps, toggleTarget, totalScore,
+  TARGETS_KEY, activeCautions, appsForContest, cellOf, contestScore, isSelectable, loadTargets, sanitizeTargets, selectedCount, sortApps, toggleTarget, totalScore,
 } from '@/lib/fit'
 
 // 正本 JSON に未反映の新案（app-fit.ts に先に足した。反映後はここから外す）。a4・timeline は 2026-11-21 に参謀長が正本へ反映済み
@@ -53,18 +53,40 @@ describe('並び順', () => {
     const s = ids.map((id) => contestScore(id, 'satellite-2026'))
     for (let i = 1; i < s.length; i++) expect(s[i - 1]).toBeGreaterThanOrEqual(s[i])
   })
-  it('提出先を選んだアプリが先頭に来て、各群の中は元の並びを保つ。コンペを選んでいても同じ', () => {
+  it('コンペを選んでいないとき: 何かを提出先に選んだアプリが先頭に来て、各群の中は元の並びを保つ', () => {
     const none = sortApps(APPS, null).map((a) => a.id)
     const pick = [none[7], none[3]]
     const t: Record<string, string[]> = {}
     for (const id of pick) t[id] = [FIT_COLUMNS.find((c) => isSelectable(cellOf(id, c.id)))!.id]
-    for (const contest of [null, 'satellite-2026' as const]) {
-      const base = sortApps(APPS, contest).map((a) => a.id)
-      const ids = sortApps(APPS, contest, t).map((a) => a.id)
-      expect(ids.slice(0, 2)).toEqual(base.filter((id) => pick.includes(id)))
-      expect(ids.slice(2)).toEqual(base.filter((id) => !pick.includes(id)))
-      expect(sortApps(APPS, contest, {}).map((a) => a.id)).toEqual(base)
-    }
+    const ids = sortApps(APPS, null, t).map((a) => a.id)
+    expect(ids.slice(0, 2)).toEqual(none.filter((id) => pick.includes(id)))
+    expect(ids.slice(2)).toEqual(none.filter((id) => !pick.includes(id)))
+    expect(sortApps(APPS, null, {}).map((a) => a.id)).toEqual(none)
+  })
+  it('コンペを選んでいるとき: そのコンペを提出先に選んだアプリだけが先頭。他のコンペ向けに選んだアプリは先頭にならず、通常の並びに混ざる', () => {
+    const base = sortApps(APPS, 'satellite-2026').map((a) => a.id)
+    // sat-sugi は衛星の下位。UDC だけを選んだアプリは、UDC に出せる（× でない）もののうち衛星の上位（sat-a は UDC × なので別のアプリを探す）
+    const udcOnly = base.find((id) => id !== 'sat-sugi' && isSelectable(cellOf(id, 'udc-2026')))!
+    const t: Record<string, string[]> = { 'sat-sugi': ['satellite-2026'], [udcOnly]: ['udc-2026'] }
+    const ids = sortApps(APPS, 'satellite-2026', t).map((a) => a.id)
+    expect(ids[0]).toBe('sat-sugi') // 衛星を選んだアプリは先頭
+    expect(ids.slice(1)).toEqual(base.filter((id) => id !== 'sat-sugi')) // UDC だけを選んだアプリは先頭に来ない（通常の位置のまま）
+    expect(ids.indexOf(udcOnly)).toBeGreaterThan(0)
+    expect(sortApps(APPS, 'satellite-2026', {}).map((a) => a.id)).toEqual(base)
+  })
+  it('イチBiz を選んでいるとき: 3部門のどれかを選んだアプリが先頭', () => {
+    const t = { 'biz-idea': ['ichibiz-2026-idea'], 'sat-a': ['satellite-2026'] }
+    const ids = sortApps(APPS, 'ichibiz-2026', t).map((a) => a.id)
+    expect(ids[0]).toBe('biz-idea')
+    expect(ids.indexOf('sat-a')).toBeGreaterThan(0)
+    expect(ids.slice(0, 2)).not.toContain('sat-a')
+  })
+  it('「選んだ N件」はそのコンペを提出先にした組の数（並び順の説明と提出予定数で共通）', () => {
+    const t = { 'sat-a': ['satellite-2026'], 'biz-idea': ['ichibiz-2026-idea', 'ichibiz-2026-business'] }
+    expect(selectedCount(t, null)).toBe(3)
+    expect(selectedCount(t, 'satellite-2026')).toBe(1)
+    expect(selectedCount(t, 'ichibiz-2026')).toBe(2)
+    expect(selectedCount(t, 'udc-2026')).toBe(0)
   })
   it('イチBiz は3部門のうち最大の score で並べる', () => {
     expect(contestScore('biz-realestate', 'ichibiz-2026')).toBe(3)

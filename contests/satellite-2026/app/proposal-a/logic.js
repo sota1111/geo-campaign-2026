@@ -85,3 +85,126 @@ export function topShift(segs, cellSat, w, n = 20) {
   const base = new Set(top(0));
   return top(w).filter((id) => !base.has(id)).length;
 }
+
+// ---------------------------------------------------------------------------
+// 調査結果（空洞あり/なし）の CSV の取り込み。処理はブラウザ内だけ。
+// 受け付ける書き方は2つ（GMS3 の出力書式は未確認のため、どちらでも受けられるようにしてある）:
+//   (1) 区間ID ＋ 空洞あり/なし        例: segment_id,cavity
+//   (2) 緯度・経度の点 ＋ 空洞あり/なし  例: lat,lon,cavity   （近い区間に結び付ける）
+// ---------------------------------------------------------------------------
+
+export const LINK_MAX_M = 20; // 点を区間に結び付ける最大距離（m）。デモ上の仮の値
+
+const COL_ID = ['segment_id', 'segmentid', 'id', '区間id', '区間', '区間番号'];
+const COL_LAT = ['lat', 'latitude', '緯度', 'y'];
+const COL_LON = ['lon', 'lng', 'long', 'longitude', '経度', 'x'];
+const COL_RES = ['cavity', 'result', 'hit', '空洞', '空洞の有無', '空洞有無', '結果', '有無'];
+const YES = new Set(['1', 'true', 'yes', 'y', 'あり', '有', '有り', '空洞あり', '空洞有り', '空洞有', '疑い', '疑いあり', 'hit', 'positive', 'pos']);
+const NO = new Set(['0', 'false', 'no', 'n', 'なし', '無', '無し', '空洞なし', '空洞無し', '空洞無', '異常なし', '異常無し', 'none', 'ok', 'negative', 'neg']);
+const squash = (v) => String(v ?? '').trim().toLowerCase().replace(/[\s　]/g, '');
+
+/** 空洞の有無の表記を true/false にする。分からなければ null。 */
+export function parseCavity(v) {
+  const k = squash(v);
+  if (YES.has(k)) return true;
+  if (NO.has(k)) return false;
+  return null;
+}
+
+/** 最小の CSV パーサ（カンマまたはタブ区切り、引用符、BOM、CRLF）。行（文字列の配列）の配列を返す。 */
+export function parseCsv(text) {
+  const t = String(text).replace(/^﻿/, '');
+  const first = t.split(/\r?\n/, 1)[0] || '';
+  const delim = (first.match(/\t/g) || []).length > (first.match(/,/g) || []).length ? '\t' : ',';
+  const rows = [];
+  let row = [], cell = '', q = false;
+  const flush = () => { row.push(cell); cell = ''; if (row.some((x) => x.trim() !== '')) rows.push(row); row = []; };
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) {
+      if (c === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; flush(); }
+    else cell += c;
+  }
+  if (cell !== '' || row.length) flush();
+  return rows;
+}
+
+const findCol = (hdr, names) => hdr.findIndex((h) => names.includes(h));
+
+/** 点（経度・緯度）から区間（2点の線分）までの距離（m）。区間の近くだけで使う平面近似。 */
+export function distToSegM(lon, lat, coords) {
+  const kx = 111320 * Math.cos((lat * Math.PI) / 180), ky = 110540;
+  const px = lon * kx, py = lat * ky;
+  const [a, b] = coords;
+  const ax = a[0] * kx, ay = a[1] * ky, bx = b[0] * kx, by = b[1] * ky;
+  const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+  const t = L2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+/** 点に最も近い区間（台帳なしの道路は除く）。しきい値より遠ければ null。 */
+export function nearestSegment(lon, lat, segs, maxM = LINK_MAX_M) {
+  let best = null, bd = maxM;
+  for (const s of segs) {
+    if (s.cls === 'noledger') continue;
+    const d = distToSegM(lon, lat, s.coords);
+    if (d <= bd) { bd = d; best = s; }
+  }
+  return best ? { seg: best, distM: bd } : null;
+}
+
+const EMPTY_SUMMARY = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 };
+
+/**
+ * 調査結果の CSV を、区間ごとの空洞の有無（Map: 区間ID → true/false）にする。
+ * 1つの区間に複数行（または複数の点）があるときは「1つでもあり」なら あり。
+ * 戻り値: { error: string|null, results: Map, summary }
+ */
+export function parseOutcomes(text, segs, { maxM = LINK_MAX_M } = {}) {
+  const fail = (error) => ({ error, results: new Map(), summary: { ...EMPTY_SUMMARY } });
+  const rows = parseCsv(text);
+  if (rows.length < 2) return fail('見出し行とデータ行が必要です。');
+  const hdr = rows[0].map(squash);
+  const ci = findCol(hdr, COL_ID), cla = findCol(hdr, COL_LAT), clo = findCol(hdr, COL_LON), cr = findCol(hdr, COL_RES);
+  if (cr < 0) return fail('空洞の有無の列がありません（見出し: cavity / 空洞 / 結果 など）。');
+  if (ci < 0 && (cla < 0 || clo < 0)) return fail('区間ID の列（segment_id / 区間ID）か、緯度・経度の列（lat,lon / 緯度,経度）が必要です。');
+  const byId = new Map(segs.map((s) => [s.id, s]));
+  const sm = { ...EMPTY_SUMMARY };
+  const seen = new Map(); // 区間ID -> Set(true/false)
+  for (const r of rows.slice(1)) {
+    sm.rows++;
+    const v = parseCavity(r[cr]);
+    if (v === null) { sm.invalid++; continue; }
+    let id = null;
+    const rawId = ci >= 0 ? (r[ci] || '').trim() : '';
+    if (rawId) {
+      const s = byId.get(rawId);
+      if (!s) { sm.unknownId++; continue; }
+      id = s.id; sm.byId++;
+    } else if (cla >= 0 && clo >= 0) {
+      const sLat = (r[cla] || '').trim(), sLon = (r[clo] || '').trim();
+      const lat = Number(sLat), lon = Number(sLon);
+      if (sLat === '' || sLon === '' || !Number.isFinite(lat) || !Number.isFinite(lon)) { sm.invalid++; continue; }
+      const n = nearestSegment(lon, lat, segs, maxM);
+      if (!n) { sm.unmatched++; continue; }
+      id = n.seg.id; sm.byPoint++;
+    } else { sm.invalid++; continue; }
+    if (!seen.has(id)) seen.set(id, new Set()); else sm.merged++;
+    seen.get(id).add(v);
+  }
+  const results = new Map();
+  for (const [id, set] of seen) {
+    if (set.size > 1) sm.conflicts++;
+    results.set(id, set.has(true));
+  }
+  sm.segments = results.size;
+  sm.hit = [...results.values()].filter(Boolean).length;
+  sm.none = sm.segments - sm.hit;
+  return { error: null, results, summary: sm };
+}
+
+/** 区間と結果（Map）から、較正に使う形（hit 付き）を作る。 */
+export const scannedFrom = (segs, results) => segs.filter((s) => results.has(s.id)).map((s) => ({ ...s, hit: results.get(s.id) }));
