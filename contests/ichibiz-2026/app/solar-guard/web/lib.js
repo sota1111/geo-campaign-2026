@@ -187,8 +187,9 @@
   function priorities(items, answers, conds, res, cls) {
     var hit = {}, unk = {};
     conds.forEach(function (c, i) {
-      if (!c.derive) return;
-      c.derive.items.forEach(function (id) {
+      /* derive: 対策の回答から決まる条件。counter: 立地の条件（本人の回答）に備える対策（本アプリの対応づけ。仮） */
+      var ids = c.derive ? c.derive.items : (c.counter || []);
+      ids.forEach(function (id) {
         if (res[i].state === 'risk' && !hit[id]) hit[id] = c.label;
         if (res[i].state === 'unknown' && !unk[id]) unk[id] = c.label;
       });
@@ -198,9 +199,9 @@
       var a = (answers || {})[it.id] || 'unknown';
       if (a === 'yes') return;
       var rank, why, cond = null;
-      if (hit[it.id]) { rank = 1; why = 'hit'; cond = hit[it.id]; }
+      if (cls !== 'unknown' && it.cls.indexOf(cls) >= 0 && it.cls.indexOf('all') < 0) { rank = 0.5; why = 'class'; }   // 選んだ区分の重点箇所（JPEA・REASP p.10）。区分を選んだ答えが一覧に必ず表れるよう先頭に置く
+      else if (hit[it.id]) { rank = 1; why = 'hit'; cond = hit[it.id]; }
       else if (it.src.indexOf('IBF') >= 0) { rank = 2; why = 'flyer'; }
-      else if (cls !== 'unknown' && it.cls.indexOf(cls) >= 0) { rank = 2; why = 'class'; }
       else if (unk[it.id]) { rank = 3; why = 'unknown'; cond = unk[it.id]; }
       else { rank = 4; why = 'other'; }
       out.push({ item: it, answer: a, rank: rank, why: why, cond: cond, k: k });

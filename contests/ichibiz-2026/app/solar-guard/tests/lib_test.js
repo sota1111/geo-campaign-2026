@@ -257,24 +257,31 @@ t('市町村で選んだ診断: 市町村の地区と人口密度（muniLevels �
   assert.equal(r.scoreMin, G.W_REGION * tiers[mu.region] + (mu.quiet ? 1 : 0));
 });
 
-t('まず取る対策の並べ方: 当てはまる条件を解消する対策→県警チラシ・区分の重点→わからない条件→その他。実施済みは出さない', () => {
+t('まず取る対策の並べ方: 当てはまる条件への対策→区分の重点→県警チラシ→わからない条件→その他。実施済みは出さない', () => {
   const its = ck.items.filter((it) => it.cls.includes('all') || it.cls.includes('low'));
   // 何も答えていない: 県警チラシ（IBF）の対策が先頭
   let res = G.evalConds(risk.conds, {}, {}, null);
   let p = G.priorities(its, {}, risk.conds, res, 'low');
   assert.equal(p.length, its.length);
-  assert.ok(p.slice(0, 3).every((x) => x.rank === 2));
-  assert.ok(p.slice(0, 3).every((x) => x.item.src.includes('IBF') || x.item.cls.includes('low')));
+  // 区分を選んだら、その区分の重点（低圧: 引込柱の一次側）が先頭。次に県警チラシ
+  assert.equal(p[0].item.id, 'pole_barrier'); assert.equal(p[0].why, 'class');
+  assert.ok(p.slice(1, 3).every((x) => x.rank === 2 && x.item.src.includes('IBF')));
+  // 立地の条件（本人の回答）が当てはまると、その条件に備える対策（counter。仮の対応づけ）が先頭
+  res = G.evalConds(risk.conds, { hidden: 'yes' }, {}, null);
+  p = G.priorities(its, {}, risk.conds, res, 'unknown');
+  assert.deepEqual(p.slice(0, 3).map((x) => x.item.id).sort(), ['camera', 'fence_sensor', 'light']);
+  assert.ok(p.slice(0, 3).every((x) => x.rank === 1 && x.cond === '外から見えにくい'));
   // 防犯設備がすべて「実施していない」→ nosec が当てはまり、その4対策が先頭
   const ans = { fence_sensor: 'no', machine_security: 'no', camera: 'no', alarm: 'no', pipes_buried: 'yes', collector_cover: 'yes' };
   res = G.evalConds(risk.conds, {}, ans, null);
   p = G.priorities(its, ans, risk.conds, res, 'low');
-  assert.deepEqual(p.slice(0, 4).map((x) => x.item.id).sort(), ['alarm', 'camera', 'fence_sensor', 'machine_security']);
-  assert.ok(p.slice(0, 4).every((x) => x.rank === 1 && x.cond === '防犯・警備の設備がない'));
+  assert.equal(p[0].item.id, 'pole_barrier');   // 区分の重点は先頭のまま
+  assert.deepEqual(p.slice(1, 5).map((x) => x.item.id).sort(), ['alarm', 'camera', 'fence_sensor', 'machine_security']);
+  assert.ok(p.slice(1, 5).every((x) => x.rank === 1 && x.cond === '防犯・警備の設備がない'));
   assert.ok(!p.some((x) => x.item.id === 'pipes_buried' || x.item.id === 'collector_cover'));
   // 同じ順の中では「実施していない」が先
   const a2 = { aluminum: 'no' };
-  p = G.priorities(its, a2, risk.conds, G.evalConds(risk.conds, {}, a2, null), 'low');
+  p = G.priorities(its, a2, risk.conds, G.evalConds(risk.conds, {}, a2, null), 'unknown');
   assert.equal(p[0].item.id, 'aluminum');
 });
 

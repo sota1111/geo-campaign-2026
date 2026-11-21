@@ -140,7 +140,8 @@ const setXY = (c, lat, lon) => c.ev(`document.getElementById("tab-diag").click()
 {
   const c = await openChrome();
   await open(c, 390, 800, true);
-  const m = await c.ev(`(function(){document.getElementById("tab-diag").click();var r=document.getElementById("map").getBoundingClientRect();var a=document.getElementById("btn-set").getBoundingClientRect().top+scrollY, b=document.getElementById("diag-result").getBoundingClientRect().top+scrollY;return {mapH:Math.round(r.height), gap:Math.round(b-a), docH:document.documentElement.scrollHeight};})()`);
+  // 評価ループ第3回: スマホの診断タブは「地図で場所を選ぶ」を押すと小さな地図が開く
+  const m = await c.ev(`(function(){document.getElementById("tab-diag").click();document.getElementById("btn-mapsel").click();var r=document.getElementById("map").getBoundingClientRect();var a=document.getElementById("btn-set").getBoundingClientRect().top+scrollY, b=document.getElementById("diag-result").getBoundingClientRect().top+scrollY;return {mapH:Math.round(r.height), gap:Math.round(b-a), docH:document.documentElement.scrollHeight};})()`);
   console.log('D: スマホ', JSON.stringify(m));
   if (m.mapH < 250) findings.push(`D[軽微] スマホ幅で地図の高さが${m.mapH}px。地図クリックで自分の発電所を指すには小さい`);
   if (m.gap > 2400) findings.push(`D[軽微] スマホ幅で「この座標で診断」ボタンから結果欄まで約${m.gap}px（チェックリスト全項目の下）。座標を入れても結果が画面外で、変化に気づきにくい`);

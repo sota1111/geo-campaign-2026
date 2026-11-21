@@ -29,22 +29,26 @@
     <!-- 1 公開の集計地図 -->
     <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
       <div class="box key" role="note">
-        <p class="big"><b>色が濃いほど、県警の被害実績（設備あたりの件数）が多い地区です。</b></p>
-        <p class="note">仮の目安で<b>被害の予測ではなく</b>、設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。メッシュを押すと理由が出て、その場所で診断できます。</p>
-        <button id="go-diag" type="button" class="primary">設備を診断する</button>
+        <button id="go-diag" type="button" class="primary">設備を診断する（条件を入れて理由と対策を見る）</button>
+        <p class="big"><b>色は、県警の地区別の被害実績に人口密度の補正を足した仮の段階です。</b><span class="pc">メッシュ（約5km四方の区画）ごとの実績ではありません（非公開）。</span></p>
+        <p class="note"><b>被害の予測ではなく</b>、的中も未検証。設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。地区内の差は、メッシュを押すか診断で見ます。</p>
       </div>
-      <div class="box" id="trend" role="note"></div>
       <details class="box" id="det-basis">
-        <summary>色の根拠・県警の被害実績との照合・限界</summary>
+        <summary>色の根拠と限界（県警の被害実績との照合）</summary>
         <ul class="note dark">
-          <li>色は、茨城県警が公表した県内5地区の被害件数（設備あたり）が主な根拠。点数の配分や切り方に公的な根拠はなく、的中率の検証もしていません。地区の段階は令和7年11月末の実績から作ったので、同じ期間と合うのは当然で、<b>独立の検証ではありません</b>。</li>
+          <li><b>この色は的中を検証していません。</b>主な根拠は県警が公表した県内5地区の被害件数（設備あたり）で、地区内のメッシュごとの実績は公開されていません。点数の配分や切り方に公的な根拠はありません。</li>
           <li>認定情報の利用ルールの禁止事項（イ）「国家・国民の安全に脅威を与える利用」に当たるかは<b>未確認</b>（管理者は資源エネルギー庁。<a href="https://www.fit-portal.go.jp/Terms" target="_blank" rel="noopener">ご利用上の注意</a>）。</li>
           <li>設備の位置は町字（大字）の代表点。出力20kW未満の太陽光は元データにありません。</li>
         </ul>
         <h3>色分けの規則</h3>
         <div id="rules"></div>
-        <h3>県警の被害実績との照合</h3>
-        <div id="dist-compare"></div>
+        <details id="det-verify"><summary>詳しい検証（県警の5地区の実績と色の照合）</summary>
+          <div id="dist-compare"></div>
+        </details>
+      </details>
+      <details class="box" id="det-trend">
+        <summary>茨城県の金属盗の件数と法令</summary>
+        <div id="trend"></div>
       </details>
       <details class="box" id="det-munis">
         <summary>市町村別の集計（表）</summary>
@@ -68,8 +72,12 @@
         <div class="row">
           <label for="in-muni">市町村</label>
           <select id="in-muni"><option value="">選ぶ</option></select>
-          <span class="note"><span class="pc">または<b>右の地図をクリック</b>（約5kmメッシュ）</span><span class="sp">または集計地図のメッシュから「この場所で診断する」</span></span>
+          <span class="note pc">または<b>右の地図をクリック</b></span>
+          <button id="btn-mapsel" type="button" class="sp mapsel">地図で場所を選ぶ</button>
         </div>
+        <p class="note" id="pos-msg" role="status"></p>
+        <div class="row"><span class="lbl">区分</span><div id="ctl-class" class="seg" role="radiogroup" aria-label="設備の区分"></div></div>
+        <p class="note" id="cls-note"></p>
         <details id="det-ll"><summary>緯度・経度で入れる</summary>
           <div class="row">
             <label for="in-lat">緯度</label><input id="in-lat" type="text" inputmode="decimal" placeholder="例 36.34" size="8">
@@ -77,17 +85,16 @@
             <button id="btn-set" type="button" class="primary">この座標で診断</button>
           </div>
         </details>
-        <p class="note" id="pos-msg" role="status"></p>
-        <div class="row"><span class="lbl">区分</span><div id="ctl-class" class="seg" role="radiogroup" aria-label="設備の区分"></div></div>
-        <p class="note" id="cls-note"></p>
       </div>
       <div class="box" id="box-cond">
-        <h2><span class="step">2</span>現場の条件と対策 <span class="sub">（当てはまる方を押す。もう一度押すと「不明」に戻る）</span></h2>
+        <h2><span class="step">2</span>立地の条件 <span class="sub">★4問（色に影響。もう一度押すと「不明」）</span></h2>
         <div id="conds"></div>
-        <div id="checklist"></div>
+        <details id="det-cl"><summary id="cl-sum">いまの対策を入れる（任意）</summary>
+          <div id="checklist"></div>
+        </details>
       </div>
       <details class="box" id="box-detail">
-        <summary>色の理由と内訳・周囲の目安</summary>
+        <summary>色の内訳・条件ごとの出典・周囲の目安</summary>
         <div id="diag-detail"></div>
       </details>
       <div class="box privacy" role="note" id="box-privacy">

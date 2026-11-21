@@ -79,7 +79,7 @@ async function run(label, w, h, mobile) {
   if (await c.ev('!!document.getElementById("w-quiet") || !!document.getElementById("weights")')) problems.push(label + ': 廃止した重みの操作が残っている');
   const rules = await c.ev('document.getElementById("rules").textContent');
   for (const wd of ['2 × 地区の段階', '人目の少なさ', '仮', '規模', '逃げやすさ', '両論']) if (!rules.includes(wd)) problems.push(label + ': 色分けの規則に「' + wd + '」がない');
-  const trend = await c.ev('document.getElementById("trend").innerText');
+  const trend = await c.ev('document.getElementById("trend").textContent');  // 評価ループ第3回: 折りたたみの中に移した
   for (const wd of ['2,889', '3,628', '1,766', '91.8%', '出典', '金属盗対策法']) if (!trend.includes(wd)) problems.push(label + ': 盗難の件数・推移に「' + wd + '」がない');
   const lg = await c.ev('({cls: document.getElementById("legend").className, txt: document.getElementById("legend").innerText})');
   if (lg.cls === 'off' || !/低.*中.*やや高.*高/.test(lg.txt) || !lg.txt.includes('被害の予測ではありません')) problems.push(label + ': 凡例が4段階・予測でない旨になっていない: ' + lg.txt);
@@ -156,13 +156,14 @@ async function run(label, w, h, mobile) {
   await sleep(200);
   res = await c.ev('document.getElementById("diag-result").textContent');
   const top = await c.ev('Array.prototype.map.call(document.querySelectorAll("#diag-result .top3 li"),function(li){return li.textContent})');
-  if (!top[0] || !top[0].includes('ケーブルを短い間隔で固定する') || !top[0].includes('未実施') || top.some((t) => t.includes('転がし配管・むき出し'))) problems.push(label + ': 回答が「まず取る対策」に反映されない: ' + JSON.stringify(top));
+  // 区分（低圧）を選んだので1件目は低圧の重点。次は当てはまる条件（この地点は人目が少ない）への対策（評価ループ第3回）
+  if (!top[0] || !top[0].includes('引込柱の一次側') || !top[1] || !top[1].includes('あなたの条件') || top.some((t) => t.includes('転がし配管・むき出し'))) problems.push(label + ': 回答が「まず取る対策」に反映されない: ' + JSON.stringify(top));
   if ((await c.ev('document.querySelectorAll("#diag-result .top3 a").length')) !== 3) problems.push(label + ': まず取る対策に出典がない');
   if (!res.includes('優先の基準')) problems.push(label + ': 対策の優先の基準が書かれていない');
   // 回答欄を下までスクロールしても、結果が見える（PC: 結果のカードを固定。スマホ: 上端に要約）
   await c.ev('document.getElementById("box-cond").scrollIntoView({block:"end"})');
   await sleep(300);
-  const stick = await c.ev(mobile ? '(function(){var m=document.getElementById("diag-mini"),r=m.getBoundingClientRect();return {ok:getComputedStyle(m).display!=="none"&&r.top>=0&&r.top<5,t:m.textContent};})()' : '(function(){var r=document.getElementById("box-result").getBoundingClientRect();return {ok:r.top>=0&&r.top<200,t:r.top};})()');
+  const stick = await c.ev(mobile ? '(function(){var m=document.getElementById("diag-mini"),r=m.getBoundingClientRect(),b=document.getElementById("box-result").getBoundingClientRect();return {ok:(getComputedStyle(m).display!=="none"&&r.top>=0&&r.top<5)||(b.top>=0&&b.top<window.innerHeight-60),t:m.textContent,res:b.top};})()' : '(function(){var r=document.getElementById("box-result").getBoundingClientRect();return {ok:r.top>=0&&r.top<200,t:r.top};})()');
   if (!stick.ok) problems.push(label + ': 回答欄の位置で結果が見えない ' + JSON.stringify(stick));
   console.log(label, 'diag heights', JSON.stringify(await c.ev('({doc: document.documentElement.scrollHeight, panel: document.getElementById("panel").scrollHeight})')));
   await click(c, '#ctl-class button:nth-child(1)');
