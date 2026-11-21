@@ -4,7 +4,7 @@ export const WARD_CODES = Array.from({ length: 23 }, (_, i) => String(13101 + i)
 export const TYPE_MANSION = '中古マンション等';
 export const AREA_MIN = 10;   // ㎡。これ未満は事務所・倉庫の一部などの可能性があり除く
 export const AREA_MAX = 300;  // ㎡。XIT001 は 2000㎡以上を「2000㎡以上」と丸めるため、極端な大面積も除く
-export const LOW_N = 10;      // 件。1四半期・1区でこれ未満は「件数が少ない」
+export const LOW_N = 30;      // 件。1四半期・1区でこれ未満は「件数が少ない」（作成者の基準。実データで全1,932区四半期のうち12が該当）
 
 export const num = (v) => { if (v === null || v === undefined || v === '') return null; const n = Number(String(v).replace(/,/g, '')); return Number.isFinite(n) ? n : null; };
 
