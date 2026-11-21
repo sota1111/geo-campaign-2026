@@ -25,6 +25,7 @@ APP_DIRS = {
     "biz-idea": "contests/ichibiz-2026/app/idea",
     "biz-realestate": "contests/ichibiz-2026/app/realestate",
     "biz-realestate-rn1": "contests/ichibiz-2026/app/realestate-rn1",
+    "biz-realestate-a4": "contests/ichibiz-2026/app/realestate-a4",
     "biz-solar-guard": "contests/ichibiz-2026/app/solar-guard",
 }
 
@@ -38,6 +39,8 @@ APP_HOME_FALLBACK = {
     "sat-sugi": ("satellite-2026", None),
     # アイデア部門のみ（reports/command/decision-20261114-solar-guard.md 結論5）
     "biz-solar-guard": ("ichibiz-2026", "idea"),
+    # 不動産部門の新案 A4「同じ土地、四つの値段」（dashboard の registry.ts にはまだ無い。reports/audit/ichibiz-2026-realestate-a4-20261121.md の対象）
+    "biz-realestate-a4": ("ichibiz-2026", "realestate"),
 }
 
 # registry.ts の division 文字列の先頭 → ichibiz の部門 id
@@ -78,6 +81,7 @@ SUBMISSION_FILES = {
     ("biz-idea-in1", "ichibiz-2026"): [f"{_IZ}/idea-in1/{n}.md" for n in _FIELDS],
     ("biz-realestate", "ichibiz-2026"): [f"{_IZ}/realestate/{n}.md" for n in _FIELDS + ["reinfolib"]],
     ("biz-realestate-rn1", "ichibiz-2026"): [f"{_IZ}/realestate-rn1/{n}.md" for n in _FIELDS + ["reinfolib"]],
+    ("biz-realestate-a4", "ichibiz-2026"): [f"{_IZ}/realestate-a4/{n}.md" for n in _FIELDS + ["reinfolib"]],
 }
 # 提出文が無いと確認できる根拠（reports/command/merge-20261121.md PR #36、監査の範囲外の記載）
 NO_DRAFT_SOURCES = {
@@ -98,6 +102,7 @@ AUDITS = {
     "ichibiz-2026-20261109": {"apps": ["biz-business", "biz-idea", "biz-realestate"], "supersedes": []},
     "ichibiz-2026-recheck-20261109": {"apps": ["biz-business", "biz-idea", "biz-realestate"], "supersedes": ["ichibiz-2026-20261109"]},
     "ichibiz-2026-business-nb-20261113": {"apps": ["biz-business-nb"], "supersedes": []},
+    "ichibiz-2026-realestate-a4-20261121": {"apps": ["biz-realestate-a4"], "supersedes": []},
     "ichibiz-2026-realestate-rn1-20261113": {"apps": ["biz-realestate-rn1"], "supersedes": []},
     "ichibiz-2026-realestate-rn1-regions-20261114": {"apps": ["biz-realestate-rn1"], "supersedes": ["ichibiz-2026-realestate-rn1-20261113"]},
     "ichibiz-2026-solar-guard-20261113": {"apps": ["biz-solar-guard"], "supersedes": []},
@@ -209,6 +214,15 @@ ESCALATION_APPS = {
     "20261114-ichibiz-rn1-honnin-kahitsu": ["biz-realestate-rn1"],
     "20261114-odpt-kodure-ksj-noncommercial": ["odpt-kodure"],
     "20261114-solar-guard-data-terms": ["biz-solar-guard"],
+    # 統合ダッシュボード自体の指摘（個別の案ではないので案には結ばない）
+    "20261121-dashboard-app-steps-hidden": [],
+    "20261121-dashboard-detail-collapse": [],
+    "20261121-ontology-graph-unreadable": [],
+    "20261121-ontology-figures-design": [],
+    "20261121-reinfolib-key-hook": [],
+    "20261121-aide-gate-relaxation": [],
+    "20261121-ichibiz-realestate-a4-honnin": ["biz-realestate-a4"],
+    "20261121-ichibiz-a4-kouji-kakaku-niju": ["biz-realestate-a4"],
 }
 DECISION_APPS = {
     "decision-20261114-odpt-kodure": ["odpt-kodure"],

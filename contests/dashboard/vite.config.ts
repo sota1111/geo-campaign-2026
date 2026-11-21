@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 const APP_IDS = [
   'odpt', 'udc-moritsuchi', 'sat-a', 'sat-b', 'biz-business', 'biz-idea', 'biz-realestate',
   // 新しい案（比較用・未選定。元の静的版を埋め込む）
-  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'odpt-teiji', 'udc-aed',
+  'sat-alpha', 'biz-business-nb', 'biz-realestate-rn1', 'biz-realestate-a4', 'odpt-teiji', 'udc-aed',
   // 審査待ちの案（元のソースが PR にだけある。ソースが無いビルドでは「審査待ち」の案内を出す）
   'sat-yabu', 'sat-sugi', 'odpt-kankou', 'odpt-kansui', 'odpt-kodure', 'biz-solar-guard',
 ]
@@ -24,6 +24,7 @@ export default defineConfig({
       input: {
         main: path.resolve(root, 'index.html'),
         ...Object.fromEntries(CONTEST_IDS.map((id) => [`contest-${id}`, path.resolve(root, `contest/${id}/index.html`)])),
+        ontology: path.resolve(root, 'ontology/index.html'),
         ...Object.fromEntries(APP_IDS.map((id) => [id, path.resolve(root, `apps/${id}/index.html`)])),
       },
     },
