@@ -56,9 +56,22 @@ export function VerifyPanel({ v }: { v: VerifyData }) {
     ['直轄国道', nat.national],
     ['豊中市（市管理）', { total: toy.incidents, sewer: toy.sewer }],
   ]
+  const oldest = v.terciles.find((g) => g.group === 'oldest'), newest = v.terciles.find((g) => g.group === 'newest')
   const top = v.towns.filter((t) => t.sewer_incidents > 0).slice(0, 8)
   return (
     <div className="space-y-4 text-sm" data-testid="verify-panel">
+      <div className="space-y-1 rounded-md border-l-4 border-primary bg-primary/5 p-2.5 text-xs" data-testid="verify-summary">
+        <b className="text-sm">要点</b>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            豊中市では、下水道管が古い町ほど、管の長さあたりの下水道起因の陥没が多い傾向でした（100 km あたり、古い方の3分の1の町 <b>{oldest?.per_100km.toFixed(1)}</b> 件、新しい方 <b>{newest?.per_100km.toFixed(1)}</b> 件。1年度・{ck.incidents_used} 件。<b>因果ではありません</b>）。
+          </li>
+          <li>位置のついた空洞の実データは見つかっておらず、<b>このアプリの点数の当たり外れは検証できません</b>。</li>
+          <li>特別重点調査の「空洞 0」は、<b>空洞調査の実施延長も 0 km</b> です（「空洞がない」ではありません）。</li>
+          <li>提案書の「令和4年度 2,625 件」（国総研）と、下の令和6年度（国交省）は<b>集計の定義が異なり、並べて比べられません</b>。</li>
+        </ul>
+        <span className="text-muted-foreground">以下は詳しい説明です。</span>
+      </div>
       <p className="rounded-md border bg-muted/40 p-2.5 text-xs">
         <b>地中レーダの結果は、一次審査を通るまで手元にありません。</b>そのため「この点数で空洞を当てられた」とは検証できません。代わりに、公開されている実データでできる範囲を示します。
         <b>因果や精度を示すものではなく、位置単位の検証でもありません。</b>
@@ -80,28 +93,16 @@ export function VerifyPanel({ v }: { v: VerifyData }) {
           方法: 陥没の町名（{toy.towns_with_incident} 町に発生）と、豊中市の下水道台帳（管 {n0(toy.pipe_count)} 本・約 {n0(Math.round(toy.pipe_km_total))} km）を、町丁境界（e-Stat、令和2年国勢調査）で町ごとに集計して照合。
           比較に使う町は、竣工年が分かる管が {ck.min_km} km 以上ある {ck.towns_used} 町。下水道起因の陥没 {ck.incidents_used} 件のうち、発生した町は {ck.towns_used_with_sewer_incident} 町。
         </p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>町を管の古さで3群に分けると</TableHead>
-              <TableHead className="text-right">町数</TableHead>
-              <TableHead className="text-right">管 km</TableHead>
-              <TableHead className="text-right">下水道起因の件数</TableHead>
-              <TableHead className="text-right">100 km あたり</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {v.terciles.map((g) => (
-              <TableRow key={g.group}>
-                <TableCell>{GROUP_JA[g.group]}（竣工年の中央値 {g.year_min}〜{g.year_max}年）</TableCell>
-                <TableCell className="text-right">{g.towns}</TableCell>
-                <TableCell className="text-right">{n0(g.pipe_km)}</TableCell>
-                <TableCell className="text-right">{g.sewer_incidents}</TableCell>
-                <TableCell className="text-right">{g.per_100km.toFixed(1)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <p className="text-xs font-medium">町を管の古さ（町ごとの竣工年の中央値）で3群に分けると、下水道起因の陥没は 100 km あたり:</p>
+        <ul className="space-y-1 text-xs" data-testid="verify-terciles">
+          {v.terciles.map((g) => (
+            <li key={g.group} className="rounded border bg-background p-1.5">
+              <b>{GROUP_JA[g.group]}</b>: <b className="text-sm">{g.per_100km.toFixed(1)} 件</b>
+              （{g.sewer_incidents} 件／{n0(g.pipe_km)} km、{g.towns} 町）
+              <span className="block text-muted-foreground">竣工年の中央値 {g.year_min}〜{g.year_max}年</span>
+            </li>
+          ))}
+        </ul>
         <ul className="list-disc space-y-1 pl-5 text-xs">
           <li>管の古さ（町ごとの竣工年の中央値）が古い町ほど、管の延長あたりの下水道起因の陥没件数が多い傾向（順位相関 <b>{ck.spearman_age_vs_rate}</b>）。件数が出た町は、出なかった町より古い確率 <b>{ck.auc_age_for_towns_with_sewer_incident}</b>（0.5 なら差なし）。</li>
           <li>件数を管の延長に比例して町に無作為に配り直す試行（{n0(ck.perm_trials)} 回）で、同じ以上になった割合は {(ck.perm_p_rho_ge * 100).toFixed(1)}%（順位相関）・{(ck.perm_p_auc_ge * 100).toFixed(1)}%（上の確率）。<b>偶然だけでは出にくい差ですが、原因を示すものではありません。</b></li>
@@ -137,7 +138,7 @@ export function VerifyPanel({ v }: { v: VerifyData }) {
           <TableBody>
             {rows.map(([label, c]) => (
               <TableRow key={label}>
-                <TableCell>{label}</TableCell><TableCell className="text-right">{n0(c.total)}</TableCell>
+                <TableCell className="whitespace-normal">{label}</TableCell><TableCell className="text-right">{n0(c.total)}</TableCell>
                 <TableCell className="text-right">{n0(c.sewer)}</TableCell><TableCell className="text-right">{p1(c.sewer, c.total)}</TableCell>
               </TableRow>
             ))}
