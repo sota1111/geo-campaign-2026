@@ -140,4 +140,5 @@ c:DelegationRuleShape a sh:NodeShape ;
     sh:targetClass c:DelegationRule ;
     sh:property [ sh:path c:delegatedTo ; sh:minCount 1 ; sh:hasValue <https://geo-campaign-2026.example/id/unit/commander-aide> ] ;
     sh:property [ sh:path c:approvalRequired ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
-    sh:property [ sh:path c:hasSource ; sh:minCount 2 ; sh:message "規則の出典が2つ要る（総司令官の指示と CLAUDE.md）" ] .
+    sh:property [ sh:path c:hasSource ; sh:minCount 3 ; sh:message "規則の出典が3つ要る（総司令官 2026-11-21 の指示2件と CLAUDE.md）" ] ;
+    sh:property [ sh:path c:condition ; sh:minCount 1 ; sh:pattern "競合" ; sh:message "条件に競合・CI・registry 承認・秘密情報・ページ削除が要る" ] .

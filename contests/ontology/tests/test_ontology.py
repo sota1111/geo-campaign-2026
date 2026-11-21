@@ -265,6 +265,10 @@ def test_merge_delegation_rule_in_graph(g):
     assert next(g.objects(rule, C.approvalRequired)).toPython() is False
     srcs = " ".join(str(g.value(s, C.path)) for s in g.objects(rule, C.hasSource))
     assert "総司令官の指示" in srcs and "CLAUDE.md" in srcs
+    cond = str(g.value(rule, C.condition))
+    assert "CI" in cond and "registry" in cond and "競合" in cond and "秘密情報" in cond and "ページ削除" in cond
+    assert "失格級・デザイン審査の重大が残っていてもマージはできる" in cond  # 条件から外し、残っていれば記録する
+    assert len(list(g.objects(rule, C.hasSource))) >= 3
 
 
 def test_shacl_rejects_merge_delegation_assigned_to_other(tmp_path):
@@ -301,3 +305,17 @@ def test_data_impact_has_no_duplicate_submissions():
     for v in rep["dataImpactAll"].values():
         keys = [(s["submission"], s["contest"], s["division"]) for s in v["submissions"]]
         assert len(keys) == len(set(keys))
+
+
+def test_decisions_are_merged_per_status_list_row(g):
+    """同じコンペ・同じ判断は 1 件（進捗一覧の「判断待ち」の行）。案の選定の関門・応募ごとの判断は includes に畳む"""
+    rep = NA.build_report(g, NOW)
+    ds = rep["commanderDecisions"]
+    rows = [d for d in ds if d["decision"].startswith("id:decision/status/list-")]
+    assert len(rows) == len(ds), "一覧の行に当たらない判断が単独で残っている"
+    folded = [i["decision"] for d in ds for i in d["includes"]]
+    assert len(folded) == len(set(folded))
+    assert any(i.startswith("id:decision/select/") for i in folded)
+    # 畳んだものも畳まないものも、元の未決の判断を取りこぼさない
+    q4 = {"id:" + r["decision"][len(str(ID)):] for r in NA.q(g, "q4_pending_decisions")}
+    assert q4 == {d["decision"] for d in ds} | set(folded)

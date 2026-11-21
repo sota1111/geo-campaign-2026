@@ -328,7 +328,8 @@ def fig_next(D, graph):
     # 一覧（項目・締切・対象の応募）
     items = []
     for d in D.cmd_decisions:
-        items.append(("判断待ち", d["label"], d["due"], "—"))
+        inc = f"（含む {len(d['includes'])} 件: 案の選定の関門など）" if d.get("includes") else ""
+        items.append(("判断待ち", d["label"] + inc, d["due"], "—"))
     for a in D.cmd_actions:
         items.append(("作業（指摘の解消）", a["action"], a["due"], D.app_label.get(a["app"], a["app"])))
     for t in D.cmd_status:
@@ -590,11 +591,13 @@ def page(schema, camp, graph, na, generated):
     toc = "".join(f'<li><a href="#{a}">{esc(t)}</a></li>' for a, t in [("next", "1 次の行動"), ("blockers", "2 止めているもの"), ("data", "3 データ条件"), ("fit", "4 適合"), ("types", "5 型（つながり方）")])
     asof = na["asOf"]
     extra_txt = "、".join(D.app_label[a] for a in D.extra_apps)
+    n_fold = sum(len(d.get("includes", [])) for d in D.cmd_decisions)
     defs = ('<details><summary>数の定義（図のあいだで数をそろえた決まり）</summary><ul>'
             f'<li>案 {len(D.fit_apps)} 件: 適合判定のあるアプリ・案（ダッシュボードの「アプリ」と同じ範囲）。別に、提出文のみでアプリのないもの {len(D.extra_apps)} 件（{esc(extra_txt)}）。</li>'
             f'<li>応募 {D.n_subs} 件: 同じ案が複数のコンペに出る・案のない応募・応募のない案があるので、案の数とは一致しない。</li>'
             f'<li>提出を止めるもの {D.n_stop} 件 = 失格級 {D.n_dq} + 未記入欄のあるファイル {D.n_unfilled_files} + 未確認のデータ条件 {D.n_data}（応募についたもの。全体では {D.n_data_all}） + 提出物なし {D.n_miss}。要修正 {D.n_fix_items} 件は別枠、軽微は数えない。</li>'
             f'<li>総司令官の作業と判断待ち（判断待ち {len(D.cmd_decisions)}・作業 {len(D.cmd_actions)}・進捗一覧の作業 {len(D.cmd_status)}）と、部隊の作業 {D.n_unit} 件は別に数える。</li>'
+            f'<li>判断待ち {len(D.cmd_decisions)} 件は、進捗一覧の「判断待ち」の行（ダッシュボードのトップと同じ数）。同じコンペ・同じ日の「案の選定」の関門（標準の流れから作ったもの）と応募ごとの判断は、その行の「含む」に畳んで1件と数える（畳んだ数: {n_fold} 件）。</li>'
             '<li>「総司令官の判断」の札は、案の選定・提出・registry 変更・ページ削除など、自動では進めない人間の関門。</li>'
             '<li>図どうしの同じ量は生成時に突き合わせ、ずれれば生成が止まる。</li></ul></details>')
     return f"""<!doctype html>

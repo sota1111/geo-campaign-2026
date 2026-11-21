@@ -197,6 +197,59 @@ def impact(g, dataset=None):
     return out
 
 
+def _contest_of(g, did):
+    """判断（short id）が属するコンペ id。案の選定の関門は id から、進捗一覧の判断は結ばれた応募・コンペから。無ければ None"""
+    m = re.match(r"id:decision/select/([a-z]+-2026)", did)
+    if m:
+        return m.group(1)
+    from rdflib import Namespace
+
+    C = Namespace("https://geo-campaign-2026.example/ontology#")
+    ref = URIRef(ID + did[len("id:"):])
+    for o in list(g.objects(ref, C.forSubmission)) + list(g.objects(ref, C.ofContest)):
+        mm = re.match(r"id:(?:sub/[^/]+/|contest/)([a-z]+-2026)", short(o))
+        if mm:
+            return mm.group(1)
+    return None
+
+
+def merge_decisions(g, dec):
+    """同じコンペ・同じ判断を 1 件にまとめる。
+
+    ダッシュボードのトップの「判断待ち」（progress.ts の DECISIONS）の元は、進捗一覧（status-*.md）の
+    「判断待ちの一覧」の行。標準の流れ（CLAUDE.md）から作った「案の選定」の関門と、応募・コンペ別の判断
+    （status の個別の行）は、同じコンペの一覧の行（締切が同じ日のもの。無ければ締切が最も早いもの）の
+    「含む」に畳む。一覧の行に当たらないものは単独で残す。"""
+    def same(a, b):  # 時刻があれば時刻まで、日付だけなら日まで比べる
+        if not a or not b:
+            return False
+        n = 16 if len(a) > 10 and len(b) > 10 else 10
+        return a[:n] == b[:n]
+
+    anchors = [d for d in dec if d["decision"].startswith("id:decision/status/list-")]
+    by_contest = {}
+    for d in dec:  # 案の選定の関門が、一覧の行の所属コンペを教える（締切の日付が同じ）
+        if d["decision"].startswith("id:decision/select/") and d.get("due"):
+            for a in anchors:
+                if same(a.get("due"), d["due"]):
+                    by_contest.setdefault(_contest_of(g, d["decision"]), set()).add(a["decision"])
+    for c in by_contest:
+        by_contest[c] = sorted(by_contest[c], key=lambda i: next(a["due"] or "" for a in anchors if a["decision"] == i))
+    out = {a["decision"]: {**a, "includes": []} for a in anchors}
+    rest = []
+    for d in dec:
+        if d["decision"] in out:
+            continue
+        c = _contest_of(g, d["decision"])
+        cand = by_contest.get(c)
+        if cand:
+            same_day = [i for i in cand if same(out[i]["due"], d.get("due"))]
+            out[(same_day or cand)[0]]["includes"].append({"decision": d["decision"], "type": d["type"], "label": d["label"], "source": d["source"]})
+        else:
+            rest.append({**d, "includes": []})
+    return list(out.values()) + rest
+
+
 def build_report(g, now, datasets=None):
     subs, unit_actions, decisions, tasks, risky = compute(g, now)
     ids = [d if d.startswith("id:") else None for d in []]
@@ -217,6 +270,7 @@ def build_report(g, now, datasets=None):
         {"decision": short(d["decision"]), "type": d["type"].split("#")[-1], "label": d["label"], "due": d.get("due"), "source": d.get("firstSource")}
         for d in decisions
     ]
+    dec = merge_decisions(g, dec)
     dec.sort(key=lambda x: (x["due"] is None, x["due"] or "", x["label"]))
     # 進捗一覧の残作業（担当別）
     t_by = defaultdict(list)

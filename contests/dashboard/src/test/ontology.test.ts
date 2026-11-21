@@ -136,6 +136,18 @@ describe('オントロジー画面のロジック', () => {
     expect(shortName('F-3 【確定】とても長い名前'.repeat(5), 20).length).toBeLessThanOrEqual(20)
   })
 
+  it('判断待ちは、進捗一覧の判断待ちの行（トップの DECISIONS と同じ数）に畳まれ、畳んだ中身もグラフのノード', async () => {
+    const { DECISIONS } = await import('@/data/progress')
+    expect(na.commanderDecisions.length).toBe(DECISIONS.length)
+    for (const d of na.commanderDecisions) for (const i of d.includes ?? []) expect(ix.byId.has(i.decision)).toBe(true)
+  })
+
+  it('レーン: 提出不可で止めているものが空の応募は、未記入欄が既定で出る（空なら根拠の文字）', () => {
+    expect(DEFAULT_TYPES).toContain('UnfilledField')
+    const lanes = buildLanes(ix, na, defaultView(), 'all').flatMap((g) => g.lanes)
+    for (const l of lanes) if (l.action.readiness === '提出不可' && l.action.counts['失格級'] === 0 && l.action.counts['未記入欄ファイル'] > 0) expect(l.total).toBeGreaterThan(0)
+  })
+
   it('開いている PR の代理マージは、総司令官の判断待ちに入らない', () => {
     expect(na.commanderDecisions.some((d) => /代理マージ/.test(d.label))).toBe(false)
   })

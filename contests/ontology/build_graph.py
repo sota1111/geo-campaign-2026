@@ -964,8 +964,9 @@ def build(offline=False):
     rule = b.node(ID["rule/merge-delegation"], "DelegationRule", "代理マージの規則（総司令官補佐が承認なしでマージ）")
     g.add((rule, C.delegatedTo, agent("commander-aide")))
     b.add(rule, C.approvalRequired, False)
-    b.add(rule, C.condition, "CI が通る・憲兵の監査に失格級がない・画面があればデザイン審査に重大がない・registry の変更は総司令官の承認済み・ページ削除を含まない。満たさなければマージしない。ページ削除を含む PR だけは PageDeletion（HumanGate）として総司令官の許可が要る")
+    b.add(rule, C.condition, "マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情報の混入・ページ削除を含む（PageDeletion は総司令官の判断）だけ。憲兵の失格級・デザイン審査の重大が残っていてもマージはできるが、残っていれば記録し、提出可能とは報告しない")
     b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「代理マージは承認なしで行うこと。Claude.mdやオントロジーに記載すること。」")
+    b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「以降は指示なしでも代理でマージを行う仕組みにすること」")
     b.cite(rule, path="CLAUDE.md", locator="成果の返し方 4")
     for p in prs:
         if p["state"] != "OPEN":

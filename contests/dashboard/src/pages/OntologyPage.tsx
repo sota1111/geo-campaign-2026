@@ -142,6 +142,10 @@ export default function OntologyPage() {
   const sel = selected ? ix.byId.get(selected) ?? null : null
   const counts = new Map<string, number>()
   for (const n of graph.nodes) counts.set(n.type, (counts.get(n.type) ?? 0) + 1)
+  // 「アプリ・案」は、適合判定のあるもの（トップ・図解と同じ範囲）。提出文だけの案は別に言葉で添える
+  const fitApps = new Set(graph.edges.filter((e) => e.rel === 'fit').map((e) => e.source))
+  const appOnlyDoc = (counts.get('App') ?? 0) - fitApps.size
+  counts.set('App', fitApps.size)
   const isDefault = JSON.stringify({ ...view, extra: [], expanded: [], focus: null, impactOf: null }) === JSON.stringify({ ...defaultView() })
   const appName = (appId: string, fallback: string) => {
     const id = appIdOf(appId)
@@ -227,7 +231,7 @@ export default function OntologyPage() {
                 />
               )}
               {tab === 'types' && (
-                <Filters view={view} counts={counts} toggle={toggle} reset={() => { setView(defaultView()); setSelected(null); setMode('lanes') }} clearExtra={() => setView((v) => ({ ...v, extra: [], expanded: [], focus: null }))} hasExtra={view.extra.length + view.expanded.length > 0 || !!view.focus} />
+                <Filters view={view} counts={counts} appOnlyDoc={appOnlyDoc} toggle={toggle} reset={() => { setView(defaultView()); setSelected(null); setMode('lanes') }} clearExtra={() => setView((v) => ({ ...v, extra: [], expanded: [], focus: null }))} hasExtra={view.extra.length + view.expanded.length > 0 || !!view.focus} />
               )}
               {tab === 'list' && <NodeList graph={graph} shown={shownNodes} q={q} setQ={setQ} selected={selected} select={fromPanel} />}
             </div>
@@ -259,7 +263,7 @@ export default function OntologyPage() {
           )}
           <p className="text-xs text-slate-800" data-testid="onto-shown">
             {effMode === 'lanes'
-              ? `応募 ${groups.reduce((n, g) => n + g.lanes.length, 0)} 件のレーン。止めているものは各応募に上位 2 件まで（残りは「ほか n 件」＝カードで全件）。${isDefault ? '既定: 失格級の指摘・未確認のデータ条件・提出物の欠落。' : ''}アプリの名前は応募のノードの中です。`
+              ? `応募 ${groups.reduce((n, g) => n + g.lanes.length, 0)} 件のレーン。止めているものは各応募に上位 2 件まで（残りは「ほか n 件」＝カードで全件）。${isDefault ? '既定: 失格級の指摘・未記入欄・未確認のデータ条件・提出物の欠落。' : ''}アプリの名前は応募のノードの中です。`
               : `いま図に出しているのは ${shownNodes.length} ノード・${shownEdges.length} つながり${view.focus ? '（選んだノードの近傍だけ）' : ''}。図の中はドラッグで動かし、左下の＋－ボタンか2本指で拡大縮小します。選んだノードの線にだけ、つながりの名前が出ます。`}
           </p>
           <div
@@ -545,6 +549,16 @@ function GatesTab({ na, select }: { na: NextActions; select: (id: string) => voi
               ★ [{fmtDue(d.due)}] {styleOf(d.type).label}: {d.label}
             </button>
             <span className="block break-all text-slate-700">出典 {d.source}</span>
+            {d.includes && d.includes.length > 0 && (
+              <details className="ml-3">
+                <summary className="min-h-7 cursor-pointer font-bold">含む {d.includes.length} 件（同じコンペ・日の案の選定の関門・応募ごとの判断）</summary>
+                <ul className="space-y-0.5 pl-3">
+                  {d.includes.map((i) => (
+                    <li key={i.decision}><button type="button" className="text-left underline" onClick={() => select(i.decision)}>★ {i.label}</button></li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </li>
         ))}
       </ul>
@@ -575,9 +589,10 @@ function ImpactTab({ na, ix, select, impactOf, setImpactOf, onGraph }: { na: Nex
 }
 
 // ---------------------------------------------------------------- 絞り込み（凡例）
-function Filters({ view, counts, toggle, reset, clearExtra, hasExtra }: {
+function Filters({ view, counts, appOnlyDoc, toggle, reset, clearExtra, hasExtra }: {
   view: ViewState
   counts: Map<string, number>
+  appOnlyDoc: number
   toggle: (k: 'types' | 'severities' | 'rels', v: string) => void
   reset: () => void
   clearExtra: () => void
@@ -601,7 +616,7 @@ function Filters({ view, counts, toggle, reset, clearExtra, hasExtra }: {
                 <label className="flex min-h-7 items-center gap-1.5">
                   <input type="checkbox" checked={view.types.includes(t)} onChange={() => toggle('types', t)} data-testid={`type-${t}`} />
                   <span className={`inline-flex items-center gap-1 px-1.5 text-[11px] font-bold leading-5 ${CAT[s.cat].box} ${SHAPE_CLASS[s.shape]}`}><span aria-hidden>{s.symbol}</span>{s.label}</span>
-                  <span className="text-slate-700">{counts.get(t)}件{DEFAULT_TYPES.includes(t) ? '・既定' : ''}</span>
+                  <span className="text-slate-700">{counts.get(t)}件{t === 'App' && appOnlyDoc > 0 ? `（＋提出文のみ ${appOnlyDoc}）` : ''}{DEFAULT_TYPES.includes(t) ? '・既定' : ''}</span>
                 </label>
                 {t === 'Finding' && view.types.includes('Finding') && (
                   <div className="ml-6 flex flex-wrap gap-x-3" role="group" aria-label="指摘の重さ">

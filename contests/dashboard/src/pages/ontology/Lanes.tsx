@@ -1,6 +1,13 @@
 import { CAT, SHAPE_CLASS, READINESS_MARK, shortName, styleOf, type GNode, type LaneGroup } from '@/lib/ontology'
 
 /** 応募ごとのレーン（既定の表示）。コンペ → 応募（状態を文字で）→ 止めているもの。普通の HTML なので、実寸（12px）のまま読め、Tab 順は上から下 */
+/** 提出可否の根拠（next-actions の内訳）を文字で。0 の項目は省く */
+export function reasonText(c: Record<string, number>): string {
+  const items: [string, string][] = [['失格級', '失格級'], ['要修正', '要修正'], ['未記入欄ファイル', '未記入欄（ファイル）'], ['データ条件', '未確認のデータ条件'], ['提出文なし', '提出文なし'], ['選定待ち', '案の選定待ち']]
+  const t = items.filter(([k]) => (c[k] ?? 0) > 0).map(([k, l]) => `${l} ${c[k]}`)
+  return t.length ? t.join('・') : '記録なし'
+}
+
 export function Lanes({ groups, selected, highlight, impactOn, appName, onSelect }: {
   groups: LaneGroup[]
   selected: string | null
@@ -79,7 +86,11 @@ export function Lanes({ groups, selected, highlight, impactOn, appName, onSelect
                           </button>
                         </li>
                       )}
-                      {l.total === 0 && <li className="self-center text-xs text-slate-800">（いま選んでいる種類では、止めているものはありません）</li>}
+                      {l.total === 0 && (
+                        <li className="self-center text-xs text-slate-800" data-testid="lane-empty">
+                          図に出ている種類には、止めているものはありません。判定の根拠: {reasonText(a.counts)}（全件はカード）
+                        </li>
+                      )}
                     </ul>
                   </li>
                 )

@@ -37,7 +37,7 @@ export interface SubmissionAction {
   blockers: Blocker[]
 }
 export interface UnitAction { due: string | null; app: string; submission: string | null; action: string; why: string; source: string }
-export interface CommanderDecision { decision: string; type: string; label: string; due: string | null; source: string }
+export interface CommanderDecision { decision: string; type: string; label: string; due: string | null; source: string; includes?: { decision: string; type: string; label: string; source: string }[] }
 export interface DataImpact { apps: Record<string, string>; submissions: { submission: string; contest: string; division: string | null }[]; label: string; why: string | null }
 export interface NextActions {
   asOf: string
@@ -115,8 +115,8 @@ export const GATE_TYPES = ['SelectionDecision', 'SubmissionDecision', 'RegistryC
 export const isGate = (n: GNode) => GATE_TYPES.includes(n.type)
 
 // ---------------------------------------------------------------- 既定の絞り込み
-/** 既定で出す種類: コンペ・応募（アプリの名前は応募のノードの中）・止めているもの（指摘は失格級のみ）。アプリ・未記入欄・総司令官の判断・部門などは「図に出す種類」で足す */
-export const DEFAULT_TYPES = ['Contest', 'Submission', 'Finding', 'UnconfirmedDataCondition', 'MissingDeliverable']
+/** 既定で出す種類: コンペ・応募（アプリの名前は応募のノードの中）・止めているもの（指摘は失格級のみ、未記入欄、未確認のデータ条件、提出物の欠落）。アプリ・総司令官の判断・部門などは「図に出す種類」で足す */
+export const DEFAULT_TYPES = ['Contest', 'Submission', 'Finding', 'UnfilledField', 'UnconfirmedDataCondition', 'MissingDeliverable']
 export const DEFAULT_SEVERITIES = ['失格級']
 /** 既定では線を引かない関係（多くて読めなくなるため。切り替えで出せる。カードの「つながり」には常に出る） */
 export const OPTIONAL_RELS: Record<string, string> = { fitsContest: '出せるコンペ（◎○△）の線', competesWith: '同じ枠で競合する案の線' }
