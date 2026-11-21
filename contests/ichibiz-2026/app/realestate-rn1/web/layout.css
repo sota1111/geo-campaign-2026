@@ -74,3 +74,80 @@ header#top .lead a { color: var(--accent); }
   .tabpanel { padding: 0 !important; }
   .panel { margin: 0 !important; padding: 0 !important; border: 0 !important; }
 }
+/* ---- 評価ループ第1回: 比較表・要約・畳み ---- */
+.sidetop { flex: 0 0 auto; padding: 2px 8px; background: #eef1f4; }
+.sidetop fieldset.regions { margin: 0; padding: 0 8px; display: flex; flex-wrap: wrap; gap: 0 12px; background: #fff; }
+.sidetop fieldset.regions legend { float: left; margin-right: 6px; padding: 0; line-height: 36px; }
+.sidetop .loadbar { margin: 4px 0; }
+.tabs { flex-wrap: nowrap; }
+.tabs button { flex: 1 1 0; min-width: 0; white-space: nowrap; padding: 5px 4px; font-size: .8rem; }
+.hsub { font-size: .75rem; font-weight: normal; color: var(--muted); }
+.msg.warnmsg, span.warnmsg { background: #fff3c4; color: #6b4a00; }
+.msg.warnmsg { border: 1px solid #d4a100; border-radius: 4px; padding: 2px 6px; font-weight: bold; }
+.cands button.first { display: block; width: 100%; text-align: left; margin: 2px 0; padding: 4px 6px; font-size: .85rem; font-weight: bold; }
+.plist li { padding: 3px 6px; }
+.plist .psum { margin: 0; font-size: .75rem; color: var(--muted); line-height: 1.4; }
+.plist button.psheet { padding: 2px 10px; font-weight: bold; }
+table.ct td b { font-weight: bold; }
+.faint { color: #7a8590; font-size: .72rem; }
+table.cmp { table-layout: fixed; font-size: .74rem; }
+table.cmp th, table.cmp td { padding: 2px 2px; text-align: center; word-break: break-all; line-height: 1.3; }
+table.cmp th:first-child { width: 2.4em; }
+table.cmp td.best { font-weight: bold; background: #e3f2e8; }
+table.cmp td.na { color: #7a8590; font-size: .68rem; }
+.rowno { padding: 0 6px; font-size: .78rem; background: #c2185b; border-color: #c2185b; border-radius: 50%; min-width: 22px; }
+.wi { display: inline-block; margin-left: 1px; color: #fff; background: #b07a00; border-radius: 50%; width: 1.25em; height: 1.25em; line-height: 1.25em; font-size: .65rem; text-align: center; }
+details.note { margin: 4px 0; }
+details.note summary, details.more summary { cursor: pointer; font-size: .8rem; color: var(--accent); }
+.ic { display: inline-block; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; border-radius: 50%; background: #b07a00; color: #fff; font-size: .75rem; margin-right: 4px; }
+#step2 > p.row { margin: 0 0 6px; }
+/* 先行きシート: 画面では1列。要約を先頭に、各節は畳む */
+.sheet { padding: 10px 12px; }
+.sheet .secs { grid-template-columns: 1fr; gap: 6px; }
+table.sum { border-collapse: collapse; width: 100%; font-size: .85rem; margin: 4px 0 8px; }
+table.sum th, table.sum td { border: 1px solid var(--line); padding: 3px 6px; text-align: left; vertical-align: top; line-height: 1.45; }
+table.sum th { background: #eef1f4; white-space: nowrap; width: 1%; font-size: .8rem; }
+details.sec > summary { cursor: pointer; list-style: none; }
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary h4 { display: block; }
+details.sec > summary h4::before { content: '▶ '; font-size: .7rem; }
+details.sec[open] > summary h4::before { content: '▼ '; }
+details.more { margin: 4px 0; }
+.sheet .fine details.more p { margin: 0 0 3px; }
+@media (min-width: 641px) { #app { grid-template-columns: 3fr 2fr; } }
+@media (max-width: 640px) {
+  #mapwrap { height: 42vh; min-height: 240px; }
+  header#top h1 { font-size: 1.1rem; }
+  header#top .lead { font-size: .76rem; line-height: 1.35; }
+}
+@media print {
+  .sidetop, #backProps { display: none !important; }
+  details.sec > summary h4::before { content: ''; }
+  .sheet .secs { grid-template-columns: 1fr 1fr; }
+  table.sum { font-size: 7.5pt; margin: 2px 0 4px; }
+  table.sum th, table.sum td { padding: 1px 4px; }
+  details.more summary { display: none; }
+}
+table.plt th[scope=row] { font-weight: normal; overflow-wrap: anywhere; }
+table.plt .psum { font-size: .7rem; color: var(--muted); line-height: 1.35; margin-top: 1px; }
+table.plt td.ops { white-space: nowrap; width: 1%; }
+table.plt td.ops button { padding: 2px 6px; font-size: .78rem; margin: 1px; }
+table.plt td.ops .psheet { font-weight: bold; }
+table.plt .rowno { margin-right: 2px; }
+.wrow { margin: 2px 0; flex-wrap: nowrap; }
+.wrow input[type=search] { min-width: 60px; padding: 5px 8px; }
+.wrow button { padding: 5px 9px; font-size: .85rem; }
+#propForm input[type=search] { min-width: 120px; padding: 6px 8px; }
+#propForm button { padding: 6px 10px; font-size: .9rem; }
+#stepP h2 { font-size: 1rem; margin: 10px 0 4px; }
+#stepP h2:first-child { margin-top: 0; }
+.panel#stepP { padding: 8px 10px; }
+table.cmp th:first-child { width: 2.9em; }
+@media (max-width: 640px) {
+  .sidetop fieldset.regions { gap: 0 6px; }
+  .sidetop fieldset.regions label { font-size: .88rem; min-height: 32px; padding-right: 0; }
+  .sidetop fieldset.regions legend { line-height: 32px; font-size: .78rem; }
+  fieldset.regions input { width: 18px; height: 18px; }
+}
+#status:empty { display: none; }
+@media (max-width: 640px) { table.sum th { white-space: normal; width: 30%; } }

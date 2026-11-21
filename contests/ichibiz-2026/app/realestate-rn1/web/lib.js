@@ -598,6 +598,42 @@
     return sec;
   }
 
+  /** シート先頭の事実の要約（結論ではない）。[{k, v}]。対象外・人口未取得のときは null。haz は想定区域の中（境界付近を含む）の災害名 */
+  function sheetSummary(data, f) {
+    if (!f || !f.inBBox || !f.inRegion || !ok(data, 'XKT013')) return null;
+    const rows = [], tk = data.region.id === 'tokushima';
+    const p = f.plan;
+    let zone = '—';
+    if (p && p.hasPlan) zone = (p.inResidential ? '居住誘導区域' + (tk ? '（居住促進区域）' : '') + 'の中' : p.inPlanArea ? '計画区域の中・居住誘導区域の外' : '立地適正化計画の区域の外') + (p.inCityFunction ? '／都市機能誘導区域の中' : '');
+    else if (f.zoning && f.zoning.use && f.zoning.use.length) zone = '用途地域: ' + f.zoning.use.map((e) => e.name).join('・') + '（立地適正化計画のデータ無し）';
+    else if (p && !p.hasPlan) zone = '立地適正化計画のデータ無し';
+    rows.push({ k: '区域', v: zone, short: p && p.hasPlan ? (p.inResidential ? '居住誘導 内' : '居住誘導 外') : '計画データ無し' });
+    const q = f.pop;
+    if (q && q.meshN) {
+      const [y0, , y2] = pickYears(q.years), L = q.local, C = q.city;
+      const small = L[y0].p < SMALL_POP || L[y2].p <= 0;
+      const lc = small ? null : changePct(L[y0].p, L[y2].p);
+      rows.push({ k: '人口（半径' + q.radius + 'm・推計）', v: small ? '人数が少なく増減率は出さない' : y0 + '→' + y2 + '年 ' + fmtPct(lc) + '（' + data.region.whole + ' ' + fmtPct(changePct(C[y0].p, C[y2].p)) + '）', short: small ? '人口 少' : '人口 ' + fmtPct(lc) });
+    } else rows.push({ k: '人口（推計）', v: '近くに推計のメッシュなし', short: '人口 —' });
+    const d = f.district;
+    if (d && d.name && d.sums && f.pop) {
+      const [y0, , y2] = pickYears(f.pop.years), a0 = d.sums[y0], a2 = d.sums[y2];
+      rows.push({ k: '小学校区の0〜14歳', v: '「' + d.name + '」' + (a0 && a0.a >= SMALL_CHILD && a2 && a2.a > 0 ? y0 + '→' + y2 + '年 ' + fmtPct(changePct(a0.a, a2.a)) : '人数が少なく増減率は出さない') });
+    } else if (data.status.XKT004.state !== 'ok' || (d && !d.name)) rows.push({ k: '小学校区', v: data.status.XKT004.state === 'ok' ? '取得データに無い' : (data.status.XKT004.state === 'empty' ? NODATA : UNFETCHED) });
+    const h = f.hazard || {}, parts = [], haz = [];
+    const st = (api) => (data.status[api].state === 'empty' ? NODATA : UNFETCHED);
+    if (data.status.XKT029.state === 'ok') { if (h.sediment) haz.push('土砂'); parts.push('土砂 ' + (h.sediment ? '中' : '外')); } else parts.push('土砂 ' + st('XKT029'));
+    const nm = { flood: '洪水', tsunami: '津波', surge: '高潮', liquefaction: '液状化' };
+    for (const spec of RASTER_HAZARDS) {
+      if (!ok(data, spec.api) || !(spec.part in h)) { parts.push(nm[spec.part] + ' ' + st(spec.api)); continue; }
+      const r = data.hazard[spec.part], v = h[spec.part], lab = (lv) => (r.labels && r.labels[lv]) || '区分不明';
+      if (spec.noBoundary) { parts.push(nm[spec.part] + ' ' + (v.level > 0 ? lab(v.level) : '区分なし')); continue; }
+      if (v.mixed) { haz.push(nm[spec.part]); parts.push(nm[spec.part] + ' 境界付近'); } else if (v.level > 0) { haz.push(nm[spec.part]); parts.push(nm[spec.part] + ' ' + lab(v.level)); } else parts.push(nm[spec.part] + ' 外');
+    }
+    rows.push({ k: '災害の想定', v: parts.join('／'), short: haz.length ? '災害: ' + haz.join('・') + 'の想定区域か付近' : '災害の想定区域 外' });
+    return rows;
+  }
+
   /** 対象の外の地点: 市（区）の名前で知らせる。名前の表に無い時だけ、市区町村コードを書く */
   function outOfRegionText(data, f) {
     const rn = data.region.name, tail = '他の地域は、画面の「対象地域」で選べます。印刷はできません。';
@@ -626,6 +662,6 @@
   return {
     processedFor, regionNote, REGIONS, DEFAULT_REGION, regionHas, planKey, cityName, wardLabel, outOfRegionText, regionCellAt, apisFor, ZONING_APIS, NODATA, zoningAt, REINFOLIB_URL, CREDIT, ATTRIBUTION, NLNI_SOURCE, NLNI_SHORT, TSUNAMI_NOTE, LIQ_NOTE, SCHOOL_FAC_NOTE, ORIG_NOTES, PROCESSED, RESPONSIBILITY, POP_NOTE, PLAN_PDF, PLAN_PAGE, WALK_RADIUS, POP_RADIUS, MESH_SNAP, APIS, PLAN_KUBUN, UNFETCHED, FAC_GROUPS,
     lonLatToWorld, worldToLonLat, haversine, inRing, inPolygon, inPolys, inBBox, fmtDist, decodeRaster, rleDecode, inRaster, levelAt, rasterAround, cellOn, pickYears, RASTER_HAZARDS, SMALL_POP, SMALL_CHILD,
-    assemble, cityAt, planAt, sumMeshes, popAround, changePct, fmtPct, fmtNum, share, districtAt, facilitiesAround, collect, buildSheet,
+    assemble, cityAt, planAt, sumMeshes, popAround, changePct, fmtPct, fmtNum, share, districtAt, facilitiesAround, collect, buildSheet, sheetSummary,
   };
 });

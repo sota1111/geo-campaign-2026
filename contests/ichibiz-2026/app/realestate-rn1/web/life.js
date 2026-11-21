@@ -27,7 +27,7 @@
     { id: 'kinder', label: '幼稚園・認定こども園', glyph: '幼', color: '#a16207', src: 'mlit', on: false },
     { id: 'elem', label: '小学校', glyph: '小', color: '#0e7490', src: 'mlit', on: false },
     { id: 'junior', label: '中学校', glyph: '中', color: '#6d28d9', src: 'mlit', on: false },
-    { id: 'gakudo', label: '学童（放課後児童クラブ）', glyph: '学', color: '#b91c1c', src: 'osm', on: false },
+    { id: 'gakudo', label: '学童（放課後児童クラブ）', glyph: '学', color: '#b91c1c', src: 'osm', on: false, sparse: true },
     { id: 'hospital', label: '病院', glyph: '病', color: '#991b1b', src: 'mlit', on: false },
     { id: 'clinic', label: '診療所（歯科を除く）', glyph: '診', color: '#9f1239', src: 'mlit', on: false },
     { id: 'pharmacy', label: '薬局', glyph: '薬', color: '#0f766e', src: 'osm', on: false },
@@ -35,6 +35,12 @@
   ];
   // 「距離を出す」種類（物件ごとに最寄りを一覧にする）
   const NEAREST_IDS = ['nursery', 'kinder', 'elem', 'junior', 'gakudo', 'super', 'conv', 'station'];
+  /** 比較表の列見出し（短い名前） */
+  const SHORT = { nursery: '保育園', kinder: '幼稚園', elem: '小学校', junior: '中学校', gakudo: '学童', super: 'スーパー', conv: 'コンビニ', station: '駅' };
+  /** 収録が極端に少ない種類（学童）は、この距離を超えたら距離を出さず「近くに登録なし」とする */
+  const SPARSE_CAP_M = 3000;
+  /** 徒歩の目安がこれを超えたら「徒歩は現実的でない」と扱う（分） */
+  const WALK_MAX_MIN = 60;
   const DISTANCE_NOTE = '距離は直線距離です（道路に沿った距離ではありません）。徒歩の目安は直線距離×' + DETOUR + '÷分速' + WALK_M_PER_MIN + 'm で、あくまで目安です。';
   const SCHOOL_NOTE = '小学校・中学校は「近い学校」で、通学区域（学区）の学校とは限りません。学区は市区町村の教育委員会で確かめてください。';
   const OSM_NOTE = 'OpenStreetMap は有志が登録したデータで、登録漏れ・古い情報があります（無い＝存在しない、ではありません）。';
@@ -107,7 +113,43 @@
     return res;
   }
 
+  /** 通勤の表に出す形。徒歩が鉄道以下（または最寄駅が同じ）なら徒歩だけ。徒歩が60分超なら「現実的でない」として鉄道を主にする */
+  function commuteSummary(c) {
+    const walkOver = c.walk > WALK_MAX_MIN;
+    const railUseful = !!(c.rail && !c.rail.same && c.rail.total < c.walk);
+    if (railUseful) return { mode: 'rail', min: c.rail.total, walkOver, showWalk: !walkOver, sameStation: false };
+    return { mode: 'walk', min: c.walk, walkOver, showWalk: true, sameStation: !!(c.rail && c.rail.same), noRail: !c.rail };
+  }
+  /** 比較表の1セル。sparse の種類は「データ不足」とし、SPARSE_CAP_M を超えたら距離を出さない */
+  function nearCell(layer, n) {
+    if (!n) return { kind: 'none' };
+    if (layer && layer.sparse) return n.m > SPARSE_CAP_M ? { kind: 'sparse-far' } : { kind: 'sparse', m: n.m };
+    return { kind: 'ok', m: n.m };
+  }
+
   // ---- 住所検索（国土地理院）の結果の読み取り ----
+  const UNIT = '都道府県市区町村郡';
+  const PREF_RE = '(?:東京都|北海道|(?:京都|大阪)府|[^' + UNIT + ']{2,3}県)';
+  const SEG = '[^' + UNIT + ']+';
+  const COARSE_RE = new RegExp('^' + PREF_RE + '?(?:' + SEG + '郡)?' + SEG + '[市区町村](?:' + SEG + '区)?$');
+  /** 住所検索の結果が市区町村の代表点だけ（町名がない）か。例: 「徳島県徳島市」「東京都千代田区」「大阪府大阪市北区」 */
+  function isCoarse(title) { return COARSE_RE.test(String(title || '').trim()); }
+  /** 入力の町名が結果に含まれないか（例: 「徳島市応神町」→「徳島県徳島市川内町」）。判定できない時は false */
+  function addressMismatch(q, title) {
+    let r = String(q || '').replace(/\s/g, '').replace(/^(JR|ＪＲ)/i, '').replace(new RegExp('^' + PREF_RE), '');
+    for (let i = 0; i < 2; i++) r = r.replace(/^[^都道府県市区町村郡0-9０-９]{1,6}?[市区郡]/, '');
+    r = r.split(/[0-9０-９一二三四五六七八九十丁番の\-－‐ー]/)[0];
+    if (r.length < 2) return false;
+    const t = String(title || '');
+    return !t.includes(r) && !(r.endsWith('駅') && t.includes(r.slice(0, -1)));
+  }
+  /** 駅名の書き方の違いを吸収した検索語（「JR徳島駅」→「徳島駅」）。変わらなければ null */
+  function altQuery(q) {
+    const r = String(q || '').trim().replace(/^(JR|ＪＲ)(西日本|東日本|東海|四国|九州|北海道)?\s*/i, '');
+    return r && r !== q ? r : null;
+  }
+
+
   /** 国土地理院 AddressSearch の応答から候補 [{lon,lat,title}] を作る。入力が配列でなければ空 */
   function parseGsi(j) {
     if (!Array.isArray(j)) return [];
@@ -138,6 +180,8 @@
   function addProp(state, p) {
     if (state.props.length >= MAX_PROPS) return { ok: false, reason: '物件は最大' + MAX_PROPS + '件までです。' };
     if (!validPlace(p)) return { ok: false, reason: '位置が不正です。' };
+    const dup = state.props.findIndex((x) => dist(x.lon, x.lat, p.lon, p.lat) < 30);
+    if (dup >= 0) return { ok: false, reason: 'すでに物件' + (dup + 1) + 'として入っています（同じ位置）。' };
     state.props.push({ label: String(p.label || '').slice(0, 80), lon: p.lon, lat: p.lat, resolved: String(p.resolved || '').slice(0, 120) });
     return { ok: true };
   }
@@ -148,7 +192,7 @@
   }
 
   return {
-    MAX_PROPS, MAX_WORKS, WALK_M_PER_MIN, DETOUR, RAIL_SPEED_KMH, RAIL_DETOUR, RAIL_WAIT_MIN, MAX_STATION_M, LAYERS, NEAREST_IDS, DISTANCE_NOTE, SCHOOL_NOTE, OSM_NOTE, GAKUDO_NOTE, MLIT_NOTE, KEY,
-    dist, buildLayers, nearest, walkMin, fmtM, commute, parseGsi, empty, validPlace, sanitize, addProp, commuteTable,
+    MAX_PROPS, MAX_WORKS, WALK_M_PER_MIN, DETOUR, RAIL_SPEED_KMH, RAIL_DETOUR, RAIL_WAIT_MIN, MAX_STATION_M, LAYERS, NEAREST_IDS, DISTANCE_NOTE, SCHOOL_NOTE, OSM_NOTE, GAKUDO_NOTE, MLIT_NOTE, KEY, SHORT, SPARSE_CAP_M, WALK_MAX_MIN,
+    commuteSummary, nearCell, isCoarse, addressMismatch, altQuery, dist, buildLayers, nearest, walkMin, fmtM, commute, parseGsi, empty, validPlace, sanitize, addProp, commuteTable,
   };
 });
