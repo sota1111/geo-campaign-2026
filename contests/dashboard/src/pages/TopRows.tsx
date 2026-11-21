@@ -5,7 +5,7 @@ import { NEW_PLAN_LABEL, isNewPlan, getApp, CONTESTS, type AppMeta, type Contest
 import { CONTEST_INFO, nextDeadline, type ContestInfo } from '@/apps/contests-info'
 import { PrizeBreakdown } from '@/components/shared/PrizeBreakdown'
 import { DataBadge } from '@/components/shared/DataBadge'
-import { PlanDivisions, PlanLine } from '@/components/shared/PlanCount'
+import { PlanDivisions, PlanLine, PlanTag } from '@/components/shared/PlanCount'
 import { Remaining } from '@/components/shared/Remaining'
 import { CONTEST_STATUS, STATUS_LABEL, contestDecisionTexts, otherNextCount } from '@/data/status'
 import { contestColor } from '@/data/colors'
@@ -70,7 +70,7 @@ function useFitLevel(deps: string, max: number) {
 }
 
 /**
- * コンペカードの表示の優先順位（残す順）: 見出し帯（名前・次の締切・提出可否）→ 概要 → 審査基準 → 賞金 → 提出予定の合計 → 総司令官の判断待ち → 次にやること → 主なルール → 提出可能数 → 部門ごとの内訳・出すアプリ。
+ * コンペカードの表示の優先順位（残す順）: 見出し帯（名前・次の締切・提出可否）→ 概要 → 審査基準 → 賞金 → 提出予定の合計（行が入らないときは提出可否の行の右端に短い札）→ 総司令官の判断待ち → 次にやること → 主なルール → 提出可能数 → 部門ごとの内訳・出すアプリ。
  * 入りきらないときは下位から削る（行数 → 「ほか n 件」 → 非表示）。概要と審査基準は最後まで残し、行数を減らすのも最後（概要 3→2、審査基準 3→2→1 行）。
  * lv: -1 = 全項目・全文（幅 1024px 未満で縦に積むとき）、0 = 全項目（各2行まで）、1 以上 = 下位から削る。
  */
@@ -95,11 +95,11 @@ export function cardPlan(lv: number) {
     nAsks: all ? 99 : lv >= 13 ? 1 : lv >= 12 ? 2 : 3,
     cl: lv >= 14 ? 'line-clamp-1' : c2,
     hideAsks: lv >= 15,
-    hidePlan: lv >= 16,
-    // 概要は最大3行（最後の手段でだけ2行）、審査基準は全項目（最後の手段でだけ2行→1行）
-    sumClamp: all ? '' : lv >= 17 ? 'line-clamp-2' : 'line-clamp-3',
+    // 概要は最大3行（最後の手段でだけ2行）、審査基準は全項目（最後の手段でだけ2行→1行）。提出予定の合計は概要・審査基準の次に残す（行が入らないときも、提出可否の行の右端に短い札で出す）
+    sumClamp: all ? '' : lv >= 16 ? 'line-clamp-2' : 'line-clamp-3',
     hideSummary: false,
-    critClamp: all ? '' : lv >= 20 ? 'line-clamp-1' : lv >= 18 ? 'line-clamp-2' : 'line-clamp-3',
+    critClamp: all ? '' : lv >= 18 ? 'line-clamp-1' : lv >= 17 ? 'line-clamp-2' : 'line-clamp-3',
+    hidePlan: lv >= 19,
     hideCrit: false,
   }
 }
@@ -161,12 +161,13 @@ export function ContestTopCard({
           {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
         </p>
         <PrizeLine info={info} />
-        <p className="shrink-0 truncate">
-          <span className="font-bold" data-testid="row-status" title={st.gap}>
+        <p className="flex shrink-0 items-center gap-x-2">
+          <span className="min-w-0 truncate font-bold" data-testid="row-status" title={st.gap}>
             <span aria-hidden>▲ </span>
             {STATUS_LABEL[info.id]}
             <span className="font-normal">（提出不可）</span>
           </span>
+          {hidePlan && <PlanTag view={plan} contestId={info.id} />}
         </p>
         {!hideSummary && <p className={`shrink-0 ${sumClamp}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>}
         {!hideCrit && <p className={`shrink-0 ${critClamp}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
@@ -209,7 +210,7 @@ export function ContestTopCard({
           items={info.limits.slice(0, nLimits).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（未確認）'}{r.text}</> }))}
           clamp={limitsClamp}
         />}
-        {!hidePlan && <PlanLine view={plan} contestId={info.id} hideParts={info.id === 'ichibiz-2026'} />}
+        {!hidePlan && <PlanLine view={plan} contestId={info.id} hideParts={info.id === 'ichibiz-2026'} compact={fit && lv0 - 1 >= 16} />}
         {info.id === 'ichibiz-2026' && !pl.hideDiv && !hidePlan && (
           <PlanDivisions view={plan} contestId={info.id} title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')} />
         )}
@@ -386,7 +387,7 @@ export function AppFitCard({
   const info = CONTEST_INFO.find((c) => c.id === a.contest)!
   const nd = plan ? { at: plan.deadlineAt, text: plan.deadlineLabel } : nextDeadline(info)
   const left = plan ? [...plan.todo.map((t) => t.text), ...(plan.decisions ?? [])] : []
-  const { ref: regRef, lv: lv0 } = useFitLevel(`${a.id}|${fit}|${chosen.length}|${contest}`, 12)
+  const { ref: regRef, lv: lv0 } = useFitLevel(`${a.id}|${fit}|${chosen.length}|${contest}|${cautions.length}`, 13)
   // 最大（残りの作業 5件・目的 3行）から始め、入るところまで減らす
   const lv = fit ? lv0 : -1
   const nLeft = lv < 0 ? 99 : lv >= 8 ? 0 : Math.max(1, 5 - lv)
@@ -397,7 +398,8 @@ export function AppFitCard({
     <li
       data-app-card={a.id}
       data-rank={rank}
-      className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${isNew ? 'border-slate-500' : 'border-slate-300'}`}
+      className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${chosen.length ? 'border-slate-900 ring-2 ring-slate-900' : isNew ? 'border-slate-500' : 'border-slate-300'}`}
+      data-chosen={chosen.length ? 'true' : undefined}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 text-xs">
         <span className="rounded bg-slate-100 px-1.5 font-bold tabular-nums text-slate-900" title={`いまの並びの ${rank} 番目です（評価の順位ではありません。提出先を選んだ候補が先に並びます）`}>{rank}番目</span>
@@ -411,6 +413,9 @@ export function AppFitCard({
           <span className="rounded border border-amber-700 bg-amber-50 px-1.5 font-bold text-amber-950" data-testid={`mini-pending-${a.id}`}>{pendingLabel(a)}</span>
         )}
         {plan && <span className={`rounded border px-1 ${plan.intent === '提出予定' ? 'border-slate-700 font-bold' : 'border-dashed border-slate-500'}`}>{plan.intent}</span>}
+        {cautions.length > 0 && (
+          <span className="rounded border border-amber-700 bg-amber-50 px-1 font-bold text-amber-950" data-testid={`caution-tag-${a.id}`}><span aria-hidden>▲ </span>注意</span>
+        )}
       </div>
       <div ref={regRef} className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden`}>
       <h3 className={`${lv >= 10 ? 'line-clamp-1' : 'line-clamp-2'} shrink-0 text-base font-bold leading-tight text-slate-900`}>
@@ -447,7 +452,7 @@ export function AppFitCard({
             >
               <span className="shrink-0">{picked && <span aria-hidden>✓</span>}{!picked && emph && <span aria-hidden>▶</span>}{m.label}{picked && <span className="sr-only">（選択済み）</span>}</span>
               <span className="min-w-0 truncate" data-testid={`mini-mark-${a.id}-${m.id}`}>
-                {divName && <span className="text-[0.75rem]">{divName} </span>}
+                {divName && <span className="text-[0.75rem]"><span className="max-[1099px]:hidden">{divName}</span><span className="min-[1100px]:hidden" aria-hidden>{divName.slice(0, 1)}</span> </span>}
                 <span className="font-bold">{cell?.mark ?? '－'}</span>
                 <span className="text-[0.75rem] max-[1099px]:hidden"> {cell ? SHORT_WORD[cell.mark] : ''}</span>
               </span>
@@ -455,10 +460,10 @@ export function AppFitCard({
           )
         })}
       </ul>
-      <p data-testid={`chosen-${a.id}`} className={`${tight ? 'line-clamp-1' : 'line-clamp-2'} shrink-0`} title={chosenCols.map(columnShort).join('、')}>
+      {lv < 12 && <p data-testid={`chosen-${a.id}`} className={`${tight ? 'line-clamp-1' : 'line-clamp-2'} shrink-0`} title={chosenCols.map(columnShort).join('、')}>
         <span className="font-bold"><span aria-hidden>✓ </span>選んだ提出先 {chosenCols.length}件</span>
         <span className="text-slate-800">{chosenCols.length ? `：${chosenCols.map(columnShort).join('、')}` : '（未選択）'}</span>
-      </p>
+      </p>}
       <div data-testid={`plan-${a.id}`} className="shrink-0">
         <p className="flex flex-wrap items-center gap-x-2" data-testid={`app-deadline-${a.id}`}>
           {plan && (
@@ -485,9 +490,6 @@ export function AppFitCard({
           アプリを開く<ArrowRight className="size-4 max-xl:hidden" aria-hidden />
         </a>
         <FitPopover a={a} contest={contest} chosen={chosen} onToggle={onToggle} onPopover={onPopover} cautions={cautions} />
-        {cautions.length > 0 && (
-          <span className="rounded border border-amber-700 bg-amber-50 px-1 text-xs font-bold text-amber-950" data-testid={`caution-tag-${a.id}`}><span aria-hidden>▲ </span>注意</span>
-        )}
       </div>
     </li>
   )

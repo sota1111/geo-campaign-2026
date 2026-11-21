@@ -26,14 +26,14 @@ export function planSentence(v: PlanView): string {
   return `提出予定 ${v.planned}件${partsText(v)}／選んだ ${v.chosen}件 ${t.mark}${t.word}`
 }
 
-export function PlanLine({ view, contestId, hideParts }: { view: PlanView; contestId: string; hideParts?: boolean }) {
+export function PlanLine({ view, contestId, hideParts, compact }: { view: PlanView; contestId: string; hideParts?: boolean; compact?: boolean }) {
   const undecided = view.planned === null
   return (
-    <p className="shrink-0" data-testid={`planned-${contestId}`} data-state={view.state} aria-live="polite" title={`${planSentence(view)}（${view.src}。要項の上限の「提出可能数」とは別）`}>
+    <p className={`shrink-0 ${compact ? 'truncate' : ''}`} data-testid={`planned-${contestId}`} data-state={view.state} aria-live="polite" title={`${planSentence(view)}（${view.src}。要項の上限の「提出可能数」とは別）`}>
       <span className="font-bold">提出予定 {undecided ? '未定' : `${view.planned}件`}</span>
-      {!undecided && !hideParts && <span>{partsText(view)}</span>}
+      {!undecided && !hideParts && !compact && <span>{partsText(view)}</span>}
       <span>／選んだ {view.chosen}件 </span>
-      <Badge state={view.state} diff={view.diff} />
+      <Badge state={view.state} diff={view.diff} short={compact} />
     </p>
   )
 }
@@ -50,5 +50,22 @@ export function PlanDivisions({ view, contestId, title }: { view: PlanView; cont
         </span>
       ))}
     </p>
+  )
+}
+
+/** 提出予定の行が入らないときに、提出可否の行の右端へ出す短い札（「予定2・選1」。全文は title）。状態は枠の種類で示す */
+export function PlanTag({ view, contestId }: { view: PlanView; contestId: string }) {
+  const tone = view.state === 'match' ? 'border-emerald-800' : view.state === 'short' ? 'border-dashed border-amber-800' : view.state === 'over' ? 'border-red-800' : 'border-slate-600'
+  return (
+    <span
+      className={`shrink-0 whitespace-nowrap rounded border px-1 text-xs font-bold tabular-nums ${tone}`}
+      data-testid={`planned-${contestId}`}
+      data-state={view.state}
+      aria-live="polite"
+      aria-label={planSentence(view)}
+      title={`${planSentence(view)}（${view.src}。要項の上限の「提出可能数」とは別）`}
+    >
+      予定{view.planned === null ? '未定' : view.planned}・選{view.chosen}
+    </span>
   )
 }
