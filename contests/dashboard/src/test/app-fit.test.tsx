@@ -131,6 +131,16 @@ describe('トップ画面の操作', () => {
     expect(document.querySelector('[data-testid="app-section"]')!.innerHTML.indexOf('data-testid="cautions"')).toBeGreaterThan(document.querySelector('[data-testid="app-section"]')!.innerHTML.indexOf('data-testid="app-row"'))
     expect(screen.getByTestId('draft-note').textContent).toContain('このブラウザだけの下書きです。正式な提出先は総司令官が参謀長に指示してください')
   })
+  it('選んだ提出先は、カードの小さな表に ✓ で出る。記号の凡例は常に出ている', () => {
+    render(<Portal />)
+    expect(screen.getByTestId('mark-legend').textContent).toContain('◎ このコンペ向け')
+    const mini = () => document.querySelector('[data-app-card="sat-b"] [data-fit-mini="satellite-2026"]')!.textContent
+    expect(mini()).not.toContain('✓')
+    openPick('sat-b')
+    fireEvent.click(screen.getByTestId('t-sat-b-satellite-2026'))
+    expect(mini()).toContain('✓')
+    expect(mini()).toContain('選択済み')
+  })
   it('localStorage が使えなくても画面は動く', () => {
     const orig = Storage.prototype.setItem
     Storage.prototype.setItem = () => { throw new Error('denied') }

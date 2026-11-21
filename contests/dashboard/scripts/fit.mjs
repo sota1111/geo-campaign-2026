@@ -48,6 +48,10 @@ for (const [w, h] of sizes) {
   })()`)
   out.push({ size: `${w}x${h}`, ...m, fits: m.scrollHeight <= m.innerHeight })
   await shot(`top-${w}x${h}.png`)
+  // コンペカードの折りたたみを全部開いた状態（カードの中だけでスクロールし、アプリの行を押し出さない）
+  const open = await ev(`(() => { const row = document.querySelector('[data-testid=app-row]'); const before = row.getBoundingClientRect().top; document.querySelectorAll('[data-testid^=facts-]').forEach((d) => { d.open = true }); return new Promise((r) => setTimeout(() => r({ scrollHeight: document.documentElement.scrollHeight, innerHeight, rowTopBefore: Math.round(before), rowTopAfter: Math.round(row.getBoundingClientRect().top) }), 300)) })()`)
+  out[out.length - 1].factsOpen = open
+  await shot(`top-${w}x${h}-facts-open.png`)
   if (w === 1513) {
     console.log('popover opened:', await ev(`(() => { document.querySelector('[data-testid=pick-targets-biz-realestate]').click(); return new Promise((r) => setTimeout(() => r(!!document.querySelector('[data-testid=popover-biz-realestate]')), 400)) })()`))
     await sleep(500)

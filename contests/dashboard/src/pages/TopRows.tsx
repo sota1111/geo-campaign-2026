@@ -50,7 +50,7 @@ export function ContestTopCard({
       onClick={(e) => {
         if (!isInteractive(e.target)) onSelect()
       }}
-      className={`flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border-2 shadow-sm ${color.tint} ${selected ? 'outline outline-4 outline-offset-2 outline-slate-900' : ''}`}
+      className={`relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border-2 shadow-sm ${color.tint} ${selected ? 'outline outline-4 outline-offset-2 outline-slate-900' : ''}`}
     >
       <h3 className={`flex items-center justify-between gap-2 px-2.5 py-1 text-sm font-bold leading-tight ${color.band}`}>
         <span className="min-w-0 truncate" title={contest.name}>
@@ -99,14 +99,14 @@ export function ContestTopCard({
             aria-pressed={selected}
             onClick={onSelect}
             data-testid={`pick-${info.id}`}
-            className={`min-h-8 rounded-md border-2 border-slate-900 px-2 text-xs font-bold ${focus} ${selected ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 hover:bg-slate-100'}`}
+            className={`min-h-11 rounded-md border-2 border-slate-900 px-2 text-xs font-bold md:min-h-8 ${focus} ${selected ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 hover:bg-slate-100'}`}
           >
             {selected ? <><span aria-hidden>✓ </span>並べ替え中（解除）</> : 'このコンペで並べる'}
           </button>
           <a
             href={contestUrl(info.id)}
             data-testid={`row-${info.id}`}
-            className={`inline-flex min-h-8 items-center gap-0.5 font-bold text-slate-900 underline underline-offset-2 ${focus}`}
+            className={`inline-flex min-h-11 items-center gap-0.5 font-bold md:min-h-8 text-slate-900 underline underline-offset-2 ${focus}`}
             title={`${contest.name}の概要・進捗・審査基準を見る`}
           >
             概要・進捗へ
@@ -115,8 +115,9 @@ export function ContestTopCard({
         </div>
       </div>
       <details className="border-t bg-white/70 px-2.5 text-xs" data-testid={`facts-${info.id}`}>
-        <summary className="min-h-7 cursor-pointer py-1 font-bold">判断待ち・次にやること・概要・審査基準・ルール・提出可能数</summary>
-        <dl className="space-y-2 pb-2">
+        <summary className="min-h-7 cursor-pointer truncate py-1 font-bold" title="判断待ち・次にやること・概要・審査基準・ルール・提出可能数">詳細（概要・審査基準・ルール・提出可能数）</summary>
+        {/* 開いた中身はカードの中だけでスクロールする（カードの高さは変えず、アプリの行を押し出さない） */}
+        <dl className="absolute inset-x-0 bottom-7 top-7 z-10 space-y-2 overflow-y-auto border-y-2 border-slate-400 bg-white px-2.5 py-2" tabIndex={0} aria-label={`${contest.name}の詳細（この枠の中でスクロールします）`}>
           <div>
             <dt className="font-bold">総司令官の判断待ち（{asks.length}件）</dt>
             <dd>
@@ -188,7 +189,7 @@ function CardCautions({ items }: { items: ActiveCaution[] }) {
           <details>
             <summary className="min-h-7 cursor-pointer py-1 font-bold">全文と出典（確認事項で、判定ではありません）</summary>
             <p className="leading-snug">{c.caution.text}</p>
-            <p className="text-[0.6875rem]">［出典: {c.caution.source}］</p>
+            <p className="text-xs">［出典: {c.caution.source}］</p>
           </details>
         </li>
       ))}
@@ -262,15 +263,16 @@ export function AppFitCard({
         {MINI.map((m) => {
           const cell = bestCell(a.id, m.id)
           const emph = contest === m.id
+          const picked = columnsOf(m.id).some((c) => chosen.includes(c.id))
           return (
             <li
               key={m.id}
               data-fit-mini={m.id}
               data-emph={emph ? 'true' : undefined}
-              className={`flex items-center justify-between rounded px-1 ${emph ? 'border-2 border-slate-900 bg-yellow-50 font-bold' : 'border border-slate-300'}`}
+              className={`flex items-center justify-between rounded px-1 ${picked ? 'border-2 border-slate-900 bg-slate-900 font-bold text-white' : emph ? 'border-2 border-slate-900 bg-yellow-50 font-bold' : 'border border-slate-300'}`}
               title={cell ? `${m.label}: ${cell.mark} ${MARK_WORD[cell.mark]}` : m.label}
             >
-              <span>{emph && <span aria-hidden>▶</span>}{m.label}</span>
+              <span>{picked && <span aria-hidden>✓</span>}{!picked && emph && <span aria-hidden>▶</span>}{m.label}{picked && <span className="sr-only">（選択済み）</span>}</span>
               <span className="font-bold" data-testid={`mini-mark-${a.id}-${m.id}`}>
                 {cell?.mark ?? '－'}
                 <span className="sr-only"> {cell ? MARK_WORD[cell.mark] : ''}</span>
@@ -313,7 +315,7 @@ function FitPopover({
         <button
           type="button"
           data-testid={`pick-targets-${a.id}`}
-          className="min-h-8 flex-1 rounded-md border-2 border-slate-900 bg-white px-1.5 text-xs font-bold text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+          className="min-h-11 flex-1 rounded-md md:min-h-8 border-2 border-slate-900 bg-white px-1.5 text-xs font-bold text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
           aria-label={`${a.name}の提出先を選ぶ（${chosen.length}件選択中）`}
         >
           提出先を選ぶ<span data-testid={`chosen-count-${a.id}`}>（{chosen.length}件）</span>
@@ -333,7 +335,7 @@ function FitPopover({
             <legend className="px-1 font-bold">
               提出先を選ぶ（{chosen.length}件選択中）
             </legend>
-            <p className="mb-1 text-[0.6875rem] leading-snug text-slate-800">右の記号は関連の判定（情報部）。左のチェックが、あなたの選択です。</p>
+            <p className="mb-1 text-xs leading-snug text-slate-800">右の記号は関連の判定（情報部）。左のチェックが、あなたの選択です。</p>
             <ul className="space-y-0.5" ref={listRef} onKeyDown={onKey} role="group" aria-label={`${a.name}の提出先（上下の矢印キーで移動、スペースで選ぶ）`}>
               {cols.map((col) => {
                 const cell = cellOf(a.id, col.id)!
@@ -348,7 +350,7 @@ function FitPopover({
                     data-emph={emph ? 'true' : undefined}
                     className={`rounded px-1 py-0.5 ${emph ? 'border-2 border-slate-900 bg-yellow-50 font-bold' : 'border border-transparent'}`}
                   >
-                    <label htmlFor={id} className={`flex min-h-8 items-center gap-1.5 ${ok ? 'cursor-pointer' : 'cursor-not-allowed text-slate-700'}`}>
+                    <label htmlFor={id} className={`flex min-h-11 items-center gap-1.5 md:min-h-8 ${ok ? 'cursor-pointer' : 'cursor-not-allowed text-slate-700'}`}>
                       <input
                         id={id}
                         type="checkbox"
@@ -372,7 +374,7 @@ function FitPopover({
                     </label>
                     {!ok && (
                       <details className="ml-5">
-                        <summary className="min-h-8 cursor-pointer py-1 font-normal underline">選べない理由</summary>
+                        <summary className="min-h-11 cursor-pointer py-2.5 font-normal underline md:min-h-8 md:py-1">選べない理由</summary>
                         <p id={`${id}-why`} className="mb-1 font-normal leading-snug text-slate-800" data-testid={`why-${a.id}-${col.id}`}>
                           選べません: {cell.reason}
                         </p>
@@ -392,7 +394,7 @@ function FitPopover({
                     <li key={col.id} className="leading-snug">
                       <span className="font-bold">{columnShort(col)} {cell.mark} {MARK_WORD[cell.mark]}</span>
                       <span className="block text-slate-800">{cell.reason}</span>
-                      <span className="block text-[0.6875rem] text-slate-700">［出典: {cell.source}］</span>
+                      <span className="block text-xs text-slate-700">［出典: {cell.source}］</span>
                     </li>
                   )
                 })}
@@ -410,7 +412,7 @@ function FitPopover({
               </span>
             </p>
           )}
-          <PopoverPrimitive.Close className="mt-1 min-h-8 rounded-md border-2 border-slate-900 bg-white px-2 text-xs font-bold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-slate-900">
+          <PopoverPrimitive.Close className="mt-1 min-h-11 rounded-md md:min-h-8 border-2 border-slate-900 bg-white px-2 text-xs font-bold hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-slate-900">
             閉じる
           </PopoverPrimitive.Close>
         </PopoverPrimitive.Content>

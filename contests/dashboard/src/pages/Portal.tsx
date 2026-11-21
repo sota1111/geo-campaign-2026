@@ -90,6 +90,9 @@ export default function Portal() {
                 : '並び順: 全コンペ（6列）の関連の強さの合計が高い順（同じなら登録順）'}
             </span>
           </h2>
+          <p className="text-xs font-bold" data-testid="mark-legend">
+            記号: ◎ このコンペ向け　○ 出せる　△ 条件付き　× 出せない　？ 要確認　／　✓ 選んだ提出先
+          </p>
           <ScrollRow
             label="アプリのカード"
             resetKey={`${contest ?? 'none'}|${q}`}
