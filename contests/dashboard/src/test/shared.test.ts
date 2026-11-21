@@ -57,9 +57,9 @@ describe('mapStyle / registry', () => {
     }
     expect(GSI_BASEMAPS.photo.url).toContain('seamlessphoto')
   })
-  it('今の案7件と新しい案11件が登録され id が一意', () => {
+  it('今の案7件と新しい案13件が登録され id が一意', () => {
     expect(CURRENT_APPS).toHaveLength(7)
-    expect(APPS.filter(isNewPlan)).toHaveLength(12)
+    expect(APPS.filter(isNewPlan)).toHaveLength(13)
     expect(new Set(APPS.map((a) => a.id)).size).toBe(APPS.length)
     expect(getApp('sat-a')?.dataKind).toBe('fictional')
     expect(appsByContest('ichibiz-2026').filter((a) => !isNewPlan(a))).toHaveLength(3)

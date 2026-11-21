@@ -9,22 +9,24 @@ import {
   TARGETS_KEY, activeCautions, appsForContest, cellOf, contestScore, isSelectable, loadTargets, sanitizeTargets, sortApps, toggleTarget, totalScore,
 } from '@/lib/fit'
 
+// 正本 JSON に未反映の新案（app-fit.ts に先に足した。反映後はここから外す）
+const NEW_UNREFLECTED = ['biz-realestate-a4', 'biz-realestate-timeline']
 const json = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../../../reports/intel/app-contest-fit-20261121.json'), 'utf-8'))
 
 describe('適合表（情報部の正本）の取り込み', () => {
-  it('19アプリ×6列=114セルで、registry の APPS と一致する', () => {
-    expect(FIT_CELLS).toHaveLength(114)
+  it('20アプリ×6列=120セルで、registry の APPS と一致する', () => {
+    expect(FIT_CELLS).toHaveLength(120)
     expect(new Set(FIT_CELLS.map((c) => c.app))).toEqual(new Set(APPS.map((a) => a.id)))
     expect(FIT_COLUMNS).toHaveLength(6)
   })
   it('UDC 列と注意 C2（2026-11-21 総司令官の更新）以外は正本の JSON と一字一句同じ（新案 biz-realestate-a4 の6セルは正本への反映待ちのため除く）', () => {
     // biz-realestate-a4: 不動産部門 ◎・他は ？（未判定）を app-fit.ts に先に足した。正本 reports/intel/app-contest-fit-20261121.json は書き込み範囲外のため情報部が反映する。反映後はこの除外を外す
-    const rest = (cs: { app?: string; contest: string }[]) => cs.filter((c) => c.contest !== 'udc-2026' && c.app !== 'biz-realestate-a4')
+    const rest = (cs: { app?: string; contest: string }[]) => cs.filter((c) => c.contest !== 'udc-2026' && !NEW_UNREFLECTED.includes(c.app ?? ''))
     expect(rest(FIT_CELLS)).toEqual(rest(json.cells))
     // UDC 列: 正本が × のうち、総司令官の更新で △ になったもの以外は同じ判定
     for (const c of FIT_CELLS.filter((x) => x.contest === 'udc-2026')) {
       const o = json.cells.find((x: { app: string; contest: string }) => x.app === c.app && x.contest === 'udc-2026')
-      if (!o) { expect(c.app).toBe('biz-realestate-a4'); continue } // 正本に未反映の新案
+      if (!o) { expect(NEW_UNREFLECTED).toContain(c.app); continue } // 正本に未反映の新案
       if (c.mark !== o.mark) {
         expect(o.mark).toBe('×')
         expect(c.mark).toBe('△')
@@ -94,7 +96,7 @@ describe('トップ画面の操作', () => {
   it('コンペ4枚とアプリ19枚。コンペを選ぶと並び替わり、関連の行が強調される', () => {
     render(<Portal />)
     expect(document.querySelectorAll('[data-contest-card]')).toHaveLength(4)
-    expect(order()).toHaveLength(19)
+    expect(order()).toHaveLength(20)
     const before = order()
     fireEvent.click(screen.getByTestId('pick-satellite-2026'))
     expect(order()).not.toEqual(before)
@@ -158,9 +160,9 @@ describe('トップ画面の操作', () => {
   })
   it('絞り込み・位置表示・Tab の止まり方・◎の言葉', () => {
     render(<Portal />)
-    expect(screen.getByTestId('row-position').textContent).toContain('19件中')
+    expect(screen.getByTestId('row-position').textContent).toContain('20件中')
     fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '盛土' } })
-    expect(order().length).toBeLessThan(19)
+    expect(order().length).toBeLessThan(20)
     expect(order()).toContain('sat-b')
     fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '' } })
     for (const id of ['odpt', 'sat-b']) {

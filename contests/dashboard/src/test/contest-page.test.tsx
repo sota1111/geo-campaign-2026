@@ -36,9 +36,9 @@ describe('トップ画面（コンペの大カードの中にアプリの小カ�
     expect(ids).toEqual(['satellite-2026', 'ichibiz-2026', 'udc-2026', 'odpt-2026'])
     for (const c of CONTESTS) expect(html).toContain(`href="${contestUrl(c.id)}"`)
   })
-  it('アプリのカード19枚が横一列に並び、名前を押すとアプリのページへ移る', () => {
+  it('アプリのカード20枚が横一列に並び、名前を押すとアプリのページへ移る', () => {
     const ids = [...html.matchAll(/<li[^>]*data-app-card="([^"]+)"/g)].map((m) => m[1])
-    expect(ids).toHaveLength(19)
+    expect(ids).toHaveLength(20)
     for (const id of ids) expect(html).toContain(`href="./apps/${id}/index.html"`)
   })
   it('大カードに概要・審査基準・主なルール・提出可能数があり、未確認の項目は「未確認」と出る（推測の数字は入れない）', () => {
