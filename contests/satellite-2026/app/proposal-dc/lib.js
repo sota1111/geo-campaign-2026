@@ -1,5 +1,6 @@
-/* データセンター候補地の一次スクリーニング：格子の読み出し・確認項目の集計（ブラウザと node の両方で動く）
- * 点数・順位・「適地」の判定は作らない。地点（または候補地の範囲）ごとに、確認項目と出典を並べるだけ。 */
+/* データセンター候補地の一次スクリーニング：格子の読み出し・確認項目の集計・優先値（ブラウザと node の両方で動く）
+ * 「適地」の判定は作らない。地点（または候補地の範囲）ごとに、確認項目と出典を並べる。
+ * 優先値は、利用者が決めた重みで 8 要素の「望ましさ（0〜1）」を平均した目安（2026-11-22 総司令官の指示で追加）。 */
 (function (root) {
   'use strict';
 
@@ -253,7 +254,123 @@
     return rows;
   }
 
+
+  // ---- 優先値（利用者の重みによる一次スクリーニングの目安。適地の判定ではない）----
+  // 8 要素それぞれを 0〜1 の「望ましさ」に直し、重み付き平均を 0〜100 にする。しきい値は公的な基準が見つからないので、すべて仮置き。
+  const FACTOR_KEYS = ['flood', 'slide', 'tsunami', 'surge', 'insar', 'lst', 'power', 'land'];
+  const FACTOR_LABEL = { flood: '洪水', slide: '土砂', tsunami: '津波', surge: '高潮', insar: '地盤', lst: '温度', power: '電力', land: '土地' };
+  const FACTOR_LONG = { flood: '洪水の区域', slide: '土砂災害の区域', tsunami: '津波の区域', surge: '高潮の区域', insar: '地盤の変動（干渉SAR）', lst: '夏の地表面温度', power: '変電所までの距離', land: '土地の状態と変化' };
+  const PRI = {
+    B: 10,               // 優先値の格子 = 元の格子 10×10（約 250 m 四方）
+    insarFree: 3.75,     // mm/年。この範囲内の動きは見分けられない → 望ましさ 1
+    insarZero: 15,       // mm/年。これ以上の動き → 望ましさ 0（間は直線）
+    powerNear: 500,      // m。これ以内 → 1
+    powerFar: 5000,      // m。これ以上 → 0（間は直線）
+    exclude: 0.5,        // 「災害区域を除外」の切替が入った時、4 種のどれかの区域が格子の半分以上なら除外
+    land: { 1: 0.2, 2: 0.8, 3: 0.3, 4: 0, 5: 0.6 }, // 植生・裸地等・建物・水・草地等
+    landChanged: 1,      // 2020 植生 → 2026 裸地等（造成の跡）
+    defaultWeight: 5,    // 0〜10。初期値は全要素で同じ（均等）
+  };
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
+  const defaultWeights = () => Object.fromEntries(FACTOR_KEYS.map((k) => [k, PRI.defaultWeight]));
+  /** 干渉SARの符号（1〜16）→ 望ましさ。動きの外縁が ±3.75 mm/年以内なら 1、±15 mm/年以上なら 0。沈下・隆起とも同じ */
+  function insarDesir(code) {
+    const [lo, hi] = insarRange(code - 1);
+    const m = Math.max(Math.abs(lo), Math.abs(hi));
+    return clamp01(1 - (m - PRI.insarFree) / (PRI.insarZero - PRI.insarFree));
+  }
+  /** 地表面温度（℃）→ 望ましさ。範囲全体の 10 パーセンタイルで 1、90 パーセンタイルで 0（低いほど高い） */
+  const lstDesir = (t, p10, p90) => clamp01((p90 - t) / (p90 - p10));
+  /** 最寄りの変電所までの距離（m）→ 望ましさ。500 m 以内で 1、5 km 以上で 0 */
+  const powerDesir = (d) => clamp01((PRI.powerFar - d) / (PRI.powerFar - PRI.powerNear));
+
+  /** 範囲（cells）の 8 要素の望ましさ。値が取れない要素は null（優先値の計算から外す）。hz = 4 種の区域のどれかが占める割合の最大 */
+  function factorsOfCells(data, layers, cells, lon, lat) {
+    const n = cells.length, f = {};
+    const share = (arr, mask) => { let h = 0; for (const k of cells) if (arr[k] & mask) h++; return n ? h / n : 0; };
+    const sFlood = share(layers.flood, 255), sSlide = share(layers.slide, 3), sTsu = share(layers.tsunami, 255), sSurge = share(layers.surge, 255);
+    f.flood = n ? 1 - sFlood : null; f.slide = n ? 1 - sSlide : null; f.tsunami = n ? 1 - sTsu : null; f.surge = n ? 1 - sSurge : null;
+    f.hz = Math.max(sFlood, sSlide, sTsu, sSurge);
+    let s = 0, c = 0;
+    for (const k of cells) { const v = layers.sub[k]; if (v) { s += insarDesir(v); c++; } }
+    f.insar = c ? s / c : null;
+    const { lst_p10: p10, lst_p90: p90 } = data.stats;
+    s = 0; c = 0;
+    for (const k of cells) { const v = layers.lst[k]; if (v) { s += lstDesir(lstFromCode(v), p10, p90); c++; } }
+    f.lst = c ? s / c : null;
+    const ss = nearestSubstation(data.substations, lon, lat, 0);
+    f.power = ss ? powerDesir(ss.d) : null;
+    s = 0; c = 0;
+    for (const k of cells) { const v = layers.land[k]; if (v) { s += layers.chg[k] ? PRI.landChanged : (PRI.land[v] ?? 0); c++; } }
+    f.land = c ? s / c : null;
+    return f;
+  }
+
+  /** 重み付き平均（0〜100）。重み 0 の要素と値のない要素は計算から外す。全て外れれば value = null。
+   *  opts.exclude が真で、災害区域が範囲の半分以上なら除外（value = null, excluded = true） */
+  function priorityOf(f, weights, opts) {
+    const parts = [];
+    let sw = 0, s = 0;
+    for (const k of FACTOR_KEYS) {
+      const w = Math.max(0, Number(weights[k]) || 0), v = f[k];
+      const used = w > 0 && v != null;
+      if (used) { sw += w; s += w * v; }
+      parts.push({ key: k, w, f: v, used });
+    }
+    if (opts && opts.exclude && f.hz >= PRI.exclude) return { value: null, excluded: true, parts, sumW: sw };
+    if (!sw) return { value: null, excluded: false, parts, sumW: 0 };
+    parts.forEach((p) => { p.contrib = p.used ? (100 * p.w * p.f) / sw : 0; });
+    return { value: (100 * s) / sw, excluded: false, parts, sumW: sw };
+  }
+
+  /** 対象範囲全体の格子（B×B 個の元の格子ごと）の望ましさ。重みに依らないので 1 回だけ作る */
+  function buildFactorGrid(data, layers, B) {
+    B = B || PRI.B;
+    const g = data.grid, nbx = Math.ceil(g.nx / B), nby = Math.ceil(g.ny / B), nb = nbx * nby;
+    const F = new Float32Array(nb * FACTOR_KEYS.length).fill(NaN), HZ = new Float32Array(nb);
+    for (let bi = 0; bi < nby; bi++) for (let bj = 0; bj < nbx; bj++) {
+      const cells = blockCells(g, B, bi, bj);
+      const [lon, lat] = blockCenter(g, B, bi, bj);
+      const f = factorsOfCells(data, layers, cells, lon, lat), b = bi * nbx + bj;
+      FACTOR_KEYS.forEach((k, q) => { if (f[k] != null) F[b * FACTOR_KEYS.length + q] = f[k]; });
+      HZ[b] = f.hz;
+    }
+    return { B, nbx, nby, F, HZ };
+  }
+  function blockCells(g, B, bi, bj) {
+    const out = [];
+    for (let i = bi * B; i < Math.min(g.ny, (bi + 1) * B); i++) for (let j = bj * B; j < Math.min(g.nx, (bj + 1) * B); j++) out.push(i * g.nx + j);
+    return out;
+  }
+  const blockCenter = (g, B, bi, bj) => [g.w + (Math.min(g.nx, (bj + 1) * B) + bj * B) / 2 * g.d, g.n - (Math.min(g.ny, (bi + 1) * B) + bi * B) / 2 * g.d];
+  /** 地点が入る格子の位置 */
+  function blockOf(g, B, lon, lat) {
+    const c = cellOf(g, lon, lat);
+    return c ? { bi: Math.floor(c.i / B), bj: Math.floor(c.j / B) } : null;
+  }
+  /** 格子ごとの優先値。値なし = NaN、除外 = -1 */
+  function priorityGrid(fg, weights, opts) {
+    const K = FACTOR_KEYS.length, nb = fg.nbx * fg.nby, out = new Float32Array(nb);
+    const w = FACTOR_KEYS.map((k) => Math.max(0, Number(weights[k]) || 0));
+    for (let b = 0; b < nb; b++) {
+      if (opts && opts.exclude && fg.HZ[b] >= PRI.exclude) { out[b] = -1; continue; }
+      let sw = 0, s = 0;
+      for (let q = 0; q < K; q++) { const v = fg.F[b * K + q]; if (w[q] > 0 && !Number.isNaN(v)) { sw += w[q]; s += w[q] * v; } }
+      out[b] = sw ? (100 * s) / sw : NaN;
+    }
+    return out;
+  }
+  /** 色の段階の境界。今の重みでの全格子の値を 5 等分した 4 つの境界（色は対象範囲の中での相対。値の範囲は凡例に出す） */
+  function priEdges(vals) {
+    const v = Array.from(vals).filter((x) => x >= 0).sort((a, b) => a - b); // NaN（値なし）と -1（除外）を除く
+    if (!v.length) return [0, 0, 0, 0];
+    return [0.2, 0.4, 0.6, 0.8].map((q) => v[Math.min(v.length - 1, Math.floor(q * v.length))]);
+  }
+  /** 段階 0〜4（境界以上なら上の段階） */
+  const priBin = (v, edges) => edges.filter((e) => v >= e).length;
+
   const api = {
+    FACTOR_KEYS, FACTOR_LABEL, FACTOR_LONG, PRI, priEdges, priBin, clamp01, defaultWeights, insarDesir, lstDesir, powerDesir, factorsOfCells, priorityOf, buildFactorGrid, blockCells, blockCenter, blockOf, priorityGrid,
     SCENES, SRC, LAND, FLOOD_RANK, SLIDE_ZONE, SLIDE_TYPE, CLICK_RADIUS_M, INSAR_CLASS_W,
     insarRange, lstFromCode, decodeRle, gridOf, cellOf, cellCenter, haversine, distToSegment, pointInRing,
     cellsInRing, cellsInDisk, summarizeFlood, summarizeSlide, summarizeDepth, summarizeInsar, summarizeLst, summarizeLand,

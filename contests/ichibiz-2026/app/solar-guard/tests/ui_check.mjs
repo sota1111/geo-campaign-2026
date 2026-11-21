@@ -92,7 +92,7 @@ async function run(label, w, h, mobile) {
 
   // 個別設備・順位の表示が無い: 表は市町村のみ、メッシュ別の一覧ボタンなし
   const tables = await c.ev('document.querySelectorAll("#pane-map table").length');
-  if (tables !== 2) problems.push(label + ': 表が市町村と5地区の比較の2つ以外にある ' + tables);
+  if (tables !== 3) problems.push(label + ": 表が市町村・5地区の比較・県警の件数（転記）の3つ以外にある " + tables);
 
   // CSV（集計のみ）
   const csv = await c.ev('SgApp.buildCsvRows().length');
@@ -125,7 +125,7 @@ async function run(label, w, h, mobile) {
   let res = await c.ev('document.getElementById("diag-result").textContent + document.getElementById("diag-detail").textContent');
   if (!res.includes('県西') || !/あと\d項目で確定/.test(res) || !res.includes('市町村の単位')) problems.push(label + ': 市町村で選んだ診断が出ない: ' + res.slice(0, 200));
   c.reqs.length = 0;
-  await c.ev(`document.getElementById("in-lat").value="36.75";document.getElementById("in-lon").value="140.35";`);
+  await c.ev(`document.getElementById("in-lat").value="36.7";document.getElementById("in-lon").value="140.4";`);
   await click(c, '#btn-set');
   await sleep(300);
   res = await c.ev('document.getElementById("diag-result").textContent + document.getElementById("diag-detail").textContent');

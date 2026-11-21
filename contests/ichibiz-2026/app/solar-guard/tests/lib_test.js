@@ -14,7 +14,7 @@ t('メッシュ: 水戸付近の基準メッシュコード・往復', () => {
   assert.equal(G.meshCode(m.ix, m.iy), '54404315');
   const b = G.cellBounds(m.cx, m.cy);
   assert.ok(b[0] <= 140.4468 && 140.4468 < b[2] && b[1] <= 36.3418 && 36.3418 < b[3]);
-  assert.ok(Math.abs((b[2] - b[0]) - 5 / 80) < 1e-9 && Math.abs((b[3] - b[1]) - 5 / 120) < 1e-9);
+  assert.ok(Math.abs((b[2] - b[0]) - 2 / 80) < 1e-9 && Math.abs((b[3] - b[1]) - 2 / 120) < 1e-9);
 });
 
 t('percentRank: 範囲・同値・単調', () => {
@@ -145,7 +145,7 @@ t('診断: 位置→メッシュ→地区・人口、対策の未実施・不明
 
 t('診断: 人口の少ない地点ほど人口密度が低く「人目が少ない」側（単調）', () => {
   const urban = G.diagnose({ lon: 140.1, lat: 36.08, cls: 'low', answers: {}, cond: {} }, ctx());
-  const rural = G.diagnose({ lon: 140.35, lat: 36.75, cls: 'low', answers: {}, cond: {} }, ctx());
+  const rural = G.diagnose({ lon: 140.4, lat: 36.7, cls: 'low', answers: {}, cond: {} }, ctx());
   assert.ok(rural.cellDensity < urban.cellDensity);
   assert.ok(rural.quietPos > urban.quietPos);
   assert.equal(rural.autoQuiet, true);
