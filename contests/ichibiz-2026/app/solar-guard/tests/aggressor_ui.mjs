@@ -112,7 +112,7 @@ const setXY = (c, lat, lon) => c.ev(`document.getElementById("tab-diag").click()
   for (const k of cases) {
     await c.ev('document.getElementById("btn-reset").click()');
     const msg = await setXY(c, k.lat, k.lon);
-    const res = await c.ev('document.getElementById("diag-result").innerText');
+    const res = await c.ev('document.getElementById("diag-result").textContent + document.getElementById("diag-detail").textContent');
     const accepted = !/範囲の外|数字で/.test(msg) && res.includes('周囲の目安');
     console.log('B:', k.name, accepted ? '受理' : '拒否', '|', msg.slice(0, 40), '|', (res.match(/位置は(\d+)/) || [])[0] || '');
     if (k.expectReject && accepted) findings.push(`B[${/海上|千葉|栃木/.test(k.name) ? '重要' : '軽微'}] ${k.name} を受理して診断を出す（${(res.match(/位置は\S+/) || [''])[0]}、「人が少ない側（上位2割）」=${res.includes('上位2割')}）。画面は「茨城県内のみ」と案内`);

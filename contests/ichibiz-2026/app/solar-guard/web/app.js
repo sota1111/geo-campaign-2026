@@ -8,7 +8,7 @@
   var MAX_ZOOM = 10;      // 地図の拡大の上限（MapLibre の拡大率10は、256px の地理院タイルでは縮尺11のタイルを取得する）。これより細かい縮尺にすると、見ている範囲の細かい地図画像を地理院が受け取り、位置が伝わりうる
   var S = { meta: null, cells: [], pops: null, munis: [], items: [], classes: [], reality: null, ck: null, land: null, regions: null,
     risk: null, areaNames: [], tiers: [], d711: null, d89: null, sc: [], bd: [], ms: [], sort: 'name', tab: 'map',
-    diag: { lon: null, lat: null, cls: 'unknown', answers: {}, cond: {} }, res: null };
+    diag: { lon: null, lat: null, muni: null, cls: 'unknown', answers: {}, cond: {} }, res: null };
   var map = null, mapReady = false, marker = null;
 
   function $(id) { return document.getElementById(id); }
@@ -25,7 +25,7 @@
       S.meta = r[0].meta; S.cells = r[0].rows; S.pops = G.popGrid(r[1].rows); S.munis = r[2].rows; S.ck = r[3]; S.items = r[3].items; S.classes = r[3].classes; S.reality = r[4]; S.land = G.landSet(r[5].rows); S.regions = r[6].regions; S.risk = r[7]; S.areaNames = r[0].regions;
       $('kmin').textContent = S.meta.k_min;
       buildClass(); buildConds(); buildChecklist(); buildTrend(); buildReality(); buildAbout();
-      recompute(); buildRules(); initMap(); renderDiag();
+      recompute(); buildMuniSelect(); buildRules(); initMap(); renderDiag();
     }).catch(function (e) {
       $('pane-map').insertAdjacentHTML('afterbegin', '<p class="warn">データを読み込めませんでした: ' + esc(e.message) + '（file:// ではなく http で開いてください）</p>');
     });
@@ -33,6 +33,9 @@
     $('btn-csv').addEventListener('click', downloadCsv);
     $('btn-set').addEventListener('click', function () { setPoint($('in-lon').value, $('in-lat').value); });
     $('btn-reset').addEventListener('click', resetDiag);
+    $('go-diag').addEventListener('click', function () { setTab('diag'); });
+    $('in-muni').addEventListener('change', function () { setMuni($('in-muni').value); });
+    initMini();
   }
 
   function setTab(t) {
@@ -46,20 +49,19 @@
   function buildTrend() {
     var y = S.reality.yearly.rows, pick = function (yr) { return y.filter(function (r) { return r.year === yr; })[0]; };
     var a = pick(2023), b = pick(2024), c = pick(2025), nat = S.reality.nation;
-    $('trend').innerHTML = '<b>金属盗は、茨城県で高い水準が続いています</b>（茨城県警の認知件数）。茨城県 令和5年 ' + n0(a.ibaraki) + '件 → 令和6年 ' + n0(b.ibaraki) + '件 → 令和7年 ' + n0(c.ibaraki) + '件（全国 ' + n0(a.japan) + ' → ' + n0(b.japan) + ' → ' + n0(c.japan) + '件）。' +
-      '太陽光発電施設のケーブル窃盗は関東に集中し、令和5年は全国の91.8%（警察庁）。金属盗対策法（令和7年9月・令和8年6月に段階施行）と茨城県の条例（令和7年4月施行）が始まっています。' +
-      '<br><span class="src">出典: ' + link(S.reality.yearly.url, '茨城県警察「金属盗難に注意！」') + '、' + link(nat.url, '警察庁 検討会資料 p.5') + '、' + link(S.reality.law.url, '警察庁「金属盗対策」') + '（取得 2026-11-21）</span>';
+    $('trend').innerHTML = '<b>茨城県の金属盗</b>（県警の認知件数）: 令和5年 ' + n0(a.ibaraki) + '件 → 令和6年 ' + n0(b.ibaraki) + '件 → 令和7年 ' + n0(c.ibaraki) + '件。太陽光のケーブル窃盗は関東に集中し、令和5年は全国の91.8%（警察庁）。金属盗対策法と県の条例が施行済み。' +
+      '<br><span class="src">出典: ' + link(S.reality.yearly.url, '茨城県警察') + '、' + link(nat.url, '警察庁 検討会資料 p.5') + '、' + link(S.reality.law.url, '警察庁「金属盗対策」') + '（取得 2026-11-21）</span>';
   }
 
   /* ---------- 色分けの規則と、県警の実績との照合 ---------- */
   function areaOf(d, name) { return d.rows.filter(function (r) { return r.area === name; })[0]; }
   function buildRules() {
     var d = S.d711, p = S.reality.areas711, sc = S.risk.scale;
-    $('rules').innerHTML = '<p class="note" style="color:#222"><b>色は次の点数で決めます（すべて仮の規則で、公的な数値の根拠はありません）</b>: <b>点数 ＝ 2 × 地区の段階（0〜2） ＋ 人目の少なさ（0か1）</b>。0点＝低、1〜2点＝中、3〜4点＝やや高、5点＝高。</p>' +
-      '<ul class="note" style="font-size:12.5px;padding-left:18px;color:#222">' +
-      '<li><b>地区の段階（主な根拠）</b>: 県警が公表した県内5地区の太陽光の件数（' + link(p.url, p.title) + '）を、地区ごとの設備数で割った「設備1,000件あたりの件数」。県全体の値（' + n1(d.avg) + '）以上なら段階2、' + G.TIER_MID + '以上なら段階1、それ未満は0（切り方は仮）。市町村と約5kmメッシュは、いずれかの地区に入れて同じ段階にする（メッシュは、中の設備が最も多い市町村の地区。' + n0(S.meta.stats.cells_visible_mixed_region) + 'メッシュは複数の地区にまたがる）。県西・県南で約7割（令和7年11月末）。</li>' +
-      '<li><b>人目の少なさ（近似）</b>: JPEA・REASPが挙げる「人目につきにくい立地」を、2020年国勢調査の人口密度で近似。県内の同じ単位（メッシュまたは市町村）の中で人口密度が低い方から1/3なら1、それ以外は0。<b>数値の根拠はなく、1/3という切り方は仮</b>。常住人口で、夜間・見通し・道路は見ない。</li>' +
-      '<li><b>色に使わないもの</b>: 規模（出力）は、JPEA・REASPのアンケートと茨城県警で向きが食い違うので使わず、両論を載せる（下の注記）。「逃げやすさ」（IC・幹線道路からの距離）は、距離の根拠がなく、国土数値情報の道路データも利用条件を確認していないので使わない。防犯設備・ケーブルの種類・巡回は公開データで再現できないので、事業者が入れる「自分の設備を診断」でだけ扱う。</li></ul>' +
+    $('rules').innerHTML = '<p class="note dark"><b>点数 ＝ 2 × 地区の段階（0〜2） ＋ 人目の少なさ（0か1）</b>。0点＝低、1〜2点＝中、3〜4点＝やや高、5点＝高（すべて仮の規則）。</p>' +
+      '<ul class="note dark">' +
+      '<li><b>地区の段階</b>: 県警の県内5地区の件数（' + link(p.url, '令和7年11月末') + '）÷地区の設備数。設備1,000件あたり、県全体（' + n1(d.avg) + '）以上で2、' + G.TIER_MID + '以上で1、他は0。メッシュは中の設備が最も多い市町村の地区（' + n0(S.meta.stats.cells_visible_mixed_region) + 'メッシュは複数の地区にまたがる）。</li>' +
+      '<li><b>人目の少なさ</b>: 国勢調査2020の人口密度が県内の低い方から1/3なら1（切り方は仮。夜間・見通しは見ない）。</li>' +
+      '<li><b>使わないもの</b>: 規模（出力）は資料で向きが食い違うので使わない（両論は下）。逃げやすさは距離の根拠がなく使わない。防犯設備などは公開データにないので診断でだけ扱う。</li></ul>' +
       '<p class="note"><b>規模について（両論）</b>: ' + esc(sc.note) + '（' + link(sc.url, 'JPEA・REASP') + '）</p>';
   }
 
@@ -81,8 +83,8 @@
       h += '<tr><td class="l" data-label="地区（県の区分で推測）">' + esc(r.area) + '</td><td data-label="設備数">' + n0(r.plants) + '</td><td data-label="県警の件数 令和7年11月末">' + n0(r.theft) + '</td><td data-label="設備1,000件あたり 令和7年11月末">' + n1(r.rate) + '</td><td data-label="地区の段階">' + r.tier + '</td><td data-label="設備1,000件あたり 令和8年9月末">' + n1(r.rate89) + '</td><td data-label="メッシュの色の数">' + r.cnt.join('／') + '（計' + r.tot + '）</td><td data-label="人目が少ないメッシュの割合">' + (r.quiet == null ? '—' : n0(r.quiet * 100) + '%') + '</td></tr>';
     });
     h += '</table></div>';
-    var html = '<p class="note"><b>当たっているか・逆になっていないか</b>。①地区の段階は令和7年11月末の実績から作ったので、地区ごとの色の並びがその実績と合うのは当然で、<b>独立の検証ではありません</b>（順位相関 ' + f2(rho1) + '）。②別の期間（令和8年9月末の設備1,000件あたり）の実績との順位相関は <b>' + f2(rho2) + '</b>（' + (rho2 != null && rho2 > 0.8 ? '地区の色の平均の順は、令和8年9月末の実績の順とも合っています。ただし、令和8年9月末は県西と県北が近く、地区の段階や人目の切り方は両期間の数値を見たうえで決めたので、これも独立の検証ではありません' : '地区の順が別の期間の実績とずれています') + '）。③<b>人目の少なさ</b>は、地区どうしで見ると' + (rho3 != null && rho3 < 0 ? '<b>被害率と逆向き</b>です（人目が少ないメッシュの割合と、令和7年11月末の被害率の順位相関 ' + f2(rho3) + '。県西は被害率が最も高いのに、人目が少ないメッシュの割合は最も低い）。人目の少なさが実績に裏づけられたとは言えず、色では1点分の小さな補正にとどめています' : '被害率と同じ向きです（順位相関 ' + f2(rho3) + '）。ただし5点だけで、裏づけとは言えません') + '。④同じ地区の中で、メッシュごとの被害実績は公開されていないので、メッシュの色の違い（人目）が当たっているかは確かめられません。5点だけの比較で、有意とは言えません。</p>' + h +
-      '<p class="note"><b>設備1,000件あたりの件数</b>は、分子が県警の「太陽光発電施設関係」の発生件数（出力20kW未満や認定外の設備の件数を含みうる）、分母が認定情報の運転開始報告済み・出力20kW以上の設備数で、定義が違うため参考値。県警の5地区が県の区分と同じ市町村の範囲かは誌面に記載がなく、<b>この対応は推測</b>です。令和7年11月末・令和8年9月末はどちらも暫定値の累計と読める（誌面に累計と明記はない）。色は「被害の予測」ではなく、実績の地区差と人目の近似から作った仮の目安です。</p>';
+    var html = '<p class="note dark">①令和7年11月末の実績との順位相関 ' + f2(rho1) + ' は、その実績から段階を作ったので<b>独立の検証ではありません</b>。②別の期間（令和8年9月末）との順位相関 ' + f2(rho2) + ' も、切り方を両期間を見て決めたので検証ではありません。③人目の少なさは、地区どうしでは被害率と' + (rho3 != null && rho3 < 0 ? '<b>逆向き</b>（順位相関 ' + f2(rho3) + '。県西は被害率が最も高いのに人目が少ないメッシュの割合は最も低い）で、色では1点の小さな補正にとどめています' : '同じ向き（順位相関 ' + f2(rho3) + '。5点だけで裏づけとは言えません）') + '。④地区の中のメッシュごとの実績は公開されておらず、確かめられません。</p>' + h +
+      '<p class="note">設備1,000件あたりの件数は、分子（県警の件数。20kW未満を含みうる）と分母（認定情報の20kW以上）の定義が違う参考値。県警の5地区が県の区分（県北・県央・鹿行・県南・県西）と同じ範囲かは記載がなく<b>推測</b>。両期間とも暫定値。</p>';
     ['dist-compare', 'dist-compare2'].forEach(function (id) { if ($(id)) $(id).innerHTML = html; });
   }
 
@@ -126,9 +128,9 @@
   function buildLegend() {
     var el = $('legend');
     el.className = '';
-    var h = 'リスク（仮の規則・4段階）: ';
+    var h = '盗難リスクの色（仮）: ';
     BAND_COLORS.forEach(function (c, i) { h += '<span class="sw" style="background:' + c + '"></span>' + BAND_LABELS[i]; });
-    h += '　<span class="sw" style="background:#fff"></span>色なし＝隠した・設備なし<br>約5kmメッシュ。主な根拠は県警の地区別件数。被害の予測ではありません。';
+    h += '　<span class="sw" style="background:#fff"></span>色なし＝設備が少ない・ない<br>濃いほど地区の被害実績が多い（地区の実績から作った仮の色）。被害の予測ではありません。';
     el.innerHTML = h;
   }
 
@@ -174,99 +176,114 @@
     var m = G.toMesh(ll.lng, ll.lat), idx = -1;
     S.sc.forEach(function (c, i) { if (c.cx === m.cx && c.cy === m.cy) idx = i; });
     var h;
-    if (idx < 0) h = '<b>このメッシュは表示しません</b><br>設備が' + S.meta.k_min + '件未満、設備が少なくて大きな設備の出力が推測できる、または設備がないためです（どれかは区別しません）。';
+    if (idx < 0) h = '<b>このメッシュは色を付けていません</b><br>設備が少ない（' + S.meta.k_min + '件未満など）か、ないためです。';
     else {
       var c = S.sc[idx], t = c.region >= 0 ? areaOf(S.d711, S.areaNames[c.region]) : null;
-      h = '<b>約5kmメッシュの集計</b>（南西角の基準メッシュ ' + G.meshCode(c.cx * G.CELL, c.cy * G.CELL) + '）<br>設備 ' + n0(c.n) + '件・出力計 約' + mw(c.kw) + ' MW・うち50kW未満 ' + n1(c.share * 100) + '%<br>人口密度 約' + n0(c.dens) + '人/km²（2020年国勢調査）' + (c.quiet ? '＝人目が少ない側（県内の低い方から1/3）' : '') + '<br>' +
-        'リスク（仮）: ' + bandChip(c.level) +
-        '<br><span style="font-size:11px;color:#555">色の根拠: 地区 ' + (t ? esc(t.area) + '（令和7年11月末 設備1,000件あたり' + n1(t.rate) + '件、段階' + t.tier + '）' : '—') + '＋人目の少なさ ' + (c.quiet ? '1' : '0') + '。被害の予測ではありません。町字の代表点で数えているため、実際の位置とずれることがあります。</span>';
+      h = 'リスクの色（仮）: ' + bandChip(c.level) + '<br><b>理由</b>: 地区 ' + (t ? esc(t.area) + '（被害実績 設備1,000件あたり' + n1(t.rate) + '件。県全体 ' + n1(S.d711.avg) + '件）' : '—') + (c.quiet ? '＋人目が少ない（人口密度 約' + n0(c.dens) + '人/km²）' : '') +
+        '<br><span class="src">設備 ' + n0(c.n) + '件・出力計 約' + mw(c.kw) + ' MW。被害の予測ではありません。</span>';
     }
     new maplibregl.Popup({ closeButton: true }).setLngLat(ll).setHTML(h).addTo(map);
   }
 
   /* ---------- 自己診断 ---------- */
-  function buildClass() {
-    var el = $('ctl-class'); el.innerHTML = '';
-    S.classes.forEach(function (c) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(c.id === S.diag.cls)); b.textContent = c.label;
-      b.addEventListener('click', function () {
-        S.diag.cls = c.id; buildClass(); buildChecklist(); renderDiag();
-      });
-      el.appendChild(b);
-    });
+  function segHtml(id, a, opts) {
+    return '<div class="seg" role="radiogroup" aria-labelledby="t-' + id + '" data-id="' + id + '">' +
+      opts.map(function (o) { return '<button type="button" role="radio" data-v="' + o[0] + '" aria-checked="' + (a === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>';
   }
-  /* 診断の「現場の条件」の質問（本人の回答で決まるもの。対策の回答から導く条件・公開データで決まる条件は結果に出る） */
-  function buildConds() {
-    var h = '';
-    S.risk.conds.filter(function (c) { return c.ask; }).forEach(function (c) {
-      var a = S.diag.cond[c.id] || 'unknown';
-      h += '<div class="cl-item cd-item"><div class="t" id="tc-' + c.id + '">' + esc(c.label) + '：' + esc(c.ask) + '</div><div class="seg" role="radiogroup" aria-labelledby="tc-' + c.id + '" data-id="' + c.id + '">' +
-        [['yes', '当てはまる'], ['no', '当てはまらない'], ['unknown', 'わからない']].map(function (o) { return '<button type="button" role="radio" data-v="' + o[0] + '" aria-checked="' + (a === o[0]) + '">' + o[1] + '</button>'; }).join('') +
-        '</div><div class="src">' + (c.auto ? '答えない場合は、メッシュの人口密度から自動で判定します。 ' : '') + '出典: ' + srcLinksRisk(c.src) + '</div></div>';
-    });
-    $('conds').innerHTML = h;
-    Array.prototype.forEach.call($('conds').querySelectorAll('.seg'), function (seg) {
+  function bindSeg(root, store) {
+    Array.prototype.forEach.call(root.querySelectorAll('.seg'), function (seg) {
       Array.prototype.forEach.call(seg.children, function (b) {
         b.addEventListener('click', function () {
-          S.diag.cond[seg.getAttribute('data-id')] = b.getAttribute('data-v');
+          store[seg.getAttribute('data-id')] = b.getAttribute('data-v');
           Array.prototype.forEach.call(seg.children, function (x) { x.setAttribute('aria-checked', String(x === b)); });
           renderDiag();
         });
       });
     });
   }
+  function clsLabel(id) { var c = S.classes.filter(function (x) { return x.id === id; })[0]; return c ? c.label.replace(/（.*$/, '') : ''; }
+  function buildClass() {
+    var el = $('ctl-class'); el.innerHTML = '';
+    S.classes.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(c.id === S.diag.cls)); b.textContent = c.id === 'unknown' ? 'わからない' : clsLabel(c.id); b.title = c.label;
+      b.addEventListener('click', function () {
+        S.diag.cls = c.id; buildClass(); buildChecklist(); renderDiag();
+      });
+      el.appendChild(b);
+    });
+    var sp = S.items.filter(function (it) { return S.diag.cls !== 'unknown' && it.cls.indexOf(S.diag.cls) >= 0; })[0];
+    $('cls-note').textContent = sp ? '区分は色に使わず、対策の重点が変わります。' + clsLabel(S.diag.cls) + 'の重点: ' + sp.short + '（JPEA・REASP p.10）' : '区分は色に使いません。選ぶと、その区分の重点箇所（JPEA・REASP p.10）が対策に加わります。';
+  }
+  /* 診断の「現場の条件」の質問（本人の回答で決まるもの。対策の回答から導く条件は、対策の回答で決まる） */
+  var YN = [['yes', 'はい'], ['no', 'いいえ'], ['unknown', '不明']];
+  function buildConds() {
+    var h = '';
+    S.risk.conds.filter(function (c) { return c.ask; }).forEach(function (c) {
+      var a = S.diag.cond[c.id] || 'unknown';
+      h += '<div class="q cd-item"><div class="lab" id="t-' + c.id + '"><b>' + esc(c.label) + '</b>' + (c.ask.indexOf(c.label.slice(0, 3)) === 0 && !c.auto ? '' : '<span class="ask">' + esc(c.ask) + (c.auto ? '（不明なら人口密度で自動判定）' : '') + '</span>') + '</div>' + segHtml(c.id, a, YN) + '</div>';
+    });
+    $('conds').innerHTML = h;
+    bindSeg($('conds'), S.diag.cond);
+  }
   function srcLinksRisk(keys) {
-    return keys.map(function (k) { var s = S.risk.sources[k]; return s ? link(s.url, s.name) : esc(k); }).join('、');
+    return keys.map(function (k) { var s = S.risk.sources[k]; return s ? link(s.url, s.short || s.name) : esc(k); }).join('、');
   }
   function visibleItems() {
     return S.items.filter(function (it) { return S.diag.cls === 'unknown' || it.cls.indexOf('all') >= 0 || it.cls.indexOf(S.diag.cls) >= 0; });
   }
-  function srcLinks(keys) {
-    return keys.map(function (k) { var s = S.ck.sources[k]; return s ? link(s.url, s.name) : esc(k); }).join('、');
+  function srcLink1(k) { var s = S.ck.sources[k]; return s ? link(s.url, s.short || s.name) : esc(k); }
+  function affects() {
+    var o = {};
+    S.risk.conds.forEach(function (c) { if (c.derive) c.derive.items.forEach(function (id) { o[id] = c.label; }); });
+    return o;
   }
+  var DONE = [['yes', '実施'], ['no', '未実施'], ['unknown', '不明']];
   function buildChecklist() {
-    var h = '', last = '';
+    var h = '', last = '', af = affects();
     visibleItems().forEach(function (it) {
       if (it.group !== last) { h += '<div class="cl-group">' + esc(it.group) + '</div>'; last = it.group; }
       var a = S.diag.answers[it.id] || 'unknown';
-      h += '<div class="cl-item"><div class="t" id="t-' + it.id + '">' + esc(it.text) + '</div><div class="seg" role="radiogroup" aria-labelledby="t-' + it.id + '" data-id="' + it.id + '">' +
-        [['yes', '実施している'], ['no', '実施していない'], ['unknown', 'わからない']].map(function (o) { return '<button type="button" role="radio" data-v="' + o[0] + '" aria-checked="' + (a === o[0]) + '">' + o[1] + '</button>'; }).join('') +
-        '</div><div class="src">出典: ' + srcLinks(it.src) + '</div></div>';
+      h += '<div class="q cl-item"><div class="lab" id="t-' + it.id + '" title="' + esc(it.text) + '">' + (af[it.id] ? '<span class="star" title="色に影響（' + esc(af[it.id]) + '）">★</span>' : '') + esc(it.short) + '</div>' + segHtml(it.id, a, DONE) + '</div>';
     });
-    $('checklist').innerHTML = h;
-    Array.prototype.forEach.call($('checklist').querySelectorAll('.seg'), function (seg) {
-      Array.prototype.forEach.call(seg.children, function (b) {
-        b.addEventListener('click', function () {
-          S.diag.answers[seg.getAttribute('data-id')] = b.getAttribute('data-v');
-          Array.prototype.forEach.call(seg.children, function (c) { c.setAttribute('aria-checked', String(c === b)); });
-          renderDiag();
-        });
+    $('checklist').innerHTML = h + '<p class="note">項目は県警・JPEA・REASPの資料から（出典は「まず取る対策」と「出典・前提・限界」）。</p>';
+    bindSeg($('checklist'), S.diag.answers);
+  }
+
+  /* 市町村の選択肢（地区のない市町村は無い。県の区分ごと） */
+  function buildMuniSelect() {
+    var sel = $('in-muni');
+    S.areaNames.forEach(function (a) {
+      var g = document.createElement('optgroup'); g.label = a;
+      (S.regions[a] || []).slice().sort(function (x, y) { return x.localeCompare(y, 'ja'); }).forEach(function (nm) {
+        var o = document.createElement('option'); o.value = nm; o.textContent = nm; g.appendChild(o);
       });
+      sel.appendChild(g);
     });
+  }
+  function setMuni(name) {
+    var m = S.ms.filter(function (x) { return x.name === name; })[0];
+    if (!m) return;
+    S.diag.lon = null; S.diag.lat = null; S.diag.muni = name;
+    $('in-lat').value = ''; $('in-lon').value = '';
+    if (marker) { marker.remove(); marker = null; }
+    if (mapReady) map.getSource('mine').setData({ type: 'FeatureCollection', features: [] });
+    $('pos-msg').textContent = name + 'で診断します（市町村の単位。地図をクリックすると約5kmメッシュで細かく診断）。'; $('pos-msg').className = 'note';
+    renderDiag();
   }
 
   /* lonS, latS: 文字列（入力欄の値、または地図クリックの数値を文字列にしたもの）。入力しても地図は動かさない（表示範囲が地理院に伝わるため） */
   function setPoint(lonS, latS) {
     var msg = $('pos-msg'), lon = G.parseCoord(lonS), lat = G.parseCoord(latS);
-    if (lon == null || lat == null) { msg.textContent = '緯度・経度を数字で入れてください（半角・全角の数字と小数点だけ。例: 緯度36.34、経度140.45。「36,34」のようなカンマは使えません）。'; msg.className = 'note warn'; return; }
+    if (lon == null || lat == null) { msg.textContent = '緯度・経度を数字で入れてください（例: 緯度36.34、経度140.45。「36,34」のカンマは使えません）。'; msg.className = 'note warn'; return; }
     var m = G.toMesh(lon, lat);
     if (!S.land || !S.land(m.ix, m.iy)) {
       msg.textContent = 'この位置は茨城県の範囲の外です（海上・他県を含む）。茨城県内の位置を入れてください。'; msg.className = 'note warn'; return;
     }
-    S.diag.lon = lon; S.diag.lat = lat;
+    S.diag.lon = lon; S.diag.lat = lat; S.diag.muni = null; $('in-muni').value = '';
     $('in-lat').value = lat.toFixed(4); $('in-lon').value = lon.toFixed(4);
-    msg.textContent = '位置を受け取りました（この端末の中だけで使います。地図は動かしません）。'; msg.className = 'note';
+    msg.textContent = '位置を受け取りました（約5kmメッシュの単位で、この端末の中だけで使います）。'; msg.className = 'note';
     showPoint(); renderDiag();
-    showSummary();
-  }
-  /* 診断直後に、受付欄へ結果の要約と「結果を見る」案内を出す（スクロールは勝手にしない。要約が出ている間は、区分・回答の変更でも renderDiag から更新する） */
-  function showSummary() {
-    var msg = $('pos-msg'), r = S.res;
-    if (!r) return;
-    msg.innerHTML = '位置を受け取りました（この端末の中だけで使います。地図は動かしません）。<b>診断しました</b>: リスク（仮）' + bandChip(r.levelMin) + (r.levelMax !== r.levelMin ? '〜' + bandChip(r.levelMax) : '') + '。対象' + r.total + '項目のうち、実施していない' + r.notDone.length + '件・わからない' + r.unknown.length + '件。 <a href="#box-result" id="go-result">結果を見る</a>';
-    msg.className = 'note';
-    $('go-result').addEventListener('click', function (e) { e.preventDefault(); $('box-result').scrollIntoView({ block: 'start' }); });
   }
   function showPoint() {
     if (!map || !mapReady || S.diag.lon == null) return;
@@ -276,51 +293,105 @@
     map.getSource('mine').setData({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [b[0], b[1]]]] } }] });
   }
   function resetDiag() {
-    S.diag = { lon: null, lat: null, cls: 'unknown', answers: {}, cond: {} };
-    $('in-lat').value = ''; $('in-lon').value = ''; $('pos-msg').textContent = ''; $('pos-msg').className = 'note';
+    S.diag = { lon: null, lat: null, muni: null, cls: 'unknown', answers: {}, cond: {} };
+    $('in-lat').value = ''; $('in-lon').value = ''; $('in-muni').value = ''; $('pos-msg').textContent = ''; $('pos-msg').className = 'note';
     if (marker) { marker.remove(); marker = null; }
     if (mapReady) map.getSource('mine').setData({ type: 'FeatureCollection', features: [] });
     buildClass(); buildConds(); buildChecklist(); renderDiag();
   }
 
+  /* スマホ: 結果のカードが画面の外にある間、上端に色とまず取る対策1つを出す */
+  function initMini() {
+    var el = document.createElement('div');
+    el.id = 'diag-mini'; el.setAttribute('aria-hidden', 'true');
+    $('pane-diag').insertBefore(el, $('pane-diag').firstChild);
+    el.addEventListener('click', function () { $('box-result').scrollIntoView({ block: 'start' }); });
+    if (typeof IntersectionObserver === 'undefined') return;
+    new IntersectionObserver(function (es) { document.body.classList.toggle('res-off', !es[0].isIntersecting); }).observe($('box-result'));
+  }
+
   var STATE_TXT = { risk: '当てはまる', ok: '当てはまらない', unknown: 'わからない' };
-  var BY_TXT = { answer: '本人の回答', derived: '下の対策の回答から', auto: '公開データから自動（回答なし）', none: '' };
+  var BY_TXT = { answer: '回答', derived: '対策の回答から', auto: '人口密度から自動', none: '' };
+  var WHY_TXT = { flyer: '県警チラシ「ケーブルへの3つの対策」の対策', other: '資料が挙げる対策' };
+  function prioReason(p) {
+    if (p.why === 'hit') return '当てはまる「' + esc(p.cond) + '」を解消';
+    if (p.why === 'class') return esc(clsLabel(S.diag.cls)) + 'の重点箇所（JPEA・REASP）';
+    if (p.why === 'unknown') return '色に効く「' + esc(p.cond) + '」に関わる';
+    return WHY_TXT[p.why];
+  }
+  /* 出典は1項目に1つ（短い「出典」リンク。資料名は title） */
+  function prioSrc(p) {
+    var k = p.why === 'flyer' ? 'IBF' : (p.why === 'class' || p.why === 'hit') && p.item.src.indexOf('JPEA') >= 0 ? 'JPEA' : p.item.src[0], s = S.ck.sources[k];
+    return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener" title="' + esc(s.name) + '">出典</a>';
+  }
+  function answered() {
+    var a = S.diag.answers, c = S.diag.cond, k;
+    for (k in a) if (a[k] !== 'unknown') return true;
+    for (k in c) if (c[k] !== 'unknown') return true;
+    return false;
+  }
   function renderDiag() {
     var el = $('diag-result');
     if (!S.items.length) return;
-    if (S.diag.lon == null) { el.innerHTML = '<p class="note">位置を指すと、リスクの色（仮）・周囲の目安・未実施の対策が出ます。</p>'; S.res = null; return; }
-    var r = G.diagnose({ lon: S.diag.lon, lat: S.diag.lat, cls: S.diag.cls, answers: S.diag.answers, cond: S.diag.cond }, { cells: S.cells, pops: S.pops, items: S.items, conds: S.risk.conds, tiers: S.tiers, regionNames: S.areaNames });
+    var items = visibleItems();
+    var hasLoc = S.diag.lon != null || S.diag.muni;
+    var mu = S.diag.muni ? S.ms.filter(function (x) { return x.name === S.diag.muni; })[0] : null;
+    var r = null;
+    if (hasLoc) r = G.diagnose({ lon: S.diag.lon, lat: S.diag.lat, muni: mu ? { region: mu.region, quiet: mu.quiet } : null, cls: S.diag.cls, answers: S.diag.answers, cond: S.diag.cond }, { cells: S.cells, pops: S.pops, items: S.items, conds: S.risk.conds, tiers: S.tiers, regionNames: S.areaNames });
     S.res = r;
-    var reg = r.region, rt = reg ? areaOf(S.d711, reg.name) : null;
-    var risk = '<div class="riskbox"><b>この設備のリスク（仮の規則）</b>: いまの回答では ' + bandChip(r.levelMin) +
-      (r.unknownCount && r.levelMax !== r.levelMin ? '　「わからない」の' + r.unknownCount + '項目がすべて当てはまる場合は ' + bandChip(r.levelMax) : r.unknownCount ? '　（「わからない」が' + r.unknownCount + '項目ありますが、どう答えても色は変わりません）' : '') +
-      '<div class="note" style="margin:4px 0 0">点数 ' + r.scoreMin + '＝地区 ' + (reg ? G.W_REGION * reg.tier : 0) + '＋当てはまる条件 ' + r.riskCount + '件（0〜3点＝低、4〜6点＝中、7〜8点＝やや高、9点以上＝高。仮の切り方）。被害の予測ではなく、公開された「盗まれやすい条件」にいくつ当てはまるかの目安です。</div></div>';
-    var h = risk + '<div class="sent"><b>対策の状況（対象' + r.total + '項目）</b>: 実施している <b>' + r.done + '</b> ／ 実施していない <b>' + r.notDone.length + '</b> ／ わからない <b>' + r.unknown.length + '</b></div>' +
-      '<h3>色の内訳と、なぜそう判定するか</h3><ul class="note" style="font-size:13px;padding-left:18px;color:#222"><li><b>地区（実績。点数が最も大きい部分）</b>: ' +
-      (reg ? esc(reg.name) + (reg.near ? '（この約5kmメッシュは公開メッシュではないため、近くの公開メッシュの地区で代用。推測）' : '（県の区分で推測）') + '。県警の令和7年11月末の太陽光の件数は設備1,000件あたり' + n1(rt.rate) + '件（県全体 ' + n1(S.d711.avg) + '件）で、段階' + reg.tier + '（点数 ' + G.W_REGION * reg.tier + '）。出典: ' + link(S.reality.areas711.url, 'Metal News 令和7年第12号') : '近くに公開メッシュがなく、地区が分かりません（地区の点数は0として下限、最大側では最大の4点を足します）') + '</li></ul>';
-    h += '<div class="scroll"><table class="cards cond"><tr><th class="l">盗まれやすい条件（資料が挙げるもの）</th><th>状態</th><th class="l">なぜ・出典</th></tr>';
+    var cres = r ? r.conds : G.evalConds(S.risk.conds, S.diag.cond, S.diag.answers, null);
+    var pr = G.priorities(items, S.diag.answers, S.risk.conds, cres, S.diag.cls);
+    var reg = r && r.region, rt = reg ? areaOf(S.d711, reg.name) : null;
+    var h = '<h2>この設備の危険度の目安（仮）</h2>', mini = '';
+    if (!r) {
+      h += '<p class="big">① <b>市町村を選ぶか、地図をクリック</b>すると色が出ます。</p>';
+      mini = '場所を選ぶと色が出ます';
+    } else {
+      var regTxt = reg ? '地区 ' + esc(reg.name) + '（被害実績 ' + (reg.tier === 2 ? '県全体以上' : reg.tier === 1 ? 'やや多い' : '少ない') + (reg.near ? '。近くのメッシュで代用' : '') + '）' : '地区 不明';
+      var hits = S.risk.conds.filter(function (c, i) { return r.conds[i].state === 'risk'; }).map(function (c) { return c.label; });
+      var mapLv = mu ? mu.band : (function () { var x = S.sc.filter(function (c) { return c.cx === r.mesh.cx && c.cy === r.mesh.cy; })[0]; return x ? x.level : null; })();
+      if (!answered()) {
+        h += '<p class="big"><b>判定には回答が必要です。</b>下の「2 現場の条件」「3 いまの対策」に答えると色が決まります。</p>';
+        mini = 'あと回答が必要です';
+      } else {
+        h += '<p class="big">' + bandChip(r.levelMin) + ' ' + (r.levelMax === r.levelMin ? '<b>この色は確定です</b>' : '<b>未回答の条件' + r.unknownCount + 'つの答え次第で、' + BAND_LABELS[r.levelMax] + 'まで上がる可能性あり</b>') + '</p>';
+        mini = bandChip(r.levelMin) + (r.levelMax === r.levelMin ? ' 確定' : ' 回答で変わる可能性');
+      }
+      h += '<p class="note dark"><b>理由</b>: ' + regTxt + '＋当てはまる条件 ' + (hits.length ? esc(hits.join('・')) : 'なし') + '</p>' +
+        '<p class="note">' + (mu ? esc(mu.name) + '（市町村）' : 'この約5kmメッシュ') + 'の地図の色（公開データのみ・目盛りが別）: ' + bandChip(mapLv) + '　被害の予測ではありません。</p>';
+    }
+    h += '<h3>まず取る対策</h3>';
+    if (!pr.length) h += '<p class="note dark">挙げた対策はすべて「実施」です。ただし資料は「完全に防ぐ方法があるわけではない」としています（JPEA・REASP p.9）。</p>';
+    else {
+      h += '<ol class="top3">' + pr.slice(0, 3).map(function (p) {
+        return '<li><b>' + esc(p.item.short) + '</b>' + (p.answer === 'no' ? '<span class="tagno">未実施</span>' : '') + ' <span class="why">— ' + prioReason(p) + '［' + prioSrc(p) + '］</span></li>';
+      }).join('') + '</ol>';
+      h += '<p class="note">並べ方（仮）: ①当てはまる条件を解消 ②県警チラシ・区分の重点 ③その他。効果の大小は資料に数値がなく比べていません。' + (pr.length > 3 ? '残り' + (pr.length - 3) + '件は下の「3」で未実施・不明のもの。' : '') + '</p>';
+      mini += '｜まず: ' + esc(pr[0].item.short);
+    }
+    el.innerHTML = h;
+    $('diag-mini').innerHTML = mini;
+    renderDetail(r, rt);
+  }
+  /* 折りたたみの中身: 点数の内訳・条件ごとの理由と出典・周囲の目安 */
+  function renderDetail(r, rt) {
+    var el = $('diag-detail');
+    if (!r) { el.innerHTML = '<p class="note">場所を選ぶと、色の内訳が出ます。</p>'; return; }
+    var reg = r.region;
+    var h = '<p class="note dark"><b>この設備のリスク（仮の規則）の内訳</b>: 点数 ' + r.scoreMin + '＝地区 ' + (reg ? G.W_REGION * reg.tier : 0) + '＋当てはまる条件 ' + r.riskCount + '件' + (r.unknownCount ? '（わからない ' + r.unknownCount + '件がすべて当てはまると ' + r.scoreMax + '）' : '') + '。0〜3＝低、4〜6＝中、7〜8＝やや高、9以上＝高（仮の切り方）。</p>' +
+      '<p class="note dark"><b>地区</b>: ' + (reg ? esc(reg.name) + (reg.near ? '（近くの公開メッシュの地区で代用。推測）' : '（県の区分で推測）') + '。県警の令和7年11月末の件数は設備1,000件あたり' + n1(rt.rate) + '件（県全体 ' + n1(S.d711.avg) + '件）で段階' + reg.tier + '（' + link(S.reality.areas711.url, 'Metal News 令和7年第12号') + '）' : '近くに公開メッシュがなく不明（下限は0点、上限は4点を足す）') + '</p>';
+    h += '<div class="scroll"><table class="cards cond"><tr><th class="l">盗まれやすい条件</th><th>状態</th><th class="l">なぜ・出典</th></tr>';
     S.risk.conds.forEach(function (c, i) {
       var e = r.conds[i];
-      h += '<tr><td class="l" data-label="条件">' + esc(c.label) + '</td><td data-label="状態"><span class="st st-' + e.state + '">' + STATE_TXT[e.state] + '</span>' + (BY_TXT[e.by] ? '<div class="by">' + BY_TXT[e.by] + '</div>' : '') + '</td><td class="l why" data-label="なぜ・出典">' + esc(c.why) + '<div class="src">出典: ' + srcLinksRisk(c.src) + '</div></td></tr>';
+      h += '<tr><td class="l" data-label="条件">' + esc(c.label) + '</td><td data-label="状態"><span class="st st-' + e.state + '">' + STATE_TXT[e.state] + '</span>' + (BY_TXT[e.by] ? '<div class="by">' + BY_TXT[e.by] + '</div>' : '') + '</td><td class="l why" data-label="なぜ・出典">' + esc(c.short) + '<div class="src">' + srcLinksRisk(c.src) + '</div><details><summary>詳しく</summary>' + esc(c.why) + '</details></td></tr>';
     });
-    h += '</table></div><p class="note">規模（出力）は点数に使いません。' + esc(S.risk.scale.note) + '</p>' +
-      '<h3>周囲の目安（公開データの集計から。被害の予測ではありません）</h3><ul class="note" style="font-size:13px;padding-left:18px;color:#222">' +
-      '<li>この位置を含む約5kmメッシュ（南西角の基準メッシュ ' + esc(r.code) + '）の人口は約' + n0(r.cellPopulation) + '人（人口密度 約' + n0(r.cellDensity) + '人/km²、2020年国勢調査の常住人口）。診断は約5kmメッシュの単位でしか位置を使いません。</li>' +
-      '<li>周囲の人の少なさ: 県内のメッシュの中で、人口密度が低い方から' + (r.quietPos == null ? '—' : (r.autoQuiet ? '1/3に入る（人目が少ない側）' : '1/3には入らない')) + '。</li>' +
-      '<li>このメッシュの認定設備の集計: ' + (r.cellVisible ? r.cell.n + '件・出力計約' + mw(r.cell.kw) + ' MW・うち50kW未満' + r.cell.small + '件' : '設備が少ないか無いため表示しません') + '。</li></ul>';
-    h += '<h3>未実施・不明の対策</h3>';
-    var list = function (title, arr, cls) {
-      if (!arr.length) return '';
-      var s = '<div class="' + cls + '"><b>' + title + '（' + arr.length + '）</b><ul style="margin:4px 0 0;padding-left:18px">';
-      arr.forEach(function (it) { s += '<li>' + esc(it.text) + '<div class="src">出典: ' + srcLinks(it.src) + '</div></li>'; });
-      return s + '</ul></div>';
-    };
-    h += list('実施していない対策', r.notDone, 'todo') + list('実施の有無を確認したい対策', r.unknown, 'sent');
-    if (!r.notDone.length && !r.unknown.length) h += '<p class="note">挙げた項目はすべて「実施している」です。ただしJPEA・REASPの資料は「完全に防ぐ方法があるわけではない」としています。</p>';
-    h += '<p class="note">不審者を見かけたとき・被害に遭ったときは、110番または最寄りの警察署へ（茨城県警の案内）。盗難防止情報は、警察が太陽光発電設備の設置者などに周知することになっています（盗難特定金属製物品の処分の防止等に関する法律 第16条）。</p>';
+    h += '</table></div><h3>周囲の目安（公開データの集計。被害の予測ではありません）</h3><ul class="note dark">';
+    if (r.byMuni) h += '<li>市町村の単位で診断（位置は使いません）。周囲の人の少なさ: 市町村の人口密度が県内の低い方から1/3' + (r.autoQuiet ? 'に入る（人目が少ない側）' : 'には入らない') + '。</li>';
+    else h += '<li>約5kmメッシュ（基準メッシュ ' + esc(r.code) + '）の人口 約' + n0(r.cellPopulation) + '人（約' + n0(r.cellDensity) + '人/km²、2020年国勢調査）。周囲の人の少なさ: 県内の低い方から1/3' + (r.autoQuiet ? 'に入る（人目が少ない側）' : 'には入らない') + '。</li>' +
+      '<li>このメッシュの認定設備: ' + (r.cellVisible ? r.cell.n + '件・出力計約' + mw(r.cell.kw) + ' MW' : '少ないか無いため表示しません') + '。</li>';
+    h += '</ul><p class="note">規模（出力）は点数に使いません（資料で向きが食い違うため。両論は地図の「色の根拠」）。不審者を見かけた・被害に遭ったときは110番または最寄りの警察署へ。</p>';
     el.innerHTML = h;
     labelCells(el);
-    if ($('go-result')) showSummary(); /* 受付欄に要約が出ている間は、結果と同じ件数に更新する */
   }
 
   /* ---------- 盗難の実態 ---------- */
