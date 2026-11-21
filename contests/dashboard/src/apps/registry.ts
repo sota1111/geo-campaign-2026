@@ -506,7 +506,7 @@ export const APPS: AppMeta[] = [
       { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
       { name: '共同住宅（種別・名称）', provider: '© OpenStreetMap contributors（Overpass API の GET で取得）', license: 'ODbL 1.0（出典表示。派生データも ODbL）', note: 'building=apartments・residential・dormitory の墨田区の建物を、PLATEAU の建物と位置で突き合わせて同梱。名称は OSM にあるものだけ。' },
       { name: '建物の上空写真', provider: '国土地理院 シームレス空中写真（地理院タイル）', license: '国土地理院コンテンツ利用規約（出典表示）', note: '表示時にブラウザが GET。建物の位置で切り出し、PLATEAU の外形線を重ねる。' },
-      { name: '建物の外観写真（見つかった建物だけ）', provider: 'Wikimedia Commons', license: '各写真の CC BY / CC BY-SA 等（作者・ライセンスをカードに表示）', note: '商用利用できるライセンスのものだけ。' },
+      { name: '建物の外観写真（見つかった建物だけ）', provider: 'Wikimedia Commons', license: '各写真の CC BY / CC BY-SA 等（作者・ライセンスをカードに表示）', note: '商用利用できるライセンスで、その建物を写したものだけ。検索したが該当する写真は見つからず、現在は0棟（上空写真のみ）。' },
     ],
   },
   {

@@ -149,6 +149,11 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await ev("document.querySelector('#simOut [data-sort=km]').click()");
   const km = await ev("[...document.querySelectorAll('#simOut .aptcard')].map((c) => (c.innerText.match(/([0-9.]+)km/) || [0, 1e9])[1]).map(Number)");
   check(km.join() === km.slice().sort((a, b) => a - b).join(), name + ': 距離で並べ替えできない ' + km);
+  const z0 = await ev('window.__rp.state.view.z');
+  await ev("document.getElementById('fitSim').click()");
+  await sleep(300);
+  check((await ev('window.__rp.state.view.z')) < z0, name + ': 「地図に全部映す」で地図が引かない');
+  await shot(`${name}-3-similar-map.png`);
   const cases = await text('#caseOut');
   check((cases.match(/架空/g) || []).length >= 4 && cases.includes('実在の建物ではありません'), name + ': 事例の架空表示がない');
   check((await ev("document.querySelectorAll('#caseOut table.cst tr.fakeitem').length")) === 3, name + ': 架空事例3件の印がない');

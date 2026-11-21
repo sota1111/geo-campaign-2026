@@ -448,15 +448,16 @@
       const key = { near: null, km: (x) => (x.km == null ? 1e9 : x.km) }[state.simSort];
       const rows = key ? state.simList.slice().sort((a, b) => key(a) - key(b)) : state.simList;
       const sb = (k, label) => '<button type="button" class="pick' + (state.simSort === k ? ' on' : '') + '" data-sort="' + k + '" aria-pressed="' + (state.simSort === k) + '">' + label + '</button>';
-      h += '<p class="mini">並べ替え ' + sb('near', '規模が近い') + sb('km', '距離') + '</p>';
+      h += '<p class="mini">並べ替え ' + sb('near', '規模が近い') + sb('km', '距離') + ' <button type="button" class="pick" id="fitSim">地図に全部映す</button></p>';
       h += '<ul class="aptgrid">' + rows.map(simCard).join('') + '</ul>';
     }
     h += '<details class="mini"><summary>出典・選び方</summary><ul class="list">' +
       '<li>「マンション」= OpenStreetMap で建物の種別が共同住宅（apartments・residential・dormitory）とされ、PLATEAU の建物の内側に位置が入ったもの' + (om ? '（墨田区 ' + L.fmt(om.osmWays, 0) + ' 件のうち、地図に出る規模の ' + L.fmt(om.matched, 0) + ' 棟。名前があるのは ' + L.fmt(om.named, 0) + ' 棟）' : '') + '。名前は OpenStreetMap にあるものだけ。無いものは「名称不明」（町丁目で区別）。住戸・居住者の情報は扱いません。</li>' +
-      '<li>上空写真: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 シームレス空中写真</a>（建物の外形線は PLATEAU）。外観写真は Wikimedia Commons で商用利用できるライセンスのものが見つかった建物だけ。</li>' +
+      '<li>上空写真: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 シームレス空中写真</a>（建物の外形線は PLATEAU）。外観写真は Wikimedia Commons で商用利用できるライセンスのものが見つかった建物だけ（今は0棟。上空写真のみ）。</li>' +
       '<li>名称・種別: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>（ODbL）。階数・延床は PLATEAU の高さ・屋根面積からの推定。</li></ul></details>';
     $('simOut').innerHTML = h;
     bindPicks($('simOut'));
+    if ($('fitSim')) $('fitSim').onclick = () => { fitTo(boundsOfList(state.simList.map((x) => x.b).concat(state.sel ? [state.sel] : [])), 40); schedule(); if (narrow()) { mapMin(false); map.scrollIntoView({ block: 'start' }); } };
     $('simOut').querySelectorAll('[data-sort]').forEach((b) => (b.onclick = () => { state.simSort = b.dataset.sort; renderSim(); }));
     renderCases();
   }
@@ -696,7 +697,7 @@
       '<li><b>修繕費の分布</b>: ' + esc(S.publisher) + '「' + esc(S.title) + '」（<a href="' + esc(S.reportUrl) + '" target="_blank" rel="noopener noreferrer">報告書</a>、<a href="' + esc(S.summaryUrl) + '" target="_blank" rel="noopener noreferrer">概要</a>）を転記。<b>' + esc(S.license) + '</b>。</li>' +
       '<li><b>地図</b>: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 地理院タイル（淡色地図）</a>。</li>' +
       '<li><b>共同住宅・名称</b>: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>（ODbL。Overpass API の GET で取得し、PLATEAU の建物と位置で突き合わせて同梱）。</li>' +
-      '<li><b>上空写真</b>: 国土地理院 シームレス空中写真（地理院タイルを表示時に取得）。<b>外観写真</b>: Wikimedia Commons（作者・ライセンスを各写真の下に表示' + (state.photoMeta ? '。' + state.photos.size + '棟' : '') + '）。</li></ul></details>';
+      '<li><b>上空写真</b>: 国土地理院 シームレス空中写真（地理院タイルを表示時に取得）。<b>外観写真</b>: Wikimedia Commons（作者・ライセンスを各写真の下に表示。現在の採用は ' + state.photos.size + ' 棟。半径60m の検索では建物そのものの写真が見つからなかった）。</li></ul></details>';
     h += '<details><summary>限界・プライバシー・表示の区別</summary><ul class="list"><li>' + esc(L.DISCLAIMER) + '。' + esc(L.LICENSE_NOTE) + '。' + esc(S.transcribed) + '</li><li>調査は200社・818件の工事事例で、全国を代表するとは限りません。金額は税抜・共通仮設費を含みません。</li><li>個別の修繕事例・口コミの実データは未収録で、見本は架空です。実在のマンションには修繕費・実績・口コミを結び付けていません。</li><li>階数・延床・戸数は推定（階高' + state.storeyH + 'm、1戸' + L.UNIT_SQM + '㎡の仮定）。推定' + L.SCALE_MAX.floors + '階超・延床' + L.fmt(L.SCALE_MAX.tfa, 0) + '㎡超は目安を出しません。外壁面積の誤差は未検証です。</li>' +
       '<li>入力・点群は端末内だけで扱い、送信しません。事例・口コミ・見積の比較・チェックだけ localStorage に保存します。通信は地図画像と同梱データの GET だけです。</li></ul>' +
       '<p class="mini">' + BADGE.real + ' 公的データ ' + BADGE.est + ' 計算した参考値 ' + BADGE.user + ' あなたの入力 ' + BADGE.fake + ' デモ用の作り物</p></details>';
