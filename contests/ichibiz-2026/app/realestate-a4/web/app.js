@@ -62,7 +62,6 @@
       g.fillStyle = '#f0a000'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke(); g.lineWidth = 1; g.strokeStyle = '#1d2733'; g.stroke();
     }
     state.results.forEach((e, i) => {
-      if (e.part > 1) return; // 同じ標準地番号は同じ位置なので、丸は1つ
       const p = project(e.point.lon, e.point.lat);
       g.beginPath(); g.arc(p.x, p.y, 11, 0, Math.PI * 2);
       g.fillStyle = '#1d2733'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke();
@@ -117,7 +116,7 @@
     if (!state.pin || !state.data) return;
     const u = uses();
     if (!u.length) { state.results = []; $('summary').textContent = '標準地の用途を1つ以上選んでください。'; $('legendBox').innerHTML = ''; $('cards').innerHTML = ''; $('notice2').hidden = true; render(); return; }
-    state.results = Lib.nearest(state.data.points, state.pin.lon, state.pin.lat, { n: Lib.DEFAULT_COUNT, uses: u, complete: $('completeOnly').checked });
+    state.results = Lib.nearest(state.data.parcels, state.pin.lon, state.pin.lat, { n: Lib.DEFAULT_COUNT, uses: u, complete: $('completeOnly').checked });
     $('summary').textContent = Lib.summaryText(state.results, { complete: $('completeOnly').checked });
     $('legendBox').innerHTML = state.results.length ? Lib.legendHtml() : '';
     $('cards').innerHTML = state.results.map((e, i) => Lib.cardHtml(e, i + 1)).join('');

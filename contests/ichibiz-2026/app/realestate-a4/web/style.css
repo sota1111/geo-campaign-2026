@@ -81,3 +81,4 @@ ul.prices { list-style:none; margin:0; padding:0; }
   .opt { border-top:1px solid var(--line); border-radius:8px; margin-top:0; }
   .res { position:static; max-height:none; overflow:visible; }
 }
+.cr { margin:0 0 4px; font-size:.78rem; color:var(--muted); }

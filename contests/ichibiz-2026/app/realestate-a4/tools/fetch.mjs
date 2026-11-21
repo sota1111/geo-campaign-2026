@@ -1,9 +1,11 @@
-/* 不動産情報ライブラリ（国土交通省）の鑑定評価書情報API（XCT001）から、福岡県の標準地（住宅地・商業地）を取得し、
- * 画面に要る項目だけを web/data/fukuoka.json に書く前処理。ブラウザからは API を呼ばない（キーが公開されるため）。
+/* 不動産情報ライブラリ（国土交通省）から、福岡県の標準地（住宅地・商業地）を取得し、画面に要る項目だけを
+ * web/data/fukuoka.json に書く前処理。ブラウザからは API を呼ばない（キーが公開されるため）。
+ *   1. XCT001（鑑定評価書情報）: 取引事例比較法比準価格・収益価格・還元利回り・相続税路線価など。標準地番号ごとに1つにまとめる
+ *   2. XPT002（地価公示・地価調査のポイント）: 公示価格として出す「当年価格」。1の標準地の位置があるタイルだけを取り、位置で突き合わせる
  *
  *   cd /home/ubuntu/dev/2026/geo-campaign-2026 && node --env-file=<環境ファイル> contests/ichibiz-2026/app/realestate-a4/tools/fetch.mjs
- *   node contests/ichibiz-2026/app/realestate-a4/tools/fetch.mjs --check     # 通信しない。取得する内容・出力先・キーの有無（真偽のみ）だけ表示
- *   --year 2025   価格時点（既定 2025。API が指定できるのは直近5年）
+ *   node contests/ichibiz-2026/app/realestate-a4/tools/fetch.mjs --check     # 通信しない。取得内容・要求回数の見込み・出力先・キーの有無（真偽のみ）を表示
+ *   --year 2025   価格時点（既定 2025。XCT001 が指定できるのは直近5年）
  *   --out <ファイル>   出力先を変える（既定 web/data/fukuoka.json）
  *
  * キーは環境変数 REINFOLIB_API_KEY だけから読む（--env-file は環境ファイルを環境変数にするだけ。このスクリプトはそのファイルを開かない）。
@@ -12,7 +14,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { GENERATOR, SOURCE, extractPoint, recordsOf, fill, indexOf, FIELDS } from './extract.mjs';
+import { GENERATOR, SOURCE, extractPoint, recordsOf, indexOf, FIELDS } from './extract.mjs';
+import { groupParcels, extractKojiPoints, attachKoji, fillParcels, tilesOf, MATCH_RADIUS_M } from './parcels.mjs';
 
 const here = import.meta.dirname;
 const args = process.argv.slice(2);
@@ -22,6 +25,7 @@ const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 const PREF = { code: '40', name: '福岡県' };
 const DIVISIONS = [{ code: '00', name: '住宅地' }, { code: '05', name: '商業地' }];
 const YEAR = Number(opt('--year', '2025'));
+const Z = 13; // XPT002 は 13〜15。最小の 13（タイル数が最も少ない）
 const BASE = process.env.REINFOLIB_BASE_URL || 'https://www.reinfolib.mlit.go.jp/ex-api/external/';
 const DELAY_MS = 500;
 const out = path.resolve(opt('--out') ?? path.join(here, '../web/data/fukuoka.json'));
@@ -30,8 +34,17 @@ const key = process.env.REINFOLIB_API_KEY;
 if (!Number.isInteger(YEAR) || YEAR < 2022 || YEAR > 2026) { console.error('--year は 2022〜2026（APIの指定範囲）'); process.exit(2); }
 
 if (flag('--check')) {
-  console.log('取得内容: XCT001（鑑定評価書情報）', PREF.name, `${YEAR}年`, DIVISIONS.map((d) => `${d.name}(${d.code})`).join('・'));
-  console.log(`要求回数: ${DIVISIONS.length}回（GET）。間隔 ${DELAY_MS}ms 以上`);
+  console.log('取得内容:');
+  console.log(`  1. XCT001（鑑定評価書情報）${PREF.name} ${YEAR}年 ${DIVISIONS.map((d) => `${d.name}(${d.code})`).join('・')}: ${DIVISIONS.length}回`);
+  // 前回の出力（あれば）から、XPT002 で取るタイル数を見積もる（標準地の位置があるタイルだけを取る）
+  let est = '前回の出力が無いため見積もれません（標準地の位置があるタイルだけを取ります。福岡県の前回実績では約150タイル）';
+  try {
+    const prev = JSON.parse(fs.readFileSync(out, 'utf8'));
+    const ps = prev.parcels ?? prev.points ?? [];
+    if (ps.length) est = `約${tilesOf(ps, Z).length}タイル（前回の出力の標準地 ${new Set(ps.map((p) => p.id)).size} 地点の位置から見積もり）`;
+  } catch { /* 前回の出力なし */ }
+  console.log(`  2. XPT002（地価公示のポイント）${YEAR}年 z${Z}: ${est}`);
+  console.log(`通信はすべて GET。要求の間隔 ${DELAY_MS}ms 以上。所要はおよそ（要求回数 × 0.5秒 + 応答時間）`);
   console.log('出力先:', out);
   console.log('REINFOLIB_API_KEY:', key ? 'あり' : 'なし（実取得には必要）');
   process.exit(0);
@@ -39,8 +52,8 @@ if (flag('--check')) {
 if (!key) { console.error('環境変数 REINFOLIB_API_KEY がありません。--env-file を付けて実行してください（--check は不要）'); process.exit(2); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function get(params) {
-  const url = `${BASE}XCT001?${new URLSearchParams(params)}`;
+async function get(endpoint, params) {
+  const url = `${BASE}${endpoint}?${new URLSearchParams(params)}`;
   for (let attempt = 1; attempt <= 4; attempt++) {
     let res = null;
     try { res = await fetch(url, { headers: { 'Ocp-Apim-Subscription-Key': key, 'Accept-Encoding': 'gzip' } }); } catch { /* 再試行 */ }
@@ -50,40 +63,59 @@ async function get(params) {
       await sleep(DELAY_MS);
       return JSON.parse(buf.toString('utf8'));
     }
+    if (res && res.status === 404 && endpoint === 'XPT002') { await sleep(DELAY_MS); return { features: [] }; } // 標準地が無いタイル
     if (res && res.status !== 429 && res.status < 500) {
-      throw new Error(`XCT001 が HTTP ${res.status} を返しました（${res.status === 401 || res.status === 403 ? 'キーが無効、または未承認の可能性' : 'パラメータを確認'}）`);
+      throw new Error(`${endpoint} が HTTP ${res.status} を返しました（${res.status === 401 || res.status === 403 ? 'キーが無効、または未承認の可能性' : 'パラメータを確認'}）`);
     }
     await sleep(1500 * attempt);
   }
-  throw new Error('XCT001 に接続できませんでした（4回失敗）');
+  throw new Error(`${endpoint} に接続できませんでした（4回失敗）`);
 }
 
-const points = [];
+// ---- 1. XCT001 ----
+const records = [];
 const counts = {};
 for (const d of DIVISIONS) {
-  const json = await get({ year: String(YEAR), area: PREF.code, division: d.code });
+  const json = await get('XCT001', { year: String(YEAR), area: PREF.code, division: d.code });
   const recs = recordsOf(json);
   let skipped = 0;
-  for (const r of recs) { const p = extractPoint(r, d.name); if (p) points.push(p); else skipped++; }
+  for (const r of recs) { const p = extractPoint(r, d.name); if (p) records.push(p); else skipped++; }
   counts[d.name] = { received: recs.length, skipped };
   console.log(`  XCT001 ${PREF.name} ${YEAR}年 ${d.name}: 受信 ${recs.length}件、位置・価格が取れず除外 ${skipped}件`);
   if (recs.length && skipped === recs.length) {
-    // 項目名が想定と違う疑い。値は出さず、項目名だけ出す（診断用）
     console.error('  全件が除外されました。1件目の項目名（値は出さない）:', [...indexOf(recs[0]).keys()].join(' / '));
     console.error('  想定する項目名:', Object.values(FIELDS).join(' / '));
     process.exit(1);
   }
 }
-const f = fill(points);
-console.log('  値のある件数:', JSON.stringify(f));
-if (!points.length || (f.price === 0 && f.rosenka === 0 && f.hikaku === 0 && f.shueki === 0)) { console.error('価格が1つも取れませんでした。書き出しません'); process.exit(1); }
+if (!records.length) { console.error('標準地が1つも取れませんでした。書き出しません'); process.exit(1); }
+const grouped = groupParcels(records);
+console.log(`  標準地番号で ${grouped.length} 地点にまとめました（記録 ${records.length} 件）`);
+
+// ---- 2. XPT002（公示価格） ----
+const tiles = tilesOf(grouped, Z);
+console.log(`  XPT002: ${tiles.length}タイルを取得します（約 ${Math.ceil((tiles.length * (DELAY_MS + 300)) / 1000)} 秒）`);
+const feats = [];
+for (const [i, t] of tiles.entries()) {
+  const j = await get('XPT002', { response_format: 'geojson', z: String(Z), x: String(t.x), y: String(t.y), year: String(YEAR), priceClassification: '0' });
+  feats.push(...(j.features ?? []));
+  if (i % 20 === 19) console.log(`  XPT002 ${i + 1}/${tiles.length} タイル`);
+}
+const kojiPoints = extractKojiPoints(feats);
+console.log(`  XPT002: 地価公示の標準地 ${kojiPoints.length} 点を受信`);
+if (!kojiPoints.length) { console.error('XPT002 から標準地が取れませんでした（項目 u_current_years_price_ja の有無を確認）。書き出しません'); process.exit(1); }
+const { parcels, matched } = attachKoji(grouped, kojiPoints);
+const f = fillParcels(parcels);
+console.log(`  突き合わせ（位置 ${MATCH_RADIUS_M}m 以内・用途が同じ）: ${matched}/${parcels.length} 地点で公示価格を当てられました`);
+console.log('  値のある標準地数:', JSON.stringify(f));
 
 const data = {
-  generator: GENERATOR, source: SOURCE, fetchedAt: new Date().toISOString().slice(0, 10),
+  generator: GENERATOR, version: 2, source: SOURCE, fetchedAt: new Date().toISOString().slice(0, 10),
   pref: PREF, year: YEAR, counts, fill: f,
-  points,
+  koji: { source: '不動産情報ライブラリ XPT002（地価公示）の当年価格', points: kojiPoints.length, matched },
+  parcels,
 };
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out + '.tmp', JSON.stringify(data));
 fs.renameSync(out + '.tmp', out);
-console.log(`書き出しました: ${out}（${points.length}件、${(fs.statSync(out).size / 1024).toFixed(0)}KB）`);
+console.log(`書き出しました: ${out}（${parcels.length}地点、${(fs.statSync(out).size / 1024).toFixed(0)}KB）`);

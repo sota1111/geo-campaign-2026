@@ -1,5 +1,5 @@
 /* 同じ土地、四つの値段: 画面の純ロジック（DOM・通信に触れない。node のテストからも使う）。
- * データは tools/fetch.mjs が作る web/data/fukuoka.json の形式。 */
+ * データは tools/fetch.mjs が作る web/data/fukuoka.json（version 2。標準地ごとにまとめた parcels）の形式。 */
 (function (root) {
   'use strict';
 
@@ -10,20 +10,29 @@
   /** PDL1.0 の出典記載例どおり */
   const ATTRIBUTION = '出典：国土交通省　不動産情報ライブラリ（' + URL_LIB + '）';
   /** 編集・加工した旨（利用したコンテンツの名称と加工の内容） */
-  const PROCESSED = '「地価公示・地価調査（鑑定評価書情報）」（国土交通省）をもとに作成者が項目の抽出・距離順の並べ替えをして作成';
+  const PROCESSED = '「地価公示・地価調査（鑑定評価書情報、地価公示のポイント）」（国土交通省）をもとに作成者が項目の抽出・標準地ごとのとりまとめ・位置による突き合わせ・距離順の並べ替えをして作成';
   /** API利用規約 第8条(1) */
   const RESPONSIBILITY = 'このアプリは作成者が開発・運営し、表示内容の責任は作成者が負います（国が作成・監修したものではありません）。表示は参考情報で、判断は利用者が行ってください（重要事項説明などの手続きには使えません）';
   /** 画面の主表示と必ず併記する文 */
   const NOTICE = '標準地の価格であり、あなたの土地の価格ではありません';
 
-  /** 4つの価格。説明は一般的な定義だけ（数値・水準の関係は書かない） */
-  const PRICES = [
-    { key: 'price', label: '公示価格', note: '地価公示（国土交通省）が示す、標準地の1㎡当たりの価格です。' },
-    { key: 'rosenka', label: '相続税路線価', note: '国税庁が相続税・贈与税の計算のために定める、標準地が面する道路（路線）の1㎡当たりの価額です。決める年が公示価格と異なることがあります。' },
-    { key: 'hikaku', label: '取引事例比較法比準価格', note: '鑑定評価で、条件の近い取引事例の価格から求めた価格です。' },
-    { key: 'shueki', label: '収益価格', note: '鑑定評価で、その土地から見込まれる収益を、還元利回りで現在の価値にした価格です。' },
-  ];
+  /** 公示価格の出典（XPT002 の当年価格だけを出す） */
+  const KOJI_SOURCE = '地価公示（不動産情報ライブラリ XPT002 の当年価格）';
+  const KOJI_MISSING = '照合できませんでした';
+  const KOJI_MISSING_NOTE = '地価公示のデータ（XPT002）と、位置で突き合わせできませんでした';
+  /** 鑑定評価書の記録が2件ある旨。API の2件がこの制度の2人分に当たるとは断定しない */
+  const RECORDS_NOTE = '地価公示では、1つの標準地を2人の鑑定評価員が評価する制度です（国土交通省）。';
   const NODATA = 'データなし';
+  /** 値の無い価格の理由の文（原因は断定しない: 国のデータに値が無いことだけを言う） */
+  const MISSING_NOTE = '国のデータにこの標準地の値の記載がありません';
+
+  /** 4つの価格。説明は一般的な定義だけ（数値・水準の関係は書かない）。kind: koji=1つの値／records=鑑定評価書の記録ごとの値 */
+  const PRICES = [
+    { key: 'koji', kind: 'koji', label: '公示価格', note: '地価公示の標準地の1㎡当たりの価格です。1つの標準地に1つで、ここでは不動産情報ライブラリ（XPT002）の当年価格を出しています。' },
+    { key: 'rosenka', kind: 'records', label: '相続税路線価', note: '国税庁が相続税・贈与税の計算のために定める、標準地が面する道路（路線）の1㎡当たりの価額です。決める年が公示価格と異なることがあります。' },
+    { key: 'hikaku', kind: 'records', label: '取引事例比較法比準価格', note: '鑑定評価員が、条件の近い取引事例の価格から求めた価格（試算価格）です。鑑定評価書の記録ごとに値があります。' },
+    { key: 'shueki', kind: 'records', label: '収益価格', note: '鑑定評価員が、その土地から見込まれる収益を還元利回りで現在の価値にして求めた価格（試算価格）です。鑑定評価書の記録ごとに値があります。' },
+  ];
   const DEFAULT_COUNT = 5;
   /** これより遠い最寄りの標準地しか無い時は、近くに無い旨を出す（m） */
   const FAR_M = 3000;
@@ -36,37 +45,39 @@
   }
 
   const has = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
-  /** 4つの価格が全て値を持つか */
-  function hasAll(p) { return PRICES.every((d) => has(p[d.key])); }
-  /** 値の無い価格の理由の文（原因は断定しない: 国のデータに値が無いことだけを言う） */
-  const MISSING_NOTE = '国のデータにこの標準地の値の記載がありません';
+  /** 記録ごとの値の配列から、値のある記録の数と、重複を除いた値（昇順）を返す */
+  function distinctValues(arr) {
+    const vals = (Array.isArray(arr) ? arr : []).filter(has);
+    return { withValue: vals.length, values: [...new Set(vals)].sort((a, b) => a - b) };
+  }
+  /** 4つの価格が全て値を持つか（公示価格が照合できていて、他の3つは記録のどれかに値がある） */
+  function hasAll(p) {
+    return has(p.koji && p.koji.price) && ['rosenka', 'hikaku', 'shueki'].every((k) => distinctValues(p[k]).values.length > 0);
+  }
 
-  /** 標準地番号（地域名・用途区分・連番。id の末尾が連番） */
+  /** 標準地番号（地域名・用途区分・連番。id の末尾が連番）。作成者による表記 */
   function parcelNo(p) {
     const seq = String(p.id || '').split('-').pop();
     return [p.area, p.use, seq].filter(Boolean).join(' ');
   }
-
-  /** 地点に近い標準地を距離順（近い順。同じ距離は id 順）で n 標準地（標準地番号の数）。uses を渡すと、その用途だけに絞る。
-   *  データには同じ標準地番号のレコードが複数ある（位置は同じで値が異なる）ので、同じ番号のものは続けて返し、
-   *  parcel（何番目の標準地か）・part（同じ番号の何件目か）・parts（同じ番号の件数）を付ける */
-  function nearest(points, lon, lat, opts) {
-    const o = Object.assign({ n: DEFAULT_COUNT, uses: null, complete: false }, opts || {});
-    const sorted = (points || [])
-      .filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat) && (!o.uses || o.uses.includes(p.use)) && (!o.complete || hasAll(p)))
-      .map((p) => ({ p, d: haversine(lon, lat, p.lon, p.lat) }))
-      .sort((a, b) => a.d - b.d || String(a.p.id).localeCompare(String(b.p.id)));
-    const order = [];
-    for (const e of sorted) { if (!order.includes(e.p.id)) { if (order.length >= o.n) continue; order.push(e.p.id); } }
-    const count = {}; for (const e of sorted) if (order.includes(e.p.id)) count[e.p.id] = (count[e.p.id] || 0) + 1;
-    const seen = {};
-    return sorted.filter((e) => order.includes(e.p.id)).map((e) => {
-      seen[e.p.id] = (seen[e.p.id] || 0) + 1;
-      return { point: e.p, distance: e.d, parcel: order.indexOf(e.p.id) + 1, part: seen[e.p.id], parts: count[e.p.id] };
-    });
+  /** 見出し下の標準地番号の行。公示のデータ（XPT002）の標準地番号があればそれを出し、無ければ作成者による表記 */
+  function parcelNoLine(p) {
+    return p.koji && p.koji.lotNo ? '標準地番号: ' + p.koji.lotNo : '標準地番号（作成者による表記）: ' + parcelNo(p);
   }
 
-  const yen = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v).toLocaleString('en-US') + '円/㎡' : NODATA);
+  /** 地点に近い標準地を距離順（近い順。同じ距離は id 順）で n 地点。uses を渡すと、その用途だけに絞る。complete は4つそろう地点だけ */
+  function nearest(parcels, lon, lat, opts) {
+    const o = Object.assign({ n: DEFAULT_COUNT, uses: null, complete: false }, opts || {});
+    return (parcels || [])
+      .filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat) && (!o.uses || o.uses.includes(p.use)) && (!o.complete || hasAll(p)))
+      .map((p) => ({ p, d: haversine(lon, lat, p.lon, p.lat) }))
+      .sort((a, b) => a.d - b.d || String(a.p.id).localeCompare(String(b.p.id)))
+      .slice(0, o.n)
+      .map((e, i) => ({ point: e.p, distance: e.d, parcel: i + 1 }));
+  }
+
+  const num = (v) => Math.round(v).toLocaleString('en-US');
+  const yen = (v) => (has(v) ? num(v) + '円/㎡' : NODATA);
   /** 還元利回り。0〜1 の値は割合（0.045）とみなして%にする。1以上はそのまま%（4.5）。空は null */
   function rateText(v) {
     if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) return null;
@@ -75,40 +86,66 @@
   }
   function distText(m) { return m < 1000 ? Math.round(m / 10) * 10 + 'm' : (m / 1000).toFixed(1) + 'km'; }
 
-  /** 標準地1件の4つの価格を、決まった順（公示→路線価→取引事例→収益）で並べる。値の無いものも行は残す（空は「データなし」）。
-   *  bar は、その標準地で値のある価格の最大を 100 とした長さ（%）。値が無ければ 0 */
+  /** 記録ごとの値の表示。値が1つ（または2件とも同じ）なら1つ、違えば「A／B円/㎡」。
+   *  extra に記録の数の注記を付ける（記録が2件以上ある標準地だけ） */
+  function recordsView(arr) {
+    const n = Array.isArray(arr) ? arr.length : 0;
+    const { withValue, values } = distinctValues(arr);
+    if (!values.length) return { value: null, text: NODATA, note: MISSING_NOTE };
+    const text = values.map(num).join('／') + '円/㎡';
+    let note = '';
+    if (n > 1) {
+      if (withValue < n) note = '鑑定評価書の記録' + n + '件のうち' + withValue + '件に値があります';
+      else if (values.length > 1) note = '鑑定評価書の記録' + n + '件（値が異なります）';
+      else note = '鑑定評価書の記録' + n + '件（同じ値）';
+    }
+    return { value: values[values.length - 1], text, note };
+  }
+
+  /** 標準地1つの4つの価格を、決まった順（公示→路線価→取引事例→収益）で並べる。値の無いものも行は残す。
+   *  bar は、値のある価格の最大（記録が複数なら高い方）を 100 とした長さ（%）。値が無ければ 0 */
   function priceRows(p) {
-    const vals = PRICES.map((d) => (typeof p[d.key] === 'number' && p[d.key] > 0 ? p[d.key] : null));
-    const max = Math.max(0, ...vals.filter((v) => v !== null));
-    return PRICES.map((d, i) => {
-      const v = vals[i];
-      const row = { key: d.key, label: d.label, note: d.note, value: v, text: yen(v), bar: v && max ? Math.round((v / max) * 100) : 0, extra: v ? '' : MISSING_NOTE };
-      if (d.key === 'rosenka' && v && p.rosenkaYear) row.extra = p.rosenkaYear + '年分';
-      if (d.key === 'shueki') { const r = rateText(p.rimawari); if (v) row.extra = r ? '還元利回り ' + r : '還元利回り ' + NODATA; }
-      return row;
+    const rows = PRICES.map((d) => {
+      if (d.kind === 'koji') {
+        const v = p.koji && has(p.koji.price) ? p.koji.price : null;
+        return { key: d.key, label: d.label, note: d.note, value: v, text: v ? yen(v) : KOJI_MISSING, extra: v ? '出典: ' + KOJI_SOURCE : KOJI_MISSING_NOTE };
+      }
+      const r = recordsView(p[d.key]);
+      let extra = r.note;
+      if (d.key === 'rosenka' && r.value && p.rosenkaYear) extra = [p.rosenkaYear + '年分', r.note].filter(Boolean).join('。');
+      if (d.key === 'shueki' && r.value) {
+        const rd = distinctValues(p.rimawari).values.map(rateText).filter(Boolean);
+        extra = [rd.length ? '還元利回り ' + rd.join('／') : '還元利回り ' + NODATA, r.note].filter(Boolean).join('。');
+      }
+      return { key: d.key, label: d.label, note: d.note, value: r.value, text: r.text, extra };
     });
+    const max = Math.max(0, ...rows.map((r) => r.value || 0));
+    for (const r of rows) r.bar = r.value && max ? Math.round((r.value / max) * 100) : 0;
+    return rows;
   }
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  /** 標準地のカード（HTML）。nth は距離順の番号（1〜） */
+  /** 標準地のカード（HTML）。1地点＝1枚。nth は距離順の番号（1〜） */
   function cardHtml(entry, nth) {
     const p = entry.point;
     const place = p.addr || p.lot || p.area || '所在地の記載なし';
     const meta = [p.use, p.zone, p.kenpei ? '建蔽率' + p.kenpei + '%' : '', p.yoseki ? '容積率' + p.yoseki + '%' : ''].filter(Boolean).join('／');
-    const rows = priceRows(p).map((r) =>
+    const prices = priceRows(p);
+    const rows = prices.map((r) =>
       '<li class="pr' + (r.value ? '' : ' none') + '" data-key="' + r.key + '">' +
       '<div class="prh"><span class="prl">' + esc(r.label) + '</span><span class="prv">' + esc(r.text) + '</span></div>' +
       '<div class="bar" aria-hidden="true"><i style="width:' + r.bar + '%"></i></div>' +
       (r.extra ? '<div class="pre">' + esc(r.extra) + '</div>' : '') +
       '</li>').join('');
-    const miss = priceRows(p).filter((r) => !r.value).length;
-    const comp = miss ? '4つのうち ' + miss + ' つはデータなし' : '4つの価格がそろっています';
+    const miss = prices.filter((r) => !r.value).length;
+    const comp = miss ? '4つのうち ' + miss + ' つはデータなし・照合できず' : '4つの価格がそろっています';
     return '<article class="card" data-id="' + esc(p.id) + '">' +
       '<h3><span class="nth">標準地 ' + (entry.parcel || nth) + '</span> ' + esc(place) + '</h3>' +
-      '<p class="pn">標準地番号（作成者による表記）: ' + esc(parcelNo(p)) + (entry.parts > 1 ? '（同じ標準地番号のデータ ' + entry.parts + ' 件中の ' + entry.part + ' 件目）' : '') + '</p>' +
+      '<p class="pn">' + esc(parcelNoLine(p)) + '</p>' +
       '<p class="cm">指した地点から直線 ' + esc(distText(entry.distance)) + '。' + esc(meta) + '</p>' +
       '<p class="cc' + (miss ? ' part' : '') + '">' + esc(comp) + '</p>' +
+      (p.n > 1 ? '<p class="cr">この標準地には鑑定評価書の記録が' + p.n + '件あります。' + esc(RECORDS_NOTE) + '</p>' : '') +
       '<ul class="prices">' + rows + '</ul>' +
       '<p class="cn">' + esc(NOTICE) + '。</p></article>';
   }
@@ -116,31 +153,32 @@
   /** 4つの価格の見方（1回だけ出す定義）。HTML */
   function legendHtml() {
     return '<dl class="legend">' + PRICES.map((d) => '<dt>' + esc(d.label) + '</dt><dd>' + esc(d.note) + '</dd>').join('') + '</dl>' +
-      '<p class="hint">各価格の下の棒は、その標準地の4つのうち最も高い価格を100%とした長さです（標準地どうしの比較には使えません）。</p>';
+      '<p class="hint">データには、同じ標準地に鑑定評価書の記録が2件あるものがあります。' + esc(RECORDS_NOTE) + '2件の値が違う項目は「A／B」と並べ、同じ値は1つにしています。</p>' +
+      '<p class="hint">各価格の下の棒は、その標準地の4つのうち最も高い価格（2つ並ぶ項目は高い方）を100%とした長さです（標準地どうしの比較には使えません）。</p>';
   }
 
   /** 結果の見出し文（近くに無い時の注意を含む） */
   function summaryText(entries, opts) {
     if (!entries.length) return '近くの標準地が見つかりませんでした。';
     const far = entries[0].distance > FAR_M;
-    const parcels = new Set(entries.map((e) => e.point.id)).size, multi = entries.length > parcels;
-    return '近い順に ' + parcels + ' 地点の標準地です' + (opts && opts.complete ? '（4つの価格がそろう標準地だけ）' : '') + (multi ? '（データは ' + entries.length + ' 件。同じ標準地番号のデータが2件ずつ並びます。位置は同じで、値が異なることがあります）' : '') + '。' + (far ? '最も近い標準地でも ' + distText(entries[0].distance) + ' 離れています。この地点の近くには標準地が少ない地域です。' : '');
+    return '近い順に ' + entries.length + ' 地点の標準地です' + (opts && opts.complete ? '（4つの価格がそろう標準地だけ）' : '') + '。' +
+      (far ? '最も近い標準地でも ' + distText(entries[0].distance) + ' 離れています。この地点の近くには標準地が少ない地域です。' : '');
   }
 
-  /** 読み込み完了の案内。標準地（標準地番号）の数とデータの件数を分けて書く */
+  /** 読み込み完了の案内。標準地（地点）の数と、鑑定評価書の記録の数を分けて書く */
   function loadedText(d) {
-    const parcels = new Set(d.points.map((p) => p.id)).size;
-    return '同梱データ: ' + d.pref.name + ' 標準地 ' + parcels.toLocaleString('en-US') + ' 地点（データ ' + d.points.length.toLocaleString('en-US') + ' 件）。';
+    const records = d.parcels.reduce((s, p) => s + (p.n || 1), 0);
+    return '同梱データ: ' + d.pref.name + ' 標準地 ' + d.parcels.length.toLocaleString('en-US') + ' 地点（鑑定評価書の記録 ' + records.toLocaleString('en-US') + ' 件）。';
   }
 
   /** 読み込んだデータの検証。形が合わなければ null */
   function validate(d) {
-    if (!d || !Array.isArray(d.points) || !d.points.length) return null;
+    if (!d || d.version !== 2 || !Array.isArray(d.parcels) || !d.parcels.length) return null;
     if (typeof d.fetchedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(d.fetchedAt)) return null;
     return d;
   }
 
-  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, parcelNo, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, loadedText, validate, esc };
+  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, KOJI_SOURCE, KOJI_MISSING, KOJI_MISSING_NOTE, RECORDS_NOTE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, parcelNo, parcelNoLine, distinctValues, recordsView, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, loadedText, validate, esc };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
 })(typeof window !== 'undefined' ? window : globalThis);
