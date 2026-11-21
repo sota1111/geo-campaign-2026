@@ -1013,6 +1013,54 @@
       "score": 0,
       "reason": "未判定（情報部の判定前）",
       "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-repair",
+      "contest": "udc-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-repair",
+      "contest": "satellite-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-repair",
+      "contest": "ichibiz-2026-business",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-repair",
+      "contest": "ichibiz-2026-idea",
+      "mark": "◎",
+      "score": 3,
+      "reason": "このコンペ向けに作った（アイデア部門向けの新案・大規模修繕の目安と発注先の検討。部門は総司令官が選ぶ）",
+      "source": "contests/ichibiz-2026/app/repair-platform/README.md"
+    },
+    {
+      "app": "biz-repair",
+      "contest": "ichibiz-2026-realestate",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
+    },
+    {
+      "app": "biz-repair",
+      "contest": "odpt-2026",
+      "mark": "？",
+      "score": 0,
+      "reason": "未判定（情報部の判定前）",
+      "source": "なし（情報部の判定前）"
     }
   ],
   "cautions": [
