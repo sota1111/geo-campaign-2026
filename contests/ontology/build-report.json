@@ -109,7 +109,7 @@
   "tasks": 91,
   "open_tasks": 43,
   "decisions_from_status": 11,
-  "escalations": 12,
+  "escalations": 13,
   "pull_requests": 39
  },
  "notes": [],
@@ -118,12 +118,12 @@
  ],
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
- "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
- "triples": 9739,
+ "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
+ "triples": 9790,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
-  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
+  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
  },
  "gap_count": 22
 }

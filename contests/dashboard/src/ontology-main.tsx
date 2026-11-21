@@ -8,7 +8,7 @@ import OntologyPage from '@/pages/OntologyPage'
 // つながり図（ontology/index.html）。graph.json と next-actions.json をビルド時に public/ontology/ へ写して読む。
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppShell>
+    <AppShell ontologyActive>
       <OntologyPage />
     </AppShell>
   </StrictMode>,

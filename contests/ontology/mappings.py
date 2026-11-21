@@ -212,6 +212,7 @@ ESCALATION_APPS = {
     # 統合ダッシュボード自体の指摘（個別の案ではないので案には結ばない）
     "20261121-dashboard-app-steps-hidden": [],
     "20261121-dashboard-detail-collapse": [],
+    "20261121-ontology-graph-unreadable": [],
 }
 DECISION_APPS = {
     "decision-20261114-odpt-kodure": ["odpt-kodure"],

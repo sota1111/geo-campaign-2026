@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { APPS } from '@/apps/registry'
 import { fmtDue } from '@/pages/OntologyPage'
 import {
-  CAT, DEFAULT_SEVERITIES, DEFAULT_TYPES, NODE_H, NODE_W, TYPE_STYLE, appIdOf, blockerNodeId, buildIndex, defaultView, impactSet, layout, neighbors, searchNodes, visibleEdges, visibleIds,
+  CAT, DEFAULT_SEVERITIES, DEFAULT_TYPES, NODE_H, NODE_W, TYPE_STYLE, appIdOf, blockerNodeId, buildIndex, buildLanes, contestOfSubmission, defaultView, shortName, impactSet, layout, neighbors, searchNodes, visibleEdges, visibleIds,
   type GraphData, type NextActions,
 } from '@/lib/ontology'
 
@@ -30,13 +30,14 @@ describe('オントロジー画面のロジック', () => {
     const ids = visibleIds(graph, ix, v, na, null)
     expect(ids.size).toBeLessThan(graph.nodes.length / 4)
     const types = new Set([...ids].map((i) => ix.byId.get(i)!.type))
-    for (const t of ['Contest', 'App', 'Submission', 'Finding']) expect(types.has(t)).toBe(true)
+    for (const t of ['Contest', 'Submission', 'Finding']) expect(types.has(t)).toBe(true)
     // 指摘は既定で失格級だけ
     for (const i of ids) {
       const n = ix.byId.get(i)!
       if (n.type === 'Finding') expect(DEFAULT_SEVERITIES).toContain(n.status)
     }
     expect(DEFAULT_TYPES).not.toContain('Task')
+    expect(DEFAULT_TYPES).not.toContain('App') // アプリは応募のノードの中に名前で出す
   })
 
   it('近傍の展開は、そのノードの相手を足す。近傍だけ表示は選んだノードと相手だけ', () => {
@@ -57,7 +58,8 @@ describe('オントロジー画面のロジック', () => {
       expect(ids.has(e.source) && ids.has(e.target)).toBe(true)
       expect(['fit', 'fitsContest', 'competesWith']).not.toContain(e.rel)
     }
-    const withFit = visibleEdges(graph, ids, { ...defaultView(), rels: ['fitsContest'] })
+    const idsApp = visibleIds(graph, ix, { ...defaultView(), types: [...DEFAULT_TYPES, 'App'] }, na, null)
+    const withFit = visibleEdges(graph, idsApp, { ...defaultView(), rels: ['fitsContest'] })
     expect(withFit.some((e) => e.rel === 'fitsContest')).toBe(true)
   })
 
@@ -116,6 +118,26 @@ describe('オントロジー画面のロジック', () => {
     const apps = graph.nodes.filter((n) => n.type === 'App').map((n) => appIdOf(n.id)!)
     const linked = apps.filter((a) => ids.has(a))
     expect(linked.length).toBeGreaterThanOrEqual(apps.length - 1)
+  })
+
+  it('レーン: 応募ごとに、止めているものは上位2件＋「ほか n件」。重さの順', () => {
+    const all = buildLanes(ix, na, defaultView(), 'all')
+    expect(all.reduce((n, g) => n + g.lanes.length, 0)).toBe(na.submissions.length)
+    for (const g of all) {
+      for (const l of g.lanes) {
+        expect(l.blockers.length).toBeLessThanOrEqual(2)
+        expect(l.blockers.length + l.more).toBe(l.total)
+        for (const b of l.blockers) if (b.type === 'Finding') expect(DEFAULT_SEVERITIES).toContain(b.status)
+      }
+    }
+    const one = buildLanes(ix, na, defaultView(), na.submissions[0].contest)
+    expect(one).toHaveLength(1)
+    expect(contestOfSubmission(ix, na.submissions[0].submission)).toBe(na.submissions[0].contest)
+    expect(shortName('F-3 【確定】とても長い名前'.repeat(5), 20).length).toBeLessThanOrEqual(20)
+  })
+
+  it('開いている PR の代理マージは、総司令官の判断待ちに入らない', () => {
+    expect(na.commanderDecisions.some((d) => /代理マージ/.test(d.label))).toBe(false)
   })
 
   it('検索は名前・種類・状態に当たる', () => {

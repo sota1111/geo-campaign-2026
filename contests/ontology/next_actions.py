@@ -170,6 +170,16 @@ def compute(g, now):
             unit_actions["military-police"].append({"due": due, "app": item["app"], "submission": item["submission"],
                                                     "action": "指摘の修正後に再監査（失格級が0になるまで提出可能と報告しない）",
                                                     "why": "憲兵の SOP", "_k": key})
+    # 開いている PR の代理マージ: 総司令官補佐の作業（承認は不要。総司令官の判断待ちには入れない）
+    seen_pr = set()
+    for r in q(g, "q10_merge_delegations"):
+        if r["task"] in seen_pr:
+            continue
+        seen_pr.add(r["task"])
+        unit_actions[r["agentName"]].append({"due": None, "app": short(r["app"]) if r.get("app") else None, "submission": None,
+                                              "action": f"代理マージを判断: PR #{r['prNumber']}（承認不要。条件: {r['condition'][:60]}…）",
+                                              "why": "総司令官の指示（2026-11-21）による委任の作業", "source": "CLAUDE.md 成果の返し方 4",
+                                              "pr": short(r["pr"]), "_k": dt.datetime.max.replace(tzinfo=JST)})
     return subs, unit_actions, decisions, tasks, risky
 
 
@@ -181,7 +191,9 @@ def impact(g, dataset=None):
         d["label"] = r["datasetLabel"]
         d["apps"][short(r["app"])] = r["appLabel"]
         if r.get("sub"):
-            d["submissions"].append({"submission": short(r["sub"]), "contest": short(r["contest"]), "division": short(r["division"]) if r.get("division") else None})
+            item = {"submission": short(r["sub"]), "contest": short(r["contest"]), "division": short(r["division"]) if r.get("division") else None}
+            if item not in d["submissions"]:  # 同じ応募を重ねて数えない
+                d["submissions"].append(item)
     return out
 
 
@@ -229,6 +241,7 @@ def build_report(g, now, datasets=None):
             "『提出可能な状態』は憲兵の失格級・未記入欄・データ条件・提出文の欠落がなく、要修正が残らず、監査があり、案の選定が済んでいること。提出・案の選定は総司令官が決める（自動では進めない）。",
             "止めているものの担当は規則による割当（推定）。指摘の解消の記録は無いため、現行の監査に残る指摘は未解消として数える。",
             "進捗一覧（reports/ops/status-*.md）は作成日以降の変化を含まない。",
+            "PR のマージは総司令官補佐（commander-aide）が承認なしで行う委任の作業で、総司令官の判断待ちには入れない（総司令官 2026-11-21 の指示、CLAUDE.md 成果の返し方 4）。ページ削除を含む PR だけは総司令官の許可が要る。",
         ],
         "summary": dict(summary),
         "submissions": subs,

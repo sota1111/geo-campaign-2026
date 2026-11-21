@@ -20,6 +20,7 @@ const OntoNode = memo(function OntoNode({ data }: NodeProps<Node<NodeData>>) {
       <Handle type="target" position={Position.Left} className="!size-1 !min-h-0 !min-w-0 !border-0 !bg-slate-500" isConnectable={false} />
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => onSelect(node.id)}
         aria-pressed={selected}
         aria-label={`${st.label}: ${node.label}${node.status ? `（${node.status}）` : ''}${impact ? '（使えなければ影響を受ける）' : ''}`}
@@ -48,7 +49,7 @@ interface Props {
   impactOn: boolean
   onSelect: (id: string) => void
   /** 外（一覧・次の行動）で選んだとき、そのノードへ寄せるための合図（id と連番） */
-  centerOn: { id: string; n: number } | null
+  centerOn: { ids: string[]; n: number } | null
 }
 
 function Inner({ nodes, edges, selected, highlight, impactOn, onSelect, centerOn }: Props) {
@@ -99,7 +100,7 @@ function Inner({ nodes, edges, selected, highlight, impactOn, onSelect, centerOn
   // 一覧・次の行動で選んだら、そのノードへ寄せる
   useEffect(() => {
     if (!centerOn) return
-    const t = setTimeout(() => void rf.fitView({ nodes: [{ id: centerOn.id }], padding: 1.2, duration: 250, maxZoom: 1 }), 60)
+    const t = setTimeout(() => void rf.fitView({ nodes: centerOn.ids.map((id) => ({ id })), padding: centerOn.ids.length > 1 ? 0.25 : 1.2, duration: 250, maxZoom: 1 }), 60)
     return () => clearTimeout(t)
   }, [centerOn, rf])
 
@@ -120,7 +121,7 @@ function Inner({ nodes, edges, selected, highlight, impactOn, onSelect, centerOn
       panOnScroll={false}
       fitView
       proOptions={{ hideAttribution: false }}
-      aria-label="つながり図。ノードを選ぶと詳細がカードに出ます。キーボードでは、ノードの一覧からも選べます"
+      aria-label="つながり図（グラフ）。ノードを選ぶと詳細がカードに出ます。キーボードでは、左の列の「ノード一覧・検索」から選びます"
     >
       <Background gap={24} color="#cbd5e1" />
       <Controls showInteractive={false} />

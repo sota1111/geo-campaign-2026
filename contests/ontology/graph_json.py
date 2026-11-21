@@ -30,14 +30,14 @@ TYPES = [
     "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate", "Escalation",
     "UnfilledField", "UnconfirmedDataCondition", "MissingDeliverable",
     "Finding", "Submission", "App", "Contest", "Division", "Theme", "Deadline", "Criterion", "Rule",
-    "SubmissionLimit", "Dataset", "License", "Task", "Decision", "PullRequest", "Audit", "Unit", "Commander", "Stage",
+    "SubmissionLimit", "Dataset", "License", "MergeDelegation", "DelegationRule", "Task", "Decision", "PullRequest", "Audit", "Unit", "Commander", "Stage",
 ]
 # グラフに線を引く関係（画面で意味のあるもの。hasSource は各ノードの sources に入れる）
 RELS = [
     "hasDivision", "hasTheme", "hasDeadline", "hasCriterion", "hasRule", "hasSubmissionLimit", "ofContest",
     "ofApp", "toContest", "toDivision", "toTheme", "hasSubmission", "usesDataset", "hasLicense", "restricts",
     "fitsContest", "competesWith", "demoOf", "blockedBy", "awaitsDecision", "assignedTo", "forApp", "forSubmission",
-    "raisedIn", "contains", "auditsApp", "supersedes", "affects", "overDataset", "appliesToApp", "performedBy", "decidedBy",
+    "raisedIn", "contains", "auditsApp", "supersedes", "affects", "overDataset", "appliesToApp", "performedBy", "decidedBy", "forPullRequest", "delegationRule", "delegatedTo",
 ]
 
 
@@ -75,11 +75,11 @@ def build(g, now):
         elif t == "Finding":
             status = str(g.value(g.value(n, C.severity), RDFS.label)) if g.value(n, C.severity) is not None else None
             props = {k: str(g.value(n, C[k])) for k in ("certainty", "rawSeverity") if g.value(n, C[k]) is not None}
-        elif t in ("Task", "Decision", "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate", "Escalation"):
+        elif t in ("Task", "MergeDelegation", "Decision", "SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate", "Escalation"):
             status = str(g.value(n, C.status)) if g.value(n, C.status) is not None else None
             if g.value(n, C.dueAt) is not None:
                 props["dueAt"] = str(g.value(n, C.dueAt))
-            if t != "Task":
+            if t not in ("Task", "MergeDelegation"):
                 props["humanGate"] = t in ("SelectionDecision", "SubmissionDecision", "RegistryChange", "PageDeletion", "HumanGate")
         elif t == "PullRequest":
             status = str(g.value(n, C.prState))

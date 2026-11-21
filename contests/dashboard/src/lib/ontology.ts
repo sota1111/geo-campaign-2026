@@ -102,6 +102,8 @@ export const TYPE_STYLE: Record<string, TypeStyle> = {
   Audit: { label: '監査', cat: 'work', symbol: '◎', shape: 'square', rank: 3 },
   Unit: { label: '部隊', cat: 'work', symbol: '◈', shape: 'pill', rank: 7 },
   Commander: { label: '総司令官', cat: 'gate', symbol: '★', shape: 'pill', rank: 7 },
+  MergeDelegation: { label: '代理マージ（総司令官補佐）', cat: 'work', symbol: '⇄', shape: 'dashed', rank: 3 },
+  DelegationRule: { label: '委任の規則', cat: 'work', symbol: '§', shape: 'dashed', rank: 7 },
   Stage: { label: '標準の流れの段階', cat: 'work', symbol: '▷', shape: 'square', rank: 7 },
 }
 export function styleOf(type: string): TypeStyle {
@@ -113,8 +115,8 @@ export const GATE_TYPES = ['SelectionDecision', 'SubmissionDecision', 'RegistryC
 export const isGate = (n: GNode) => GATE_TYPES.includes(n.type)
 
 // ---------------------------------------------------------------- 既定の絞り込み
-/** 既定で出す種類: コンペ・応募・アプリ・止めているもの（指摘は失格級のみ。未記入欄・総司令官の判断・部門は「図に出す種類」で足す） */
-export const DEFAULT_TYPES = ['Contest', 'Submission', 'App', 'Finding', 'UnconfirmedDataCondition', 'MissingDeliverable']
+/** 既定で出す種類: コンペ・応募（アプリの名前は応募のノードの中）・止めているもの（指摘は失格級のみ）。アプリ・未記入欄・総司令官の判断・部門などは「図に出す種類」で足す */
+export const DEFAULT_TYPES = ['Contest', 'Submission', 'Finding', 'UnconfirmedDataCondition', 'MissingDeliverable']
 export const DEFAULT_SEVERITIES = ['失格級']
 /** 既定では線を引かない関係（多くて読めなくなるため。切り替えで出せる。カードの「つながり」には常に出る） */
 export const OPTIONAL_RELS: Record<string, string> = { fitsContest: '出せるコンペ（◎○△）の線', competesWith: '同じ枠で競合する案の線' }
@@ -286,9 +288,65 @@ export const appIdOf = (nodeId: string) => (nodeId.startsWith('id:app/') ? nodeI
 export const contestIdOf = (nodeId: string) => (nodeId.startsWith('id:contest/') ? nodeId.slice('id:contest/'.length) : null)
 
 export const READINESS_MARK: Record<string, string> = {
-  提出不可: '✕ 提出不可',
+  提出不可: '× 提出不可',
   要修正あり: '△ 要修正あり',
   未監査: '？ 未監査',
   選定待ち: '？ 選定待ち',
   提出可能な状態: '✓ 提出可能な状態（提出は総司令官）',
+}
+
+// ---------------------------------------------------------------- 応募ごとのレーン（既定の表示）
+export const SEV_RANK: Record<string, number> = { 失格級: 0, 要修正: 1, 軽微: 2 }
+/** レーンに並べる「止めているもの」の関係（応募 → 指摘・未記入欄・データ条件・提出物の欠落・判断待ち） */
+const LANE_RELS = ['blockedBy', 'awaitsDecision']
+
+export interface Lane {
+  sub: GNode
+  action: SubmissionAction
+  blockers: GNode[] // 図に出すもの（上限まで）
+  more: number // 上限を超えた件数（「ほか n件」）
+  total: number
+}
+export interface LaneGroup { contest: GNode; deadline: string | null; lanes: Lane[] }
+
+/** 名前を短くする（【…】の注記を除き、長ければ「…」で省く。全文はカード） */
+export function shortName(label: string, max = 40): string {
+  const t = label.replace(/【[^】]*】/g, '').replace(/\s+/g, ' ').trim()
+  return t.length > max ? t.slice(0, max - 1) + '…' : t
+}
+
+export const LANE_BLOCKER_CAP = 2
+
+/** コンペ → 応募 → 止めているもの のレーン。コンペ・応募の並びは next-actions（締切の近い順）に従う */
+export function buildLanes(ix: Index, na: NextActions, v: ViewState, contestSel: string, cap = LANE_BLOCKER_CAP): LaneGroup[] {
+  const groups: LaneGroup[] = []
+  for (const a of na.submissions) {
+    if (contestSel !== 'all' && a.contest !== contestSel) continue
+    const sub = ix.byId.get(a.submission)
+    const contest = ix.byId.get(a.contest)
+    if (!sub || !contest) continue
+    let g = groups.find((x) => x.contest.id === a.contest)
+    if (!g) {
+      g = { contest, deadline: a.deadline.at, lanes: [] }
+      groups.push(g)
+    }
+    const found: GNode[] = []
+    for (const e of ix.adj.get(a.submission) ?? []) {
+      if (!LANE_RELS.includes(e.rel) || e.source !== a.submission) continue
+      const n = ix.byId.get(e.target)
+      if (!n || !v.types.includes(n.type)) continue
+      if (n.type === 'Finding' && !v.severities.includes(n.status ?? '')) continue
+      if (!found.includes(n)) found.push(n)
+    }
+    const typeOrder = Object.keys(TYPE_STYLE)
+    found.sort((x, y) => (SEV_RANK[x.status ?? ''] ?? 9) - (SEV_RANK[y.status ?? ''] ?? 9) || typeOrder.indexOf(x.type) - typeOrder.indexOf(y.type) || x.label.localeCompare(y.label, 'ja'))
+    g.lanes.push({ sub, action: a, blockers: found.slice(0, cap), more: Math.max(0, found.length - cap), total: found.length })
+  }
+  return groups
+}
+
+/** 応募のノードが属するコンペ id（選んだ応募のコンペへレーンを切り替えるため） */
+export function contestOfSubmission(ix: Index, subId: string): string | null {
+  for (const e of ix.adj.get(subId) ?? []) if (e.rel === 'toContest' && e.source === subId) return e.target
+  return null
 }

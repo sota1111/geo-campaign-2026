@@ -4,7 +4,8 @@
  "notes": [
   "『提出可能な状態』は憲兵の失格級・未記入欄・データ条件・提出文の欠落がなく、要修正が残らず、監査があり、案の選定が済んでいること。提出・案の選定は総司令官が決める（自動では進めない）。",
   "止めているものの担当は規則による割当（推定）。指摘の解消の記録は無いため、現行の監査に残る指摘は未解消として数える。",
-  "進捗一覧（reports/ops/status-*.md）は作成日以降の変化を含まない。"
+  "進捗一覧（reports/ops/status-*.md）は作成日以降の変化を含まない。",
+  "PR のマージは総司令官補佐（commander-aide）が承認なしで行う委任の作業で、総司令官の判断待ちには入れない（総司令官 2026-11-21 の指示、CLAUDE.md 成果の返し方 4）。ページ削除を含む PR だけは総司令官の許可が要る。"
  ],
  "summary": {
   "提出不可": 17,
@@ -2372,10 +2373,40 @@
     "source": "reports/ops/status-20261121.md L82"
    },
    {
-    "text": "申請者欄・体制欄（総司令官）",
-    "app": "id:app/sat-b",
+    "text": "PPT の記入7か所（総司令官）",
+    "app": "id:app/biz-business",
     "due": null,
-    "source": "reports/ops/status-20261121.md L31"
+    "source": "reports/ops/status-20261121.md L45"
+   },
+   {
+    "text": "本人欄（総司令官。憲兵の失格級＝未記入）",
+    "app": "id:app/sat-alpha",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L39"
+   },
+   {
+    "text": "本人欄（総司令官）",
+    "app": "id:app/biz-idea-in1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L54"
+   },
+   {
+    "text": "アプリの公開（総司令官）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   },
+   {
+    "text": "本応募の記入（総司令官）",
+    "app": "id:app/udc-moritsuchi",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L19"
+   },
+   {
+    "text": "同梱データ約4.5MBの承認（判断待ち）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
    },
    {
     "text": "本人欄・背景欄（総司令官。生成AI条項のため本人の書き換えが必須）",
@@ -2385,84 +2416,12 @@
    },
    {
     "text": "本人欄・背景欄（総司令官）",
-    "app": "id:app/biz-idea",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L51"
-   },
-   {
-    "text": "登録（総司令官）",
-    "app": "id:app/biz-business",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L45"
-   },
-   {
-    "text": "本応募でアプリケーションに変えるか（判断待ち。対象自治体の選定が前提。11/30 以降に工兵が試作する予定）",
-    "app": "id:app/udc-moritsuchi",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L19"
-   },
-   {
-    "text": "Word での体裁確認（総司令官）",
-    "app": "id:app/sat-a",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L28"
-   },
-   {
-    "text": "同梱データ約4.5MBの承認（判断待ち）",
-    "app": "id:app/biz-realestate-rn1",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L60"
-   },
-   {
-    "text": "本人欄（総司令官）",
-    "app": "id:app/biz-idea-in1",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L54"
-   },
-   {
-    "text": "アプリの公開URL（総司令官。本応募に必要）",
-    "app": "id:app/odpt",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L15"
-   },
-   {
-    "text": "数週間の連続収集（判断待ち: 場所と担当）",
-    "app": "id:app/odpt-teiji",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L73"
-   },
-   {
-    "text": "申請者欄・体制欄の記入（総司令官）",
-    "app": "id:app/sat-a",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L28"
-   },
-   {
-    "text": "アプリの公開（総司令官）",
-    "app": "id:app/odpt",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L70"
-   },
-   {
-    "text": "登録（総司令官）",
     "app": "id:app/biz-realestate",
     "due": null,
     "source": "reports/ops/status-20261121.md L57"
    },
    {
-    "text": "提出（総司令官）",
-    "app": "id:app/sat-b",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L31"
-   },
-   {
-    "text": "本人欄（総司令官。憲兵の失格級＝未記入）",
-    "app": "id:app/sat-alpha",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L39"
-   },
-   {
-    "text": "PPT の記入7か所（総司令官）",
+    "text": "登録（総司令官）",
     "app": "id:app/biz-business",
     "due": null,
     "source": "reports/ops/status-20261121.md L45"
@@ -2474,28 +2433,34 @@
     "source": "reports/ops/status-20261121.md L82"
    },
    {
-    "text": "本人欄3か所（総司令官。失格級＝未記入。PR #27 は記入と憲兵の再監査までマージ保留）",
-    "app": "id:app/biz-realestate-rn1",
+    "text": "フォームから提出（総司令官）",
+    "app": "id:app/sat-a",
     "due": null,
-    "source": "reports/ops/status-20261121.md L60"
+    "source": "reports/ops/status-20261121.md L28"
    },
    {
-    "text": "本応募の記入（総司令官）",
+    "text": "数週間の連続収集（判断待ち: 場所と担当）",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "申請者欄・体制欄（総司令官）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   },
+   {
+    "text": "Word での体裁確認（総司令官）",
+    "app": "id:app/sat-a",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "アプリの公開URL（総司令官。本応募に必要）",
     "app": "id:app/odpt",
     "due": null,
     "source": "reports/ops/status-20261121.md L15"
-   },
-   {
-    "text": "本応募の記入（総司令官）",
-    "app": "id:app/udc-moritsuchi",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L19"
-   },
-   {
-    "text": "本人欄・背景欄（総司令官）",
-    "app": "id:app/biz-realestate",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L57"
    },
    {
     "text": "本人欄（総司令官。失格級＝未記入）",
@@ -2504,42 +2469,86 @@
     "source": "reports/ops/status-20261121.md L48"
    },
    {
+    "text": "本人欄・背景欄（総司令官）",
+    "app": "id:app/biz-idea",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L51"
+   },
+   {
     "text": "XKT003・XKT025 の利用条件の問い合わせ（判断待ち）",
     "app": "id:app/biz-realestate-rn1",
     "due": null,
     "source": "reports/ops/status-20261121.md L60"
    },
    {
-    "text": "フォームから提出（総司令官）",
+    "text": "登録（総司令官）",
+    "app": "id:app/biz-realestate",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L57"
+   },
+   {
+    "text": "申請者欄・体制欄の記入（総司令官）",
     "app": "id:app/sat-a",
     "due": null,
     "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "本人欄3か所（総司令官。失格級＝未記入。PR #27 は記入と憲兵の再監査までマージ保留）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
    },
    {
     "text": "登録（総司令官）",
     "app": "id:app/biz-idea",
     "due": null,
     "source": "reports/ops/status-20261121.md L51"
-   }
-  ],
-  "未抽出": [
+   },
    {
-    "text": "本応募フォームの案内を待つ（11月末、事務局から）",
+    "text": "本応募の記入（総司令官）",
     "app": "id:app/odpt",
     "due": null,
     "source": "reports/ops/status-20261121.md L15"
    },
    {
-    "text": "応募フォーム各項目の下書き（PR #12 で作業中）",
-    "app": "id:app/odpt",
+    "text": "本応募でアプリケーションに変えるか（判断待ち。対象自治体の選定が前提。11/30 以降に工兵が試作する予定）",
+    "app": "id:app/udc-moritsuchi",
     "due": null,
-    "source": "reports/ops/status-20261121.md L70"
+    "source": "reports/ops/status-20261121.md L19"
    },
    {
-    "text": "実データでの精度確認",
+    "text": "提出（総司令官）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   }
+  ],
+  "engineer": [
+   {
+    "text": "軽微4件（部隊）",
     "app": "id:app/odpt-teiji",
     "due": null,
     "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "SAR の変位と後方散乱の書き方を揃える小修正（部隊。B を選んだ場合）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   },
+   {
+    "text": "要修正3（必須データ「GTFSデータリポジトリ」の扱い）の要項確認（部隊）",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   }
+  ],
+  "未抽出": [
+   {
+    "text": "地理院の住所検索 API の利用条件",
+    "app": "id:app/biz-business-nb",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L48"
    },
    {
     "text": "提案書（docx）がない",
@@ -2548,10 +2557,10 @@
     "source": "reports/ops/status-20261121.md L34"
    },
    {
-    "text": "本文の「現在地の案内」「住民の投稿」はアプリにない（本文を直すかアプリに足すか）",
-    "app": "id:app/biz-idea-in1",
+    "text": "実データでの精度確認",
+    "app": "id:app/odpt-teiji",
     "due": null,
-    "source": "reports/ops/status-20261121.md L54"
+    "source": "reports/ops/status-20261121.md L73"
    },
    {
     "text": "ライブラリ欄の字数上限（395/400、フォームで確認）",
@@ -2560,7 +2569,19 @@
     "source": "reports/ops/status-20261121.md L60"
    },
    {
-    "text": "地理院の住所検索 API の利用条件",
+    "text": "本文の「現在地の案内」「住民の投稿」はアプリにない（本文を直すかアプリに足すか）",
+    "app": "id:app/biz-idea-in1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L54"
+   },
+   {
+    "text": "応募フォーム各項目の下書き（PR #12 で作業中）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   },
+   {
+    "text": "北部拠点の受け入れ確認",
     "app": "id:app/biz-business-nb",
     "due": null,
     "source": "reports/ops/status-20261121.md L48"
@@ -2572,30 +2593,10 @@
     "source": "reports/ops/status-20261121.md L39"
    },
    {
-    "text": "北部拠点の受け入れ確認",
-    "app": "id:app/biz-business-nb",
+    "text": "本応募フォームの案内を待つ（11月末、事務局から）",
+    "app": "id:app/odpt",
     "due": null,
-    "source": "reports/ops/status-20261121.md L48"
-   }
-  ],
-  "engineer": [
-   {
-    "text": "SAR の変位と後方散乱の書き方を揃える小修正（部隊。B を選んだ場合）",
-    "app": "id:app/sat-b",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L31"
-   },
-   {
-    "text": "軽微4件（部隊）",
-    "app": "id:app/odpt-teiji",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L73"
-   },
-   {
-    "text": "要修正3（必須データ「GTFSデータリポジトリ」の扱い）の要項確認（部隊）",
-    "app": "id:app/odpt-teiji",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L73"
+    "source": "reports/ops/status-20261121.md L15"
    }
   ],
   "aggressor": [
@@ -2608,12 +2609,6 @@
   ],
   "military-police": [
    {
-    "text": "憲兵・デザイン審査が未実施（ODPT の2件だけ別 PR に分ければ衛星の監査と切り離して入れられる）",
-    "app": null,
-    "due": null,
-    "source": "reports/ops/status-20261121.md L78"
-   },
-   {
     "text": "憲兵・デザイン審査が未実施",
     "app": null,
     "due": null,
@@ -2624,6 +2619,12 @@
     "app": "id:app/odpt",
     "due": null,
     "source": "reports/ops/status-20261121.md L70"
+   },
+   {
+    "text": "憲兵・デザイン審査が未実施（ODPT の2件だけ別 PR に分ければ衛星の監査と切り離して入れられる）",
+    "app": null,
+    "due": null,
+    "source": "reports/ops/status-20261121.md L78"
    }
   ]
  },
@@ -2641,11 +2642,6 @@
     "id:app/sat-yabu": "クマ対策：藪払いの優先地図（提案yabu コンセプトデモ）"
    },
    "submissions": [
-    {
-     "submission": "id:sub/sat-yabu/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
-    },
     {
      "submission": "id:sub/sat-yabu/satellite-2026",
      "contest": "id:contest/satellite-2026",
@@ -2674,11 +2670,6 @@
     "id:app/biz-solar-guard": "太陽光発電所の盗難対策マップ（イチBizアワード2026・新案・最小デモ・茨城県）"
    },
    "submissions": [
-    {
-     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
-     "contest": "id:contest/ichibiz-2026",
-     "division": "id:division/ichibiz-2026/idea"
-    },
     {
      "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
      "contest": "id:contest/ichibiz-2026",
@@ -2729,11 +2720,6 @@
      "division": "id:division/ichibiz-2026/idea"
     },
     {
-     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
-     "contest": "id:contest/ichibiz-2026",
-     "division": "id:division/ichibiz-2026/idea"
-    },
-    {
      "submission": "id:sub/odpt/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
@@ -2746,16 +2732,6 @@
     {
      "submission": "id:sub/odpt-kodure/odpt-2026",
      "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kodure/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
      "division": null
     },
     {
@@ -2777,11 +2753,6 @@
      "submission": "id:sub/biz-business-nb/ichibiz-2026/business",
      "contest": "id:contest/ichibiz-2026",
      "division": "id:division/ichibiz-2026/business"
-    },
-    {
-     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
-     "contest": "id:contest/ichibiz-2026",
-     "division": "id:division/ichibiz-2026/idea"
     },
     {
      "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
@@ -2824,11 +2795,6 @@
      "submission": "id:sub/odpt-kodure/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kodure/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
     }
    ],
    "label": "国土地理院 住所検索・地名検索 API",
@@ -2844,11 +2810,6 @@
      "submission": "id:sub/biz-realestate/ichibiz-2026/realestate",
      "contest": "id:contest/ichibiz-2026",
      "division": "id:division/ichibiz-2026/realestate"
-    },
-    {
-     "submission": "id:sub/odpt-kansui/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
     },
     {
      "submission": "id:sub/odpt-kansui/odpt-2026",
@@ -2924,11 +2885,6 @@
      "division": "id:division/ichibiz-2026/idea"
     },
     {
-     "submission": "id:sub/biz-solar-guard/ichibiz-2026/idea",
-     "contest": "id:contest/ichibiz-2026",
-     "division": "id:division/ichibiz-2026/idea"
-    },
-    {
      "submission": "id:sub/odpt/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
@@ -2940,16 +2896,6 @@
     },
     {
      "submission": "id:sub/odpt-kankou/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kankou/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kansui/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
     },
@@ -2975,16 +2921,6 @@
     },
     {
      "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/sat-yabu/satellite-2026",
      "contest": "id:contest/satellite-2026",
      "division": null
     },
@@ -3082,11 +3018,6 @@
      "submission": "id:sub/odpt-kodure/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kodure/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
     }
    ],
    "label": "国土数値情報 鉄道駅 N02",
@@ -3097,11 +3028,6 @@
     "id:app/odpt-kankou": "観光バスを避ける生活ルート（odpt-2026 比較用の案）"
    },
    "submissions": [
-    {
-     "submission": "id:sub/odpt-kankou/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
     {
      "submission": "id:sub/odpt-kankou/odpt-2026",
      "contest": "id:contest/odpt-2026",
@@ -3120,11 +3046,6 @@
      "submission": "id:sub/odpt-kodure/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kodure/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
     }
    ],
    "label": "国土数値情報 都市公園 P13",
@@ -3135,11 +3056,6 @@
     "id:app/odpt-kodure": "子連れお出かけ診断（東京都区部）"
    },
    "submissions": [
-    {
-     "submission": "id:sub/odpt-kodure/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
     {
      "submission": "id:sub/odpt-kodure/odpt-2026",
      "contest": "id:contest/odpt-2026",
@@ -3169,11 +3085,6 @@
     {
      "submission": "id:sub/odpt/udc-2026",
      "contest": "id:contest/udc-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kankou/odpt-2026",
-     "contest": "id:contest/odpt-2026",
      "division": null
     },
     {
@@ -3216,22 +3127,7 @@
      "division": null
     },
     {
-     "submission": "id:sub/odpt-kankou/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
      "submission": "id:sub/odpt-kansui/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kansui/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kodure/odpt-2026",
      "contest": "id:contest/odpt-2026",
      "division": null
     },
@@ -3258,16 +3154,6 @@
     {
      "submission": "id:sub/odpt-kansui/odpt-2026",
      "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/odpt-kansui/odpt-2026",
-     "contest": "id:contest/odpt-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/sat-yabu/satellite-2026",
-     "contest": "id:contest/satellite-2026",
      "division": null
     },
     {
@@ -3336,11 +3222,6 @@
      "submission": "id:sub/sat-sugi/satellite-2026",
      "contest": "id:contest/satellite-2026",
      "division": null
-    },
-    {
-     "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
     }
    ],
    "label": "風向（sat-sugi 固有）",
@@ -3351,11 +3232,6 @@
     "id:app/sat-sugi": "案 sugi デモ: スギ植え替えの優先地（風下の人が多い人工林から）"
    },
    "submissions": [
-    {
-     "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
-    },
     {
      "submission": "id:sub/sat-sugi/satellite-2026",
      "contest": "id:contest/satellite-2026",
@@ -3373,16 +3249,6 @@
    "submissions": [
     {
      "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/sat-sugi/satellite-2026",
-     "contest": "id:contest/satellite-2026",
-     "division": null
-    },
-    {
-     "submission": "id:sub/sat-yabu/satellite-2026",
      "contest": "id:contest/satellite-2026",
      "division": null
     },
@@ -3453,17 +3319,17 @@
   }
  },
  "unitLabels": {
-  "engineer": "工兵",
-  "intelligence": "情報部",
-  "recon": "偵察隊",
   "operations-research": "作戦研究班",
   "design-reviewer": "デザイン審査班",
+  "recon": "偵察隊",
+  "intelligence": "情報部",
   "maintainer": "整備隊",
   "commander": "総司令官",
-  "commander-aide": "総司令官補佐",
-  "aggressor": "アグレッサー",
-  "military-police": "憲兵",
   "relocator": "陣地転換隊",
+  "engineer": "工兵",
+  "commander-aide": "総司令官補佐",
+  "military-police": "憲兵",
+  "aggressor": "アグレッサー",
   "未抽出": "担当 未抽出"
  }
 }

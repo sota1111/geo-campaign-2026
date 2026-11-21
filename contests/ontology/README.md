@@ -65,6 +65,7 @@ classDiagram
 何にでも `hasSource`（→ `Source`）が付く。
 
 - **人間の関門**は `HumanGate` 型（案の選定・提出・registry 変更・ページ削除）で、担当は `Commander` のみ。SHACL が「部隊が決めている」を違反にする（`doctrine/roe.md`）。標準の流れの段階 `Stage` にも `isHumanGate` があり、「案の選定」「提出」は総司令官。
+- **代理マージ**（総司令官 2026-11-21 の指示「代理マージは承認なしで行うこと」。CLAUDE.md 成果の返し方 4）: PR のマージは `HumanGate` ではなく、総司令官補佐（`commander-aide`）が行う委任の作業 `MergeDelegation`（`Task` の下位。`forPullRequest`・`delegationRule`）。規則は `DelegationRule`（`rule/merge-delegation`。委任先・`approvalRequired=false`・条件＝CI・憲兵の失格級なし・デザインの重大なし・registry 承認・ページ削除なし。出典は総司令官の指示と CLAUDE.md）。SHACL が担当を総司令官補佐に限る。開いている PR があれば `next_actions` が補佐の次の作業に出し（Q10）、総司令官の判断待ちには入れない。ページ削除を含む PR だけは従来どおり `PageDeletion`（総司令官の許可）。
 - **Submission** は「案 × コンペ（× 部門・テーマ）」。止めているもの `Blocker` は、監査の指摘（失格級・要修正）、提出文に残る【本人加筆】等の穴、データ条件の未確認、提出文の欠落。
 - 重大度は `Severity` の個体: 監査 `sev-disqualifying`（失格級）`sev-fix`（要修正）`sev-minor`（軽微）、デザイン `dsev-major`（重大）`dsev-medium`（中）`dsev-minor`（軽微）。デザイン審査（`reports/design/`）の取り込みは未着手。
 
