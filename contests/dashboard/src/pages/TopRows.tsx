@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Popover as PopoverPrimitive } from 'radix-ui'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { NEW_PLAN_LABEL, isNewPlan, getApp, CONTESTS, type AppMeta, type ContestId } from '@/apps/registry'
@@ -35,6 +35,28 @@ export function useTier(): 0 | 1 | 2 | 3 {
   if (w < 1280) return 3
   return h < 830 ? 0 : h < 960 ? 1 : 2
 }
+/**
+ * 可変部分（判断待ち・次にやること・ルールなど）が入れ物より高いとき、段階（lv）を上げて行数・件数を減らしていく。
+ * フォントや描画の違いがあっても、行の途中で切れず、下端のボタンが必ず見える。画面の大きさ・中身・Web フォント読み込みが変わると 0 からやり直す。
+ */
+function useFitLevel(deps: string, max = 9) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { w, h } = useViewport()
+  const [fontTick, setFontTick] = useState(0)
+  useEffect(() => {
+    document.fonts?.ready.then(() => setFontTick((n) => n + 1))
+  }, [])
+  const key = `${w}x${h}|${fontTick}|${deps}`
+  const [st, setSt] = useState({ key, lv: 0 })
+  const lv = st.key === key ? st.lv : 0
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (el.scrollHeight > el.clientHeight + 0.5 && lv < max) setSt({ key, lv: lv + 1 })
+  })
+  return { ref, lv }
+}
+
 const pick = <T,>(tier: number, a: T, b: T, c: T, all: T): T => (tier === 0 ? a : tier === 1 ? b : tier === 2 ? c : all)
 const SHORT_WORD: Record<string, string> = { '◎': 'このコンペ向け', '○': '出せる', '△': '条件付き', '×': '出せない', '？': '要確認' }
 
@@ -59,12 +81,18 @@ export function ContestTopCard({
   const nexts = st.next.filter((n) => !n.decision)
   const next = nexts[0] ?? st.next[0]
   const tier = useTier()
-  const nAsks = pick(tier, 1, 2, 3, 99)
-  const nNext = pick(tier, 1, 1, 2, 99)
-  const nRules = pick(tier, 1, 1, 2, 99)
-  const nLimits = pick(tier, 1, 1, 2, 99)
-  const nCrit = pick(tier, 1, 2, 2, 2)
-  const cl = tier <= 1 ? 'line-clamp-1' : 'line-clamp-2'
+  const { ref: regRef, lv } = useFitLevel(`${info.id}|${tier}|${selected}|${appsForContest(targets, info.id).length}`)
+  const dec = (n: number) => (n >= 99 ? n : Math.max(1, n - Math.min(lv, 2)))
+  const nAsks = dec(pick(tier, 1, 2, 3, 99))
+  const nNext = dec(pick(tier, 1, 1, 2, 99))
+  const nRules = dec(pick(tier, 1, 1, 2, 99))
+  const nLimits = dec(pick(tier, 1, 1, 2, 99))
+  const nCrit = tier < 3 && lv >= 3 ? 1 : pick(tier, 1, 2, 2, 2)
+  const cl = tier <= 1 || (tier < 3 && lv >= 3) ? 'line-clamp-1' : 'line-clamp-2'
+  const hideSummary = tier < 3 && lv >= 7
+  const hideLimits = tier < 3 && lv >= 5
+  const hideRules = tier < 3 && lv >= 6
+  const hideCrit = tier < 3 && lv >= 8
   const more = otherNextCount(info.id)
   const cols = columnsOf(info.id)
   const chosen = appsForContest(targets, info.id)
@@ -87,7 +115,8 @@ export function ContestTopCard({
         </span>
         {selected && <span className="shrink-0 rounded bg-white px-1.5 text-xs text-slate-900" data-testid="selected-tag"><span aria-hidden>✓ </span>選択中</span>}
       </h3>
-      <div className={`flex min-h-0 flex-1 flex-col ${tier === 0 ? 'gap-0.5' : 'gap-1'} overflow-hidden bg-white/70 px-2.5 py-1 text-[0.8125rem] leading-snug`}>
+      <div className="flex min-h-0 flex-1 flex-col bg-white/70 px-2.5 py-1 text-[0.8125rem] leading-snug">
+      <div ref={regRef} className={`flex min-h-0 flex-1 flex-col ${tier === 0 ? 'gap-0.5' : 'gap-1'} overflow-hidden`}>
         <p className="flex flex-wrap items-center gap-x-2" data-testid="row-deadline">
           <span>
             次の締切 <span className="font-bold">{nd.text}</span>
@@ -135,25 +164,26 @@ export function ContestTopCard({
           <span className="font-bold">このコンペに出すアプリ {chosen.length}件</span>
           <span className="text-slate-800">{chosen.length ? `：${chosen.map(appName).join('、')}` : '（未選択）'}</span>
         </p>
-        <p className={`shrink-0 ${tier === 0 ? 'line-clamp-1' : 'line-clamp-2'}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>
-        <p className={`shrink-0 ${nCrit === 1 ? 'line-clamp-1' : 'line-clamp-2'}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
+        {!hideSummary && <p className={`shrink-0 ${tier === 0 || (tier < 3 && lv >= 4) ? 'line-clamp-1' : 'line-clamp-2'}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>}
+        {!hideCrit && <p className={`shrink-0 ${nCrit === 1 ? 'line-clamp-1' : 'line-clamp-2'}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
           <span className="font-bold">審査基準 </span>{info.criteria.map((c) => c.name).join('・')}
-        </p>
-        <Sec
+        </p>}
+        {!hideRules && <Sec
           testid="card-rules"
           label={<span className="font-bold">主なルール</span>}
           extra={info.keyRules.length > nRules ? `（ほか${info.keyRules.length - nRules}件）` : ''}
           items={info.keyRules.slice(0, nRules).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（要確認）'}{r.text}</> }))}
           clamp={cl}
-        />
-        <Sec
+        />}
+        {!hideLimits && <Sec
           testid="card-limits"
           label={<span className="font-bold">提出可能数</span>}
           extra={info.limits.length > nLimits ? `（ほか${info.limits.length - nLimits}件）` : ''}
           items={info.limits.slice(0, nLimits).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（未確認）'}{r.text}</> }))}
           clamp={cl}
-        />
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+        />}
+      </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 pt-1">
           <button
             type="button"
             aria-pressed={selected}
@@ -175,7 +205,7 @@ export function ContestTopCard({
         </div>
       </div>
       <details className="border-t bg-white/70 px-2.5 text-xs" data-testid={`facts-${info.id}`}>
-        <summary className="min-h-7 cursor-pointer truncate py-1 font-bold" title="判断待ち・次にやること・概要・審査基準・ルール・提出可能数の全文">全文と出典を開く</summary>
+        <summary className="min-h-7 cursor-pointer truncate py-1 font-bold" title="判断待ち・次にやること・概要・審査基準・ルール・提出可能数の全文">全文と出典（概要・審査基準・ルール・提出可能数）</summary>
         {/* 開いた中身はカードの中だけでスクロールする（カードの高さは変えず、アプリの行を押し出さない） */}
         <dl className="absolute inset-x-0 bottom-7 top-7 z-10 space-y-2 overflow-y-auto border-y-2 border-slate-400 bg-white px-2.5 py-2" tabIndex={0} aria-label={`${contest.name}の詳細（この枠の中でスクロールします）`}>
           <div>
@@ -317,7 +347,9 @@ export function AppFitCard({
   const info = CONTEST_INFO.find((c) => c.id === a.contest)!
   const nd = plan ? { at: plan.deadlineAt, text: plan.deadlineLabel } : nextDeadline(info)
   const left = plan ? [...plan.todo.map((t) => t.text), ...(plan.decisions ?? [])] : []
-  const nLeft = pick(tier, 1, 2, 3, 99)
+  const { ref: regRef, lv } = useFitLevel(`${a.id}|${tier}|${chosen.length}|${contest}`)
+  const nLeft = tier < 3 && lv >= 5 ? 0 : (() => { const n = pick(tier, 1, 2, 3, 99); return n >= 99 ? n : Math.max(1, n - Math.min(lv, 2)) })()
+  const tight = tier < 3 && lv >= 3
   const chosenCols = FIT_COLUMNS.filter((c) => chosen.includes(c.id))
   return (
     <li
@@ -338,6 +370,7 @@ export function AppFitCard({
         )}
         {plan && <span className={`rounded border px-1 ${plan.intent === '提出予定' ? 'border-slate-700 font-bold' : 'border-dashed border-slate-500'}`}>{plan.intent}</span>}
       </div>
+      <div ref={regRef} className={`flex min-h-0 flex-1 flex-col overflow-hidden ${tier === 0 ? 'gap-0.5' : 'gap-1'}`}>
       <h3 className="line-clamp-2 shrink-0 text-base font-bold leading-tight text-slate-900">
         <a
           href={appUrl(a.id)}
@@ -349,7 +382,7 @@ export function AppFitCard({
           {missing && <span className="sr-only">（未収録の案内）</span>}
         </a>
       </h3>
-      <p className={`shrink-0 ${pick(tier, 'line-clamp-2', 'line-clamp-2', 'line-clamp-3', '')} text-slate-800`} title={a.purpose} data-testid="card-purpose">
+      <p className={`shrink-0 ${tight ? 'line-clamp-1' : pick(tier, 'line-clamp-2', 'line-clamp-2', 'line-clamp-3', '')} text-slate-800`} title={a.purpose} data-testid="card-purpose">
         <span className="font-bold">目的 </span>{a.purpose}
       </p>
       <ul className="grid shrink-0 grid-cols-1 gap-y-0.5 min-[1100px]:grid-cols-2 min-[1100px]:gap-x-1" aria-label="出せるコンペ（◎このコンペ向け ○出せる △条件付き ×出せない ？要確認）">
@@ -374,7 +407,7 @@ export function AppFitCard({
           )
         })}
       </ul>
-      <p data-testid={`chosen-${a.id}`} className="line-clamp-2 shrink-0" title={chosenCols.map(columnShort).join('、')}>
+      <p data-testid={`chosen-${a.id}`} className={`${tight ? 'line-clamp-1' : 'line-clamp-2'} shrink-0`} title={chosenCols.map(columnShort).join('、')}>
         <span className="font-bold"><span aria-hidden>✓ </span>選んだ提出先 {chosenCols.length}件</span>
         <span className="text-slate-800">{chosenCols.length ? `：${chosenCols.map(columnShort).join('、')}` : '（未選択）'}</span>
       </p>
@@ -395,7 +428,8 @@ export function AppFitCard({
           </ul>
         )}
       </div>
-      <div className="mt-auto flex shrink-0 flex-wrap items-center gap-1">
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
         <a
           href={appUrl(a.id)}
           data-testid={`open-app-${a.id}`}

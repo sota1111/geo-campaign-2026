@@ -34,7 +34,29 @@ const sizes = [[1513, 784], [1280, 800], [1440, 900], [1920, 1080], [1024, 768],
 const out = []
 const measure = `(() => {
   // カードの中で、カードの下端より下にはみ出して切れている子要素（ボタン・見出し・段落）を数える
-  const clipped = (card) => [...card.querySelectorAll('p, li, button, a, h3, dt')].filter((el) => !el.closest('details') && el.getBoundingClientRect().height > 0 && el.getBoundingClientRect().bottom > card.getBoundingClientRect().bottom + 1).length
+  const isClamp = (e) => getComputedStyle(e).webkitLineClamp !== 'none'
+  const clipped = (card) => {
+    const cb = card.getBoundingClientRect().bottom - 2
+    let n = 0
+    for (const el of card.querySelectorAll('*')) {
+      if (el.closest('details') || el.closest('svg')) continue
+      const r = el.getBoundingClientRect()
+      if (r.height === 0 || r.width === 0) continue
+      if (r.bottom > cb) { n++; if (window.__dbg) console.log('x'); (window.__why ||= []).push(card.dataset.contestCard + ':' + el.tagName + ':' + (el.textContent||'').slice(0,20) + ':' + Math.round(r.bottom - cb)); continue }
+      // overflow:hidden の入れ物（line-clamp 以外）の下端を超えている子 = 隠れている
+      for (let p = el.parentElement; p && p !== card.parentElement; p = p.parentElement) {
+        const cs = getComputedStyle(p)
+        if (cs.overflowY !== 'visible' && !isClamp(p) && r.bottom > p.getBoundingClientRect().bottom + 0.5) { n++; (window.__why ||= []).push('anc:' + card.dataset.contestCard + ':' + el.tagName + ':' + (el.textContent||'').slice(0,25) + ':' + p.tagName + '.' + String(p.className).slice(0,30)); break }
+      }
+      // 行の途中で切れる（line-clamp 以外で scrollHeight > clientHeight）
+    }
+    for (const el of card.querySelectorAll('*')) {
+      if (el.closest('details')) continue
+      const cs = getComputedStyle(el)
+      if (cs.overflowY !== 'visible' && !isClamp(el) && el.scrollHeight > el.clientHeight + 1) { n++; (window.__why ||= []).push('sh:' + card.dataset.contestCard + ':' + el.tagName + ':' + String(el.className).slice(0,50) + ':' + el.scrollHeight + '/' + el.clientHeight) }
+    }
+    return n
+  }
   const cc = [...document.querySelectorAll('[data-contest-card]')]
   const ac = [...document.querySelector('[data-testid=app-row]').children]
   const row = document.querySelector('[data-testid=app-row]'), box = row.getBoundingClientRect()
@@ -55,7 +77,17 @@ for (const [w, h] of sizes) {
   await sleep(200)
   await send('Page.navigate', { url: base })
   await sleep(2500)
+  // 負荷試験: STRESS=1.35 なら全部の行の高さを 1.35 倍にし（実機の Chrome とフォントが違う状況の代わり）、画面を1px 動かして再計算させる
+  if (process.env.STRESS) {
+    await ev(`(() => { const st = document.createElement('style'); st.textContent = '#root *:not(svg):not(path){line-height:${process.env.STRESS} !important}'; document.head.appendChild(st) })()`)
+    await send('Emulation.setDeviceMetricsOverride', { width: w + 1, height: h, deviceScaleFactor: 1, mobile: w < 600 })
+    await sleep(300)
+    await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 600 })
+    await sleep(800)
+  }
+  await ev('window.__why = []')
   const m = await ev(measure)
+  if (process.env.WHY) console.log('why', w, JSON.stringify(await ev('window.__why')))
   out.push({ size: `${w}x${h}`, ...m, noVScroll: m.scrollHeight <= m.innerHeight, noHScroll: m.scrollWidth <= m.innerWidth })
   await shot(`top-${w}x${h}.png`)
   if (w === 1513) {
@@ -69,6 +101,7 @@ for (const [w, h] of sizes) {
   }
 }
 console.log(JSON.stringify(out))
+console.log('why', JSON.stringify(await ev('window.__why')))
 for (const o of out) console.log(JSON.stringify(o))
 ws.close(); chrome.kill()
 try { fs.rmSync(prof, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }) } catch { /* ignore */ }
