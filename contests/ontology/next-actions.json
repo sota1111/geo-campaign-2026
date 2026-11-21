@@ -369,7 +369,7 @@
      "severity": null,
      "certainty": null,
      "label": "提出文が未作成: sat-sugi → satellite-2026",
-     "source": "reports/command/merge-20261121.md",
+     "source": "reports/command/merge-20261121.md 提出文なしの記載",
      "owner": "engineer",
      "action": "提出文の作成"
     }
@@ -411,7 +411,7 @@
      "severity": null,
      "certainty": null,
      "label": "提出文が未作成: sat-yabu → satellite-2026",
-     "source": "reports/command/merge-20261121.md",
+     "source": "reports/command/merge-20261121.md 提出文なしの記載",
      "owner": "engineer",
      "action": "提出文の作成"
     }
@@ -1280,7 +1280,7 @@
      "severity": null,
      "certainty": null,
      "label": "提出文が未作成: odpt-kankou → odpt-2026",
-     "source": "reports/command/merge-20261121.md",
+     "source": "reports/command/merge-20261121.md 提出文なしの記載",
      "owner": "engineer",
      "action": "提出文の作成"
     },
@@ -1331,7 +1331,7 @@
      "severity": null,
      "certainty": null,
      "label": "提出文が未作成: odpt-kansui → odpt-2026",
-     "source": "reports/command/merge-20261121.md",
+     "source": "reports/command/merge-20261121.md 提出文なしの記載",
      "owner": "engineer",
      "action": "提出文の作成"
     }
@@ -1839,7 +1839,7 @@
     "submission": "id:sub/sat-sugi/satellite-2026",
     "action": "提出文の作成: 提出文が未作成: sat-sugi → satellite-2026",
     "why": "MissingDeliverable（規則による割当）",
-    "source": "reports/command/merge-20261121.md"
+    "source": "reports/command/merge-20261121.md 提出文なしの記載"
    },
    {
     "due": "2026-11-30T12:00:00+09:00",
@@ -1847,7 +1847,7 @@
     "submission": "id:sub/sat-yabu/satellite-2026",
     "action": "提出文の作成: 提出文が未作成: sat-yabu → satellite-2026",
     "why": "MissingDeliverable（規則による割当）",
-    "source": "reports/command/merge-20261121.md"
+    "source": "reports/command/merge-20261121.md 提出文なしの記載"
    },
    {
     "due": "2026-11-30T20:00:00+09:00",
@@ -2007,7 +2007,7 @@
     "submission": "id:sub/odpt-kankou/odpt-2026",
     "action": "提出文の作成: 提出文が未作成: odpt-kankou → odpt-2026",
     "why": "MissingDeliverable（規則による割当）",
-    "source": "reports/command/merge-20261121.md"
+    "source": "reports/command/merge-20261121.md 提出文なしの記載"
    },
    {
     "due": "2027-01-11T23:59:00+09:00",
@@ -2015,7 +2015,7 @@
     "submission": "id:sub/odpt-kansui/odpt-2026",
     "action": "提出文の作成: 提出文が未作成: odpt-kansui → odpt-2026",
     "why": "MissingDeliverable（規則による割当）",
-    "source": "reports/command/merge-20261121.md"
+    "source": "reports/command/merge-20261121.md 提出文なしの記載"
    },
    {
     "due": "2027-01-11T23:59:00+09:00",
@@ -2412,19 +2412,10 @@
     "due": null,
     "app": null,
     "submission": null,
-    "action": "代理マージを判断: PR #46（承認不要。条件: マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情…）",
+    "action": "代理マージを判断: PR #49（承認不要。条件: マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情…）",
     "why": "総司令官の指示（2026-11-21）による委任の作業",
     "source": "CLAUDE.md 成果の返し方 4",
-    "pr": "id:pr/46"
-   },
-   {
-    "due": null,
-    "app": null,
-    "submission": null,
-    "action": "代理マージを判断: PR #47（承認不要。条件: マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情…）",
-    "why": "総司令官の指示（2026-11-21）による委任の作業",
-    "source": "CLAUDE.md 成果の返し方 4",
-    "pr": "id:pr/47"
+    "pr": "id:pr/49"
    }
   ]
  },
@@ -2452,19 +2443,19 @@
      "decision": "id:decision/select/satellite-2026-common2",
      "type": "SelectionDecision",
      "label": "案の選定: satellite-2026/common2（2案）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     },
     {
      "decision": "id:decision/select/satellite-2026-sat-sugi",
      "type": "SelectionDecision",
      "label": "案の選定: satellite-2026/テーマ未決/sat-sugi（テーマ枠が未決）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     },
     {
      "decision": "id:decision/select/satellite-2026-sat-yabu",
      "type": "SelectionDecision",
      "label": "案の選定: satellite-2026/テーマ未決/sat-yabu（テーマ枠が未決）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     }
    ]
   },
@@ -2485,7 +2476,7 @@
      "decision": "id:decision/select/ichibiz-2026-business",
      "type": "SelectionDecision",
      "label": "案の選定: ichibiz-2026/business（2案）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     }
    ]
   },
@@ -2500,13 +2491,13 @@
      "decision": "id:decision/select/ichibiz-2026-idea",
      "type": "SelectionDecision",
      "label": "案の選定: ichibiz-2026/idea（3案）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     },
     {
      "decision": "id:decision/select/ichibiz-2026-realestate",
      "type": "SelectionDecision",
      "label": "案の選定: ichibiz-2026/realestate（3案）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     }
    ]
   },
@@ -2541,7 +2532,7 @@
      "decision": "id:decision/select/odpt-2026",
      "type": "SelectionDecision",
      "label": "案の選定: odpt-2026（5案）",
-     "source": "CLAUDE.md 「標準の流れ」"
+     "source": "CLAUDE.md 「標準の流れ」「案の選定と提出は必ず総司令官に戻す」"
     }
    ]
   },
@@ -2569,70 +2560,10 @@
     "source": "reports/ops/status-20261121.md L82"
    },
    {
-    "text": "本人欄・背景欄（総司令官）",
-    "app": "id:app/biz-realestate",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L57"
-   },
-   {
-    "text": "本人欄（総司令官。失格級＝未記入）",
-    "app": "id:app/biz-business-nb",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L48"
-   },
-   {
-    "text": "同梱データ約4.5MBの承認（判断待ち）",
-    "app": "id:app/biz-realestate-rn1",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L60"
-   },
-   {
-    "text": "申請者欄・体制欄（総司令官）",
-    "app": "id:app/sat-b",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L31"
-   },
-   {
-    "text": "本応募の記入（総司令官）",
-    "app": "id:app/udc-moritsuchi",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L19"
-   },
-   {
-    "text": "東京都「緑のオープンデータ」のライセンス欄をブラウザで確認（部隊からはカタログが 403）（総司令官）",
-    "app": "id:app/odpt-kodure",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L82"
-   },
-   {
-    "text": "本人欄・背景欄（総司令官）",
-    "app": "id:app/biz-idea",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L51"
-   },
-   {
     "text": "XKT003・XKT025 の利用条件の問い合わせ（判断待ち）",
     "app": "id:app/biz-realestate-rn1",
     "due": null,
     "source": "reports/ops/status-20261121.md L60"
-   },
-   {
-    "text": "本人欄（総司令官。憲兵の失格級＝未記入）",
-    "app": "id:app/sat-alpha",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L39"
-   },
-   {
-    "text": "申請者欄・体制欄の記入（総司令官）",
-    "app": "id:app/sat-a",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L28"
-   },
-   {
-    "text": "登録（総司令官）",
-    "app": "id:app/biz-idea",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L51"
    },
    {
     "text": "本応募の記入（総司令官）",
@@ -2641,10 +2572,106 @@
     "source": "reports/ops/status-20261121.md L15"
    },
    {
+    "text": "数週間の連続収集（判断待ち: 場所と担当）",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "フォームから提出（総司令官）",
+    "app": "id:app/sat-a",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "Word での体裁確認（総司令官）",
+    "app": "id:app/sat-a",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L28"
+   },
+   {
+    "text": "申請者欄・体制欄（総司令官）",
+    "app": "id:app/sat-b",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L31"
+   },
+   {
+    "text": "PPT の記入7か所（総司令官）",
+    "app": "id:app/biz-business",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L45"
+   },
+   {
+    "text": "本人欄（総司令官。失格級＝未記入）",
+    "app": "id:app/biz-business-nb",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L48"
+   },
+   {
+    "text": "登録（総司令官）",
+    "app": "id:app/biz-business",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L45"
+   },
+   {
+    "text": "アプリの公開（総司令官）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   },
+   {
     "text": "本人欄3か所（総司令官。失格級＝未記入。PR #27 は記入と憲兵の再監査までマージ保留）",
     "app": "id:app/biz-realestate-rn1",
     "due": null,
     "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "同梱データ約4.5MBの承認（判断待ち）",
+    "app": "id:app/biz-realestate-rn1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "アプリの公開URL（総司令官。本応募に必要）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L15"
+   },
+   {
+    "text": "本人欄・背景欄（総司令官）",
+    "app": "id:app/biz-realestate",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L57"
+   },
+   {
+    "text": "東京都「緑のオープンデータ」のライセンス欄をブラウザで確認（部隊からはカタログが 403）（総司令官）",
+    "app": "id:app/odpt-kodure",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L82"
+   },
+   {
+    "text": "登録（総司令官）",
+    "app": "id:app/biz-realestate",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L57"
+   },
+   {
+    "text": "本応募でアプリケーションに変えるか（判断待ち。対象自治体の選定が前提。11/30 以降に工兵が試作する予定）",
+    "app": "id:app/udc-moritsuchi",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L19"
+   },
+   {
+    "text": "本応募の記入（総司令官）",
+    "app": "id:app/udc-moritsuchi",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L19"
+   },
+   {
+    "text": "本人欄（総司令官。憲兵の失格級＝未記入）",
+    "app": "id:app/sat-alpha",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L39"
    },
    {
     "text": "本人欄（総司令官）",
@@ -2654,15 +2681,9 @@
    },
    {
     "text": "登録（総司令官）",
-    "app": "id:app/biz-realestate",
+    "app": "id:app/biz-idea",
     "due": null,
-    "source": "reports/ops/status-20261121.md L57"
-   },
-   {
-    "text": "フォームから提出（総司令官）",
-    "app": "id:app/sat-a",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L28"
+    "source": "reports/ops/status-20261121.md L51"
    },
    {
     "text": "提出（総司令官）",
@@ -2671,49 +2692,19 @@
     "source": "reports/ops/status-20261121.md L31"
    },
    {
-    "text": "数週間の連続収集（判断待ち: 場所と担当）",
-    "app": "id:app/odpt-teiji",
+    "text": "本人欄・背景欄（総司令官）",
+    "app": "id:app/biz-idea",
     "due": null,
-    "source": "reports/ops/status-20261121.md L73"
+    "source": "reports/ops/status-20261121.md L51"
    },
    {
-    "text": "アプリの公開（総司令官）",
-    "app": "id:app/odpt",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L70"
-   },
-   {
-    "text": "本応募でアプリケーションに変えるか（判断待ち。対象自治体の選定が前提。11/30 以降に工兵が試作する予定）",
-    "app": "id:app/udc-moritsuchi",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L19"
-   },
-   {
-    "text": "本人欄・背景欄（総司令官。生成AI条項のため本人の書き換えが必須）",
-    "app": "id:app/biz-business",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L45"
-   },
-   {
-    "text": "Word での体裁確認（総司令官）",
+    "text": "申請者欄・体制欄の記入（総司令官）",
     "app": "id:app/sat-a",
     "due": null,
     "source": "reports/ops/status-20261121.md L28"
    },
    {
-    "text": "アプリの公開URL（総司令官。本応募に必要）",
-    "app": "id:app/odpt",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L15"
-   },
-   {
-    "text": "登録（総司令官）",
-    "app": "id:app/biz-business",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L45"
-   },
-   {
-    "text": "PPT の記入7か所（総司令官）",
+    "text": "本人欄・背景欄（総司令官。生成AI条項のため本人の書き換えが必須）",
     "app": "id:app/biz-business",
     "due": null,
     "source": "reports/ops/status-20261121.md L45"
@@ -2721,16 +2712,10 @@
   ],
   "未抽出": [
    {
-    "text": "ライブラリ欄の字数上限（395/400、フォームで確認）",
-    "app": "id:app/biz-realestate-rn1",
+    "text": "応募フォーム各項目の下書き（PR #12 で作業中）",
+    "app": "id:app/odpt",
     "due": null,
-    "source": "reports/ops/status-20261121.md L60"
-   },
-   {
-    "text": "本文の「現在地の案内」「住民の投稿」はアプリにない（本文を直すかアプリに足すか）",
-    "app": "id:app/biz-idea-in1",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L54"
+    "source": "reports/ops/status-20261121.md L70"
    },
    {
     "text": "地理院の住所検索 API の利用条件",
@@ -2739,28 +2724,10 @@
     "source": "reports/ops/status-20261121.md L48"
    },
    {
-    "text": "提案書（docx）がない",
-    "app": null,
-    "due": null,
-    "source": "reports/ops/status-20261121.md L34"
-   },
-   {
     "text": "市場規模の金額がない",
     "app": "id:app/sat-alpha",
     "due": null,
     "source": "reports/ops/status-20261121.md L39"
-   },
-   {
-    "text": "応募フォーム各項目の下書き（PR #12 で作業中）",
-    "app": "id:app/odpt",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L70"
-   },
-   {
-    "text": "実データでの精度確認",
-    "app": "id:app/odpt-teiji",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L73"
    },
    {
     "text": "本応募フォームの案内を待つ（11月末、事務局から）",
@@ -2769,30 +2736,34 @@
     "source": "reports/ops/status-20261121.md L15"
    },
    {
-    "text": "北部拠点の受け入れ確認",
-    "app": "id:app/biz-business-nb",
-    "due": null,
-    "source": "reports/ops/status-20261121.md L48"
-   }
-  ],
-  "military-police": [
-   {
-    "text": "憲兵・デザイン審査が未実施（ODPT の2件だけ別 PR に分ければ衛星の監査と切り離して入れられる）",
-    "app": null,
-    "due": null,
-    "source": "reports/ops/status-20261121.md L78"
-   },
-   {
-    "text": "憲兵・デザイン審査が未実施",
+    "text": "提案書（docx）がない",
     "app": null,
     "due": null,
     "source": "reports/ops/status-20261121.md L34"
    },
    {
-    "text": "憲兵の監査（未実施）",
-    "app": "id:app/odpt",
+    "text": "ライブラリ欄の字数上限（395/400、フォームで確認）",
+    "app": "id:app/biz-realestate-rn1",
     "due": null,
-    "source": "reports/ops/status-20261121.md L70"
+    "source": "reports/ops/status-20261121.md L60"
+   },
+   {
+    "text": "北部拠点の受け入れ確認",
+    "app": "id:app/biz-business-nb",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L48"
+   },
+   {
+    "text": "実データでの精度確認",
+    "app": "id:app/odpt-teiji",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L73"
+   },
+   {
+    "text": "本文の「現在地の案内」「住民の投稿」はアプリにない（本文を直すかアプリに足すか）",
+    "app": "id:app/biz-idea-in1",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L54"
    }
   ],
   "engineer": [
@@ -2813,6 +2784,26 @@
     "app": "id:app/sat-b",
     "due": null,
     "source": "reports/ops/status-20261121.md L31"
+   }
+  ],
+  "military-police": [
+   {
+    "text": "憲兵の監査（未実施）",
+    "app": "id:app/odpt",
+    "due": null,
+    "source": "reports/ops/status-20261121.md L70"
+   },
+   {
+    "text": "憲兵・デザイン審査が未実施",
+    "app": null,
+    "due": null,
+    "source": "reports/ops/status-20261121.md L34"
+   },
+   {
+    "text": "憲兵・デザイン審査が未実施（ODPT の2件だけ別 PR に分ければ衛星の監査と切り離して入れられる）",
+    "app": null,
+    "due": null,
+    "source": "reports/ops/status-20261121.md L78"
    }
   ],
   "aggressor": [
@@ -3527,17 +3518,17 @@
   }
  },
  "unitLabels": {
-  "engineer": "工兵",
-  "intelligence": "情報部",
-  "design-reviewer": "デザイン審査班",
-  "commander": "総司令官",
-  "operations-research": "作戦研究班",
-  "aggressor": "アグレッサー",
-  "recon": "偵察隊",
   "maintainer": "整備隊",
-  "relocator": "陣地転換隊",
   "military-police": "憲兵",
+  "engineer": "工兵",
+  "commander": "総司令官",
   "commander-aide": "総司令官補佐",
+  "design-reviewer": "デザイン審査班",
+  "relocator": "陣地転換隊",
+  "recon": "偵察隊",
+  "operations-research": "作戦研究班",
+  "intelligence": "情報部",
+  "aggressor": "アグレッサー",
   "未抽出": "担当 未抽出"
  }
 }
