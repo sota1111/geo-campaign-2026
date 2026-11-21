@@ -346,7 +346,7 @@ def to_md(rep, units_label):
         shown = acts[:12]
         for a in shown:
             due = (a["due"] or "締切未抽出")[:16].replace("T", " ")
-            w(f"- [{due}] {a['app'].replace('id:app/', '')}: {a['action'][:110]}")
+            w(f"- [{due}] {(a['app'] or '共通').replace('id:app/', '')}: {a['action'][:110]}")
         if len(acts) > len(shown):
             w(f"- …ほか {len(acts) - len(shown)} 件（JSON に全件）")
     w("")

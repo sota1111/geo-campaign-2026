@@ -254,7 +254,7 @@ def test_ui_json_points_to_graph_nodes(g):
         assert ds in ids and set(v["apps"]) <= ids
     for acts in rep["unitActions"].values():
         for a in acts:
-            assert a["app"] in ids
+            assert a["app"] is None or a["app"] in ids  # 代理マージなど、アプリに結ばない作業は None
 
 
 # ---------------- 代理マージ（総司令官 2026-11-21 の指示）
@@ -267,8 +267,11 @@ def test_merge_delegation_rule_in_graph(g):
     assert "総司令官の指示" in srcs and "CLAUDE.md" in srcs
     cond = str(g.value(rule, C.condition))
     assert "CI" in cond and "registry" in cond and "競合" in cond and "秘密情報" in cond and "ページ削除" in cond
-    assert "失格級・デザイン審査の重大が残っていてもマージはできる" in cond  # 条件から外し、残っていれば記録する
-    assert len(list(g.objects(rule, C.hasSource))) >= 3
+    assert "最新の監査に失格級が残る" in cond and "最新のデザイン審査に重大が残る" in cond  # 現行の SOP
+    note = str(g.value(rule, C.note))
+    assert "PR #46" in note and "確認待ち" in note  # 「失格級・重大は止めない」は注記だけ
+    assert "止めない" not in cond and "マージできる" not in cond
+    assert len(list(g.objects(rule, C.hasSource))) >= 2
 
 
 def test_shacl_rejects_merge_delegation_assigned_to_other(tmp_path):

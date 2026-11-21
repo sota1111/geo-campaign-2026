@@ -37,15 +37,7 @@
    "what": "アプリ×コンペの適合（適合 JSON に行がない）"
   },
   {
-   "node": "id:app/biz-realestate-a4",
-   "what": "アプリ×コンペの適合（適合 JSON に行がない）"
-  },
-  {
    "node": "id:app/sat-a",
-   "what": "使うデータ（README に出典・ライセンス表がなく、registry.ts にも sources がない）"
-  },
-  {
-   "node": "id:app/biz-realestate-a4",
    "what": "使うデータ（README に出典・ライセンス表がなく、registry.ts にも sources がない）"
   },
   {
@@ -104,7 +96,7 @@
  "counts": {
   "units": 10,
   "apps": 20,
-  "fits": 108,
+  "fits": 114,
   "datasets": 34,
   "licenses": 29,
   "submissions": 20,
@@ -121,22 +113,21 @@
   "tasks": 91,
   "open_tasks": 43,
   "decisions_from_status": 11,
-  "escalations": 17,
-  "pull_requests": 45
+  "escalations": 18,
+  "pull_requests": 47
  },
  "notes": [],
  "apps_without_dataset_rows": [
-  "sat-a",
-  "biz-realestate-a4"
+  "sat-a"
  ],
  "status_file": "reports/ops/status-20261121.md",
  "status_asof": "2026-11-21",
- "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）",
- "triples": 10141,
+ "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）",
+ "triples": 10283,
  "meta": {
   "asOf": "2026-11-21",
   "fit_source": "reports/intel/app-contest-fit-20261121.json",
-  "pr_source": "contests/ontology/data/gh-pr-snapshot.json（gh pr list の写し）"
+  "pr_source": "gh pr list --state all（取得時に data/gh-pr-snapshot.json へ保存）"
  },
- "gap_count": 25
+ "gap_count": 23
 }

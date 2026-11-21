@@ -515,8 +515,8 @@ function UnitsTab({ na, ix, select }: { na: NextActions; ix: ReturnType<typeof b
         const rest = acts.slice(8)
         const row = (a: (typeof acts)[number], i: number) => (
           <li key={i}>
-            <button type="button" className="text-left underline" onClick={() => select(a.submission ?? a.app)}>
-              [{fmtDue(a.due)}] {ix.byId.get(a.app)?.label ?? a.app}
+            <button type="button" className="text-left underline" onClick={() => select((a.submission ?? a.app ?? a.pr) as string)}>
+              [{fmtDue(a.due)}] {a.app ? ix.byId.get(a.app)?.label ?? a.app : a.pr ? ix.byId.get(a.pr)?.label ?? a.pr : "共通"}
             </button>
             <span>: {a.action}</span>
           </li>

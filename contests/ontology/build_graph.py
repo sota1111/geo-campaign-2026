@@ -964,9 +964,9 @@ def build(offline=False):
     rule = b.node(ID["rule/merge-delegation"], "DelegationRule", "代理マージの規則（総司令官補佐が承認なしでマージ）")
     g.add((rule, C.delegatedTo, agent("commander-aide")))
     b.add(rule, C.approvalRequired, False)
-    b.add(rule, C.condition, "マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情報の混入・ページ削除を含む（PageDeletion は総司令官の判断）だけ。憲兵の失格級・デザイン審査の重大が残っていてもマージはできるが、残っていれば記録し、提出可能とは報告しない")
+    b.add(rule, C.condition, "マージを止める条件は、CI の必須チェックが通らない・registry の変更に総司令官の承認がない・競合がある・秘密情報の混入・ページ削除を含む（PageDeletion は総司令官の判断）・提出物を含む PR でその戦域の最新の監査に失格級が残る・画面を含む PR で最新のデザイン審査に重大が残る。満たさなければマージしない")
+    b.add(rule, C.note, "注記: 「以降は指示なしでも代理でマージ」（総司令官 2026-11-21）を、失格級・重大が残っていてもマージできる意味にするかは、総司令官本人の確認待ち（PR #46）。確認が取れるまで、現行の SOP（失格級・重大が残ればマージしない）を規則とする")
     b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「代理マージは承認なしで行うこと。Claude.mdやオントロジーに記載すること。」")
-    b.cite(rule, path="総司令官の指示（2026-11-21）", locator="原文「以降は指示なしでも代理でマージを行う仕組みにすること」")
     b.cite(rule, path="CLAUDE.md", locator="成果の返し方 4")
     for p in prs:
         if p["state"] != "OPEN":

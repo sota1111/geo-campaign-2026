@@ -220,6 +220,7 @@ ESCALATION_APPS = {
     "20261121-ontology-graph-unreadable": [],
     "20261121-ontology-figures-design": [],
     "20261121-reinfolib-key-hook": [],
+    "20261121-aide-gate-relaxation": [],
     "20261121-ichibiz-realestate-a4-honnin": ["biz-realestate-a4"],
     "20261121-ichibiz-a4-kouji-kakaku-niju": ["biz-realestate-a4"],
 }

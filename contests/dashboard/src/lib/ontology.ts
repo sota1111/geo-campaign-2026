@@ -36,7 +36,7 @@ export interface SubmissionAction {
   blockerOwners: string[]
   blockers: Blocker[]
 }
-export interface UnitAction { due: string | null; app: string; submission: string | null; action: string; why: string; source: string }
+export interface UnitAction { due: string | null; app: string | null; pr?: string; submission: string | null; action: string; why: string; source: string }
 export interface CommanderDecision { decision: string; type: string; label: string; due: string | null; source: string; includes?: { decision: string; type: string; label: string; source: string }[] }
 export interface DataImpact { apps: Record<string, string>; submissions: { submission: string; contest: string; division: string | null }[]; label: string; why: string | null }
 export interface NextActions {
