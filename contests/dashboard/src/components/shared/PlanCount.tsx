@@ -5,11 +5,12 @@ import { planStateText } from '@/lib/fit'
 function Badge({ state, diff, short }: { state: PlanState; diff: number; short?: boolean }) {
   if (state === 'undecided') return null
   const { mark, word } = planStateText(state, diff)
-  const tone = state === 'match' ? 'text-emerald-900' : state === 'short' ? 'text-amber-950' : 'text-red-900'
+  // 記号ではなく、言葉と枠で区別する（短い形は「あと1件」「予定どおり」「1件多い」）。▲✓ は別の意味に使うので使わない
+  const tone = state === 'match' ? 'border-emerald-800 text-emerald-900' : state === 'short' ? 'border-dashed border-amber-800 text-amber-950' : 'border-red-800 text-red-900'
   return (
-    <span className={`whitespace-nowrap font-bold ${tone}`} data-state={state}>
+    <span className={`whitespace-nowrap rounded border px-1 font-bold ${tone}`} data-state={state}>
       <span aria-hidden>{mark}</span>
-      {short ? word.replace('で予定', '').replace('予定より', '').replace('件', '') : word}
+      {short ? word.replace('で予定', '').replace('予定より', '') : word}
     </span>
   )
 }
