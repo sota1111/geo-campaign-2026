@@ -46,14 +46,32 @@ def blocked_command(cmd: str) -> str | None:
 # contests/**/tools/fetch*.mjs に限る（取得スクリプトはキーを出力しないことをレビューしてから使う）。
 REPO = os.path.realpath(os.environ.get("CLAUDE_PROJECT_DIR") or os.path.join(os.path.dirname(__file__), "..", ".."))
 FETCH_CMD = re.compile(
-    r"""^\s*(?:cd\s+(?P<cd>\S+)\s*&&\s*)?node\s+--env-file=\.env\s+(?P<script>[\w./-]+\.mjs)(?P<args>(?:\s+--?[\w-]+(?:=[\w.:/-]+)?|\s+[\w.:/-]+)*)\s*$"""
+    # 空白はスペースとタブだけ（\s は改行にも一致し、改行で2つ目のコマンドを続けられるため使わない）。
+    # 引数は英数字・_・-・= と、値に限って : / . を許す。
+    r"""^[ \t]*(?:cd[ \t]+(?P<cd>[^ \t\n\r;&|<>`$()]+)[ \t]*&&[ \t]*)?node[ \t]+--env-file=\.env[ \t]+(?P<script>[\w./-]+\.mjs)(?P<args>(?:[ \t]+--?[\w-]+(?:=[\w:/-]+)?|[ \t]+[\w-]+)*)[ \t]*$"""
 )
 FETCH_SCRIPT = re.compile(r"""(?:^|/)contests/(?:[\w.-]+/)+tools/fetch[\w-]*\.mjs$""")
 
 
+def _git_clean_tracked(path: str) -> bool:
+    """スクリプトが git で追跡され、手元で変更されていないこと（レビューできる版だけを動かす）。"""
+    import subprocess
+    d = os.path.dirname(path)
+    try:
+        tracked = subprocess.run(["git", "-C", d, "ls-files", "--error-unmatch", path], capture_output=True, timeout=10).returncode == 0
+        clean = subprocess.run(["git", "-C", d, "diff", "--quiet", "HEAD", "--", path], capture_output=True, timeout=10).returncode == 0
+    except Exception:
+        return False
+    return tracked and clean
+
+
 def allowed_fetch(cmd: str) -> bool:
+    if "\n" in cmd or "\r" in cmd:
+        return False
     m = FETCH_CMD.match(cmd)
     if not m:
+        return False
+    if blocked_command(m.group("args") or ""):  # 引数に秘密ファイル名を含めない
         return False
     base = REPO
     if m.group("cd"):
@@ -65,7 +83,7 @@ def allowed_fetch(cmd: str) -> bool:
     if not (script == REPO or script.startswith(REPO + os.sep)):
         return False
     rel = os.path.relpath(script, REPO).replace(os.sep, "/")
-    return bool(FETCH_SCRIPT.search(rel)) and os.path.isfile(script)
+    return bool(FETCH_SCRIPT.search(rel)) and os.path.isfile(script) and _git_clean_tracked(script)
 
 
 def main() -> int:
