@@ -398,7 +398,7 @@ export function AppFitCard({
     <li
       data-app-card={a.id}
       data-rank={rank}
-      className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/3.7)] ${color.edge} ${chosen.length ? 'border-slate-900 ring-2 ring-slate-900' : isNew ? 'border-slate-500' : 'border-slate-300'}`}
+      className={`relative flex h-full w-72 min-h-0 shrink-0 snap-start flex-col gap-1 p-2 overflow-hidden rounded-lg border-2 border-l-8 bg-white text-[0.8125rem] leading-snug shadow-sm lg:w-[calc((100%-1.5rem)/4)] ${color.edge} ${chosen.length ? 'border-slate-900 ring-2 ring-slate-900' : isNew ? 'border-slate-500' : 'border-slate-300'}`}
       data-chosen={chosen.length ? 'true' : undefined}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 text-xs">
