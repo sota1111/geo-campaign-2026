@@ -16,27 +16,30 @@
 <main>
   <div class="mappane">
     <div id="map" role="application" aria-label="福岡県直方市・鞍手町・北九州市西部の地図。造成地・遊休地の候補を番号つきで表示。地図をクリックするとその地点の確認項目が出る"></div>
-    <details class="layers" id="layers" open>
-      <summary>衛星で見る・災害を重ねる</summary>
-      <fieldset><legend>衛星で見ること（1つ選ぶ）</legend>
-        <label><input type="radio" name="sat" data-layer="lst" checked> 夏の地表面温度<span class="what">地面の熱さ</span></label>
-        <label><input type="radio" name="sat" data-layer="sub"> 地盤の変動<span class="what">地面の上下</span></label>
-        <label><input type="radio" name="sat" data-layer="land"> 土地の状態<span class="what">いま何があるか</span></label>
-        <label><input type="radio" name="sat" data-layer="chg"> 植生→裸地等の変化<span class="what">2020→2026</span></label>
-        <label><input type="radio" name="sat" data-layer="none"> 重ねない</label>
+    <div class="layers" id="layers">
+      <fieldset class="satbar"><legend><span class="sat">衛星</span>で見る</legend>
+        <label title="夏の日中の地面の熱さ（Landsat 9）"><input type="radio" name="sat" data-layer="lst" checked><span>温度</span></label>
+        <label title="地面が年に何 mm 上下したか（干渉SAR）"><input type="radio" name="sat" data-layer="sub"><span>地盤</span></label>
+        <label title="いま何があるか（Sentinel-2）"><input type="radio" name="sat" data-layer="land"><span>土地</span></label>
+        <label title="2020年は植生、2026年は裸地等（Sentinel-2）"><input type="radio" name="sat" data-layer="chg"><span>変化</span></label>
+        <label title="衛星の層を重ねない"><input type="radio" name="sat" data-layer="none"><span>なし</span></label>
       </fieldset>
-      <fieldset><legend>災害・電力（国土数値情報・OSM）</legend>
-        <label><input type="checkbox" data-layer="flood"> 洪水</label>
-        <label><input type="checkbox" data-layer="slide"> 土砂災害</label>
-        <label><input type="checkbox" data-layer="tsunami"> 津波</label>
-        <label><input type="checkbox" data-layer="surge"> 高潮</label>
-        <label><input type="checkbox" data-layer="power"> 変電所・送電線</label>
-      </fieldset>
-    </details>
+      <details class="hzlayers" id="hzlayers"><summary>災害・電力を重ねる</summary>
+        <fieldset><legend>国土数値情報・OSM</legend>
+          <label><input type="checkbox" data-layer="flood"> 洪水</label>
+          <label><input type="checkbox" data-layer="slide"> 土砂災害</label>
+          <label><input type="checkbox" data-layer="tsunami"> 津波</label>
+          <label><input type="checkbox" data-layer="surge"> 高潮</label>
+          <label><input type="checkbox" data-layer="power"> 変電所・送電線</label>
+        </fieldset>
+      </details>
+    </div>
     <button type="button" id="btn-home" class="home">全体に戻す</button>
-    <details class="legendbox" id="legendbox" open><summary>凡例</summary><div id="legend" class="legend" aria-live="polite"></div></details>
+    <details class="legendbox" id="legendbox" open><summary>凡例<span class="lgsum">（造＝造成地・遊＝遊休地）</span></summary><div id="legend" class="legend" aria-live="polite"></div></details>
     <p class="loading" id="loading" role="status">地図を読み込んでいます…（「候補地」の一覧は先に使えます）</p>
+    <p class="tilewarn" id="tilewarn" hidden>背景地図を読めません（候補地・層・確認項目は使えます）</p>
     <p class="credit" id="credit"></p>
+    <button type="button" id="jump" class="jump" hidden></button>
   </div>
   <aside class="side" aria-label="選んだ地点の確認項目">
     <section id="checks" aria-live="polite">
@@ -47,15 +50,15 @@
       <div class="ttl"><h2 id="target-title">確認項目の一覧</h2><button type="button" id="btn-pin" class="pin">＋比べる</button></div>
       <p id="target-sub" class="sub"></p>
       <p id="impact" class="impact"></p>
-      <p class="satline"><span class="sat">衛星</span>が担う：地盤の変動／地表面温度（冷却）／土地の状態と変化</p>
+      <p class="satline" title="押すと地図がその層に切り替わる"><span class="sat">衛星</span>で見る▸<button type="button" data-sat="sub">地盤＝地面が年に何mm上下したか</button><button type="button" data-sat="lst">温度＝夏の日中の地面の熱さ</button><button type="button" data-sat="land">土地＝いま何があるか</button><button type="button" data-sat="chg">変化＝2020年から植生→裸地等</button></p>
       <ol id="rows" class="rows"></ol>
     </section>
     <section id="cmp" class="cmp-box" aria-live="polite"></section>
     <div class="why" id="why"><b>防災・都市課題にどうつながるか</b>
       <ul>
-        <li>災害に重ならない所なら、災害時もデータと通信の拠点を残せる可能性（重なるなら、かさ上げ・止水の費用を見込む）</li>
-        <li>造成地・遊休地を使えば森林・農地を拓く量を減らせる可能性／地盤は衛星で傾向→気になる所だけ地上で調べる</li>
-        <li>排熱の活用は近くの熱需要の確認から（この画面に熱需要のデータはない）</li>
+        <li>災害に重ならない所 → 災害時もデータ・通信の拠点を残せる可能性</li>
+        <li>造成地・遊休地 → 森林・農地を拓く量を減らせる可能性</li>
+        <li>排熱の活用 → 近くの熱需要の確認から（データなし）</li>
       </ul>
     </div>
     <div class="foot">

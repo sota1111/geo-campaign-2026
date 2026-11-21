@@ -4,10 +4,12 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import net from 'node:net';
 const [base, outDir] = process.argv.slice(2);
 fs.mkdirSync(outDir, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const port = 9300 + Math.floor(Math.random() * 300);
+// 空いている番号を OS に選ばせる（他の検査の Chrome と取り違えないように）
+const port = await new Promise((r) => { const srv = net.createServer(); srv.listen(0, '127.0.0.1', () => { const p = srv.address().port; srv.close(() => r(p)); }); });
 const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-'));
 const proxy = process.env.https_proxy || process.env.HTTPS_PROXY;
 const cargs = ['--headless=new', '--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader', `--remote-debugging-port=${port}`, `--user-data-dir=${prof}`];
@@ -53,8 +55,12 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   ok(label + ': 出典・注意は既定で畳まれ、ⓘで開く', await ev(`(()=>{const b=document.querySelector('#rows .row button.info');const d=document.getElementById(b.getAttribute('aria-controls'));const was=d.hidden;b.click();const r=was&&!d.hidden;b.click();return r})()`));
   ok(label + ': 防災・都市課題の観点が畳まれずに見える', await ev(`(()=>{const w=document.querySelector('#why');return w.tagName!=='DETAILS'&&w.getBoundingClientRect().height>40&&/防災/.test(w.textContent)})()`));
   ok(label + ': 防災への一言が結果の上に常に出る', await ev(`/→/.test(document.querySelector('#impact').textContent)`));
-  ok(label + ': 比べる表が最初から 2 件並び、確認すべき点か差の行がある', await ev(`(()=>{const t=document.querySelector('#cmp table.cmp');return !!t&&t.querySelectorAll('thead th').length===3&&t.querySelectorAll('tbody tr').length===8})()`));
+  ok(label + ': 比べる表が最初から 2 件並び、既定は差のある行・地盤・温度だけ、「全項目」で 8 行', await ev(`(()=>{const q=()=>document.querySelector('#cmp table.cmp');const t=q();const n=t.querySelectorAll('tbody tr').length;const ok1=t.querySelectorAll('thead th').length===3&&n>=2&&n<8&&/地盤の変動/.test(t.textContent)&&/地表面温度/.test(t.textContent);document.querySelector('#cmp .cmp-all').click();const ok2=q().querySelectorAll('tbody tr').length===8;document.querySelector('#cmp .cmp-all').click();return ok1&&ok2&&q().querySelectorAll('tbody tr').length===n})()`));
+  ok(label + ': 衛星で見ることが平易な一言で並び、押すと地図の層が切り替わる', await ev(`(()=>{const b=document.querySelector('.satline button[data-sat="sub"]');b.click();const m=DCApp.state.map;const r=m.getLayoutProperty('img-sub','visibility')==='visible'&&m.getLayoutProperty('img-lst','visibility')==='none'&&document.querySelector('#layers input[data-layer="sub"]').checked&&/目立つ動き/.test(document.querySelector('#legend').textContent);document.querySelector('.satline button[data-sat="lst"]').click();return r&&/年に何mm上下/.test(document.querySelector('.satline').textContent)})()`));
+  ok(label + ': 衛星の層の切替が地図の上に常に見える', await ev(`(()=>{const r=document.querySelector('.satbar').getBoundingClientRect();return r.height>0&&r.width>0&&document.querySelectorAll('.satbar input').length===5})()`));
+  ok(label + ': 例として表示中であることが分かる', await ev(`/例として/.test(document.querySelector('#target-sub').textContent)`));
   ok(label + ': 候補地の名前の意味（造＝造成地・遊＝遊休地）と該当数の凡例がある', await ev(`/造成地の候補/.test(document.querySelector('#legend').textContent)&&/遊休地の候補/.test(document.querySelector('#legend').textContent)&&!!document.querySelector('.cand-mk .hzd')`));
+  if (!mobile) ok(label + ': 限界・出典のボタンがパネル内に見える', await ev(`(()=>{const s=document.querySelector('.side').getBoundingClientRect();const b=document.querySelector('#btn-data').getBoundingClientRect();return b.bottom<=s.bottom+1&&b.top>=s.top})()`));
   if (!mobile) ok(label + ': 確認項目 8 つがパネル内でスクロールなしに見える', await ev(`(()=>{const s=document.querySelector('.side').getBoundingClientRect();const r=[...document.querySelectorAll('#rows .row')];return r[r.length-1].getBoundingClientRect().bottom<=s.bottom})()`));
   await shot(label + '_1_first.png');
   // 候補地を選ぶ
@@ -62,12 +68,15 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   const opts = await ev(`[...document.querySelectorAll('#pick option')].filter(o=>!o.disabled).map(o=>o.value)`);
   await ev(`(()=>{const s=document.querySelector('#pick');s.value=${JSON.stringify(opts[Math.min(opts.length - 1, 30)])};s.dispatchEvent(new Event('change'))})()`); await sleep(900);
   ok(label + ': 選んだ候補地が比べる表に「選択中」の列として自動で入る', await ev(`(()=>{const c=document.querySelector('#cmp thead th.cur');return !!c&&/選択中/.test(c.textContent)&&c.textContent.includes(DCApp.state.target.id)&&document.querySelectorAll('#cmp thead th').length===4})()`));
+  ok(label + ': 土砂に重なる所の助言に「かさ上げ」が出ない（災害の種類ごとの助言）', await ev(`(()=>{const L=DCApp.L,D=DCApp.DATA;const c=D.candidates.find(c=>{const r=L.buildChecks(D,DCApp.LAYERS,{lon:c.lon,lat:c.lat,cells:L.cellsInRing(D.grid,c.ring)});return r.find(x=>x.key==='slide').status==='hit'&&r.find(x=>x.key==='flood').status!=='hit'});if(!c)return true;const s=document.querySelector('#pick');const v=s.value;s.value=c.id;s.dispatchEvent(new Event('change'));const t=document.querySelector('#impact').textContent;s.value=v;s.dispatchEvent(new Event('change'));return /斜面/.test(t)&&!/かさ上げ/.test(t)})()`)); await sleep(500);
+  ok(label + ': 選択中の列は（仮）と示し、ボタンは「固定」', await ev(`/（仮）/.test(document.querySelector('#cmp thead th.cur').textContent)&&/固定/.test(document.querySelector('#btn-pin').textContent)`));
   await ev(`document.querySelector('#btn-pin').click()`);
   ok(label + ': ＋比べるで 3 件目が並ぶ', await ev(`document.querySelectorAll('#cmp thead th').length===4`));
   ok(label + ': 候補地を選ぶと見出しと確認項目が変わる', (await ev(`document.querySelector('#target-title').textContent`)) !== first && (await ev(`document.querySelectorAll('#rows .row').length`)) === 8);
   ok(label + ': 選んだ候補地の輪郭が地図にある', await ev(`DCApp.state.map.getSource('sel')._data.geometry?.type==='Polygon'`));
   // 地図をクリックして地点を指す
   await ev(`window.scrollTo(0,0)`); await sleep(500); // スマホは選択後に結果へ寄せるので、地図の位置に戻してから指す
+  if (mobile) ok(label + ': スマホは結果が画面外の時、下端に選んだ所と災害の該当の帯が出る', await ev(`(()=>{const b=document.querySelector('#jump');return !b.hidden&&b.textContent.includes(DCApp.state.target.id)&&b.getBoundingClientRect().height>=44})()`));
   const pt = await ev(`(()=>{const m=DCApp.state.map;const p=m.project(m.getCenter());const r=m.getContainer().getBoundingClientRect();return {x:r.left+p.x+(r.width>600?110:70),y:r.top+p.y-70}})()`);
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pt.x, y: pt.y, button: 'left', clickCount: 1 }); await sleep(700);
