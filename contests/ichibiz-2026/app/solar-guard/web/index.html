@@ -17,8 +17,8 @@
     </details>
   </div>
   <nav id="tabs" role="tablist" aria-label="画面の切り替え">
-    <button type="button" role="tab" id="tab-map" data-tab="map" aria-selected="true" aria-label="公開の集計地図"><span class="pc">公開の</span>集計地図</button>
-    <button type="button" role="tab" id="tab-diag" data-tab="diag" aria-selected="false" aria-label="自分の設備を診断"><span class="pc">自分の</span>設備を診断</button>
+    <button type="button" role="tab" id="tab-map" data-tab="map" aria-selected="true" aria-label="公開の集計地図">集計地図</button>
+    <button type="button" role="tab" id="tab-diag" data-tab="diag" aria-selected="false" aria-label="自分の設備を診断">設備を診断</button>
     <button type="button" role="tab" id="tab-reality" data-tab="reality" aria-selected="false">盗難の実態</button>
     <button type="button" role="tab" id="tab-about" data-tab="about" aria-selected="false" aria-label="出典・前提・限界">出典<span class="pc">・前提</span>・限界</button>
   </nav>
@@ -30,8 +30,8 @@
     <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map">
       <div class="box key" role="note">
         <p class="big"><b>色が濃いほど、県警の被害実績（設備あたりの件数）が多い地区です。</b></p>
-        <p class="note">人目の少なさ（人口密度）を小さく加えた<b>仮の目安で、被害の予測ではなく</b>、公開情報から作ったもの。メッシュを押すと色の理由が出ます。個別の設備は出さず、設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。</p>
-        <button id="go-diag" type="button" class="primary">自分の設備を診断する</button>
+        <p class="note">仮の目安で<b>被害の予測ではなく</b>、設備<span id="kmin">3</span>件未満などのメッシュは色を付けずに隠します。メッシュを押すと理由が出て、その場所で診断できます。</p>
+        <button id="go-diag" type="button" class="primary">設備を診断する</button>
       </div>
       <div class="box" id="trend" role="note"></div>
       <details class="box" id="det-basis">
@@ -68,7 +68,7 @@
         <div class="row">
           <label for="in-muni">市町村</label>
           <select id="in-muni"><option value="">選ぶ</option></select>
-          <span class="note">または<b>地図をクリック</b>（約5kmメッシュで診断）</span>
+          <span class="note"><span class="pc">または<b>右の地図をクリック</b>（約5kmメッシュ）</span><span class="sp">または集計地図のメッシュから「この場所で診断する」</span></span>
         </div>
         <details id="det-ll"><summary>緯度・経度で入れる</summary>
           <div class="row">
@@ -82,11 +82,8 @@
         <p class="note" id="cls-note"></p>
       </div>
       <div class="box" id="box-cond">
-        <h2><span class="step">2</span>現場の条件 <span class="sub">（資料が「盗まれやすい」とする条件）</span></h2>
+        <h2><span class="step">2</span>現場の条件と対策 <span class="sub">（当てはまる方を押す。もう一度押すと「不明」に戻る）</span></h2>
         <div id="conds"></div>
-      </div>
-      <div class="box" id="box-check">
-        <h2><span class="step">3</span>いまの対策 <span class="sub">（★は色に影響）</span></h2>
         <div id="checklist"></div>
       </div>
       <details class="box" id="box-detail">
@@ -119,7 +116,7 @@
     <div id="legend"></div>
   </section>
 </main>
-<footer id="credit">出典: 資源エネルギー庁 再エネ電子申請サイト 事業計画認定情報、総務省統計局 e-Stat 国勢調査2020、茨城県警察、国土地理院タイルを<b>編集・加工して作成</b>（国が作成したものではありません）。詳しくは「出典・前提・限界」。</footer>
+<footer id="credit">出典: 資源エネルギー庁 再エネ認定情報、e-Stat 国勢調査2020、茨城県警察、地理院タイルを<b>編集・加工して作成</b>（国が作成したものではありません）<span class="pc">。詳しくは「出典・前提・限界」</span></footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
 <script src="lib.js"></script>

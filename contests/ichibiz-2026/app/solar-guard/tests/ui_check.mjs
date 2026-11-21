@@ -143,7 +143,8 @@ async function run(label, w, h, mobile) {
   if (sc1 !== sc0 + 1) problems.push(label + ': 条件1つ分（+1）上がらない ' + sc0 + '→' + sc1);
   res = await c.ev('document.getElementById("diag-result").textContent');
   if (!/この色は確定です|上がる可能性あり/.test(res) || !res.includes('外から見えにくい')) problems.push(label + ': 回答後に色と理由が出ない: ' + res.slice(0, 200));
-  await click(c, '#conds .cd-item:nth-child(2) .seg button[data-v="unknown"]');
+  await click(c, '#conds .cd-item:nth-child(2) .seg button[data-v="yes"]'); // もう一度押すと「不明」に戻る
+  if ((await c.ev('SgApp.STATE.diag.cond.hidden')) !== 'unknown') problems.push(label + ': 選んだ回答をもう一度押しても不明に戻らない');
   // 出典・加工の明記が初期画面（地図タブ）からも見える（憲兵 L5）
   await click(c, '#tab-map');
   const cr = await c.ev('(function(){var r=document.getElementById("credit").getBoundingClientRect();return {t:document.getElementById("credit").innerText,top:r.top,h:window.innerHeight,bottom:r.bottom};})()');
@@ -151,15 +152,15 @@ async function run(label, w, h, mobile) {
   await click(c, '#tab-diag');
   await click(c, '#ctl-class button:nth-child(1)'); // 低圧
   await click(c, '#checklist .cl-item .seg button[data-v="yes"]');
-  await click(c, '.cl-group + .cl-item + .cl-item .seg button[data-v="no"]');
+  await click(c, '#checklist .seg[data-id="fix_cable"] button[data-v="no"]');
   await sleep(200);
   res = await c.ev('document.getElementById("diag-result").textContent');
   const top = await c.ev('Array.prototype.map.call(document.querySelectorAll("#diag-result .top3 li"),function(li){return li.textContent})');
   if (!top[0] || !top[0].includes('ケーブルを短い間隔で固定する') || !top[0].includes('未実施') || top.some((t) => t.includes('転がし配管・むき出し'))) problems.push(label + ': 回答が「まず取る対策」に反映されない: ' + JSON.stringify(top));
   if ((await c.ev('document.querySelectorAll("#diag-result .top3 a").length')) !== 3) problems.push(label + ': まず取る対策に出典がない');
-  if (!res.includes('並べ方')) problems.push(label + ': 対策の並べ方の規則が書かれていない');
+  if (!res.includes('優先の基準')) problems.push(label + ': 対策の優先の基準が書かれていない');
   // 回答欄を下までスクロールしても、結果が見える（PC: 結果のカードを固定。スマホ: 上端に要約）
-  await c.ev('document.getElementById("box-check").scrollIntoView({block:"end"})');
+  await c.ev('document.getElementById("box-cond").scrollIntoView({block:"end"})');
   await sleep(300);
   const stick = await c.ev(mobile ? '(function(){var m=document.getElementById("diag-mini"),r=m.getBoundingClientRect();return {ok:getComputedStyle(m).display!=="none"&&r.top>=0&&r.top<5,t:m.textContent};})()' : '(function(){var r=document.getElementById("box-result").getBoundingClientRect();return {ok:r.top>=0&&r.top<200,t:r.top};})()');
   if (!stick.ok) problems.push(label + ': 回答欄の位置で結果が見えない ' + JSON.stringify(stick));
@@ -167,7 +168,7 @@ async function run(label, w, h, mobile) {
   await click(c, '#ctl-class button:nth-child(1)');
   await c.ev('window.scrollTo(0,0);document.getElementById("panel").scrollTo(0,0)');
   await shot(c, `${label}-2-diag.png`, false);
-  await c.ev('document.getElementById("box-check").scrollIntoView({block:"end"})');
+  await c.ev('document.getElementById("box-cond").scrollIntoView({block:"end"})');
   await shot(c, `${label}-2b-diag-result.png`, false);
   await c.ev('window.scrollTo(0,0);document.getElementById("panel").scrollTo(0,0)');
   // 範囲外・不正入力
