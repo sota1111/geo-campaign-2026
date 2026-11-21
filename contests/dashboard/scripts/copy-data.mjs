@@ -75,6 +75,15 @@ const EMBEDS = {
   'biz-realestate-rn1': { src: 'ichibiz-2026/app/realestate-rn1/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'udc-aed': { src: 'udc-2026/app/aed-night', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
   'odpt-teiji': { src: 'odpt-2026/app-teiji/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  // ---- 審査待ちの案（元のソースが、憲兵監査前の PR にだけある）。ソースが無いビルドでは含めず、画面に「PR #xx で審査待ち」と出す。
+  //      PR がマージされれば、次のビルドで自動的に含まれる。ソースのある checkout で見るときは CONTESTS_ROOT を指す。
+  //      optional: データ等、無くてもよいもの（子連れお出かけ診断は、利用条件の確認中で行き先データをブランチから外してある）
+  'sat-yabu': { pending: 'PR #36', src: 'satellite-2026/app/proposal-yabu', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data', 'vendor'] },
+  'sat-sugi': { pending: 'PR #36', src: 'satellite-2026/app/proposal-sugi', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data', 'vendor'] },
+  'odpt-kankou': { pending: 'PR #36', src: 'odpt-2026/app-kankou/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'odpt-kansui': { pending: 'PR #36', src: 'odpt-2026/app-kansui/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
+  'odpt-kodure': { pending: 'PR #19', src: 'odpt-2026/app-kodure/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'], optional: ['data'] },
+  'biz-solar-guard': { pending: 'PR #18', src: 'ichibiz-2026/app/solar-guard/web', files: ['index.html', 'app.js', 'lib.js', 'style.css', 'data'] },
 }
 const vendorOut = path.join(root, 'public', 'vendor', 'maplibre-gl')
 fs.mkdirSync(vendorOut, { recursive: true })
@@ -82,15 +91,24 @@ for (const f of ['maplibre-gl.js', 'maplibre-gl.css']) {
   fs.copyFileSync(path.join(root, 'node_modules', 'maplibre-gl', 'dist', f), path.join(vendorOut, f))
 }
 let embedCount = 0
+/** 画面が「このビルドに含まれているか」を知るための一覧（public/embedded/availability.json） */
+const availability = {}
 for (const [id, def] of Object.entries(EMBEDS)) {
   const srcDir = path.join(contests, def.src)
-  if (!fs.existsSync(srcDir)) throw new Error(`新しい案の元アプリが見つかりません: ${srcDir}（別 checkout にある場合は CONTESTS_ROOT=<その contests/> を指定）`)
   const outDir = path.join(root, 'public', 'embedded', id)
   fs.rmSync(outDir, { recursive: true, force: true })
+  if (!fs.existsSync(srcDir) && def.pending) {
+    availability[id] = false
+    console.log(`copy-data: ${id} は元のソースがないため含めません（${def.pending} で審査待ち。CONTESTS_ROOT でソースのある checkout を指すと含まれます）`)
+    continue
+  }
+  if (!fs.existsSync(srcDir)) throw new Error(`新しい案の元アプリが見つかりません: ${srcDir}（別 checkout にある場合は CONTESTS_ROOT=<その contests/> を指定）`)
+  availability[id] = true
   fs.mkdirSync(outDir, { recursive: true })
   for (const f of def.files) {
     const from = path.join(srcDir, f)
     const to = path.join(outDir, f)
+    if (def.optional?.includes(f) && !fs.existsSync(from)) continue
     if (f === 'index.html') {
       let html = fs.readFileSync(from, 'utf8')
       html = html
@@ -105,6 +123,8 @@ for (const [id, def] of Object.entries(EMBEDS)) {
     embedCount++
   }
 }
+fs.mkdirSync(path.join(root, 'public', 'embedded'), { recursive: true })
+fs.writeFileSync(path.join(root, 'public', 'embedded', 'availability.json'), JSON.stringify(availability))
 console.log(`copy-data: ${embedCount} items -> public/embedded/<id>/（新しい案の静的版）`)
 
 // ---- 提出文のみの案（IN1）: ポータルのカードから読めるよう、提出文を .txt にして public/submission/<id>/ に置く ----

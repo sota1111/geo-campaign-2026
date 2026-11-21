@@ -1,5 +1,6 @@
 import { DeadlineChip, Remaining } from '@/components/shared/Remaining'
-import { type ContestId } from '@/apps/registry'
+import { getApp, type ContestId } from '@/apps/registry'
+import { appUrl } from '@/lib/data'
 import { CONTEST_INFO } from '@/apps/contests-info'
 import { PROGRESS_AS_OF, plansByContest, type Owner, type PlanProgress, type TodoItem } from '@/data/progress'
 import { CONTEST_STATUS, crossItems } from '@/data/status'
@@ -77,14 +78,14 @@ function DecisionList({ contest }: { contest: ContestId }) {
 }
 
 /** 各コンペの詳細の最上段: 提出までの状況 */
-export function ContestStatusBox({ contest }: { contest: ContestId }) {
+export function ContestStatusBox({ contest, hideGap }: { contest: ContestId; hideGap?: boolean }) {
   const info = CONTEST_INFO.find((c) => c.id === contest)
   const st = CONTEST_STATUS[contest]
   if (!info || !st) return null
   return (
     <section
       aria-label="提出までの状況"
-      className="rounded-lg border-2 border-slate-700 bg-card p-3"
+      className="rounded-lg bg-card p-1"
       data-testid={`contest-status-${contest}`}
     >
       <h3 className="text-base font-bold">
@@ -102,11 +103,12 @@ export function ContestStatusBox({ contest }: { contest: ContestId }) {
           <span aria-hidden>✓ </span>
           {st.done}
         </dd>
-        <dt className="font-bold">提出可能か</dt>
-        <dd className="font-bold" data-testid="contest-gap">
-          <span aria-hidden>▲ </span>
-          {st.gap}
-        </dd>
+        {!hideGap && (
+          <>
+            <dt className="font-bold">提出可能か</dt>
+            <dd className="font-bold" data-testid="contest-gap">{st.gap}</dd>
+          </>
+        )}
         <dt className="font-bold">判断待ち</dt>
         <dd>
           <DecisionList contest={contest} />
@@ -154,6 +156,16 @@ function PlanCard({ p }: { p: PlanProgress }) {
     <article className="rounded-lg border bg-card p-3" data-testid={`plan-progress-${p.id}`}>
       <header className="space-y-0.5">
         <h4 className="text-sm font-bold">{p.name}</h4>
+        {(p.appIds ?? (p.appId ? [p.appId] : [])).length > 0 && (
+          <p className="text-xs">
+            アプリ:{' '}
+            {(p.appIds ?? (p.appId ? [p.appId] : [])).map((id) => (
+              <a key={id} href={appUrl(id)} className="mr-2 font-medium text-primary underline underline-offset-2">
+                {getApp(id)?.name}
+              </a>
+            ))}
+          </p>
+        )}
         <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
           <span className={`rounded px-1.5 py-0.5 font-bold ${plan === '新しい案' ? 'border border-dashed border-slate-600' : 'border border-slate-600'}`} data-testid="plan-kind">{plan}</span>
           <span className={`rounded px-1.5 py-0.5 font-bold ${INTENT_CLS[p.intent]}`} data-testid="plan-intent">
@@ -224,19 +236,19 @@ function PlanCard({ p }: { p: PlanProgress }) {
 }
 
 /** コンペのタブ: 提出までの状況、その下に案ごとの要約（詳細は開いて見る） */
-export function ContestProgress({ contest }: { contest: ContestId }) {
+export function ContestProgress({ contest, hideGap }: { contest: ContestId; hideGap?: boolean }) {
   const plans = plansByContest(contest)
   if (plans.length === 0) return null
   const active = plans.filter((p) => p.intent !== '出さない')
   const out = plans.filter((p) => p.intent === '出さない')
   return (
     <div className="space-y-2">
-      <ContestStatusBox contest={contest} />
-      <section aria-label="案ごとのチェックリスト" className="space-y-1.5" data-testid={`contest-progress-${contest}`}>
-        <h3 className="text-sm font-bold">
-          案ごとの進み具合
-          <span className="ml-2 text-xs font-normal text-muted-foreground">✓ 済　□ 残り　？ 判断待ち・要確認（各案の「開いて詳細を見る」で一覧）</span>
-        </h3>
+      <ContestStatusBox contest={contest} hideGap={hideGap} />
+      <details className="space-y-1.5" data-testid={`contest-progress-${contest}`}>
+        <summary className="cursor-pointer text-sm font-bold">
+          案ごとの進み具合・チェックリスト（{active.length}案）
+          <span className="ml-2 text-xs font-normal text-muted-foreground">✓ 済　□ 残り　？ 判断待ち・要確認</span>
+        </summary>
         <div className="grid gap-2 lg:grid-cols-2">
           {active.map((p) => (
             <PlanCard key={p.id} p={p} />
@@ -245,7 +257,7 @@ export function ContestProgress({ contest }: { contest: ContestId }) {
         {out.map((p) => (
           <DecidedOutRow key={p.id} p={p} />
         ))}
-      </section>
+      </details>
     </div>
   )
 }

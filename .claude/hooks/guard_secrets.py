@@ -39,6 +39,53 @@ def blocked_command(cmd: str) -> str | None:
     return None
 
 
+# 例外（2026-11-21 総司令官の許可: 「.env は読まないが、名前を使って API を実行するのは許可」）。
+# .env の中身を読む・表示するのではなく、node に環境変数として渡してデータ取得スクリプトを動かす形だけを通す。
+#   [cd <このリポジトリ> && ] node --env-file=.env <contests/ 配下の tools/fetch*.mjs> [--オプション …]
+# パイプ・リダイレクト・コマンド置換・複数コマンドは不可。スクリプトはリポジトリ内（worktree を含む）の
+# contests/**/tools/fetch*.mjs に限る（取得スクリプトはキーを出力しないことをレビューしてから使う）。
+REPO = os.path.realpath(os.environ.get("CLAUDE_PROJECT_DIR") or os.path.join(os.path.dirname(__file__), "..", ".."))
+FETCH_CMD = re.compile(
+    # 空白はスペースとタブだけ（\s は改行にも一致し、改行で2つ目のコマンドを続けられるため使わない）。
+    # 引数は英数字・_・-・= と、値に限って : / . を許す。
+    r"""^[ \t]*(?:cd[ \t]+(?P<cd>[^ \t\n\r;&|<>`$()]+)[ \t]*&&[ \t]*)?node[ \t]+--env-file=\.env[ \t]+(?P<script>[\w./-]+\.mjs)(?P<args>(?:[ \t]+--?[\w-]+(?:=[\w:/-]+)?|[ \t]+[\w-]+)*)[ \t]*$"""
+)
+FETCH_SCRIPT = re.compile(r"""(?:^|/)contests/(?:[\w.-]+/)+tools/fetch[\w-]*\.mjs$""")
+
+
+def _git_clean_tracked(path: str) -> bool:
+    """スクリプトが git で追跡され、手元で変更されていないこと（レビューできる版だけを動かす）。"""
+    import subprocess
+    d = os.path.dirname(path)
+    try:
+        tracked = subprocess.run(["git", "-C", d, "ls-files", "--error-unmatch", path], capture_output=True, timeout=10).returncode == 0
+        clean = subprocess.run(["git", "-C", d, "diff", "--quiet", "HEAD", "--", path], capture_output=True, timeout=10).returncode == 0
+    except Exception:
+        return False
+    return tracked and clean
+
+
+def allowed_fetch(cmd: str) -> bool:
+    if "\n" in cmd or "\r" in cmd:
+        return False
+    m = FETCH_CMD.match(cmd)
+    if not m:
+        return False
+    if blocked_command(m.group("args") or ""):  # 引数に秘密ファイル名を含めない
+        return False
+    base = REPO
+    if m.group("cd"):
+        cd = os.path.realpath(m.group("cd"))
+        if cd != REPO:
+            return False
+        base = cd
+    script = os.path.realpath(os.path.join(base, m.group("script")))
+    if not (script == REPO or script.startswith(REPO + os.sep)):
+        return False
+    rel = os.path.relpath(script, REPO).replace(os.sep, "/")
+    return bool(FETCH_SCRIPT.search(rel)) and os.path.isfile(script) and _git_clean_tracked(script)
+
+
 def main() -> int:
     try:
         data = json.load(sys.stdin)
@@ -48,7 +95,10 @@ def main() -> int:
     tool = data.get("tool_name", "")
     ti = data.get("tool_input", {}) or {}
     if tool == "Bash":
-        hit = blocked_command(ti.get("command", "") or "")
+        cmd = ti.get("command", "") or ""
+        hit = blocked_command(cmd)
+        if hit and allowed_fetch(cmd):
+            return 0
         if hit:
             print(f"交戦規定違反: 秘密情報（{hit}）に触れるコマンドは禁止です。.env.example は読めます。", file=sys.stderr)
             return 2

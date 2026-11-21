@@ -142,9 +142,9 @@ function StepList({ steps, onPick }: { steps: Steps; onPick?: () => void }) {
 }
 
 /** デスクトップ（md 以上）の左サイドバー。手順が未登録なら何も出さない。手順リストはこの中でスクロールする */
-export function StepsSidebar({ appName }: { appName?: string }) {
+export function StepsSidebar({ appName, open = true }: { appName?: string; open?: boolean }) {
   const { steps, description, layoutActive } = useRegisteredSteps()
-  if (!steps.length) return null
+  if (!steps.length || !open) return null
   return (
     <aside
       aria-label="進め方"
