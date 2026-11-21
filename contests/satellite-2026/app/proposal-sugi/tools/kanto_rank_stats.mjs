@@ -23,6 +23,11 @@ for (const R of K.RANK_RADII) {
   const mat = (i) => (age === 21 ? D.cells.n21[i] : D.cells.n26[i]) * K.CELL_HA;
   const yr = V9.years.map((y, j) => K.spearman(V9.sites.map((s) => s.byYear[j]), V9.sites.map(site)));
   console.log(`  rho 9年平均 ${fx(K.spearman(V9.sites.map((s) => s.mean9), V9.sites.map(site)))} 回帰係数 ${fx(K.spearman(V9.sites.map((s) => s.coef), V9.sites.map(site)))} 各年 ${yr.map(fx).join(' ')} 人口なし(9年平均) ${fx(K.spearman(V9.sites.map((s) => s.mean9), V9.sites.map((s) => K.haWithin(D, s.lon, s.lat, R, mat))))}`);
+  { // 2026年の累積飛散数（画面の renderVerify と同じ）との照合: 点数・区分1の面積・26年生以上の面積
+    const cum = D.verify.tokyo.sites.map((s) => s.cum), ts = D.verify.tokyo.sites;
+    const c1 = (i) => (cls[i] === 1 ? D.cells.n[i] * K.CELL_HA : 0);
+    console.log(`  rho 2026年累積 点数 ${K.spearman(cum, ts.map(site)).toFixed(4)} 区分1の面積 ${K.spearman(cum, ts.map((s) => K.haWithin(D, s.lon, s.lat, R, c1))).toFixed(4)} 26年生以上の面積 ${fx(K.spearman(cum, ts.map((s) => K.haWithin(D, s.lon, s.lat, R, mat))))}`);
+  }
   if (R === R0) {
     const top = D.munis.map((m, i) => ({ n: m[0] + '(' + D.meta.prefs[m[1]] + ')', v: bs.byMuni[i] })).sort((a, b) => b.v[1] - a.v[1]).slice(0, 15);
     console.log('  上位10%の面積が大きい市町村:', top.map((t) => `${t.n} ${Math.round(t.v[1])}ha`).join('、'));

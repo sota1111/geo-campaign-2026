@@ -68,14 +68,14 @@
     const fm = (v) => v.toFixed(2);
     const mono = t['高'].dens != null && t['中'].dens != null && t['低'].dens != null && t['高'].dens > t['中'].dens && t['中'].dens > t['低'].dens;
     const per = (p) => HB.val[p + '|near500'].auc;
-    const beat = (x) => (x.S > x.base ? '上回る' : x.S < x.base ? '下回る' : '同じ');
-    return '<p class="saved"><b>結果（そのまま掲載）：</b>検証範囲全体では、論文ベースの判定 S の AUC は ' + fm(u.S) + '、人家からの距離だけの基準は ' + fm(u.base) + ' で、S は基準を' + beat(u) + '。人家から500m以内に限ると、S は ' + fm(a.S) + '、基準は ' + fm(a.base) + ' で、S は基準を' + beat(a) + '（2009〜2013年度 ' + fm(per('first').S) + ' 対 ' + fm(per('first').base) + '、2014〜2018年度 ' + fm(per('second').S) + ' 対 ' + fm(per('second').base) + '、2010年度を除く ' + fm(per('all_no2010').S) + ' 対 ' + fm(per('all_no2010').base) + '）。500m以内の目撃密度は 高 ' + dens(t['高']) + '、中 ' + dens(t['中']) + '、低 ' + dens(t['低']) + ' 件/km² で、' + (mono ? '高・中・低の順に高い' : '高・中・低の順にはなっていない') + '。AUC は 0.5 が当てずっぽう、1 が完全に当たる値。</p>';
+    const beat = (x) => (Math.abs(x.S - x.base) < 0.02 ? 'とほぼ同じ（差0.02未満）' : x.S > x.base ? 'を上回る' : 'を下回る');
+    return '<p class="saved"><b>結果（そのまま掲載）：</b>検証範囲全体では、論文ベースの判定 S の AUC は ' + fm(u.S) + '、人家からの距離だけの基準は ' + fm(u.base) + ' で、S は基準' + beat(u) + '。人家から500m以内に限ると、S は ' + fm(a.S) + '、基準は ' + fm(a.base) + ' で、S は基準' + beat(a) + '（2009〜2013年度 ' + fm(per('first').S) + ' 対 ' + fm(per('first').base) + '、2014〜2018年度 ' + fm(per('second').S) + ' 対 ' + fm(per('second').base) + '、2010年度を除く ' + fm(per('all_no2010').S) + ' 対 ' + fm(per('all_no2010').base) + '）。500m以内の目撃密度は 高 ' + dens(t['高']) + '、中 ' + dens(t['中']) + '、低 ' + dens(t['低']) + ' 件/km² で、' + (mono ? '高・中・低の順に高い' : '高・中・低の順にはなっていない') + '。AUC は 0.5 が当てずっぽう、1 が完全に当たる値。</p>';
   }
   function renderValidation() {
     const el = $('#validation-body');
     if (!HB) { el.innerHTML = '<p>検証データを読み込めませんでした。</p>'; return; }
     const m = HB.meta;
-    el.innerHTML = '<p>判定は論文の数値だけで作り、<b>目撃データで調整していません</b>（目撃は当てはめではなく答え合わせにだけ使用）。検証範囲は、地図の範囲より広い丹後〜福知山の一部（東経 ' + m.val_bbox[0] + '〜' + m.val_bbox[2] + '、北緯 ' + m.val_bbox[1] + '〜' + m.val_bbox[3] + '）で、100m四方の ' + m.n_cells_val.toLocaleString() + ' 区画、目撃 ' + m.n_sights_val.toLocaleString() + ' 件（2009〜2018年度）。区画ごとに「目撃があったか」と判定値を比べます。</p>' +
+    el.innerHTML = '<p>判定のうち、林縁・川の部分は論文の数値、集落・市街地の係数（各0.5）は<b>仮置き</b>です。どちらも<b>目撃データで調整していません</b>（目撃は当てはめではなく答え合わせにだけ使用）。検証範囲は、地図の範囲より広い丹後〜福知山の一部（東経 ' + m.val_bbox[0] + '〜' + m.val_bbox[2] + '、北緯 ' + m.val_bbox[1] + '〜' + m.val_bbox[3] + '）で、100m四方の ' + m.n_cells_val.toLocaleString() + ' 区画、目撃 ' + m.n_sights_val.toLocaleString() + ' 件（2009〜2018年度）。区画ごとに「目撃があったか」と判定値を比べます。</p>' +
       '<p class="old"><b>注意：目撃データは住民・市町村・警察の通報で、府は真偽を精査していません。人の多い所ほど見つかり・通報されやすく、クマが実際に多い所とは限りません。</b>そのため「人家からの距離だけ」の単純な判定を基準にして、論文ベースの判定がそれを上回るかを見ます。</p>' +
       verdict() +
       '<h3>① 判定の当たり具合（AUC）：建物から500m以内の区画だけ</h3><p class="note">人里の周りだけで比べる表。通報されやすさの差が小さい範囲です。</p>' + aucTable('near500') +
@@ -100,7 +100,7 @@
       '<tr><th scope="row">針葉樹率・学校・NDVIの濃さ</th><td><b>入れていません</b></td><td>針葉樹率は文献で向きが割れる（山梨・長野・兵庫）。学校・NDVIの濃さは出没しやすさの根拠が見つからない（学校は「被害を受ける側」として表に残す）</td><td>―</td></tr>' +
       '</tbody></table></div>' +
       '<p class="note">林縁の判定：Sentinel-2 の5月のNDVI 0.6以上の画素を森林とし（田・その他農用地・建物用地・道路・ゴルフ場などの土地利用は除く）、それ以外を開けた所として、境目までの距離（森林側・開けた側とも）を10m単位で求めています。雲などで欠測の所は国土数値情報の「森林」で補っています。論文の林縁の定義とは異なるため、林縁の位置はずれます。川はOSMの river・stream です。</p>' +
-      '<p class="note">使ったデータ：国土数値情報 土地利用細分メッシュ L03-b（令和3年・5335）（国土交通省。国土数値情報の利用約款に従う）、© OpenStreetMap contributors（ODbL。建物 ' + m.n_buildings.toLocaleString() + ' 棟・河川 ' + m.n_waterways.toLocaleString() + ' 本、' + esc((m.osm_timestamp || '').slice(0, 10)) + ' 時点）、Copernicus Sentinel-2（' + esc(m.scene) + '）、京都府クマ目撃情報（BODIK、CC BY 4.0）。地図に塗った範囲：高 ' + HB.show_n['高'] + ' 区画・中 ' + HB.show_n['中'] + ' 区画（100m四方）。</p>';
+      '<p class="note">使ったデータ：国土数値情報 土地利用細分メッシュ L03-b（令和3年・5335）（国土交通省。国土数値情報の利用約款に従う）、© OpenStreetMap contributors（ODbL。openstreetmap.org/copyright。加工して派生データベースを ODbL で提供。建物 ' + m.n_buildings.toLocaleString() + ' 棟・河川 ' + m.n_waterways.toLocaleString() + ' 本、' + esc((m.osm_timestamp || '').slice(0, 10)) + ' 時点）、Contains modified Copernicus Sentinel data（2026。Sentinel-2 ' + esc(m.scene) + '）、京都府クマ目撃情報（BODIK、CC BY 4.0。取得したCSVから範囲内を抽出・集計して加工）。地図に塗った範囲：高 ' + HB.show_n['高'] + ' 区画・中 ' + HB.show_n['中'] + ' 区画（100m四方）。</p>';
   }
 
   // ---- ⑴ 順位表・詳細 ----
@@ -260,7 +260,7 @@
 
   function init() {
     recompute();
-    $('#footer').innerHTML = '出典：クマ目撃＝京都府「クマ目撃情報」（BODIK、CC BY 4.0、' + D.meta.sight_years[0] + '〜' + D.meta.sight_years[1] + '年度、対象範囲内 ' + D.meta.n_sights + ' 件）／建物・学校＝© OpenStreetMap contributors（ODbL、' + esc(D.meta.osm_timestamp.slice(0, 10)) + ' 取得、建物 ' + D.meta.n_houses + ' 棟）／衛星＝Copernicus Sentinel-2 L2A（' + D.meta.scenes.green.id + '・' + D.meta.scenes.winter.id + '。AWS Open Data）／背景地図＝国土地理院 地理院タイル／地図＝MapLibre GL JS（BSD-3-Clause）。';
+    $('#footer').innerHTML = '出典：クマ目撃＝京都府「クマ目撃情報」（BODIK、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener">CC BY 4.0</a>。取得したCSVから範囲内を抽出・集計して加工、' + D.meta.sight_years[0] + '〜' + D.meta.sight_years[1] + '年度、対象範囲内 ' + D.meta.n_sights + ' 件）／建物・学校＝© OpenStreetMap contributors（ODbL、' + esc(D.meta.osm_timestamp.slice(0, 10)) + ' 取得、建物 ' + D.meta.n_houses + ' 棟。<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">ライセンス</a>。OSMの建物・河川から範囲内を抽出・集計して加工し、この加工データも ODbL で提供します）／衛星＝Contains modified Copernicus Sentinel data（2026）。Sentinel-2 L2A（' + D.meta.scenes.green.id + '・' + D.meta.scenes.winter.id + '。AWS Open Data）／土地利用＝国土数値情報 土地利用細分メッシュ L03-b（令和3年。国土交通省。加工して作成）／背景地図＝国土地理院 地理院タイル／地図＝MapLibre GL JS（BSD-3-Clause）。';
     $('#map-note').textContent = '地図の区画は ' + D.meta.area + ' の ' + D.meta.n_cells_all + ' 区画（100m四方）から、条件に合う ' + D.cells.length + ' 区画を候補にしたもの。条件：' + D.meta.rule.replace(/^候補 = /, '');
     $('#r-result').innerHTML = '<option value="">（現地で見た結果を選ぶ）</option>' + L.RESULTS.map((r) => '<option>' + esc(r) + '</option>').join('');
     $('#cell-list').innerHTML = D.cells.map((c) => '<option value="' + c.id + '">').join('');
