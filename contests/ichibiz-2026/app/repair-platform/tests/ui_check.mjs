@@ -132,14 +132,32 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await ev("document.getElementById('t-sim').click()");
   await sleep(500);
   const sim = await text('#simOut');
-  const nsim = await ev("document.querySelectorAll('#simOut tbody tr').length");
-  check(nsim >= 3 && sim.includes('修繕実績・築年は未収録') && sim.includes('実績ではない') && !!(await ev("document.querySelector('#caseOut form#caseForm:not(details form)')")), name + ': 似た建物が出ない/実績・築年の限界の表示なし ' + nsim);
-  await ev("document.querySelector('#simOut [data-sort=floors]').click()");
-  const fl = await ev("[...document.querySelectorAll('#simOut tbody tr')].map((r) => +r.cells[1].innerText)");
-  check(fl.join() === fl.slice().sort((a, b) => b - a).join(), name + ': 階数で並べ替えできない ' + fl);
+  const nsim = await ev("document.querySelectorAll('#simOut .aptcard').length");
+  check(nsim >= 3 && sim.includes('修繕費・修繕実績・口コミは結び付けていません') && sim.includes('未登録（公開データなし）') && !!(await ev("document.querySelector('#caseOut form#caseForm:not(details form)')")), name + ': 似たマンションのカードが出ない/結び付けない旨の表示なし ' + nsim);
+  // 実在の建物のカードに、金額・万円・口コミ・評価の数値が出ない
+  const cardTxt = await ev("[...document.querySelectorAll('#simOut .aptcard')].map((c) => c.innerText).join('|')");
+  check(!/万円|円|星|★|口コミ\s*\d|評価\s*\d|\d+\s*件/.test(cardTxt), name + ': 実在の建物のカードに金額・口コミ・評価らしい表示 ' + cardTxt.slice(0, 120));
+  const aerOk = await ev("[...document.querySelectorAll('#simOut .aptcard')].every((c) => c.querySelectorAll('.aer img').length === 4 && c.querySelector('.aer svg polygon'))");
+  check(aerOk, name + ': 各カードに上空写真（タイル4枚＋外形線）がない');
+  const aerSrc = await ev("[...document.querySelectorAll('#simOut .aer img')].every((i) => i.src.startsWith('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/18/'))");
+  check(aerSrc, name + ': 上空写真が国土地理院のシームレス空中写真でない');
+  const simAll = await ev("document.getElementById('simOut').textContent");
+  check(simAll.includes('国土地理院') && simAll.includes('OpenStreetMap contributors'), name + ': 上空写真・OSM の出典表示がない');
+  check(await ev("[...document.querySelectorAll('#simOut .aptcard')].every((c) => /[町丁]/.test(c.innerText))"), name + ': 町丁目がない');
+  const rank = await ev("[...document.querySelectorAll('#simOut .aptcard > button.pick')].map((b) => +b.innerText).sort().join()");
+  check(rank === Array.from({ length: nsim }, (_, i) => i + 1).join(), name + ': カードの番号が地図の番号と対応しない ' + rank);
+  await ev("document.querySelector('#simOut [data-sort=km]').click()");
+  const km = await ev("[...document.querySelectorAll('#simOut .aptcard')].map((c) => (c.innerText.match(/([0-9.]+)km/) || [0, 1e9])[1]).map(Number)");
+  check(km.join() === km.slice().sort((a, b) => a - b).join(), name + ': 距離で並べ替えできない ' + km);
+  const z0 = await ev('window.__rp.state.view.z');
+  await ev("document.getElementById('fitSim').click()");
+  await sleep(300);
+  check((await ev('window.__rp.state.view.z')) < z0, name + ': 「地図に全部映す」で地図が引かない');
+  await shot(`${name}-3-similar-map.png`);
   const cases = await text('#caseOut');
-  check((cases.match(/架空/g) || []).length >= 4 && sim.includes('公開された個別事例がない'), name + ': 事例の架空表示がない');
+  check((cases.match(/架空/g) || []).length >= 4 && cases.includes('実在の建物ではありません'), name + ': 事例の架空表示がない');
   check((await ev("document.querySelectorAll('#caseOut table.cst tr.fakeitem').length")) === 3, name + ': 架空事例3件の印がない');
+  check(await ev("!document.querySelector('#simOut').contains(document.querySelector('#caseOut table'))"), name + ': 架空事例が実在の建物のカードと同じ枠にある');
   await shot(`${name}-3-similar.png`);
 
   // 点群: 見本（合成）→ 概算 → 反映
