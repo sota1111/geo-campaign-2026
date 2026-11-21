@@ -1,0 +1,12 @@
+PREFIX c: <https://geo-campaign-2026.example/ontology#>
+PREFIX id: <https://geo-campaign-2026.example/id/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+# Q9 コンペ（部門）ごとに出せる案（◎○）。
+SELECT ?targetLabel ?appLabel ?mark ?score
+WHERE {
+  ?f a c:Fit ; c:fitApp ?app ; c:fitTarget ?target ; c:mark ?mark ; c:score ?score .
+  FILTER(?score >= 2)
+  ?app rdfs:label ?appLabel . ?target rdfs:label ?targetLabel .
+}
+ORDER BY ?targetLabel DESC(?score) ?appLabel
