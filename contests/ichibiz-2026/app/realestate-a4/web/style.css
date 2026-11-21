@@ -37,6 +37,7 @@ footer ul { padding-left: 1.2rem; }
 .card h4 { margin:0 0 2px; font-size:1rem; }
 .nth { display:inline-block; background:var(--fg); color:#fff; border-radius:3px; padding:0 8px; font-size:.85rem; }
 .cm { margin:0 0 6px; font-size:.82rem; color:var(--muted); }
+.pn { margin:0 0 2px; font-size:.8rem; }
 .cc { margin:0 0 4px; font-size:.8rem; font-weight:bold; color:#1b6b3a; }
 .cc::before { content:"◎ "; }
 .cc.part { color:#7a5400; }

@@ -41,15 +41,29 @@
   /** 値の無い価格の理由の文（原因は断定しない: 国のデータに値が無いことだけを言う） */
   const MISSING_NOTE = '国のデータにこの標準地の値の記載がありません';
 
-  /** 地点に近い標準地を距離順（近い順。同じ距離は id 順）で n 件。uses を渡すと、その用途だけに絞る */
+  /** 標準地番号（地域名・用途区分・連番。id の末尾が連番） */
+  function parcelNo(p) {
+    const seq = String(p.id || '').split('-').pop();
+    return [p.area, p.use, seq].filter(Boolean).join(' ');
+  }
+
+  /** 地点に近い標準地を距離順（近い順。同じ距離は id 順）で n 標準地（標準地番号の数）。uses を渡すと、その用途だけに絞る。
+   *  データには同じ標準地番号のレコードが複数ある（位置は同じで値が異なる）ので、同じ番号のものは続けて返し、
+   *  parcel（何番目の標準地か）・part（同じ番号の何件目か）・parts（同じ番号の件数）を付ける */
   function nearest(points, lon, lat, opts) {
     const o = Object.assign({ n: DEFAULT_COUNT, uses: null, complete: false }, opts || {});
-    return (points || [])
+    const sorted = (points || [])
       .filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat) && (!o.uses || o.uses.includes(p.use)) && (!o.complete || hasAll(p)))
       .map((p) => ({ p, d: haversine(lon, lat, p.lon, p.lat) }))
-      .sort((a, b) => a.d - b.d || String(a.p.id).localeCompare(String(b.p.id)))
-      .slice(0, o.n)
-      .map((e) => ({ point: e.p, distance: e.d }));
+      .sort((a, b) => a.d - b.d || String(a.p.id).localeCompare(String(b.p.id)));
+    const order = [];
+    for (const e of sorted) { if (!order.includes(e.p.id)) { if (order.length >= o.n) continue; order.push(e.p.id); } }
+    const count = {}; for (const e of sorted) if (order.includes(e.p.id)) count[e.p.id] = (count[e.p.id] || 0) + 1;
+    const seen = {};
+    return sorted.filter((e) => order.includes(e.p.id)).map((e) => {
+      seen[e.p.id] = (seen[e.p.id] || 0) + 1;
+      return { point: e.p, distance: e.d, parcel: order.indexOf(e.p.id) + 1, part: seen[e.p.id], parts: count[e.p.id] };
+    });
   }
 
   const yen = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v).toLocaleString('en-US') + '円/㎡' : NODATA);
@@ -91,7 +105,8 @@
     const miss = priceRows(p).filter((r) => !r.value).length;
     const comp = miss ? '4つのうち ' + miss + ' つはデータなし' : '4つの価格がそろっています';
     return '<article class="card" data-id="' + esc(p.id) + '">' +
-      '<h4><span class="nth">標準地 ' + nth + '</span> ' + esc(place) + '</h4>' +
+      '<h4><span class="nth">標準地 ' + (entry.parcel || nth) + '</span> ' + esc(place) + '</h4>' +
+      '<p class="pn">標準地番号: ' + esc(parcelNo(p)) + (entry.parts > 1 ? '（同じ標準地番号のデータ ' + entry.parts + ' 件中の ' + entry.part + ' 件目）' : '') + '</p>' +
       '<p class="cm">指した地点から直線 ' + esc(distText(entry.distance)) + '。' + esc(meta) + '</p>' +
       '<p class="cc' + (miss ? ' part' : '') + '">' + esc(comp) + '</p>' +
       '<ul class="prices">' + rows + '</ul>' +
@@ -107,7 +122,8 @@
   function summaryText(entries) {
     if (!entries.length) return '近くの標準地が見つかりませんでした。';
     const far = entries[0].distance > FAR_M;
-    return '近い順に ' + entries.length + ' 件の標準地です。' + (far ? '最も近い標準地でも ' + distText(entries[0].distance) + ' 離れています。この地点の近くには標準地が少ない地域です。' : '');
+    const parcels = new Set(entries.map((e) => e.point.id)).size, multi = entries.length > parcels;
+    return '近い順に ' + parcels + ' 件の標準地です。' + (multi ? '同じ標準地番号のデータが2件ずつ並ぶものがあります（位置は同じで、値が異なることがあります）。' : '') + (far ? '最も近い標準地でも ' + distText(entries[0].distance) + ' 離れています。この地点の近くには標準地が少ない地域です。' : '');
   }
 
   /** 読み込んだデータの検証。形が合わなければ null */
@@ -117,7 +133,7 @@
     return d;
   }
 
-  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, validate, esc };
+  const api = { URL_LIB, CREDIT, ATTRIBUTION, PROCESSED, RESPONSIBILITY, NOTICE, PRICES, NODATA, DEFAULT_COUNT, FAR_M, haversine, nearest, yen, rateText, distText, parcelNo, priceRows, hasAll, MISSING_NOTE, cardHtml, legendHtml, summaryText, validate, esc };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

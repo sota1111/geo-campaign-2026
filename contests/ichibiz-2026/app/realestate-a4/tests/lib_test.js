@@ -86,7 +86,8 @@ test('実データ（web/data/fukuoka.json があれば）: 形式・座標・�
   assert.ok(r.length && r.every((v) => v >= 1 && v <= 15), '還元利回りは%の値');
   assert.match(Lib.rateText(r[0]), /^\d+(\.\d+)?%$/);
   const near = Lib.nearest(d.points, 130.3988, 33.5902);
-  assert.strictEqual(near.length, 5);
+  assert.strictEqual(new Set(near.map((e) => e.point.id)).size, 5);
+  assert.ok(near.length >= 5 && near.length <= 10);
 });
 test('路線価は年を添える', () => {
   assert.strictEqual(Lib.priceRows({ rosenka: 10, rosenkaYear: '2025' })[1].extra, '2025年分');
@@ -122,6 +123,17 @@ test('近くに標準地が無い時の注意', () => {
   assert.strictEqual(Lib.summaryText([]), '近くの標準地が見つかりませんでした。');
   assert.strictEqual(Lib.distText(450), '450m');
   assert.strictEqual(Lib.distText(1500), '1.5km');
+});
+test('同じ標準地番号のレコードは続けて返し、標準地の数（番号の数）で件数を切る', () => {
+  const mk = (id, lon, v) => ({ id, lon, lat: 33, use: '商業地', area: '福岡中央', price: v, rosenka: 1, hikaku: 1, shueki: 1 });
+  const pts = [mk('133-福岡中央-商業地-9', 130.0001, 1), mk('133-福岡中央-商業地-9', 130.0001, 2), mk('133-福岡中央-商業地-1', 130.001, 3), mk('133-福岡中央-商業地-2', 130.01, 4)];
+  const r = Lib.nearest(pts, 130, 33, { n: 2 });
+  assert.deepStrictEqual(r.map((e) => [e.parcel, e.part, e.parts]), [[1, 1, 2], [1, 2, 2], [2, 1, 1]]);
+  assert.strictEqual(Lib.parcelNo(pts[0]), '福岡中央 商業地 9');
+  const h = Lib.cardHtml(r[1], 2);
+  assert.ok(h.includes('標準地番号: 福岡中央 商業地 9') && h.includes('同じ標準地番号のデータ 2 件中の 2 件目'));
+  assert.ok(!Lib.cardHtml(r[2], 3).includes('件中の'));
+  assert.ok(Lib.summaryText(r).includes('近い順に 2 件の標準地です。') && Lib.summaryText(r).includes('2件ずつ'));
 });
 test('データ検証', () => {
   assert.ok(Lib.validate(sample));

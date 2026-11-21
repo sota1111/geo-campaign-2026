@@ -57,10 +57,11 @@
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
     g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     state.results.forEach((e, i) => {
+      if (e.part > 1) return; // 同じ標準地番号は同じ位置なので、丸は1つ
       const p = project(e.point.lon, e.point.lat);
       g.beginPath(); g.arc(p.x, p.y, 11, 0, Math.PI * 2);
       g.fillStyle = '#1d2733'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke();
-      g.fillStyle = '#fff'; g.fillText(String(i + 1), p.x, p.y + 0.5);
+      g.fillStyle = '#fff'; g.fillText(String(e.parcel || i + 1), p.x, p.y + 0.5);
     });
   }
   function placePin() {
