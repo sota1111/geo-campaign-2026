@@ -59,7 +59,7 @@ describe('mapStyle / registry', () => {
   })
   it('今の案7件と新しい案11件が登録され id が一意', () => {
     expect(CURRENT_APPS).toHaveLength(7)
-    expect(APPS.filter(isNewPlan)).toHaveLength(11)
+    expect(APPS.filter(isNewPlan)).toHaveLength(12)
     expect(new Set(APPS.map((a) => a.id)).size).toBe(APPS.length)
     expect(getApp('sat-a')?.dataKind).toBe('fictional')
     expect(appsByContest('ichibiz-2026').filter((a) => !isNewPlan(a))).toHaveLength(3)
