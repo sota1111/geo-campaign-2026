@@ -213,7 +213,7 @@ export default function App() {
       // cavity 列は空欄。調査後に あり／なし を書いて、そのまま手順「戻す」で入れられる（空欄の行は読み飛ばす）
       .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote, ''])
     downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note', 'cavity'], ...rows])), 'text/csv;charset=utf-8')
-    setExportMsg(`survey-targets.csv（${rows.length} 区間）をダウンロードフォルダに保存。調査後、空欄の cavity 列に あり／なし を書いて結果の手順で入れます`)
+    setExportMsg(`survey-targets.csv（${rows.length} 区間。列 segment_id,lat,lon,length_m,score,cavity）を保存。調査後、cavity 列に あり／なし を書いて結果の手順で入れます（スマホは表計算アプリで編集）`)
   }
   const exportRound2 = () => {
     const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, dataNote])

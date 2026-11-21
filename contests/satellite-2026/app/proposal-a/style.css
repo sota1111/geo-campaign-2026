@@ -237,3 +237,18 @@ tr.drow,#load-msg{scroll-margin-bottom:90px}
   #s2 table{margin:2px 0}
   #s2 p{margin:3px 0}
 }
+
+/* 評価ループ第5回: ドラッグで置ける枠・デモのリンクは橙（架空）・点数の説明を1行に */
+.filebox.drag{background:#eef6f8;outline:3px dashed var(--acc);outline-offset:2px}
+#demo-go{color:var(--warn)}
+#score-def b{color:var(--ink)}
+.r2box .cmp{display:inline-block;margin-top:2px}
+.wrow #bud-out{min-width:3.6em;text-align:right;white-space:nowrap}
+@media (max-width:720px){
+  body.st2 #panel{height:56vh}
+  body.st2 #map,body.st2 #fake-mark{bottom:56vh}
+  body.st2.sheet-closed #map,body.st2.sheet-closed #fake-mark{bottom:150px}
+  .maplibregl-ctrl-attrib{font-size:10px;line-height:1.3}
+}
+@media (max-width:720px){body.st2 #panel.closed{height:150px}}
+@media (max-width:720px){[data-testid=sel-ties]{display:none}}

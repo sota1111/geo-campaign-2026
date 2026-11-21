@@ -109,8 +109,8 @@ export const WEAK_AUC = 0.7
 export const MIN_LABELS = 20
 export const ADOPT_REASON: Record<Exclude<AdoptReason, null>, string> = {
   short: '結果が足りない',
-  low: 'あり・なしの差が点数に出ていない',
-  small: '重みを変えても差が小さい',
+  low: '点数が同じ区間が多く、あり・なしの差が出ない',
+  small: '重みを変えても当たり方がほぼ同じ',
   same: '今の重みが最も当たる',
 }
 /** 較正の結果から、次回に使う重みを決める。条件を満たさなければ今の重みのまま（当てずっぽうに近い結果で重みを動かさない）。更新幅は MAX_STEP まで */

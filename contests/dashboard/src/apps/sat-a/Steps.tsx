@@ -368,7 +368,7 @@ export function ScanPanel({
         </div>
       ) : (
         <div className="space-y-1.5 rounded-md border border-dashed border-primary/60 bg-background p-2.5">
-          <label className="text-sm font-medium" htmlFor="csv-file">調査結果の CSV を選ぶ（累計で入ります。同じ区間は上書き）</label>
+          <label className="text-sm font-medium" htmlFor="csv-file">調査結果の CSV を選ぶ（ドラッグでも可。累計で入り、同じ区間は上書き）</label>
           <input
             id="csv-file"
             data-testid="csv-file"
@@ -383,7 +383,7 @@ export function ScanPanel({
           />
           <p className="text-xs text-muted-foreground">
             結果の CSV がなければ、見本（下の書式の説明にあります。架空の値）を入れるか、
-            <Button size="sm" variant="link" className="h-auto p-0 text-xs underline" onClick={() => onDemo(true)} data-testid="demo-go">説明用デモで動きを見る（架空の結果）</Button>
+            <Button size="sm" variant="link" className="h-auto p-0 text-xs text-amber-800 underline" onClick={() => onDemo(true)} data-testid="demo-go">説明用デモで動きを見る（架空の結果）</Button>
             を押してください。
           </p>
         </div>
@@ -505,7 +505,7 @@ export function ApplyPanel({
             {(demo || sample) && <b>（架空の結果）</b>}
             {calib.ad.adopt
               ? <b>重みを {pct(calib.ad.w)}% に更新します。</b>
-              : <><b>重みは {pct(calib.ad.w)}% のまま</b>（{ADOPT_REASON[calib.ad.reason ?? 'same']}）。第{round + 1}回へ進めます。</>}
+              : <><b>較正の結果、重みは {pct(calib.ad.w)}% のまま</b>（{ADOPT_REASON[calib.ad.reason ?? 'same']}）。第{round + 1}回で変わるのは調査済み区間の除外だけ。{calib.ad.reason === 'low' || calib.ad.reason === 'small' ? '結果が増えると重みが動くことがあります。' : ''}</>}
             {calib.ad.adopt && (calib.ad.capped || calib.ad.weak) && (
               <span className="mt-1 block rounded bg-amber-100 px-1.5 py-0.5 text-amber-950" data-testid="weak">{calib.ad.weak ? '結果が少ないか差が弱いので、' : ''}変更は1回 {pct(MAX_STEP)}% までにしています{calib.ad.capped ? `（最良は ${pct(calib.w)}%）` : ''}。台帳の根拠も併せて確かめてください。</span>
             )}
@@ -593,6 +593,7 @@ export function Round2Panel({
           : `何が変わったか: 結果が不足していたため重みは据え置き、調査した${prev.scanned}区間を除いた順位を作り直しました。`}
       </p>
       <p className="text-xs text-muted-foreground" data-testid="calib-msg">{msg}</p>
+      {!demo && !sample && <p className="text-xs text-muted-foreground" data-testid="src-note">結果の出所は利用者の申告（アプリでは確かめていません）。</p>}
       <p className="text-xs text-muted-foreground">下の表の1位は、第{prev.round}回の重みのままの1位と、反映後の1位を比べたものです。</p>
       <Table>
         <TableHeader>
