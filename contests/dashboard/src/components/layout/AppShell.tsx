@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
@@ -9,7 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { DataBadge } from '@/components/shared/DataBadge'
 import { CONTESTS, isNewPlan, orderedAppsByContest, type AppMeta } from '@/apps/registry'
-import { appUrl } from '@/lib/data'
+import { appUrl, contestUrl, portalUrl } from '@/lib/data'
 import { contestsByDeadline } from '@/apps/contests-info'
 import { asOf } from '@/pages/Progress'
 
@@ -22,16 +23,24 @@ export function matchesAppQuery(a: AppMeta, q: string): boolean {
   return words.every((w) => hay.includes(w))
 }
 
-function PortalSidebar() {
+function PortalSidebar({ activeContest }: { activeContest?: string }) {
   const [q, setQ] = useState('')
   const groups = contestsByDeadline()
     .map((i) => CONTESTS.find((c) => c.id === i.id)!)
     .map((c) => ({ c, apps: orderedAppsByContest(c.id).filter((a) => matchesAppQuery(a, q)) }))
+  // コンペ画面を開いたとき、そのコンペ名がサイドバー内で見える位置まで、サイドバーの中だけをスクロールする（本文は動かさない）
+  useEffect(() => {
+    if (!activeContest) return
+    const link = document.querySelector<HTMLElement>(`[data-contest-link="${activeContest}"]`)
+    const box = link?.closest<HTMLElement>('[data-sidebar="content"]')
+    if (!link || !box) return
+    box.scrollTop += link.getBoundingClientRect().top - box.getBoundingClientRect().top - 8
+  }, [activeContest])
   const hits = groups.reduce((n, g) => n + g.apps.length, 0)
   return (
     <Sidebar>
       <SidebarHeader className="border-b">
-        <a href="./index.html" className="px-2 py-1 text-sm font-bold leading-tight">
+        <a href={portalUrl()} className="px-2 py-1 text-sm font-bold leading-tight">
           統合ダッシュボード
           <span className="block text-xs font-normal text-muted-foreground">4つのコンペ・今の案7件＋新しい案</span>
         </a>
@@ -58,7 +67,20 @@ function PortalSidebar() {
         {/* 本文の一覧と同じ、締切の近い順 */}
         {groups.filter((g) => g.apps.length).map(({ c, apps }) => (
           <SidebarGroup key={c.id}>
-            <SidebarGroupLabel className="h-auto whitespace-normal py-1 leading-tight">{c.name}</SidebarGroupLabel>
+            <SidebarGroupLabel asChild className={`h-auto min-h-10 whitespace-normal border-l-4 py-1.5 text-sm font-bold leading-tight text-sidebar-foreground underline underline-offset-2 hover:bg-sidebar-accent ${activeContest === c.id ? 'border-primary bg-sidebar-accent' : 'border-transparent'}`}>
+              <a
+                href={contestUrl(c.id)}
+                data-contest-link={c.id}
+                aria-current={activeContest === c.id ? 'page' : undefined}
+                title={`${c.name}の概要・目的・審査基準を見る`}
+              >
+                {c.name}
+                <span className="ml-auto flex shrink-0 items-center gap-0.5 pl-1 text-xs font-normal no-underline">
+                  {activeContest === c.id ? '表示中' : '概要'}
+                  <ChevronRight className="size-4" aria-hidden />
+                </span>
+              </a>
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {apps.map((a) => (
@@ -90,17 +112,17 @@ function PortalSidebar() {
   )
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, activeContest }: { children: React.ReactNode; activeContest?: string }) {
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <PortalSidebar />
+        <PortalSidebar activeContest={activeContest} />
         <SidebarInset className="min-w-0">
           <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-3">
             <SidebarTrigger aria-label="メニューを開閉" />
             <Separator orientation="vertical" className="h-5" />
-            <span className="text-sm font-medium">統合ダッシュボード</span>
-            <span className="text-xs text-muted-foreground">{asOf} 時点</span>
+            <a href={portalUrl()} className="text-sm font-medium hover:underline">統合ダッシュボード</a>
+            <span className="text-xs text-muted-foreground">提出状況は {asOf} 時点の記録</span>
           </header>
           <main className="min-w-0 flex-1 p-3 md:p-6">{children}</main>
         </SidebarInset>
