@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, adoptWeight, MIN_AUC, MIN_GAIN, aucAt, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom } from '../logic.js';
+import { ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, topShift, adoptWeight, MIN_AUC, MIN_GAIN, aucAt, AGE_UNKNOWN, parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, clusterCount } from '../logic.js';
 
 const data = JSON.parse(fs.readFileSync(new URL('../data/toyonaka.json', import.meta.url)));
 const cellSat = Object.fromEntries(data.cells.map((c) => [c.id, satNorm(c.disp)]));
@@ -250,4 +250,24 @@ test('説明用デモの架空データは別ファイルで、既定のデー�
   assert.ok(d.note.includes('架空'));
   const ids = new Set(data.segments.map((s) => s.id));
   for (const id of [...d.past, ...d.hit]) assert.ok(ids.has(id));
+});
+
+test('空洞の列が空欄の行は未記入として読み飛ばす（書き出した CSV に一部だけ記入して戻す）', () => {
+  const segs = [{ id: 'S1', cls: 'life', coords: [[135, 34], [135.001, 34]] }, { id: 'S2', cls: 'life', coords: [[135, 34.01], [135.001, 34.01]] }];
+  const r = parseOutcomes('segment_id,lat,lon,length_m,score,cavity\nS1,34,135,90,0.9,あり\nS2,34.01,135,90,0.9,\n', segs);
+  assert.equal(r.error, null);
+  assert.equal(r.summary.segments, 1);
+  assert.equal(r.summary.blank, 1);
+  assert.equal(r.summary.invalid, 0);
+});
+
+test('まとまりの数: 端点が近い区間は1つと数える', () => {
+  const segs = [
+    { id: 'A', coords: [[135, 34], [135.001, 34]] },
+    { id: 'B', coords: [[135.001, 34], [135.002, 34]] },
+    { id: 'C', coords: [[135.05, 34], [135.051, 34]] },
+  ];
+  assert.equal(clusterCount(segs, new Set(['A', 'B', 'C'])), 2);
+  assert.equal(clusterCount(segs, new Set(['A', 'C'])), 2);
+  assert.equal(clusterCount(segs, new Set()), 0);
 });

@@ -147,3 +147,23 @@ table.rank td,table.rank th{padding:3px 3px}
 }
 @media (max-width:720px){#badge{max-width:58%}}
 .filebox .filebtn{min-height:44px;padding:6px 14px;border-radius:6px;background:var(--acc);color:#fff;font-weight:700;font-size:14px;white-space:nowrap}
+
+/* 評価ループ第2回: 段階見出しの固定・下部ボタン帯の不透明化と影・3ボタンを1段に・同点の警告・上位の比較 */
+.step h2{position:sticky;top:-10px;background:var(--bg);z-index:3;padding:4px 0;margin:0 0 2px}
+.stickybar{box-shadow:0 -6px 8px -6px rgba(0,0,0,.25);padding-bottom:12px}
+.stickybar.row3{display:flex;gap:4px}
+.stickybar.row3 .btn{flex:1 1 auto;margin:0;padding:6px 8px;font-size:13px;white-space:nowrap}
+#ties{margin:4px 0;font-size:12.5px}
+.cmp{font-size:12px;font-variant-numeric:tabular-nums}
+details.more{border:0;padding:0 2px;margin:0 0 4px;background:none}
+details.more table{margin-top:0}
+.foot{display:flex;flex-wrap:wrap;align-items:center;gap:0 8px}
+.foot .note{font-size:11.5px}
+@media (max-width:720px){
+  .step h2{top:-8px;font-size:14px}
+  #status{display:none}
+  #fake-mark{font-size:64px;color:rgba(163,66,0,.2)}
+  body.fake #map::after{content:"架空";position:absolute;left:6px;bottom:6px;z-index:3;background:#fff3e0;border:2px solid var(--warn);color:var(--warn);font-weight:900;padding:0 8px;border-radius:4px;font-size:13px}
+  .stickybar.row3 .btn{font-size:12px;padding:6px 4px}
+}
+@media (max-width:720px){.stickybar{bottom:-24px}}

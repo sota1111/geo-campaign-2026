@@ -1,4 +1,4 @@
-import { rank, selectByBudget, totalKm, satNorm, ageNorm, calibrate, exclusionAccuracy, aucAt, topShift, parseOutcomes, scannedFrom, adoptWeight, MIN_AUC, MIN_GAIN, LINK_MAX_M, NOW_YEAR } from './logic.js';
+import { rank, selectByBudget, totalKm, satNorm, ageNorm, calibrate, exclusionAccuracy, aucAt, topShift, parseOutcomes, scannedFrom, adoptWeight, clusterCount, CLUSTER_GAP_M, MIN_AUC, MIN_GAIN, LINK_MAX_M, NOW_YEAR } from './logic.js';
 import { verifyHtml } from './verify.js';
 
 const $ = (s) => document.querySelector(s);
@@ -50,51 +50,53 @@ const s1Row = (s) => `<tr data-id="${s.id}" tabindex="0" class="rowlink"><td>${s
 /** 衛星の点数がどれだけ順位を動かしているか（台帳のみの上位20区間からの入れ替わり数）。絞れない地域では小さいままになる。 */
 function satEffect() {
   const n = 20, shift = topShift(STATE.segs, STATE.cellSat, STATE.w, n);
-  return `台帳だけ（0%）の上位${n}区間と比べた入れ替わり: <b>${shift}</b> 区間（衛星の差は階級幅以内）。`;
+  return `衛星で入れ替わった区間: 上位${n}のうち <b>${shift}</b>`;
 }
-/** 1位と同点の区間数と、同点の並べ方（1行）。 */
+/** 1位と同点の区間数と、衛星の効き（1行）。 */
 function tieLine() {
   const c = candidates(), t = c.length ? c[0].score.toFixed(2) : null;
   const ties = c.filter((x) => x.score.toFixed(2) === t).length;
-  return ties > 1 ? `1位と同点（${t}）が <b>${ties}</b> 区間。同点は竣工年の古い順→区間番号順。` : '';
+  const head = ties > 1 ? `<b>上位${ties}区間が同点（${t}）</b>：台帳だけでは決まらず、` : '';
+  return `${head}<span id="w-shift">${satEffect()}</span>（この地区は衛星の差が小さい）。`;
 }
 /** 重みの説明（今の状態に合わせて作る）。 */
 function wNote() {
-  const base = '0%＝台帳（管の古さ）だけ／100%＝衛星だけ。';
+  const base = '0%＝台帳だけ／100%＝衛星だけ。';
   if (STATE.round > 1 && STATE.calibNote) return base + STATE.calibNote;
-  return base + '初期値10%（この地区は衛星の階級差が小さいため台帳中心）。';
+  return base + '初期値10%（衛星の差が小さい地区のため）。';
 }
+const S1_ROWS = 5;
 
 function renderS1() {
   const c = candidates(), km = c.reduce((a, s) => a + s.lenM, 0) / 1000;
-  const top = c.slice(0, 8);
+  const top = c.slice(0, S1_ROWS);
   const cc = STATE.data.stats.cell_with_roads_class_counts, k7 = cc['7'] || 0, k8 = cc['8'] || 0;
   const fakeR2 = STATE.round > 1 && isFake();
   const box = STATE.round > 1 ? `<div class="r2box${fakeR2 ? ' fake' : ''}" data-testid="${STATE.srcSample && !STATE.demo ? 'round2-fake' : 'round2-box'}" role="status">
-      <b>第${STATE.round}回の順位を作りました</b><br>${STATE.msg}
+      <b>第${STATE.round}回の順位</b>：${STATE.msg}
       <br><button class="btn pri" id="r2-to2" type="button">この順位で調査区間を選び直す</button></div>` : (STATE.msg ? `<p class="note"><b>${STATE.msg}</b></p>` : '');
   $('#s1').innerHTML = `
     <h2>第1段階：点数で候補区間を絞る</h2>
     ${box}
-    <p class="note">点数＝台帳（下水道管の古さ）＋衛星（地表の沈下）。<b>行か道路を押すと内訳</b>が出ます。</p>
-    <p><span class="big">${c.length}</span> 区間（${fmt1(km)} km）が未調査の生活道路。<span class="note" id="ties">${tieLine()}</span></p>
+    <p><span class="big">${c.length}</span> 区間（${fmt1(km)} km）が未調査の生活道路。<span class="note">行か道路を押すと内訳。</span></p>
+    <p class="warnbox" id="ties">${tieLine()}</p>
     <table class="rank"><thead><tr><th>区間</th><th class="n">竣工</th><th class="n">台帳分</th><th class="n">衛星分</th><th class="n">点数</th></tr></thead><tbody>
     ${top.map(s1Row).join('')}
     </tbody></table>
+    <p class="note">※同点は竣工の古い順→区間番号順。点数＝台帳（管の古さ）＋衛星（地表の沈下）。</p>
     <div class="lbl"><label for="w">衛星指標の重み</label><span id="w-out">${pct(STATE.w)}%</span></div>
     <input id="w" type="range" min="0" max="100" step="10" value="${pct(STATE.w)}" aria-describedby="w-note">
     <p id="w-note" class="note">${wNote()}</p>
     <details><summary>この地区の衛星の値</summary>
-      <p class="note">2階級（-3.75〜0 mm/年が ${k7} 区画、0〜+3.75 mm/年が ${k8} 区画）の差は階級幅（3.75 mm/年）以内で、沈下の兆候とは言えません。衛星の値は最大 ${satNorm(STATE.data.cells.reduce((m, x) => Math.min(m, x.disp), 0)).toFixed(2)}（0 mm/年以上の階級は 0）。重みを上げると、順位は2階級で二分されます。</p>
-      <p class="note" id="w-shift">${satEffect()}</p></details>
-    <div class="stickybar"><button class="btn pri" id="to2" type="button">次へ：確かめる区間を選ぶ</button></div>`;
-  $('#w').oninput = (e) => { STATE.w = +e.target.value / 100; recompute(); $('#w-out').textContent = pct(STATE.w) + '%'; $('#w-shift').innerHTML = satEffect(); refreshMap(); renderS1Table(); };
+      <p class="note">2階級（沈下側 -3.75〜0 mm/年が ${k7} 区画、隆起側 0〜+3.75 mm/年が ${k8} 区画）の差は階級幅以内で、沈下の兆候とは言えません。衛星の値は最大 ${satNorm(STATE.data.cells.reduce((m, x) => Math.min(m, x.disp), 0)).toFixed(2)}（隆起側は 0）。</p></details>
+    <div class="stickybar"><button class="btn pri" id="to2" type="button">次へ：調査区間を選ぶ（第2段階）</button></div>`;
+  $('#w').oninput = (e) => { STATE.w = +e.target.value / 100; recompute(); $('#w-out').textContent = pct(STATE.w) + '%'; refreshMap(); renderS1Table(); };
   $('#to2').onclick = () => setStep(2);
   if ($('#r2-to2')) $('#r2-to2').onclick = () => setStep(2);
   bindRows('#s1');
 }
 function renderS1Table() { // スライダー操作中はフォーカスを保つため表だけ更新
-  $('#s1 tbody').innerHTML = candidates().slice(0, 8).map(s1Row).join('');
+  $('#s1 tbody').innerHTML = candidates().slice(0, S1_ROWS).map(s1Row).join('');
   $('#ties').innerHTML = tieLine();
   bindRows('#s1'); syncDetail();
 }
@@ -105,40 +107,51 @@ function bindRows(root) {
   });
 }
 
+const S2_ROWS = 5;
+const s2Row = (s) => `<tr data-id="${s.id}" tabindex="0" class="pick rowlink"><td>${s.id}</td><td>${yearTxt(s.year)}</td><td class="n">${s.lenM} m</td><td class="n">${s.score.toFixed(2)}</td></tr>`;
 function renderS2() {
   const sel = STATE.selected, km = totalKm(STATE.segs, sel), over = km > STATE.budgetKm + 1e-9;
   const rows = STATE.ranked.filter((s) => sel.has(s.id));
-  const sc = new Set(rows.map((s) => s.score.toFixed(2)));
-  const tieSel = rows.length > 1 && sc.size === 1 ? `<p class="note" data-testid="sel-ties">選んだ ${rows.length} 区間は同点（${[...sc][0]}）。竣工年の古い順→区間番号順に選んでいます。</p>` : '';
+  const nc = rows.length ? clusterCount(STATE.segs, sel) : 0;
+  const thead = '<thead><tr><th>区間</th><th>竣工年</th><th class="n">長さ</th><th class="n">点数</th></tr></thead>';
   $('#s2').innerHTML = `
     <h2>第2段階：予算内で調査区間を選ぶ</h2>
     <div class="lbl"><label for="bud">走らせられる延長（仮の値）</label><span id="bud-out">${STATE.budgetKm.toFixed(1)} km</span></div>
     <input id="bud" type="range" min="1" max="8" step="0.5" value="${STATE.budgetKm}" aria-describedby="bud-note">
-    <p>選択中: <span class="big">${sel.size}</span> 区間 / <span id="sel-km" class="${over ? 'over' : ''}">${fmt1(km)} km</span>${over ? ' <span class="over">（上限を超えています）</span>' : ''}</p>
+    <p>選択中: <span class="big">${sel.size}</span> 区間 / <span id="sel-km" class="${over ? 'over' : ''}">${fmt1(km)} km</span>${over ? ' <span class="over">（上限を超えています）</span>' : ''}${nc ? `・まとまり <b data-testid="clusters">${nc}</b> か所<span class="note">（${CLUSTER_GAP_M} m 以内を1つ）</span>` : ''}</p>
     ${STATE.exportMsg ? `<p class="okmsg" role="status" data-testid="export-msg">✓ ${STATE.exportMsg}</p>` : ''}
-    ${tieSel}
-    ${rows.length ? `<table><thead><tr><th>区間</th><th>竣工年</th><th class="n">長さ</th><th class="n">点数</th></tr></thead><tbody>${rows.slice(0, 8).map((s) => `<tr data-id="${s.id}" tabindex="0" class="pick rowlink"><td>${s.id}</td><td>${yearTxt(s.year)}</td><td class="n">${s.lenM} m</td><td class="n">${s.score.toFixed(2)}</td></tr>`).join('')}</tbody></table>${rows.length > 8 ? `<p class="note">ほか ${rows.length - 8} 区間</p>` : ''}` : '<p class="note">「上位から自動で選ぶ」を押すか、地図の道路を押して選びます。</p>'}
-    <p class="note" id="bud-note">道路を押すと選択／解除（未調査の生活道路のみ）。延長は予算・車両の制約を置き換えた仮の値です。${sel.size ? ' <button class="linkbtn" id="clear" type="button">選択をクリア</button>' : ''}</p>
-    <div class="stickybar"><button class="btn ${sel.size ? '' : 'pri'}" id="auto" type="button">上位から自動で選ぶ</button><button class="btn ${sel.size && !over ? 'pri' : ''}" id="export" type="button" ${sel.size ? '' : 'disabled'}>CSV で書き出す</button><button class="btn" id="to3" type="button" ${sel.size && !over ? '' : 'disabled'}>次へ</button></div>`;
+    ${rows.length ? `<p class="note" data-testid="sel-ties">点数の高い順。同点は竣工の古い順→区間番号順で選んでいます。</p>
+    <table>${thead}<tbody>${rows.slice(0, S2_ROWS).map(s2Row).join('')}</tbody></table>${rows.length > S2_ROWS ? `<details class="more"><summary>ほか ${rows.length - S2_ROWS} 区間</summary><table><tbody>${rows.slice(S2_ROWS).map(s2Row).join('')}</tbody></table></details>` : ''}` : '<p class="note">「自動で選ぶ」を押すか、地図の道路を押して選びます。</p>'}
+    <p class="note" id="bud-note">道路を押すと選択／解除。延長は予算・車両の制約を置き換えた仮の値です。${sel.size ? ' <button class="linkbtn" id="clear" type="button">選択をクリア</button>' : ''}</p>
+    <div class="stickybar row3"><button class="btn ${sel.size ? '' : 'pri'}" id="auto" type="button">自動で選ぶ</button><button class="btn ${sel.size && !over && !STATE.exportMsg ? 'pri' : ''}" id="export" type="button" ${sel.size ? '' : 'disabled'}>CSV 書き出し</button><button class="btn ${STATE.exportMsg ? 'pri' : ''}" id="to3" type="button" ${sel.size && !over ? '' : 'disabled'}>次へ：結果を入れる →</button></div>`;
   $('#bud').oninput = (e) => { STATE.budgetKm = +e.target.value; $('#bud-out').textContent = STATE.budgetKm.toFixed(1) + ' km'; const k = totalKm(STATE.segs, STATE.selected); $('#sel-km').className = k > STATE.budgetKm + 1e-9 ? 'over' : ''; $('#to3').disabled = !(STATE.selected.size && k <= STATE.budgetKm + 1e-9); };
   $('#bud').onchange = () => render();
-  $('#auto').onclick = () => { STATE.selected = new Set(selectByBudget(STATE.ranked, STATE.budgetKm)); STATE.exportMsg = ''; render(); };
+  $('#auto').onclick = () => { STATE.selected = new Set(selectByBudget(STATE.ranked, STATE.budgetKm)); STATE.exportMsg = ''; render(); fitSelected(); };
   if ($('#clear')) $('#clear').onclick = () => { STATE.selected = new Set(); STATE.exportMsg = ''; render(); };
   $('#export').onclick = exportSelected;
   $('#to3').onclick = () => setStep(3);
   bindRows('#s2');
 }
+/** 選んだ区間の全体が入るように地図を合わせる（パネルに隠れない余白をとる）。 */
+function fitSelected() {
+  if (!map || !STATE.selected.size) return;
+  const pts = STATE.segs.filter((s) => STATE.selected.has(s.id)).flatMap((s) => s.coords);
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: mapPad(), duration: 400, maxZoom: 15 });
+}
+const mapPad = () => (innerWidth < 720 ? { top: 46, left: 8, right: 8, bottom: 8 } : { top: 40, bottom: 30, right: 30, left: 430 });
 
 /** 選んだ区間の一覧（区間ID・中点の緯度経度・長さ・点数）を CSV で書き出す。調査の依頼や、結果 CSV の区間IDとの突き合わせ用。 */
 function exportSelected() {
   const rows = STATE.ranked.filter((s) => STATE.selected.has(s.id));
   const mid = (s, k) => ((s.coords[0][k] + s.coords[1][k]) / 2).toFixed(6);
-  const csv = 'segment_id,lat,lon,length_m,score\n' + rows.map((s) => `${s.id},${mid(s, 1)},${mid(s, 0)},${s.lenM},${s.score.toFixed(3)}`).join('\n') + '\n';
+  // cavity 列は空欄。調査後に あり／なし を書いて、そのまま第3段階で入れられる（空欄の行は読み飛ばす）
+  const csv = 'segment_id,lat,lon,length_m,score,cavity\n' + rows.map((s) => `${s.id},${mid(s, 1)},${mid(s, 0)},${s.lenM},${s.score.toFixed(3)},`).join('\n') + '\n';
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = 'survey-targets.csv'; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  STATE.exportMsg = `survey-targets.csv（${rows.length} 区間・${fmt1(totalKm(STATE.segs, STATE.selected))} km）を書き出しました`;
+  STATE.exportMsg = `survey-targets.csv（${rows.length} 区間）をダウンロードフォルダに保存。調査後、空欄の cavity 列に あり／なし を書いて第3段階で入れます`;
   if (STATE.step === 2) render();
 }
 const calibNow = () => {
@@ -157,15 +170,16 @@ const loadMsg = () => {
   if (sm.invalid) bad.push(`空洞の有無や座標が読めない行 ${sm.invalid}`);
   if (sm.unknownId) bad.push(`存在しない区間ID ${sm.unknownId}`);
   if (sm.unmatched) bad.push(`${LINK_MAX_M} m 以内に区間が無い点 ${sm.unmatched}`);
-  return `<p class="okmsg" data-testid="load-ok">✓ 「${i.name}」: <b>${sm.segments} 区間</b>（空洞あり ${sm.hit}・なし ${sm.none}）。区間IDで ${sm.byId} 行、緯度・経度の点で ${sm.byPoint} 行を結び付け。${sm.merged ? `同じ区間の複数行 ${sm.merged} 行は「1つでもあり」ならあり。` : ''}${bad.length ? `<br><span class="over">使えなかった行: ${bad.join('、')}。</span>` : ''}</p>`;
+  return `<p class="okmsg" data-testid="load-ok">✓ 「${i.name}」: <b>${sm.segments} 区間</b>（空洞あり ${sm.hit}・なし ${sm.none}）。区間IDで ${sm.byId} 行、緯度・経度の点で ${sm.byPoint} 行を結び付け。${sm.blank ? `空欄 ${sm.blank} 行は未記入として読み飛ばし。` : ''}${sm.merged ? `同じ区間の複数行 ${sm.merged} 行は「1つでもあり」ならあり。` : ''}${bad.length ? `<br><span class="over">使えなかった行: ${bad.join('、')}。</span>` : ''}</p>`;
 };
 
-const FORMAT_HTML = `<p class="note">1行目は見出し。区切りはカンマかタブ。処理はブラウザの中だけで、外へは送りません。</p>
-    <ul class="tight note"><li>A. 区間ID: <code>segment_id,cavity</code>（例 S0312）</li>
+const FORMAT_HTML = `<ul class="tight note"><li>1行目は見出し。区切りはカンマかタブ。処理はブラウザの中だけで、外へは送りません。</li>
+      <li>A. 区間ID: <code>segment_id,cavity</code>（第2段階の CSV がこの形）</li>
       <li>B. 緯度・経度: <code>lat,lon,cavity</code>（${LINK_MAX_M} m 以内で最も近い区間に結び付け）</li>
-      <li>空洞の値: あり／なし、1／0、true／false、疑い／異常なし など</li></ul>
-    <p class="note">見本（書式を示す架空の値）: <a href="data/format_sample_by_segment.csv" download>区間ID</a>・<a href="data/format_sample_by_point.csv" download>緯度・経度</a></p>`;
-const REASON = { short: '結果が足りない', low: `最良でも AUC が ${MIN_AUC.toFixed(2)} 未満`, small: `今の重みとの AUC の差が ${MIN_GAIN.toFixed(2)} 未満`, same: '今の重みが最良' };
+      <li>空洞の値: あり／なし、1／0、疑い／異常なし など。空欄は読み飛ばし</li>
+      <li>説明用デモ: 実データに空洞の結果が無いため、動きを見せるだけ。オンの間は結果が乱数になり、切り替えると結果と較正は初めから</li></ul>`;
+const REASON = { short: '結果が足りない', low: '当たりやすさが当てずっぽうに近い', small: '今の重みとの差が小さい', same: '今の重みが最も当たりやすい' };
+const AUC_TH = '当たりやすさ（AUC。0.5＝当てずっぽう）';
 
 function renderS3() {
   const sel = STATE.selected, km = totalKm(STATE.segs, sel), demo = STATE.demo;
@@ -173,14 +187,14 @@ function renderS3() {
   const pastN = demo && STATE.pastSet ? [...STATE.results.keys()].filter((id) => STATE.pastSet.has(id)).length : 0, nScan = demo ? n - pastN : 0;
   const ad = adoptWeight(c, surveyedSet(), STATE.cellSat, STATE.w);
   let h = `<h2>第3段階：調査結果を入れて重みを較正</h2>
-    <p class="note">一次審査を通った後、GMS3 の結果（出力書式は未確認）をここに入れます。同梱の実データに空洞の結果はありません。</p>`;
+    <p class="note">一次審査を通った後、GMS3 等の結果を入れる枠（出力書式は未確認）。① 第2段階の CSV の cavity 列に あり／なし を記入 → ② 下で選ぶ（あり・なし各3件以上）→ ③ 第${STATE.round + 1}回へ。</p>`;
   if (demo) {
-    h += `<div class="demo-on" data-testid="demo-on"><b>説明用デモ中（結果は架空）</b>。オフにするまで CSV は入れられません。過去の調査（架空）が入っています。</div>
+    h += `<div class="demo-on" data-testid="demo-on"><b>説明用デモ中（結果は架空）</b>。過去の調査（架空）が入っています。<button class="linkbtn" id="demo-off" type="button">デモをやめる</button></div>
       ${sel.size ? `<p>今回の走査: 第2段階で選んだ <b>${sel.size}</b> 区間（${fmt1(km)} km）。</p>` : nScan > 0 ? '<p class="note" data-testid="scan-done">今回の走査 ' + nScan + ' 区間を入れました。下のボタンで第' + (STATE.round + 1) + '回へ。</p>' : '<p class="note" data-testid="scan-hint">区間を選んでいないので、走査できません。<button class="linkbtn" id="go2" type="button">第2段階で区間を選ぶ</button></p>'}`;
   } else {
     h += `<div class="filebox"><span class="btn pri filebtn" aria-hidden="true">調査結果の CSV を選ぶ</span><span class="fname">${STATE.loadInfo ? STATE.loadInfo.name : '未選択'}</span>
       <input id="csv-file" type="file" accept=".csv,.tsv,.txt,text/csv" aria-label="調査結果の CSV を選ぶ（累計で入ります）"></div>
-      <p class="note">区間ID か緯度・経度の列＋空洞の有無の列。<b>空洞あり・なしが各3件以上</b>で較正します。</p>
+      <p class="note">書式の見本: <a href="data/format_sample_by_segment.csv" download>区間ID</a>・<a href="data/format_sample_by_point.csv" download>緯度・経度</a></p>
       <div id="load-msg" aria-live="polite">${loadMsg()}</div>`;
   }
   h += `<p data-testid="res-total">調査結果が入った区間: <b>${n}</b>${demo ? `（架空。過去 ${pastN}＋今回 ${n - pastN}）` : ''}${n ? `　<button class="linkbtn" id="clear-res" type="button">結果を消す</button>` : ''}</p>`;
@@ -188,34 +202,32 @@ function renderS3() {
     h += `<p class="over" data-testid="calib-short">較正に使える結果が不足しています（空洞あり ${c.pos} 件・なし ${c.neg} 件。各3件以上で較正）。重みは変えません。</p>`;
   } else if (c.w !== null) {
     const fin = ad.w;
-    h += `<table><thead><tr><th>点数のつけ方${demo ? '（架空の結果）' : ''}</th><th class="n">AUC</th></tr></thead><tbody>
+    const concl = ad.adopt ? `<p class="okmsg" data-testid="adopt"><b>重みを ${pct(STATE.w)}% → ${pct(fin)}% に変えます</b>（この結果で最も当たりやすい重み）。</p>`
+      : ad.reason === 'same' ? `<p class="okmsg" data-testid="no-change"><b>今の重み ${pct(fin)}% が最も当たりやすい重みでした。</b>重みは変えません。</p>`
+        : `<p class="warnbox" data-testid="no-change"><b>重みは ${pct(fin)}% のまま</b>（${REASON[ad.reason]}）。調査した区間を除いて並べ直します。</p>`;
+    h += `${concl}<details><summary>詳しく（${AUC_TH}）</summary><table><thead><tr><th>点数のつけ方${demo ? '（架空の結果）' : ''}</th><th class="n">当たりやすさ</th></tr></thead><tbody>
         <tr><td>台帳のみ（衛星0%）</td><td class="n">${c.ledgerOnly.toFixed(2)}</td></tr>
         <tr><td>衛星のみ（100%）</td><td class="n">${c.satOnly.toFixed(2)}</td></tr>
         ${ad.adopt || ad.reason === 'same' ? '' : `<tr><td>最良: 衛星 ${pct(c.w)}%</td><td class="n">${ad.best.toFixed(2)}</td></tr>`}
         <tr class="pick"><td>採用: 衛星 ${pct(fin)}%${ad.adopt ? `（${pct(STATE.w)}% から更新）` : '（今のまま）'}</td><td class="n" data-testid="auc-adopted">${aucAt(surveyedSet(), STATE.cellSat, fin).toFixed(2)}</td></tr></tbody></table>
-      ${ad.adopt ? '' : ad.reason === 'same' ? '<p class="okmsg" data-testid="no-change">今の重みが最も当たりやすい重みでした。重みは変えません。</p>' : `<p class="warnbox" data-testid="no-change"><b>この結果では重みを変える根拠がありません</b>（${REASON[ad.reason]}）。重みは今のままです。</p>`}
-      <p class="note">重みを変える条件（仮の基準）: AUC ${MIN_AUC.toFixed(2)} 以上かつ今の重みより ${MIN_GAIN.toFixed(2)} 以上高い。AUC＝空洞のあった区間が高い点数になる確率（0.5＝当てずっぽう）。${demo ? '空洞の有無は架空で、精度や効果を示しません。' : '調査した区間の中での比較で、実際の精度・効果ではありません。'}</p>`;
+      <p class="note">重みを変える条件（仮の基準）: 当たりやすさ ${MIN_AUC.toFixed(2)} 以上かつ今の重みより ${MIN_GAIN.toFixed(2)} 以上高い。当たりやすさ＝空洞のあった区間が高い点数になる確率。${demo ? '空洞の有無は架空で、精度や効果を示しません。' : '調査した区間の中での比較で、実際の精度・効果ではありません。'}</p></details>`;
   }
   const why = c.w !== null || demo ? '' : (n === 0
-    ? '<p class="why" data-testid="apply-why">まだ結果がないので反映できません。<button class="linkbtn" id="demo-go" type="button">説明用デモで動きを見る（架空の結果）</button></p>'
-    : '<p class="why" data-testid="apply-why">結果が足りないので反映できません（各3件以上）。<button class="linkbtn" id="demo-go" type="button">説明用デモで動きを見る（架空の結果）</button></p>');
+    ? '<p class="why" data-testid="apply-why">まだ結果がないので進めません。<button class="linkbtn" id="demo-go" type="button">説明用デモで動きを見る（架空の結果）</button></p>'
+    : '<p class="why" data-testid="apply-why">結果が足りないので進めません（各3件以上）。<button class="linkbtn" id="demo-go" type="button">説明用デモで動きを見る（架空の結果）</button></p>');
   const scanned = demo ? n - pastN : 0;
   const scanBtn = demo && (sel.size || !scanned) ? `<button class="btn ${sel.size && !scanned ? 'pri' : ''}" id="scan" type="button" ${sel.size ? '' : 'disabled'}>走査結果を入れる（架空）</button> ` : '';
   const applyLabel = c.w !== null && !ad.adopt ? `重みを変えずに第${STATE.round + 1}回へ` : `較正を反映して第${STATE.round + 1}回へ`;
   h += `<div class="stickybar">${why}${scanBtn}<button class="btn ${demo && !scanned ? '' : 'pri'}" id="apply" type="button" ${c.w === null ? 'disabled' : ''}>${applyLabel}</button></div>
-    <details id="fmt-box"><summary>CSV の書式と見本</summary>${FORMAT_HTML}</details>
-    <details id="demo-box"><summary>説明用デモ（架空の結果で動きを見る）。既定はオフ</summary>
-      <p class="note">実データに空洞の結果が無いため、動きを見せるだけの機能です。オンの間は<b>地中レーダの結果が乱数（架空）</b>になり、「架空」と出し続けます。切り替えると結果と較正は初めからになります。</p>
-      <label><input type="checkbox" id="demo-toggle" ${demo ? 'checked' : ''}> 説明用デモをオンにする（架空の結果）</label></details>`;
+    <details id="fmt-box"><summary>CSV の書式・説明用デモについて</summary>${FORMAT_HTML}</details>`;
   $('#s3').innerHTML = h;
   $('#apply').onclick = applyCalib;
-  $('#demo-toggle').onchange = (e) => setDemo(e.target.checked);
   if ($('#scan')) $('#scan').onclick = demoScan;
   if ($('#go2')) $('#go2').onclick = () => setStep(2);
   if ($('#demo-go')) $('#demo-go').onclick = () => setDemo(true);
+  if ($('#demo-off')) $('#demo-off').onclick = () => setDemo(false);
   if ($('#clear-res')) $('#clear-res').onclick = () => { clearResults(); render(); };
   if ($('#csv-file')) $('#csv-file').onchange = onFile;
-  if (demo) $('#demo-box').open = true;
 }
 
 function clearResults() { STATE.results = new Map(); STATE.loadInfo = null; STATE.srcSample = false; STATE.srcUser = false;
@@ -231,9 +243,10 @@ function updateBadge() {
   let t = BADGE_DEFAULT, fake = false;
   if (STATE.demo) { t = '説明用デモ：レーダ結果は架空'; fake = true; }
   else if (STATE.srcSample) { t = `架空を含む（見本 CSV）：レーダ結果 ${n} 区間は架空の値${STATE.srcUser ? '・利用者の CSV を含む' : ''}`; fake = true; }
-  else if (n > 0) t = `実データ＋利用者の調査結果 ${n} 区間（実データかは利用者の責任）`;
+  else if (n > 0) t = `実データ＋あなたが入れた調査結果 ${n} 区間（出所はあなたが確認）`;
   $('#badge').textContent = t;
-  const st = $('#status'); st.textContent = t; st.hidden = STATE.demo; st.classList.toggle('fake', fake);
+  // パネル内は状態の短い語だけ（詳しい表示は地図上のバッジ）
+  const st = $('#status'); st.textContent = fake ? '架空を含む' : n > 0 ? 'あなたの結果入り' : '実データ'; st.hidden = STATE.demo; st.classList.toggle('fake', fake);
   document.body.classList.toggle('fake', fake);
 }
 
@@ -287,14 +300,21 @@ function demoScan() {
 function applyCalib() {
   const c = calibNow();
   const ad = adoptWeight(c, surveyedSet(), STATE.cellSat, STATE.w);
-  const oldW = STATE.w, before = new Set(candidates().slice(0, 20).map((s) => s.id));
+  const oldW = STATE.w;
+  // 比べる元: 今の重みで、調査結果を入れる前の並び（調査済みも含む生活道路）
+  const life = (arr) => arr.filter((s) => s.cls === 'life');
+  const beforeAll = life(rank(STATE.segs, STATE.cellSat, oldW)), before5 = beforeAll.slice(0, 5).map((s) => s.id), before20 = new Set(beforeAll.slice(0, 20).map((s) => s.id));
+  const nDone = STATE.segs.filter((s) => s.cls === 'life' && STATE.results.has(s.id)).length;
   STATE.w = ad.w;
   STATE.appliedW = c.w === null ? null : ad.w;
   recompute(); markSurveyed();
-  const moved = candidates().slice(0, 20).filter((s) => !before.has(s.id)).length;
+  const after = candidates(), after5 = after.slice(0, 5).map((s) => s.id);
+  const moved = after.slice(0, 20).filter((s) => !before20.has(s.id)).length;
   const fk = STATE.demo ? '（架空の結果による）' : STATE.srcSample ? '（見本 CSV＝架空の値による）' : '';
   STATE.calibNote = ad.adopt ? `較正で ${pct(oldW)}% → ${pct(STATE.w)}% に更新。` : `較正の結果、${pct(STATE.w)}% のまま（${REASON[ad.reason]}）。`;
-  STATE.msg = `${fk}重み: ${ad.adopt ? `${pct(oldW)}% → <b>${pct(STATE.w)}%</b>（較正で更新）` : `<b>${pct(STATE.w)}%</b> のまま（${REASON[ad.reason]}）`}。調査した区間を除いて作り直し、第${STATE.round}回の上位20に無かった区間: <b>${moved}</b>。`;
+  const head = ad.adopt ? `重みを ${pct(oldW)}% → <b>${pct(STATE.w)}%</b> に更新し、` : `<b>重みは ${pct(STATE.w)}% のまま</b>（${REASON[ad.reason]}）。`;
+  STATE.msg = `${fk}${head}調査済み ${nDone} 区間を除いて並べ直し、${moved ? `上位20に新しく ${moved} 区間が入りました。` : '上位20の顔ぶれは同じです。'}`
+    + `<br><span class="cmp" data-testid="cmp">上位5: ${before5.join('・')} → <b>${after5.join('・')}</b></span>`;
   STATE.round += 1;
   setStep(1);
 }
@@ -308,10 +328,10 @@ function setStep(n) { STATE.step = n; STATE.focus = null; STATE.focusCell = null
 
 function renderLegend() {
   const pal = STATE.data.satellite.palette, used = [...new Set(STATE.data.cells.map((c) => c.k))].sort((x, y) => x - y);
-  const chips = used.map((k) => { const c = STATE.data.cells.find((x) => x.k === k), neg = c.range[1] <= 0; return `<div class="lg"><span class="sw sq" style="background:${pal[k]};${neg ? 'background-image:repeating-linear-gradient(45deg,#4d5c64 0 1px,transparent 1px 5px)' : ''}"></span>区画${neg ? '（斜線）' : ''} ${fmtRange(c.range)} mm/年</div>`; }).join('');
+  const chips = used.map((k) => { const c = STATE.data.cells.find((x) => x.k === k), neg = c.range[1] <= 0; return `<div class="lg"><span class="sw sq" style="background:${pal[k]};${neg ? 'background-image:repeating-linear-gradient(45deg,#4d5c64 0 1px,transparent 1px 5px)' : ''}"></span>${neg ? '地表がやや沈下側（斜線）' : '地表がやや隆起側'} ${fmtRange(c.range)} mm/年</div>`; }).join('');
   const fk = isFake() ? '（架空）' : '';
   $('#legend').innerHTML = `${chips}
-    <div class="note">衛星の階級（2階級の差は階級幅以内）</div>
+    <div class="note">衛星の区画（2つの差は誤差の幅以内）</div>
     <div>道路の点数</div><div class="grad"></div><div class="lg" style="justify-content:space-between"><span>低</span><span>高</span></div>
     <div class="lg"><span class="sw" style="border-color:#1a237e;border-top-width:6px"></span>選択した区間</div>
     <div class="lg"><span class="sw" style="border-color:#59656d;border-top-style:dashed"></span>結果が入った区間${fk}</div>
@@ -359,7 +379,7 @@ function syncDetail() {
 function focusSeg(id) {
   STATE.focus = id; STATE.focusCell = null; syncDetail();
   const s = STATE.segs.find((x) => x.id === id);
-  if (map && s) map.easeTo({ center: [(s.coords[0][0] + s.coords[1][0]) / 2, (s.coords[0][1] + s.coords[1][1]) / 2], duration: 400 });
+  if (map && s) map.easeTo({ center: [(s.coords[0][0] + s.coords[1][0]) / 2, (s.coords[0][1] + s.coords[1][1]) / 2], offset: innerWidth < 720 ? [0, 0] : [200, 0], duration: 400 });
 }
 function toggleSeg(id) {
   const s = STATE.segs.find((x) => x.id === id);
@@ -427,6 +447,7 @@ function fit() {
   map.resize();
   const mobile = innerWidth < 720, bb = STATE.data.area.bbox;
   map.fitBounds([[bb[0], bb[1]], [bb[2], bb[3]]], { padding: mobile ? { top: 46, left: 8, right: 8, bottom: 8 } : { top: 30, bottom: 30, right: 30, left: 430 }, duration: 0 });
+  if (STATE.step === 2 && STATE.selected.size) fitSelected();
 }
 
 function hatchImage() {
@@ -467,8 +488,8 @@ async function init() {
     map.addLayer({ id: 'seg-done', type: 'line', source: 'segs', filter: ['all', ['==', ['get', 'done'], 1], ['==', ['get', 'none'], 0]], paint: { 'line-color': '#59656d', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.6, 14, 1.2, 17, 3], 'line-dasharray': [2, 1.5] } });
     map.addLayer({ id: 'seg-todo', type: 'line', source: 'segs', filter: ['all', ['==', ['get', 'done'], 0], ['==', ['get', 'none'], 0], ['==', ['get', 'art'], 0]], layout: { 'line-cap': 'round' }, paint: { 'line-color': SCORE_COLOR, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1, 14, 2.5, 17, 6] } });
     map.addSource('res', { type: 'geojson', data: resFC() });
-    map.addLayer({ id: 'res-ok', type: 'circle', source: 'res', filter: ['==', ['get', 'hit'], 0], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 2.5, 5], 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2.5], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1] } });
-    map.addLayer({ id: 'res-hit', type: 'circle', source: 'res', filter: ['==', ['get', 'hit'], 1], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 4, 10], 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 3], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1] } });
+    map.addLayer({ id: 'res-ok', type: 'circle', source: 'res', filter: ['==', ['get', 'hit'], 0], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 2, 4], 'circle-color': '#fff', 'circle-stroke-color': '#0072b2', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2.5], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.5, 1] } });
+    map.addLayer({ id: 'res-hit', type: 'circle', source: 'res', filter: ['==', ['get', 'hit'], 1], paint: { 'circle-radius': ['case', ['==', ['get', 'past'], 1], 3, 7], 'circle-color': '#d55e00', 'circle-stroke-color': '#fff', 'circle-stroke-width': ['case', ['==', ['get', 'past'], 1], 1, 2], 'circle-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1], 'circle-stroke-opacity': ['case', ['==', ['get', 'past'], 1], 0.55, 1] } });
     const roadLayers = ['seg-todo', 'seg-done', 'seg-none', 'seg-art'];
     map.on('click', (e) => {
       const r = 9, f = map.queryRenderedFeatures([[e.point.x - r, e.point.y - r], [e.point.x + r, e.point.y + r]], { layers: roadLayers });
@@ -489,7 +510,6 @@ async function init() {
 document.querySelectorAll('#steps button').forEach((b) => (b.onclick = () => setStep(+b.dataset.step)));
 $('#sheet-toggle').onclick = () => { const p = $('#panel'); p.classList.toggle('closed'); const closed = p.classList.contains('closed'); document.body.classList.toggle('sheet-closed', closed); $('#sheet-toggle').setAttribute('aria-expanded', String(!closed)); setTimeout(fit, 260); };
 window.addEventListener('resize', () => fit());
-if (innerWidth < 720) $('#legend-box').open = false;
 const openAbout = () => { $('#modal').hidden = false; const box = $('.modal-box'); box.scrollTop = 0; box.focus({ preventScroll: true }); };
 $('#btn-about').onclick = openAbout;
 $('#btn-close').onclick = () => { $('#modal').hidden = true; };

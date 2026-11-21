@@ -284,6 +284,7 @@ export interface OutcomeSummary {
   unknownId: number
   unmatched: number
   invalid: number
+  blank: number
   merged: number
   conflicts: number
   segments: number
@@ -295,7 +296,7 @@ export interface ParsedOutcomes {
   results: Map<string, boolean>
   summary: OutcomeSummary
 }
-const EMPTY: OutcomeSummary = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 }
+const EMPTY: OutcomeSummary = { rows: 0, byId: 0, byPoint: 0, unknownId: 0, unmatched: 0, invalid: 0, blank: 0, merged: 0, conflicts: 0, segments: 0, hit: 0, none: 0 }
 
 /**
  * 調査結果の CSV を、区間ごとの空洞の有無（Map: 区間ID → true/false）にする。
@@ -314,6 +315,8 @@ export function parseOutcomes(text: string, segs: Segment[], maxM = LINK_MAX_M):
   const seen = new Map<string, Set<boolean>>()
   for (const r of rows.slice(1)) {
     sm.rows++
+    // 空洞の列が空欄の行は「未記入」として読み飛ばす（書き出した CSV に一部だけ記入して戻す使い方のため）
+    if (squash(r[cr]) === '') { sm.blank++; continue }
     const v = parseCavity(r[cr])
     if (v === null) { sm.invalid++; continue }
     let id: string | null = null
@@ -345,4 +348,18 @@ export function parseOutcomes(text: string, segs: Segment[], maxM = LINK_MAX_M):
   sm.hit = [...results.values()].filter(Boolean).length
   sm.none = sm.segments - sm.hit
   return { error: null, results, summary: sm }
+}
+
+/** 選んだ区間の「まとまり」の数。端点どうしが gapM 以内の区間を同じまとまりとする（現場で続けて走れる塊の目安。gapM は画面に明示する仮の値） */
+export const CLUSTER_GAP_M = 150
+export function clusterCount(segs: Pick<Segment, 'id' | 'coords'>[], ids: Set<string>, gapM = CLUSTER_GAP_M): number {
+  const sel = segs.filter((s) => ids.has(s.id))
+  const par = sel.map((_, i) => i)
+  const find = (i: number): number => (par[i] === i ? i : (par[i] = find(par[i])))
+  const near = (a: Pick<Segment, 'coords'>, b: Pick<Segment, 'coords'>) => a.coords.some((p) => b.coords.some((q) => {
+    const kx = 111320 * Math.cos((p[1] * Math.PI) / 180)
+    return Math.hypot((p[0] - q[0]) * kx, (p[1] - q[1]) * 110540) <= gapM
+  }))
+  for (let i = 0; i < sel.length; i++) for (let j = i + 1; j < sel.length; j++) if (near(sel[i], sel[j])) par[find(i)] = find(j)
+  return new Set(sel.map((_, i) => find(i))).size
 }

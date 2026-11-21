@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import { dataUrl } from '@/lib/data'
 import {
-  ADOPT_REASON, LINK_MAX_M, MIN_AUC, MIN_GAIN, aucAt, totalKm, type Adoption, type AdoptReason, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
+  ADOPT_REASON, CLUSTER_GAP_M, LINK_MAX_M, clusterCount, MIN_AUC, MIN_GAIN, aucAt, totalKm, type Adoption, type AdoptReason, type Calibration, type CellSat, type Exclusion, type OutcomeSummary, type Scanned, type Scored, type Segment,
 } from './logic'
 
 const pct = (x: number) => Math.round(x * 100)
@@ -157,8 +157,8 @@ function IndicatorFlow() {
 
 /* ---------- 1 候補区間の点数を見る ---------- */
 export function TopPanel({
-  candidates, focus, onFocus,
-}: { candidates: Scored[]; focus: string | null; onFocus: (id: string) => void }) {
+  candidates, focus, onFocus, satShift,
+}: { candidates: Scored[]; focus: string | null; onFocus: (id: string) => void; satShift?: number }) {
   const km = candidates.reduce((a, s) => a + s.lenM, 0) / 1000
   const best = candidates[0]
   // 表示（小数2桁）で同点の区間
@@ -179,6 +179,11 @@ export function TopPanel({
           testId="m-top"
         />
       </div>
+      {ties.length > 1 && (
+        <p className="rounded border-l-4 border-amber-600 bg-amber-50 px-2 py-1 text-xs" data-testid="tie-warn">
+          <b>上位{ties.length}区間が同点（{best.score.toFixed(2)}）</b>：台帳だけでは決まらず、衛星で入れ替わった区間は上位20のうち {satShift ?? 0}（この地区は衛星の差が小さい）。
+        </p>
+      )}
       <div className="text-sm font-medium">点数の高い順 上位10区間（<b>行を1つ選ぶ</b>と地図に表示され、この手順が完了します）</div>
       <RankTable rows={candidates.slice(0, 10)} focus={focus} onFocus={onFocus} />
     </div>
@@ -230,7 +235,7 @@ export function PickPanel({
         </div>
         <Progress value={Math.min(100, (km / budgetKm) * 100)} className={over ? '[&>div]:bg-[#b45309]' : ''} />
         <div className="min-h-4 text-xs leading-4 text-muted-foreground" data-testid="sel-breakdown">
-          {selected.size > 0 ? `上位15区間のうち ${inTop} 区間＋それ以外 ${selected.size - inTop} 区間を選びました。` : 'まだ区間を選んでいません。'}
+          {selected.size > 0 ? `上位15区間のうち ${inTop} 区間＋それ以外 ${selected.size - inTop} 区間。まとまり ${clusterCount(segs, selected)} か所（${CLUSTER_GAP_M} m 以内を1つ）。` : 'まだ区間を選んでいません。'}
         </div>
         {over && <div className="text-sm font-medium text-[#b45309]">▲ 上限を超えています。区間を外すか、延長を増やしてください。</div>}
       </div>
@@ -347,6 +352,7 @@ export function ScanPanel({
       <p className="text-sm">
         <b>一次審査を通った後、地中レーダ探査車（GMS3）のデータで較正します。</b>この手順はその結果を受け取る枠です。GMS3 のデータは現時点で手元になく、この画面は使っていません。同梱している実データに空洞の結果はありません。
       </p>
+      <p className="text-xs font-medium" data-testid="flow3">① 書き出した CSV の空欄の cavity 列に あり／なし を記入 → ② 下で選ぶ（あり・なし各3件以上）→ ③ 次の回へ</p>
 
       {demo ? (
         <div className="space-y-2 rounded-md border-l-4 border-amber-600 bg-amber-50 p-2.5 text-sm text-amber-950" data-testid="demo-on">
@@ -396,13 +402,14 @@ export function ScanPanel({
           <p className="text-sm" data-testid="load-ok">
             「{loadInfo.name}」を読み込みました（{sm.rows} 行）: 区間IDで {sm.byId} 行、緯度・経度の点で {sm.byPoint} 行を区間に結び付け、<b>{sm.segments} 区間</b>の結果（空洞あり {sm.hit}・なし {sm.none}）。
             {sm.merged > 0 && `同じ区間への複数行 ${sm.merged} 行は「1つでもあり」ならありにまとめました${sm.conflicts ? `（あり・なしが食い違った区間 ${sm.conflicts}）` : ''}。`}
+            {sm.blank > 0 && `空欄 ${sm.blank} 行は未記入として読み飛ばしました。`}
             {bad.length > 0 && <span className="block text-amber-800">使えなかった行: {bad.join('、')}。</span>}
           </p>
         )}
       </div>
 
       <p className="text-sm" data-testid="res-total">
-        調査結果が入った区間: <b>{resultsCount}</b>{demo ? `（架空。過去の調査 ${pastCount ?? 0} 区間＋今回の走査 ${resultsCount - (pastCount ?? 0)} 区間）` : sample ? `（見本 CSV の架空の値${userCsv ? '。利用者の CSV を含む' : ''}）` : userCsv ? '（利用者の調査結果。実データかは利用者の責任）' : ''}
+        調査結果が入った区間: <b>{resultsCount}</b>{demo ? `（架空。過去の調査 ${pastCount ?? 0} 区間＋今回の走査 ${resultsCount - (pastCount ?? 0)} 区間）` : sample ? `（見本 CSV の架空の値${userCsv ? '。利用者の CSV を含む' : ''}）` : userCsv ? '（あなたが入れた調査結果。出所はあなたが確認）' : ''}
         {resultsCount > 0 && <Button size="sm" variant="outline" className="ml-2" onClick={onClear} data-testid="clear-res">結果を消す</Button>}
       </p>
 
@@ -498,7 +505,7 @@ export function ApplyPanel({
           </p>
           <Table>
             <TableHeader>
-              <TableRow><TableHead>点数のつけ方</TableHead><TableHead className="text-right">当たりやすさ(AUC)</TableHead></TableRow>
+              <TableRow><TableHead>点数のつけ方</TableHead><TableHead className="text-right">当たりやすさ（AUC。0.5＝当てずっぽう）</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               <TableRow><TableCell>台帳のみ（衛星0%）</TableCell><TableCell className="text-right">{calib.ledgerOnly?.toFixed(2)}</TableCell></TableRow>

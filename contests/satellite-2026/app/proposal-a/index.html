@@ -13,7 +13,7 @@
 <div id="map" aria-label="道路区間の地図（豊中市北東部）"></div>
 <div id="badge" role="note">実データ（衛星・道路・台帳）／レーダ結果は未入力</div>
 <div id="fake-mark" aria-hidden="true">架空</div>
-<details id="legend-box" open><summary>凡例</summary><section id="legend" aria-label="凡例"></section></details>
+<details id="legend-box"><summary>凡例</summary><section id="legend" aria-label="凡例"></section></details>
 
 <aside id="panel">
   <button id="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel-body">パネルを開閉</button>
@@ -35,10 +35,7 @@
     <section id="s2" class="step" hidden aria-labelledby="tab-2"></section>
     <section id="s3" class="step" hidden aria-labelledby="tab-3"></section>
     <section id="s4" class="step" hidden aria-labelledby="tab-4"></section>
-    <details class="sat" id="sat-note"><summary>衛星はだいち2号・4号で代用（提案書の主想定は Sentinel-1）</summary>
-      <p>ALOS-2/4（Lバンド）、国土地理院解析、約90m、階級 3.75 mm/年幅。提案書は Sentinel-1 を主に想定（ALOS-4 は比較検証）。解析：国土地理院 原初データ所有：JAXA。</p>
-    </details>
-    <p class="foot"><button id="btn-about" type="button">出典・データの扱い・限界</button></p>
+    <p class="foot"><span class="note">衛星はだいち2号・4号で代用（提案書の主想定は Sentinel-1）。</span><button id="btn-about" type="button">出典・データの扱い・限界</button></p>
   </div>
 </aside>
 

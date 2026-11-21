@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   ageNorm, satNorm, segScore, rank, selectByBudget, totalKm, auc, calibrate, exclusionAccuracy, candidatesOf, topShift,
-  parseCsv, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, adoptWeight, MIN_AUC,
+  parseCsv, clusterCount, parseCavity, parseOutcomes, distToSegM, nearestSegment, scannedFrom, adoptWeight, MIN_AUC,
   type DataFile, type DemoData, type Segment,
 } from './logic'
 
@@ -209,5 +209,23 @@ describe('評価ループ第1回: 同点の並べ方と重みを変える条件'
     expect(r.adopt).toBe(false)
     expect(r.w).toBe(0.1)
     expect(adoptWeight(null, [], cs, 0.3)).toMatchObject({ w: 0.3, reason: 'short' })
+  })
+})
+
+describe('書き出した CSV を戻す（評価ループ第2回）', () => {
+  it('空洞の列が空欄の行は未記入として読み飛ばす', () => {
+    const segs = [{ id: 'S1', cls: 'life', coords: [[135, 34], [135.001, 34]] }, { id: 'S2', cls: 'life', coords: [[135, 34.01], [135.001, 34.01]] }] as never
+    const r = parseOutcomes('rank,segment_id,lat,lon,cavity\n1,S1,34,135,あり\n2,S2,34.01,135,\n', segs)
+    expect(r.error).toBeNull()
+    expect(r.summary).toMatchObject({ segments: 1, blank: 1, invalid: 0 })
+  })
+  it('まとまりの数: 端点が近い区間は1つと数える', () => {
+    const segs = [
+      { id: 'A', coords: [[135, 34], [135.001, 34]] },
+      { id: 'B', coords: [[135.001, 34], [135.002, 34]] },
+      { id: 'C', coords: [[135.05, 34], [135.051, 34]] },
+    ] as never
+    expect(clusterCount(segs, new Set(['A', 'B', 'C']))).toBe(2)
+    expect(clusterCount(segs, new Set())).toBe(0)
   })
 })

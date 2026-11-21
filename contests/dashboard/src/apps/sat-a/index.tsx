@@ -19,7 +19,7 @@ import {
 import { VerifyPanel, type VerifyData } from './Verify'
 import { SOURCES } from './About'
 import {
-  NOW_YEAR, ADOPT_REASON, adoptWeight, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, totalKm,
+  NOW_YEAR, ADOPT_REASON, adoptWeight, ageNorm, calibrate, candidatesOf, exclusionAccuracy, parseOutcomes, rank, satNorm, scannedFrom, selectByBudget, topShift, totalKm,
   type DataFile, type DemoData, type Scanned, type Segment,
 } from './logic'
 
@@ -201,16 +201,17 @@ export default function App() {
   // 書き出し CSV の出どころ表記。見本 CSV（架空の値）で較正した順位を「実データ」と書かない
   const dataNote = demo ? '説明用デモ（結果は架空）'
     : srcSample ? '見本 CSV（架空の値）で較正。地中レーダの結果は実際の調査結果ではありません'
-      : srcUser ? '利用者の調査結果による（衛星・道路・台帳は豊中市北東部の実データ。調査結果が実データかは利用者の責任）'
+      : srcUser ? 'あなたが入れた調査結果による（衛星・道路・台帳は豊中市北東部の実データ。調査結果の出所はあなたが確認）'
         : '実データ（豊中市北東部。衛星・道路・台帳）'
   const exportTargets = () => {
     const rk = new Map(candidates.map((s, i) => [s.id, i + 1]))
     const mid = (s: Segment, k: 0 | 1) => ((s.coords[0][k] + s.coords[1][k]) / 2).toFixed(6)
     const rows = [...selected].map((id) => ranked.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s)
       .sort((a, b) => (rk.get(a.id) ?? 999) - (rk.get(b.id) ?? 999))
-      .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote])
-    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note'], ...rows])), 'text/csv;charset=utf-8')
-    setExportMsg(`survey-targets.csv（${rows.length} 区間・${totalKm(segs, selected).toFixed(1)} km）を書き出しました`)
+      // cavity 列は空欄。調査後に あり／なし を書いて、そのまま手順「戻す」で入れられる（空欄の行は読み飛ばす）
+      .map((s) => [rk.get(s.id) ?? '', s.id, mid(s, 1), mid(s, 0), s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), `${pct(w)}%`, dataNote, ''])
+    downloadText('survey-targets.csv', markCsv(toCsv([['rank', 'segment_id', 'lat', 'lon', 'cell', 'length_m', 'laid_year', 'score', 'satellite_weight', 'data_note', 'cavity'], ...rows])), 'text/csv;charset=utf-8')
+    setExportMsg(`survey-targets.csv（${rows.length} 区間）をダウンロードフォルダに保存。調査後、空欄の cavity 列に あり／なし を書いて結果の手順で入れます`)
   }
   const exportRound2 = () => {
     const rows = candidates.slice(0, 10).map((s, i) => [i + 1, s.id, s.cell, s.lenM, s.year ?? '', s.score.toFixed(2), prev?.rank[s.id] ?? '', `${pct(w)}%`, dataNote])
@@ -323,7 +324,7 @@ export default function App() {
       badge={
         demo ? { kind: 'fictional', label: '架空を含む（説明用デモ）' }
           : srcSample ? { kind: 'fictional', label: srcUser ? '架空を含む（見本 CSV＋利用者の CSV）' : '架空を含む（見本 CSV）' }
-            : srcUser ? { kind: 'partial', label: '実データ＋利用者の調査結果（実データかは利用者の責任）' }
+            : srcUser ? { kind: 'partial', label: '実データ＋あなたが入れた調査結果（出所はあなたが確認）' }
               : undefined
       }
       actions={
@@ -426,7 +427,7 @@ export default function App() {
           <Skeleton className="h-40 w-full" />
         ) : (
           <>
-            {step === 'top' && <TopPanel candidates={candidates} focus={focus} onFocus={focusRow} />}
+            {step === 'top' && <TopPanel candidates={candidates} focus={focus} onFocus={focusRow} satShift={topShift(segs, cellSat, w, 20)} />}
             {step === 'weight' && (
               <WeightPanel
                 w={w}
