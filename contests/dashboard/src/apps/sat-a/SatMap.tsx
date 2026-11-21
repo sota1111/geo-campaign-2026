@@ -17,13 +17,16 @@ export interface SatMapProps {
   step: '1' | '2'
   results: Map<string, boolean>
   demo: boolean
+  /** 同梱の見本 CSV（架空の値）を入れた / 利用者の CSV を入れた */
+  sample?: boolean
+  userCsv?: boolean
   /** 説明用デモの「過去の調査」（架空）の区間。小さく薄く描き、今回の走査分だけを大きく見せる */
   pastIds?: Set<string>
   onSegmentClick: (id: string) => void
   className?: string
 }
 
-export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, step, results, demo, pastIds, onSegmentClick, className }: SatMapProps) {
+export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, step, results, demo, sample, userCsv, pastIds, onSegmentClick, className }: SatMapProps) {
   const cellsFc = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: 'FeatureCollection',
@@ -123,12 +126,22 @@ export function SatMap({ round, bbox, palette, cells, ranked, selected, focus, s
         >
           説明用デモ中：地中レーダの結果は架空（乱数）です／第{round}回
         </div>
+      ) : sample ? (
+        <div
+          role="alert"
+          data-testid="sample-banner"
+          className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4rem)] rounded border-2 border-amber-600 bg-amber-50/95 px-2 py-1 text-xs font-bold text-amber-950 shadow"
+        >
+          見本 CSV（架空の値）を入れています。レーダ結果 {results.size} 区間は架空です{userCsv ? '（利用者の CSV を含む）' : ''}／第{round}回
+        </div>
       ) : (
         <div
           data-testid="real-badge"
           className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-4rem)] rounded border border-slate-400 bg-white/95 px-2 py-1 text-xs font-medium text-slate-800 shadow"
         >
-          実データ（衛星・道路・台帳）／レーダ結果は未入力／第{round}回
+          {results.size > 0
+            ? `実データ（衛星・道路・台帳）／レーダ結果: 利用者の調査結果 ${results.size} 区間（実データかは利用者の責任）／第${round}回`
+            : `実データ（衛星・道路・台帳）／レーダ結果は未入力／第${round}回`}
         </div>
       )}
     </div>
