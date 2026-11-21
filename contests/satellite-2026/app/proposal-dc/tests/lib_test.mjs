@@ -11,6 +11,7 @@ const src = fs.readFileSync(path.join(root, 'data/dc.js'), 'utf8');
 const D = JSON.parse(src.replace(/^window\.DC_DATA=/, '').replace(/;\s*$/, ''));
 const g = D.grid;
 const N = g.nx * g.ny;
+const mx = (a) => a.reduce((m, v) => (v > m ? v : m), 0);
 const LY = Object.fromEntries(Object.entries(D.layers).map(([k, v]) => [k, L.decodeRle(v, N)]));
 
 test('RLE: 往復できる・長さが合わないと例外', () => {
@@ -88,9 +89,9 @@ test('データの整合: 格子の大きさ・層・場面', () => {
   for (const k of ['flood', 'slide', 'tsunami', 'surge', 'sub', 'lst', 'land', 'chg']) assert.equal(LY[k].length, N, k);
   assert.ok(D.stats.insar_valid > 0.5, '干渉SARが範囲の半分以上にある');
   assert.ok(D.stats.lst_valid > 0.5);
-  assert.ok(Math.max(...LY.flood) <= 6 && Math.max(...LY.sub) <= 16 && Math.max(...LY.land) <= 5 && Math.max(...LY.chg) <= 1);
+  assert.ok(mx(LY.flood) <= 6 && mx(LY.sub) <= 16 && mx(LY.land) <= 5 && mx(LY.chg) <= 1);
   assert.ok(D.labels.tsunami.length >= 1 && D.labels.surge.length >= 1);
-  assert.ok(Math.max(...LY.tsunami) <= D.labels.tsunami.length && Math.max(...LY.surge) <= D.labels.surge.length);
+  assert.ok(mx(LY.tsunami) <= D.labels.tsunami.length && mx(LY.surge) <= D.labels.surge.length);
 });
 
 test('データの整合: 候補地は範囲内で、輪郭に格子があり、番号が一意', () => {

@@ -58,7 +58,7 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   ok(label + ': 候補地を選ぶと見出しと確認項目が変わる', (await ev(`document.querySelector('#target-title').textContent`)) !== first && (await ev(`document.querySelectorAll('#rows .row').length`)) === 8);
   ok(label + ': 選んだ候補地の輪郭が地図にある', await ev(`DCApp.state.map.getSource('sel')._data.geometry?.type==='Polygon'`));
   // 地図をクリックして地点を指す
-  const pt = await ev(`(()=>{const m=DCApp.state.map;const p=m.project([130.74,33.80]);const r=m.getContainer().getBoundingClientRect();return {x:r.left+p.x,y:r.top+p.y}})()`);
+  const pt = await ev(`(()=>{const m=DCApp.state.map;const p=m.project(m.getCenter());const r=m.getContainer().getBoundingClientRect();return {x:r.left+p.x+(r.width>600?110:70),y:r.top+p.y-70}})()`);
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pt.x, y: pt.y, button: 'left', clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pt.x, y: pt.y, button: 'left', clickCount: 1 }); await sleep(700);
   ok(label + ': 地図をクリックすると「地図で指した地点」の確認項目が出る', await ev(`document.querySelector('#target-title').textContent==='地図で指した地点'&&document.querySelectorAll('#rows .row').length===8&&!!document.querySelector('.pt-mk')`));
