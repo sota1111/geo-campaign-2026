@@ -8,8 +8,8 @@ export const FIELDS = {
   price: '公示価格',
   priceAlt: '1㎡当たりの価格',
   change: '変動率',
-  lat: '緯度',
-  lon: '経度',
+  lat: '位置座標緯度',
+  lon: '位置座標経度',
   rosenka: '路線価相続税路線価',
   rosenkaYear: '路線価年',
   hikaku: '鑑定評価手法の適用取引事例比較法比準価格',
@@ -17,15 +17,21 @@ export const FIELDS = {
   rimawari: '収益価格算定内訳還元利回り',
   cityCode: '標準地番号市区町村コード市区町村コード',
   areaName: '標準地番号地域名',
-  useName: '標準地番号用途区分コード',
+  useName: '標準地番号用途区分',
   seq: '標準地番号連番',
   lot: '標準地所在地所在地番',
   addr: '標準地所在地住居表示',
   zone: '標準地法令上の規制等用途地域',
-  kenpei: '標準地法令上の規制等指定建蔽率',
+  kenpei: '標準地法令上の規制等指定建ぺい率',
   yoseki: '標準地法令上の規制等指定容積率',
   chiseki: '標準地地積地積',
   genkyo: '標準地土地利用の現況現況',
+};
+/** 別名（表記ゆれ。実データの項目名は上の FIELDS）。建蔽／建ぺい、位置座標の有無、用途区分のコード有無など */
+export const ALIASES = {
+  lat: ['緯度'], lon: ['経度'],
+  useName: ['標準地番号用途区分コード'],
+  kenpei: ['標準地法令上の規制等指定建蔽率'],
 };
 /** 4つの価格に当たる項目 */
 export const PRICE_FIELDS = ['price', 'rosenka', 'hikaku', 'shueki'];
@@ -55,7 +61,10 @@ const inJapan = (lon, lat) => lon >= 122 && lon <= 154 && lat >= 20 && lat <= 46
 /** 1件を画面用の形にする。位置が取れない、または価格が4つとも無い件は null */
 export function extractPoint(rec, fallbackUse = '') {
   const ix = indexOf(rec);
-  const g = (f) => ix.get(FIELDS[f]);
+  const g = (f) => {
+    for (const name of [FIELDS[f], ...(ALIASES[f] ?? [])]) { const v = ix.get(name); if (v !== undefined) return v; }
+    return undefined;
+  };
   const lat = num(g('lat')), lon = num(g('lon'));
   if (lat === null || lon === null || !inJapan(lon, lat)) return null;
   const price = num(g('price')) ?? num(g('priceAlt'));
