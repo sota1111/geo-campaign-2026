@@ -460,7 +460,7 @@
     const region = data.region, tk = region.id === 'tokushima', u = unitOf(region);
     // 立地適正化計画が「データ無し」（取得できたが0件）の地域は、用途地域の代用を示すので、「データ無し」の行は出さない
     const planApis = ['XKT003'].filter((a) => !(region.zoning && data.status[a].state === 'empty'));
-    const sec = { id: 'plan', title: '1. 市の計画：立地適正化計画の区域か', apis: ['XKT003', 'XKT013'], lines: [], ask: [], missing: unfetched(data, planApis) };
+    const sec = { id: 'plan', title: '1. 立地適正化計画の区域', apis: ['XKT003', 'XKT013'], lines: [], ask: [], missing: unfetched(data, planApis) };
     const p = f.plan;
     if (!(p && p.hasPlan) && region.zoning && f.zoning) return zoningSection(data, f, sec);
     if (!p) return sec;

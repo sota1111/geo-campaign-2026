@@ -291,3 +291,70 @@ button.gowork { white-space: nowrap; }
   .sechd { font-size: .68rem; }
   #step2 > p.row { margin: 0 0 3px; }
 }
+/* ---- 評価ループ第4回: 凡例を表の直上に1行ずつ・10件でも列が切れない・シートの番号チップ・スマホの地図切替と出典の畳み ---- */
+.tleg { list-style: none; margin: 2px 0; padding: 0; font-size: .7rem; line-height: 1.4; color: #3d4954; }
+.tleg li { margin: 1px 0; }
+.tleg .pb { display: inline-block; margin: 0 2px 0 6px; }
+.tleg li > .pb:first-child { margin-left: 0; }
+.tscroll { max-width: 100%; overflow-x: auto; }
+.pb[title] { cursor: help; }
+.chips { display: inline-flex; flex-wrap: wrap; gap: 3px; margin: 0 6px; vertical-align: middle; }
+.chip { min-width: 28px; height: 28px; padding: 0 4px; border-radius: 50%; background: #fff; color: #c2185b; border: 2px solid #c2185b; font-weight: bold; font-size: .8rem; }
+.chip.on { background: #c2185b; color: #fff; }
+.mobonly { display: none; }
+details.sec > summary h4 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 641px) {
+  #propList table.cmp th.pc { max-width: 9em; }
+  #propList .pbs { flex-wrap: wrap; }
+  #propList table.cmp td.cmt .md { white-space: nowrap; }
+}
+@media (max-width: 640px) {
+  .mobonly { display: inline-block; }
+  .attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; cursor: pointer; }
+  .attr.open { white-space: normal; max-width: 100%; }
+  body.on-sheet #mapwrap { height: 26dvh; min-height: 200px; }
+  body.map-big #mapwrap, body.map-big.has-props #mapwrap, body.map-big.on-sheet #mapwrap { height: 58dvh; }
+  #propList table.cmp { font-size: .66rem; }
+  button.pname { font-size: .7rem; min-height: 28px; }
+  .tleg { font-size: .64rem; }
+  .chip { min-width: 30px; height: 30px; }
+  .sheet .fine { font-size: .66rem; }
+}
+@media (min-width: 641px) {
+  #app { grid-template-columns: 5fr 4fr; }
+  #propList table.cmp th.pc { max-width: none; }
+  #propList .pbs { flex-wrap: nowrap; }
+  #propList table.cmp th, #propList table.cmp td { padding: 1px 3px; }
+}
+@media (max-width: 640px) {
+  /* スマホ: 物件名は札と同じ下の行に出し、番号の列だけ残して表を画面幅に収める */
+  #propList th.pc .pnt { display: none; }
+  #propList table.cmp th.pc { min-width: 0; width: 2.2rem; text-align: center; }
+  #propList th.pc button.pname { min-height: 32px; justify-content: center; }
+  #propList th.pc .rowno { height: 24px; min-width: 24px; font-size: .8rem; }
+  #propList tr.brow td { display: table-cell; }
+  #propList tr.brow .pname { font-size: .72rem; margin-right: 6px; vertical-align: middle; }
+  #propList tr.brow .pbs { display: inline-flex; vertical-align: middle; }
+  #propList table.cmp th, #propList table.cmp td { padding: 1px 2px; }
+}
+@media (max-width: 640px) {
+  #propList table.cmp td { font-size: .62rem; }
+  #propList table.cmp td.cmt .cm, td.cmt .cm.far { font-size: .64rem; letter-spacing: -.03em; }
+  #propList table.cmp td.cmt .md { font-size: .5rem; letter-spacing: -.05em; }
+  #propList table.cmp td.na { font-size: .56rem; }
+}
+@media (max-width: 640px) {
+  #propList table.cmp th.pc { width: 1.8rem; padding: 1px 0; }
+  #propList table.cmp th, #propList table.cmp td { padding: 1px 1px; }
+  .panel#stepP { padding: 4px 4px; }
+}
+/* 節の見出しは軽い帯に（詳細を開くためだけの見出し）。印刷は従来どおり */
+@media screen {
+  details.sec > summary h4 { background: #eef1f4; color: var(--fg); border: 1px solid var(--line); font-weight: bold; }
+  details.sec[open] > summary h4 { background: var(--fg); color: #fff; }
+  details.sec:not([open]) .sechd { color: var(--muted); }
+}
+@media (max-width: 640px) {
+  .chip { min-width: 26px; height: 26px; font-size: .74rem; }
+  .chips { margin: 0 4px; }
+}

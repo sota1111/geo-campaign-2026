@@ -78,3 +78,14 @@ test('評価ループ第3回: 例は勤務先2か所と物件5件、通勤は60�
   assert.ok(app.includes("nw === Life.MAX_WORKS; // Bが空"));
   assert.ok(!/<details class="sec"[^>]*' open'/.test(app));
 });
+test('評価ループ第4回: 凡例は表の直上・「札」の字なし・通勤は全行「約」・学童の列を畳む・節見出しは名詞で終える', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
+  assert.ok(app.includes('class="tleg"') && !app.includes('札 誘導'));
+  assert.ok(!/'<b class="cm">' \+ v\.min/.test(app));
+  assert.ok(app.includes('gkFold') && app.includes('要確認') && !app.includes('>未登録<'));
+  assert.ok(!app.includes('10件まで入りました。'));
+  assert.ok(html.includes('id="propChips"') && html.includes('id="mapBig"'));
+  assert.ok(!/title: '1\. 市の計画/.test(fs.readFileSync(path.join(__dirname, '../web/lib.js'), 'utf8')));
+  assert.ok(!/査定|適正料金|最適地/.test(app + html));
+});

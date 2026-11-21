@@ -25,8 +25,8 @@
       <div id="marks"></div>
       <div id="popup" class="popup" role="dialog" aria-label="物件・勤務先の情報" hidden></div>
       <div id="maploading" class="maploading" hidden></div>
-      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button><button type="button" id="fitAll" aria-label="物件と勤務先をすべて表示" title="物件と勤務先をすべて表示">全</button></div>
-      <div class="attr">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工／施設: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors（ODbL）</a>・国土数値情報</div>
+      <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button><button type="button" id="fitAll" aria-label="物件と勤務先をすべて表示" title="物件と勤務先をすべて表示">全</button><button type="button" id="mapBig" class="mobonly" aria-pressed="false" aria-label="地図を大きくする" title="地図を大きく・小さく">⇕</button></div>
+      <div class="attr" id="attr" title="押すと全文">地図: 国土地理院タイル／区域: 不動産情報ライブラリ（国土交通省）を加工／施設: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors（ODbL）</a>・国土数値情報</div>
     </div>
   </div>
 
@@ -84,7 +84,7 @@
         <div id="workForms"></div>
         <p id="workMsg" class="msg" role="status"></p>
 
-        <h2><span class="stepn" aria-hidden="true">2</span>物件の住所（最大10件）<span id="propFull" class="hsub" hidden> 10件まで入りました（消すには地図の番号を押す）</span> <button type="button" id="exFill" class="secondary mini">例を入れる</button></h2>
+        <h2><span class="stepn" aria-hidden="true">2</span>物件の住所（最大10件）<span id="propFull" class="hsub" hidden> 10件まで入りました（消すには地図の番号を押す）</span> <button type="button" id="exFill" class="secondary mini" title="例の物件5件を入れます。勤務先は空いている欄だけ例で埋めます">例を入れる</button></h2>
         <form id="propForm" class="row">
           <label class="sr" for="propQ">物件の住所</label>
           <input id="propQ" type="search" placeholder="例: 徳島市幸町2丁目" autocomplete="off">
@@ -105,7 +105,7 @@
     <div class="tabpanel" id="tab-sheet" role="tabpanel" aria-labelledby="t-sheet" hidden>
       <section id="step2" class="panel">
         <p id="status" role="status">物件の「シート」を押すか、地図を押すと、ここにその場所のシートが出ます。</p>
-        <p class="row"><button type="button" id="backProps" class="secondary">← 物件・通勤へ</button><button type="button" id="printBtn" class="secondary" disabled>印刷・PDF（A4・1枚）</button></p>
+        <p class="row"><button type="button" id="backProps" class="secondary">← 物件の表</button><span id="propChips" class="chips" role="group" aria-label="物件を切り替える"></span><button type="button" id="printBtn" class="secondary" disabled>印刷・PDF</button></p>
         <div id="sheet" class="sheet" aria-live="polite"></div>
       </section>
     </div>
