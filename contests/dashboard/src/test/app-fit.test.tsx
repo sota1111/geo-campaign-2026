@@ -9,8 +9,8 @@ import {
   TARGETS_KEY, activeCautions, appsForContest, cellOf, contestScore, isSelectable, loadTargets, sanitizeTargets, sortApps, toggleTarget, totalScore,
 } from '@/lib/fit'
 
-// 正本 JSON に未反映の新案（app-fit.ts に先に足した。反映後はここから外す）
-const NEW_UNREFLECTED = ['biz-realestate-a4', 'biz-realestate-timeline']
+// 正本 JSON に未反映の新案（app-fit.ts に先に足した。反映後はここから外す）。a4・timeline は 2026-11-21 に参謀長が正本へ反映済み
+const NEW_UNREFLECTED: string[] = []
 const json = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../../../reports/intel/app-contest-fit-20261121.json'), 'utf-8'))
 
 describe('適合表（情報部の正本）の取り込み', () => {
