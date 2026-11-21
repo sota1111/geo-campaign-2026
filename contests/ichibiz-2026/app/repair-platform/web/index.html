@@ -33,7 +33,7 @@
         <div id="tiles"></div>
         <canvas id="over"></canvas>
         <div class="maplegend" aria-hidden="true"><b>推定階数</b>
-          <span><i style="background:#f2c14e"></i>〜5</span><span><i style="background:#f08a24"></i>6〜9</span><span><i style="background:#d1495b"></i>10〜14</span><span><i style="background:#7a2e8e"></i>15〜</span>
+          <span><i style="background:#f2c14e"></i>〜5</span><span><i style="background:#f08a24"></i>6〜9</span><span><i style="background:#d1495b"></i>10〜14</span><span><i style="background:#7a2e8e"></i>15〜</span><span><i style="background:#a7afb7"></i>対象外</span>
         </div>
         <div class="zoombtns"><button type="button" id="zin" aria-label="拡大">＋</button><button type="button" id="zout" aria-label="縮小">－</button><button type="button" id="zfit" aria-label="墨田区全体に戻す" class="fit">全体</button></div>
         <div class="attr" id="mapAttr"></div>
@@ -63,7 +63,7 @@
       </form>
       <div id="estOut" aria-live="polite"></div>
       <p id="simMini" class="mini"></p>
-      <details id="moreCond"><summary>条件を変える（延床・築年・階数・工事回数・階高）</summary>
+      <details id="moreCond"><summary>条件を変える（延床・築年・回数など）</summary>
         <div class="fields">
           <label>延床 <input id="inTfa" type="number" min="1" inputmode="numeric"><span class="u">㎡</span><span id="tfaTag" class="tag" hidden>推定</span></label>
           <label>築年数 <input id="inAge" type="number" min="0" max="100" inputmode="numeric"><span class="u">年</span></label>

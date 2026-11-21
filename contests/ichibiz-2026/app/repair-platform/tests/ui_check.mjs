@@ -63,7 +63,7 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   check(!m0.hscroll, name + ': 横スクロールがある');
   if (desktop) { check(!m0.vscroll, name + ': 縦スクロールがある（docH ' + m0.docH + ' > ' + m0.vh + '）'); check(m0.mapW / m0.vw >= 0.6 && m0.mapW / m0.vw <= 0.75 && m0.mapH / m0.vh >= 0.75, name + ': 地図が画面の6〜7割（幅）・高さ7.5割以上でない ' + m0.mapW + 'x' + m0.mapH); }
   else check(m0.mapTop < m0.sideTop, name + ': 地図が操作パネルより上でない');
-  check((await ev("document.getElementById('mapNote').innerText")).includes('用途の属性は入っていない'), name + ': 地図の注記がない');
+  check((await ev("document.getElementById('mapNote').innerText")).includes('マンションとは限りません'), name + ': 地図の注記がない');
   await shot(`${name}-1-load.png`);
 
   // 建物を実クリックで選ぶ: 推定10階前後の建物に寄せてから、その中心を押す
@@ -133,13 +133,13 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await sleep(500);
   const sim = await text('#simOut');
   const nsim = await ev("document.querySelectorAll('#simOut tbody tr').length");
-  check(nsim >= 3 && sim.includes('修繕実績・築年は未収録') && sim.includes('機械計算'), name + ': 似た建物が出ない/実績・築年の限界の表示なし ' + nsim);
+  check(nsim >= 3 && sim.includes('修繕実績・築年は未収録') && sim.includes('実績ではない') && !!(await ev("document.querySelector('#caseOut form#caseForm:not(details form)')")), name + ': 似た建物が出ない/実績・築年の限界の表示なし ' + nsim);
   await ev("document.querySelector('#simOut [data-sort=floors]').click()");
   const fl = await ev("[...document.querySelectorAll('#simOut tbody tr')].map((r) => +r.cells[1].innerText)");
   check(fl.join() === fl.slice().sort((a, b) => b - a).join(), name + ': 階数で並べ替えできない ' + fl);
   await ev("document.querySelector('#caseOut details.cases').open = true");
   const cases = await text('#caseOut');
-  check((cases.match(/架空/g) || []).length >= 4 && cases.includes('公開されている個別の修繕事例はありません'), name + ': 事例の架空表示がない');
+  check((cases.match(/架空/g) || []).length >= 4 && sim.includes('公開された個別事例がない'), name + ': 事例の架空表示がない');
   check((await ev("document.querySelectorAll('#caseOut .list li.fakeitem').length")) === 3, name + ': 架空事例3件の印がない');
   await shot(`${name}-3-similar.png`);
 
@@ -173,7 +173,8 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const vendor = await text('#vendorOut');
   check(nlinks === 4 && nrev === 4, name + ': 公的リンク4件・架空の口コミ4件でない ' + nlinks + '/' + nrev);
   check(vendor.includes('新しい順') && vendor.includes('実データなし') && vendor.includes('架空です'), name + ': 口コミの規則・架空の表示がない');
-  check((await ev("document.querySelectorAll('#vendorOut .rangebar .you').length")) === 3 && /\d件/.test(await text('#vendorOut table.qt')), name + ': 見本の3社が最初から帯に並ばない／口コミ数が出ない');
+  check((await ev("document.querySelectorAll('#vendorOut .rangebar .you').length")) === 4 && /\d件/.test(await text('#vendorOut table.qt')) && (await text('#vendorOut table.qt')).includes('目安タブの見積'), name + ': 自分の見積と見本の3社が最初から帯に並ばない／口コミ数が出ない');
+  check((await ev("[...document.querySelectorAll('#vendorOut .list.rev li')].filter((l) => l.getBoundingClientRect().height > 0).length")) === 4, name + ': 口コミ4件が最初から並ばない');
   const order = await ev("[...document.querySelectorAll('#vendorOut .list li.fakeitem')].map((l) => (l.textContent.match(/\\d{4}-\\d{2}-\\d{2}/) || [''])[0]).join(',')");
   report[name + '-reviewOrder'] = order;
   check(order === order.split(',').sort().reverse().join(','), name + ': 口コミが新しい順でない');
@@ -183,7 +184,7 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const nmark = await ev("document.querySelectorAll('#vendorOut .rangebar .you').length");
   const qt = await text('#vendorOut table.qt');
   report[name + '-quotes'] = qt.replace(/\n/g, ' / ').slice(0, 300);
-  check(nmark === 3 && /上位25%|中央値と|下位25%/.test(qt), name + ': 複数社の見積が帯に並ばない ' + nmark);
+  check(nmark === 4 && /上位25%|中央値と|下位25%/.test(qt), name + ': 複数社の見積が帯に並ばない ' + nmark);
   await shot(`${name}-5-vendor.png`);
 
   // 口コミを1件投稿（端末内のみ）→ 先頭に出る・並びは日付順

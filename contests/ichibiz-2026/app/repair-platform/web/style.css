@@ -167,3 +167,32 @@ canvas#plan { width:100%; max-width:380px; height:140px; border:1px solid var(--
   .maplegend { font-size:.68rem; gap:4px; padding:2px 5px; }
   .tabs [role=tab] { font-size:.78rem; padding:6px 6px; }
 }
+
+/* 第4回: 点群は結果と図を横並び・見積書との照合を1行に。事例の登録欄は表の直下に出す。口コミは1行要約 */
+.slamrow { display:flex; gap:8px; align-items:flex-start; }
+.slamrow table { flex:1; margin:0; }
+canvas#plan { width:120px; height:84px; max-width:none; flex:none; }
+.qcheck label { font-size:.8rem; white-space:nowrap; }
+.qcheck input { width:5.5em; }
+.qcheck #wOut p { margin:2px 0; }
+form.case3 { grid-template-columns: repeat(3, minmax(0,1fr)); align-items:end; }
+form.case3 .sub2 { display:flex; align-items:end; }
+form.case3 details { margin:0; } form.case3 details summary { font-size:.76rem; font-weight:normal; color:var(--accent); }
+.list.rev li { padding:2px 8px; margin:3px 0; }
+details.rv { margin:0; } details.rv summary { font-weight:normal; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+details.rv[open] summary .rvt { display:none; }
+.rvt { color:var(--muted); }
+.band.demo { color:#7d8893; }
+tr.minerow td { background:#fdf0f4; }
+.big .sub .guess { font-weight:bold; color:var(--fg); font-size:inherit; white-space:normal; }
+.srcsum li { font-size:.8rem; padding:2px 8px; }
+@media (max-width: 899px) {
+  body { padding-bottom:88px; }
+  body.typing .mapbox { height:16vh; height:16dvh; min-height:110px; }
+  form.case3 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+table.simt td { white-space:nowrap; padding:1px 5px; }
+table.simt th { font-size:.74rem; line-height:1.25; }
+table.simt button.pick { min-height:24px; }
+form.case3 details.full { grid-column:1 / -1; }
+body.typing .zoombtns .fit { display:none; }

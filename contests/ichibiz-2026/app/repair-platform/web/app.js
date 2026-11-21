@@ -9,6 +9,7 @@
   const KEY = { cases: 'rp1-cases', reviews: 'rp1-reviews', checks: 'rp1-checks', quotes: 'rp2-quotes' };
   const COLORS = ['#f2c14e', '#f08a24', '#d1495b', '#7a2e8e'];
   const colorOf = (f) => (f >= 15 ? COLORS[3] : f >= 10 ? COLORS[2] : f >= 6 ? COLORS[1] : COLORS[0]);
+  const GRAY = '#a7afb7'; // 規模が大きく目安を出さない建物（押す前に分かるように）
   const B_ = (kind, text) => '<span class="b ' + kind + '">' + text + '</span>';
   const BADGE = { real: B_('real', '実データ'), est: B_('est', '推定'), user: B_('user', '利用者入力'), fake: B_('fake', '架空') };
   const n2 = (x) => (x == null || !isFinite(x) ? '—' : x.toFixed(2));
@@ -85,7 +86,7 @@
     for (const b of state.vis) {
       if (b.bb[2] < x0 || b.bb[0] > x1 || b.bb[3] < y0 || b.bb[1] > y1) continue;
       ringPath(b, c, k, w, h);
-      ctx.fillStyle = colorOf(b.floors); ctx.globalAlpha = 0.93; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+      ctx.fillStyle = b.blocked ? GRAY : colorOf(b.floors); ctx.globalAlpha = 0.93; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
     }
     for (const b of state.vis) {
       if (!state.simIds.has(b.id)) continue;
@@ -184,18 +185,19 @@
       e.w = ws.flatMap((p) => [p.x, p.y]);
       e.bb = [Math.min(...ws.map((p) => p.x)), Math.min(...ws.map((p) => p.y)), Math.max(...ws.map((p) => p.x)), Math.max(...ws.map((p) => p.y))];
       e.cw = world(e.lon, e.lat);
+      e.blocked = L.scaleCheck(e).blocked;
       return e;
     });
     refilter();
   }
   function reenrich() {
-    for (const e of state.list) { const f = L.enrich(e, state.storeyH); e.floors = f.floors; e.tfa = f.tfa; e.wall = f.wall; }
+    for (const e of state.list) { const f = L.enrich(e, state.storeyH); e.floors = f.floors; e.tfa = f.tfa; e.wall = f.wall; e.blocked = L.scaleCheck(e).blocked; }
     if (state.sel) state.sel = state.list.find((b) => b.id === state.sel.id) || null;
     refilter();
   }
   function refilter() {
     state.vis = state.list.filter((b) => b.floors >= state.minFloors && (!state.town || baseTown(b.town) === state.town));
-    $('mapNote').innerHTML = BADGE.real + ' PLATEAU <b>' + L.fmt(state.vis.length, 0) + '棟</b>。用途の属性は入っていない（共同住宅とは限らない）';
+    $('mapNote').innerHTML = BADGE.real + ' PLATEAU <b>' + L.fmt(state.vis.length, 0) + '棟</b>。用途不明でマンションとは限りません。灰色は対象外';
     refreshSim(); schedule();
   }
 
@@ -220,6 +222,16 @@
     state.cloudApplied = false;
     refreshSim(); renderAll(); schedule();
     if (jump && narrow()) { if (state.tab !== 'est') setTab('est'); scrollToSide(); }
+  }
+  /** 目安を出せない建物のとき: 近くのマンション規模の建物（対象外・小規模を除く） */
+  function nearestUsable(b) {
+    let best = null, bd = Infinity;
+    for (const x of state.vis) {
+      if (x.id === b.id || x.blocked || L.scaleCheck(x).small) continue;
+      const d = (x.lon - b.lon) ** 2 + (x.lat - b.lat) ** 2;
+      if (d < bd) { bd = d; best = x; }
+    }
+    return best;
   }
   function pickExample() {
     const c = state.vis.filter((x) => x.floors >= 8 && x.floors <= 14 && !L.scaleCheck(x).blocked && !L.scaleCheck(x).small).sort((a, b) => b.area - a.area);
@@ -251,9 +263,9 @@
     const name = b.name && !sc.blocked ? ' ' + esc(b.name) + '<span class="mini">（PLATEAU の名称）</span>' : '';
     const cw = state.cloudInfo && cloudWhole(state.cloudInfo);
     const cloud = state.cloudApplied && cw ? '<br>点群からの概算（建物全体に補正） <b>' + L.fmt(cw, 0) + '㎡</b>' + (state.cloudSynthetic ? ' ' + BADGE.fake + '合成の点群' : '') : '';
-    el.innerHTML = '<b>' + esc(state.B.meta.ward) + esc(b.town) + '</b>' + name + ' ' + BADGE.est + '<br>' +
+    el.innerHTML = '<b>' + esc(state.B.meta.ward) + esc(b.town) + '</b>' + name + ' ' + BADGE.est + ' <span class="mini">共同住宅か不明</span><br>' +
       '高さ' + n1(b.h) + 'm・推定階数 約' + b.floors + '階・推定延床 約' + L.fmt(b.tfa, 0) + '㎡・外壁面積の概算 約' + L.fmt(b.wall, 0) + '㎡' + cloud +
-      (sc.text ? '<p class="' + (sc.blocked ? 'err' : 'warnline') + '">' + esc(sc.text) + '</p>' : '') +
+      (sc.text && !sc.blocked ? '<p class="warnline">' + esc(sc.text) + '</p>' : '') +
       '<details class="mini"><summary>推定の根拠</summary>高さは PLATEAU の計測高さ。階数は高さ÷階高' + state.storeyH + 'm、延床は屋根面積' + L.fmt(b.area, 0) + '㎡×階数、戸数は延床÷' + L.UNIT_SQM + '㎡の仮定、外壁面積は外周' + L.fmt(b.per, 0) + 'm×高さ（開口部などは考えない。誤差は未検証）。建築年・用途は PLATEAU に値なし。建物ID ' + esc(b.id) + '</details>';
   }
 
@@ -263,29 +275,28 @@
     state.lastEst = r;
     let h = '<div class="result">';
     if (state.sel && state.scale && state.scale.blocked && !r.primary) {
-      h += '<p class="err">' + esc(state.scale.text) + '。マンションなら、戸数を入れると計算します。</p>';
+      const nb = nearestUsable(state.sel);
+      h += '<p class="err">' + esc(state.scale.text) + '。マンションなら、戸数を入れると計算します。' + (nb ? '<br><button type="button" class="pick" id="toNear">近くのマンション規模の建物（約' + nb.floors + '階）を選ぶ</button>' : '') + '</p>';
     } else if (!r.primary) {
       h += '<p class="mini">戸数（または延床）を入れると、目安の範囲が出ます。</p>';
     } else if (r.conflict && (r.conflict.per < L.PER_UNIT_SQM.min / 3 || r.conflict.per > L.PER_UNIT_SQM.max * 4)) {
       h += '<p class="mini">戸数か延床の桁が違うようです。直すと目安が出ます。</p>';
     } else {
       const g = r.primary;
-      h += '<p class="big">修繕費の目安 <b>' + L.fmtMan(g.low) + '〜' + L.fmtMan(g.high) + '</b><span class="sub">税抜・中央値 ' + L.fmtMan(g.mid) + '・' + (g.key === 'perUnit' ? L.fmt(g.basis, 0) + '戸' + (est.units ? '（推定）' : '') + '×戸あたり' : '延床' + L.fmt(g.basis, 0) + '㎡×㎡あたり') + 'の中位50%（国交省調査・' + esc(set.label) + '）</span></p>';
+      h += '<p class="big">修繕費の目安 <b>' + L.fmtMan(g.low) + '〜' + L.fmtMan(g.high) + '</b><span class="sub">税抜・国交省調査の中位50%（' + esc(set.label) + '）' + (g.key === 'perUnit' && est.units ? '・<b class="guess">推定' + L.fmt(g.basis, 0) + '戸・用途不明の建物での試算</b>' : '') + '</span></p>';
       h += rangeBar(g, r.quoteEx ? [{ v: r.quoteEx, label: '見積' }] : []);
       const pp = r.primaryPos;
       const guessU = g.key === 'perUnit' && est.units;
-      if (pp) h += '<p class="concl' + (pp.band === 'above-q3' ? ' hi' : '') + '">' + (guessU ? '推定戸数での位置: ' : '') + '見積 ' + L.fmtMan(r.quoteEx) + (inp.quoteTaxIn ? '（税抜換算）' : '') + ' → <b>' + pp.text + '</b>・' + pp.rel + '</p>' + (guessU ? '<p class="mini">戸数を実際の値に直すと判定が変わります。</p>' : '');
+      if (pp) h += '<p class="concl' + (pp.band === 'above-q3' ? ' hi' : '') + '">' + (guessU ? '<span class="tag">仮の判定</span> ' : '') + '見積 ' + L.fmtMan(r.quoteEx) + (inp.quoteTaxIn ? '（税抜換算）' : '') + ' → <b>' + pp.text + '</b>・' + pp.rel + (guessU ? '<span class="mini">（戸数を直すと確定）</span>' : '') + '</p>';
       else if (!inp.quote) h += '<p class="mini">↑ 手元の見積を入れると、帯に印が出ます。</p>';
     }
     if (r.conflict) {
       const u2 = L.unitsFromTfa(inp.tfa), t2 = Math.round((inp.units * L.UNIT_SQM) / 10) * 10;
       h += '<p class="err">戸数と延床が合っていません（1戸あたり' + L.fmt(r.conflict.per, 0) + '㎡）。延床' + L.fmt(inp.tfa, 0) + '㎡なら約' + u2 + '戸です。<br><button type="button" class="pick" data-fix="units" data-v="' + u2 + '">戸数を' + u2 + '戸にする</button> <button type="button" class="pick" data-fix="tfa" data-v="' + t2 + '">延床を' + L.fmt(t2, 0) + '㎡にする</button></p>';
-    } else if (r.primary && r.primary.key === 'perUnit') {
-      const sq = r.ranges.find((x) => x.key === 'perSqm'), ps = r.positions.find((x) => x.key === 'perSqm');
-      if (sq) h += '<details class="mini alt"><summary>別の見方（延床あたり）</summary>延床あたりでは ' + L.fmtMan(sq.low) + '〜' + L.fmtMan(sq.high) + (ps ? '・見積は' + bandShort[ps.band] : '') + '。戸数が' + (est.units ? '延床÷' + L.UNIT_SQM + '㎡の推定のため' : '延床と比べて多い・少ないため') + '、戸あたりとずれることがあります。判定は戸あたりを主にします。</details>';
     }
     h += '</div>';
     $('estOut').innerHTML = h;
+    if ($('toNear')) $('toNear').onclick = () => { const nb = nearestUsable(state.sel); if (nb) selectBuilding(nb, true); };
     $('estOut').querySelectorAll('[data-fix]').forEach((bt) => (bt.onclick = () => {
       const el = $(bt.dataset.fix === 'units' ? 'inUnits' : 'inTfa');
       if (bt.dataset.fix === 'tfa' && !$('moreCond').open) $('moreCond').open = true;
@@ -294,7 +305,14 @@
 
     // 根拠（折りたたみ）
     const wasOpen = !!($('estMore').querySelector('details') || {}).open;
-    let m = '<details' + (wasOpen ? ' open' : '') + '><summary>根拠: 国交省調査の分布（' + esc(set.label) + '） ' + BADGE.real + '</summary>';
+    let m = '<details' + (wasOpen ? ' open' : '') + '><summary>根拠・別の見方 ' + BADGE.real + '</summary>';
+    if (r.primary && !r.conflict) {
+      const g = r.primary;
+      m += '<p class="mini">中央値 ' + L.fmtMan(g.mid) + '。範囲は' + (g.key === 'perUnit' ? L.fmt(g.basis, 0) + '戸×戸あたり' : '延床' + L.fmt(g.basis, 0) + '㎡×㎡あたり') + 'の下位25%値〜上位25%値。</p>';
+      const sq = g.key === 'perUnit' && r.ranges.find((x) => x.key === 'perSqm'), ps = r.positions.find((x) => x.key === 'perSqm');
+      if (sq) m += '<p class="mini">別の見方（延床あたり）: ' + L.fmtMan(sq.low) + '〜' + L.fmtMan(sq.high) + (ps ? '・見積は' + bandShort[ps.band] : '') + '。戸数' + (est.units ? 'が推定のため' : 'と延床の関係で') + '戸あたりとずれることがあり、判定は戸あたりを主にします。</p>';
+    }
+    m += '<p class="mini">国交省調査の分布（' + esc(set.label) + '）</p>';
     m += '<table><thead><tr><th>指標</th><th>下位25%値</th><th>中央値</th><th>上位25%値</th><th>件数</th></tr></thead><tbody>';
     const row = (name, s, f) => '<tr><td>' + name + ' <span class="mini">' + esc(s.page) + '</span></td><td>' + f(s.q1) + '</td><td>' + f(s.median) + '</td><td>' + f(s.q3) + '</td><td>' + s.n + '</td></tr>';
     m += row('戸あたり（万円/戸）', set.perUnit, n1) + row('㎡あたり（万円/㎡）', set.perSqm, n1) + row('総額（万円）', set.total, (x) => L.fmt(x, 0));
@@ -345,7 +363,9 @@
   /** スマホ: 地図（上に固定）のすぐ下にパネルの先頭が来るように寄せる */
   function scrollToSide() {
     if (!narrow()) return;
-    const y = $('side').getBoundingClientRect().top + window.scrollY - $('mapcol').offsetHeight;
+    const top = $('side').getBoundingClientRect().top, mb = $('mapcol').getBoundingClientRect().bottom;
+    if (top >= mb - 1 && top <= mb + 20) return; // すでに地図のすぐ下（勝手に画面を動かさない）
+    const y = top + window.scrollY - $('mapcol').offsetHeight;
     window.scrollTo(0, Math.max(0, y));
   }
 
@@ -363,7 +383,8 @@
   }
   function renderSim() {
     const t = simTarget();
-    let h = '<h2>似た建物（PLATEAU・推定階数±2階） ' + BADGE.est + '</h2>';
+    let h = '<h2>規模が似た建物（推定階数±2階） ' + BADGE.est + '</h2>';
+    h += '<p class="concl">修繕実績・築年は未収録（公開された個別事例がない）。表は規模と試算の比較。<b>実額は下に手元の事例を足して比べます。</b></p>';
     if (!t) h += '<p class="mini">建物を選ぶと、規模の近い建物を地図に番号で示します。</p>';
     else if (!state.simList.length) h += '<p>条件に合う建物がありません。</p>';
     else {
@@ -371,8 +392,8 @@
       const rows = key ? state.simList.slice().sort((a, b) => key(a) - key(b)) : state.simList;
       const sb = (k, label) => '<button type="button" class="pick' + (state.simSort === k ? ' on' : '') + '" data-sort="' + k + '" aria-pressed="' + (state.simSort === k) + '">' + label + '</button>';
       h += '<p class="mini">並べ替え ' + sb('near', '規模が近い') + sb('floors', '階数') + sb('km', '距離') + sb('wall', '外壁') + '</p>';
-      h += '<table class="simt"><thead><tr><th>地図</th><th>階</th><th>延床㎡</th><th>外壁㎡</th><th>km</th><th class="calc">機械計算（万円）</th></tr></thead><tbody>' + rows.map(simRow).join('') + '</tbody></table>';
-      h += '<p class="mini">修繕実績・築年は未収録。機械計算は延床×㎡あたりの中位50%で、実績ではありません。</p>';
+      h += '<table class="simt"><thead><tr><th>地図</th><th>階</th><th>延床㎡</th><th>外壁㎡</th><th>km</th><th class="calc">規模からの試算（万円）<br>実績ではない</th></tr></thead><tbody>' + rows.map(simRow).join('') + '</tbody></table>';
+      h += '<p class="mini">試算は延床×㎡あたりの中位50%。</p>';
     }
     $('simOut').innerHTML = h;
     bindPicks($('simOut'));
@@ -396,17 +417,20 @@
         (c.fake ? '' : ' <button type="button" class="pick delcase" data-cid="' + esc(c.id) + '">削除</button>') + '</li>';
     };
     const mine = list.filter((c) => !c.fake), demo = list.filter((c) => c.fake);
-    let h = '<h3>修繕事例</h3><p class="mini">公開されている個別の修繕事例はありません。手元の事例を登録すると並べて比べられます（端末内のみ）。</p>';
-    if (mine.length) h += '<ul class="list">' + mine.map(caseLi).join('') + '</ul>';
-    h += '<details class="addcase"><summary>＋ 自分の事例を登録する</summary><form id="caseForm" class="mini-form" autocomplete="off">' +
-      '<label>建物名（任意）<input name="name" maxlength="40"></label><label>町名（任意）<input name="town" maxlength="20"></label>' +
-      '<label>戸数<input name="units" type="number" min="1" required></label><label>延床面積（㎡）<input name="tfa" type="number" min="1" required></label>' +
-      '<label>築年数（工事時）<input name="age" type="number" min="0" max="100"></label><label>工事年<input name="year" type="number" min="1990" max="2040"></label>' +
-      '<label>工事回数<select name="count"><option value="1">1回目</option><option value="2">2回目</option><option value="3">3回目以上</option></select></label>' +
+    let h = '<h3>手元の修繕事例を足して比べる <span class="mini">端末内のみ</span></h3>';
+    h += '<form id="caseForm" class="mini-form case3" autocomplete="off">' +
+      '<label>戸数<input name="units" type="number" min="1" required></label><label>延床㎡<input name="tfa" type="number" min="1" required></label>' +
       '<label>総額（万円・税抜）<input name="total" type="number" min="1" required></label>' +
+      '<label>工事回数<select name="count"><option value="1">1回目</option><option value="2">2回目</option><option value="3">3回目以上</option></select></label>' +
+      '<label>工事年<input name="year" type="number" min="1990" max="2040"></label>' +
+      '<div class="sub2"><button type="submit">事例を足す</button></div>' +
+      '<details class="full addcase"><summary>任意の項目・書き出し</summary><div class="mini-form">' +
+      '<label>建物名<input name="name" maxlength="40"></label><label>町名<input name="town" maxlength="20"></label>' +
+      '<label>築年数（工事時）<input name="age" type="number" min="0" max="100"></label>' +
       '<label>発注方式<select name="method"><option value="">不明</option><option>設計・監理方式</option><option>責任施工方式</option><option>CM方式</option><option>その他</option></select></label>' +
-      '<label class="full">メモ（任意。個人名・部屋番号は書かない）<input name="memo" maxlength="120"></label>' +
-      '<div class="full"><button type="submit">登録する（この端末に保存）</button> <button type="button" class="ghost" id="exportCases">JSONで書き出す</button></div></form></details>';
+      '<label class="full">メモ（個人名・部屋番号は書かない）<input name="memo" maxlength="120"></label>' +
+      '<div class="full"><button type="button" class="ghost" id="exportCases">JSONで書き出す</button></div></div></details></form>';
+    if (mine.length) h += '<ul class="list">' + mine.map(caseLi).join('') + '</ul>';
     h += '<details class="cases"><summary>架空の見本3件 ' + BADGE.fake + '</summary><ul class="list">' + demo.map(caseLi).join('') + '</ul></details>';
     const wasOpen = [...$('caseOut').querySelectorAll('details')].map((d) => d.open);
     $('caseOut').innerHTML = h;
@@ -430,36 +454,37 @@
   function cloudWhole(c) { return state.sel ? c.wallLen * state.sel.h : c.wall; }
   function renderSlam() {
     const c = state.cloudInfo, sb = state.sel;
-    let h = '<div class="fields"><button type="button" id="cloudSample">' + (sb ? '見本: この建物の低層部を測ったとみなす' : '見本（合成の箱）を読み込む') + '</button><span class="mini"><b>見本は実測ではありません</b></span><label class="btn ghost filebtn">点群ファイルを選ぶ<input id="cloudFile" class="vh" type="file" accept=".ply,.las,.laz,.xyz,.txt,.csv,.pts"></label></div>';
+    let h = '<div class="fields"><button type="button" id="cloudSample">見本で試す</button><label class="btn ghost filebtn">点群ファイル（お持ちの方）<input id="cloudFile" class="vh" type="file" accept=".ply,.las,.laz,.xyz,.txt,.csv,.pts"></label></div>';
+    h += '<p class="warnline">スマホ LiDAR は1〜5m程度まで。高層の外壁全体は測れません。</p>';
     if (state.cloudErr) h += '<p class="err">' + esc(state.cloudErr) + '</p>';
     if (c) {
       const fake = state.cloudSynthetic ? ' ' + BADGE.fake : '';
-      h += '<p>' + (state.cloudSynthetic ? BADGE.fake + ' <b>操作の練習用の合成データ</b>（実在の測定ではありません）' : BADGE.user + ' ' + esc(state.cloudName)) + '</p>';
+      h += '<p class="mini">' + (state.cloudSynthetic ? BADGE.fake + ' 操作の練習用の合成データ（<b>実測ではありません</b>）' : BADGE.user + ' ' + esc(state.cloudName)) + '</p>';
       if (sb) {
         const lowH = Math.min(c.height, sb.h), mapLow = sb.per * lowH, whole = cloudWhole(c);
-        h += '<p class="big">測れた範囲 <b>高さ' + n1(lowH) + 'm／建物' + n1(sb.h) + 'm</b>' + fake + '</p>';
-        h += '<table><thead><tr><th>外壁面積</th><th>測れた範囲</th><th>建物全体</th></tr></thead><tbody>' +
-          '<tr><td>点群' + fake + '</td><td>' + L.fmt(c.wall, 0) + '㎡</td><td><b>' + L.fmt(whole, 0) + '㎡</b><span class="mini">（高さで補正）</span></td></tr>' +
-          '<tr><td>地図（PLATEAU）</td><td>' + L.fmt(mapLow, 0) + '㎡</td><td>' + L.fmt(sb.wall, 0) + '㎡</td></tr></tbody></table>';
-        h += '<p class="mini">建物全体は、測れた低層部の外周を建物の高さまで伸ばした値。窓・バルコニー・凹みで実面積とずれます（誤差は未検証）。点群の外周は地図の ' + L.fmt((c.wallLen / sb.per) * 100, 0) + '%。</p>';
+        const d = ((whole - sb.wall) / sb.wall) * 100, ad = L.fmt(Math.abs(d), 0);
+        const why = Math.abs(d) < 10 ? '地図とほぼ同じ（差' + ad + '%）' : d < 0 ? '地図より' + ad + '%小さい＝測れていない面がある可能性' : '地図より' + ad + '%大きい＝付属物や周りも測った可能性';
         const useV = state.cloudSynthetic ? sb.wall : whole;
         state.wallRef = useV;
-        h += '<div class="qcheck"><p><b>見積書と照らす</b> 使う値 <b>' + L.fmt(useV, 0) + '㎡</b><span class="mini">（' + (state.cloudSynthetic ? '見本の点群は練習用なので地図の値' : '実測の点群の建物全体') + '）</span></p>' +
-          '<div class="fields"><label>見積書の外壁数量 <input id="wQty" type="number" min="0" inputmode="numeric" value="' + (state.wallQty || '') + '"><span class="u">㎡</span></label>' +
-          '<label>外壁単価 <input id="wUnit" type="number" min="0" inputmode="numeric" value="' + (state.wallUnit || '') + '"><span class="u">円/㎡</span></label></div><div id="wOut"></div></div>';
+        h += '<p class="concl">判断に使う外壁面積 <b>' + L.fmt(useV, 0) + '㎡</b>' + (state.cloudSynthetic ? '（地図の値。見本は練習用）' : '（点群・建物全体）') + '<br><span class="mini">点群は' + why + '</span></p>';
+        const W = state.cloudSynthetic ? (x) => x : (x) => '<b>' + x + '</b>';
+        h += '<div class="slamrow"><table><thead><tr><th>外壁面積</th><th>測れた範囲<br><span class="mini">高さ' + n1(lowH) + 'm</span></th><th>建物全体<br><span class="mini">' + n1(sb.h) + 'm</span></th></tr></thead><tbody>' +
+          '<tr><td>点群' + fake + '</td><td>' + L.fmt(c.wall, 0) + '㎡</td><td>' + W(L.fmt(whole, 0) + '㎡') + '</td></tr>' +
+          '<tr><td>地図</td><td>' + L.fmt(mapLow, 0) + '㎡</td><td>' + L.fmt(sb.wall, 0) + '㎡</td></tr></tbody></table>' +
+          '<canvas id="plan" width="120" height="84" role="img" aria-label="点群を真上から見た図（青い点）と外周（赤線）"></canvas></div>';
+        h += '<div class="qcheck"><b>見積書と照らす</b> <label>外壁数量 <input id="wQty" type="number" min="0" inputmode="numeric" value="' + (state.wallQty || '') + '"><span class="u">㎡</span></label> ' +
+          '<label>単価 <input id="wUnit" type="number" min="0" inputmode="numeric" value="' + (state.wallUnit || '') + '"><span class="u">円/㎡</span></label><div id="wOut"></div></div>';
         if (!state.cloudSynthetic) h += unitLine(whole);
       } else {
-        h += '<p class="big">外壁面積の概算 <b>' + L.fmt(c.wall, 0) + '㎡</b>' + fake + ' <span class="mini">壁の長さ' + n1(c.wallLen) + 'm×高さ' + n1(c.height) + 'm</span></p><p class="mini">地図で建物を選ぶと、建物全体との比較が出ます。</p>';
+        h += '<p class="big">外壁面積の概算 <b>' + L.fmt(c.wall, 0) + '㎡</b>' + fake + ' <span class="mini">壁の長さ' + n1(c.wallLen) + 'm×高さ' + n1(c.height) + 'm</span></p><p class="mini">地図で建物を選ぶと、建物全体との比較が出ます。</p><canvas id="plan" width="120" height="84" role="img" aria-label="点群を真上から見た図（青い点）と外周（赤線）"></canvas>';
       }
       if (c.width < 10 && c.depth < 10) h += '<p class="warnline">範囲が10m未満です。建物の一部だけの可能性が高いです。</p>';
       if (c.slender) h += '<p class="warnline">細長いので壁1面とみなしました。</p>';
       h += '<p><button type="button" id="cloudApply">この概算を建物の欄に出す</button></p>';
-      h += '<p class="mini plancap">真上から見た点（青）と外周（赤線）</p><canvas id="plan" width="380" height="140" role="img" aria-label="点群を真上から見た図と、外周（凸包）"></canvas>';
     } else {
-      h += '<p class="mini">LiDAR アプリで低層部の外壁を一周測ったファイルを開くと、外壁面積の概算が出ます。</p>';
+      h += '<p class="mini">低層部の外壁を一周測った点群から、外壁面積を概算し、地図の値・見積書の数量と比べます。</p>';
     }
-    h += '<p class="warnline">スマホ LiDAR は1〜5m程度まで。高層の外壁全体は測れません。</p>';
-    h += '<details class="mini"><summary>詳しく（形式・向き）</summary>PLY・LAS（無圧縮）・XYZ を端末内で読み、送信・保存しません。LAZ は LAS か PLY に変換してください。点群に住戸内や人が写ることがあります。検出範囲は電子情報通信学会 FIT2025 I-015 の記載とメーカー資料による。<br><label>上方向 <select id="cloudUp"><option value="z"' + (state.cloudUp === 'z' ? ' selected' : '') + '>Z</option><option value="y"' + (state.cloudUp === 'y' ? ' selected' : '') + '>Y（スマホのARアプリ）</option></select></label> <button type="button" id="cloudSavePly" class="ghost">見本をPLYで保存</button></details>';
+    h += '<details class="mini"><summary>詳しく（計算・形式・向き）</summary>建物全体は、測れた低層部の外周を建物の高さまで伸ばした値。図は真上から見た点（青）と外周（赤線）。窓・バルコニー・凹みで実面積とずれます（誤差は未検証）。PLY・LAS（無圧縮）・XYZ を端末内で読み、送信・保存しません。LAZ は LAS か PLY に変換してください。点群に住戸内や人が写ることがあります。検出範囲は電子情報通信学会 FIT2025 I-015 の記載とメーカー資料による。<br><label>上方向 <select id="cloudUp"><option value="z"' + (state.cloudUp === 'z' ? ' selected' : '') + '>Z</option><option value="y"' + (state.cloudUp === 'y' ? ' selected' : '') + '>Y（スマホのARアプリ）</option></select></label> <button type="button" id="cloudSavePly" class="ghost">見本をPLYで保存</button></details>';
     $('slamOut').innerHTML = h;
     $('cloudFile').onchange = async (e) => { const f = e.target.files[0]; if (f) await loadCloud(f); };
     $('cloudSample').onclick = () => setCloud(sampleCloud(), '見本（合成）', true);
@@ -481,7 +506,7 @@
       h += '<p class="pos">見積書の数量は使う値より <b>' + (d >= 0 ? '+' : '') + L.fmt(d, 0) + '%</b><span class="mini">（差の理由＝開口部・付属部の扱いなどを業者に確認）</span></p>';
     }
     if (u) h += '<p class="mini">使う値×見積書の単価 = <b>' + L.fmtMan((ref * u) / 10000) + '</b>' + (q ? '（見積書の数量では ' + L.fmtMan((q * u) / 10000) + '）' : '') + '</p>';
-    if (!q && !u) h = '<p class="mini">見積書の外壁の数量（㎡）を入れると差が％で出ます。単価は見積書の値を入れます。</p>';
+    if (!q && !u) h = '<p class="mini">見積書の外壁数量（㎡）を入れると差が％で出ます。</p>';
     el.innerHTML = h;
   }
   /** 見本: 建物を選んでいれば、その外形を低層部（5m＝スマホ LiDAR の検出範囲の上限か建物の高さの低い方）まで測ったとみなす。選んでいなければ箱 */
@@ -514,10 +539,10 @@
     g.clearRect(0, 0, W, H);
     const xs = c.hull.map((p) => p[0]), ys = c.hull.map((p) => p[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    const s = Math.min((W - 20) / Math.max(1e-6, x1 - x0), (H - 20) / Math.max(1e-6, y1 - y0));
-    const X = (x) => 10 + (x - x0) * s, Y = (y) => H - 10 - (y - y0) * s;
+    const s = Math.min((W - 12) / Math.max(1e-6, x1 - x0), (H - 12) / Math.max(1e-6, y1 - y0));
+    const X = (x) => 6 + (x - x0) * s, Y = (y) => H - 6 - (y - y0) * s;
     g.fillStyle = '#0b3d63';
-    for (const p of c.sample) g.fillRect(X(p[0]) - 1.5, Y(p[1]) - 1.5, 3, 3);
+    for (const p of c.sample) g.fillRect(X(p[0]) - 1, Y(p[1]) - 1, 2, 2);
     g.strokeStyle = '#d6336c'; g.lineWidth = 2; g.beginPath();
     c.hull.forEach((p, i) => (i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])))); g.closePath(); g.stroke();
   }
@@ -537,26 +562,29 @@
     const amts = rows.map((r) => quoteAmount(r, base, inp.quoteTaxIn));
     const per = rows.map((r, i) => (amts[i] > 0 ? L.compareQuotes([{ name: r.name, amount: amts[i], taxIn: inp.quoteTaxIn }], inp, state.S)[0] : null));
     const anyDemo = rows.some((r) => r.demo);
-    let h = '<p class="banner">' + BADGE.fake + ' 見本の3社と口コミは架空です。実在の会社の見積・口コミは未収録（実データなし）。<b>会社名と見積を書き換えて比べます。</b></p>';
+    let h = '<p class="banner">' + BADGE.fake + ' 見本の3社・口コミは架空です（実データなし）。<b>会社名と見積を書き換えて比べます。</b></p>';
     h += '<table class="qt"><thead><tr><th></th><th>会社名</th><th>見積（万円・' + (inp.quoteTaxIn ? '税込' : '税抜') + '）</th><th>目安の中の位置</th><th>口コミ</th></tr></thead><tbody>';
+    // 目安タブで入れた見積を「自分の見積」として先頭に並べる（入力の往復をなくす）
+    const mine = inp.quote > 0 ? L.compareQuotes([{ name: '自分の見積', amount: inp.quote, taxIn: inp.quoteTaxIn }], inp, state.S)[0] : null;
+    if (inp.quote > 0) h += '<tr class="minerow"><td><b>自</b></td><td>目安タブの見積</td><td>' + L.fmt(inp.quote, 0) + '</td><td>' + (mine && mine.pos ? '<b class="band ' + mine.pos.band + '">' + bandShort[mine.pos.band] + '</b>' : '—') + '</td><td>—</td></tr>';
     rows.forEach((r, i) => {
       const c = per[i], rc = L.reviewCounts(all, r.name);
       h += '<tr' + (r.demo ? ' class="demorow"' : '') + '><td><b>' + LETTER[i] + '</b></td><td><input class="qname" data-i="' + i + '" value="' + esc(r.name) + '" maxlength="20" aria-label="会社' + LETTER[i] + 'の名前"></td><td><input class="qamt" data-i="' + i + '" type="number" min="0" inputmode="numeric" value="' + (amts[i] || '') + '" aria-label="会社' + LETTER[i] + 'の見積（万円）"></td><td>' +
-        (c && c.pos ? '<b class="band ' + c.pos.band + '">' + bandShort[c.pos.band] + '</b>' : amts[i] ? '戸数を入れてください' : '—') + '</td><td>' + (r.name ? (rc.n ? rc.n + '件' + (rc.related ? '（利害あり' + rc.related + '）' : '') : '該当なし') : '—') + '</td></tr>';
+        (c && c.pos ? (r.demo ? '<span class="band demo">見本: ' + bandShort[c.pos.band] + '</span>' : '<b class="band ' + c.pos.band + '">' + bandShort[c.pos.band] + '</b>') : amts[i] ? '戸数を入れてください' : '—') + '</td><td>' + (r.name ? (rc.n ? rc.n + '件' + (rc.related ? '（利害あり' + rc.related + '）' : '') : '該当なし') : '—') + '</td></tr>';
     });
     h += '</tbody></table>';
-    if (base.primary) h += rangeBar(base.primary, per.map((c, i) => (c ? { v: c.ex, label: LETTER[i] } : null)).filter(Boolean));
+    if (base.primary) h += rangeBar(base.primary, (mine ? [{ v: mine.ex, label: '自' }] : []).concat(per.map((c, i) => (c ? { v: c.ex, label: LETTER[i] } : null)).filter(Boolean)));
     else h += '<p class="mini">建物を選ぶか戸数を入れると、各社の位置が同じ帯に並びます。</p>';
     h += '<p class="mini">' + (anyDemo ? '' : '<button type="button" class="pick" id="qDemo">見本の3社に戻す</button> ') + '<button type="button" class="pick" id="qClear">表を空にする</button> 税は目安タブに合わせます。格付けはしません。</p>';
 
     const q = state.reviewFilter.trim();
     const shown = q ? all.filter((r) => r.company.includes(q)) : all;
-    const revLi = (r) => '<li class="' + (r.fake ? 'fakeitem' : '') + '">' + (r.fake ? BADGE.fake : BADGE.user) + ' <b>' + esc(r.company) + '</b> ' + esc(r.date) + ' <span class="stars" aria-label="評価' + r.stars + '">' + '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars) + '</span> ' + (r.stake === 'related' ? '<b>利害関係あり</b>' : '利害関係なし') + '（申告）<br>' + esc(r.text) + (r.fake ? '' : ' <button type="button" class="pick delrev" data-rid="' + esc(r.id) + '">削除</button>') + '</li>';
-    h += '<h3>口コミ <span class="mini">新しい順・' + shown.length + '件</span></h3>';
-    h += '<ul class="list rev">' + shown.slice(0, 1).map(revLi).join('') + '</ul>';
-    h += '<details class="revs"><summary>残り' + Math.max(0, shown.length - 1) + '件・絞り込み・投稿</summary>';
+    // 口コミは1行の要約（星・会社・利害・冒頭）で全件並べ、押すと本文が開く
+    const revLi = (r) => '<li class="' + (r.fake ? 'fakeitem' : '') + '"><details class="rv"><summary>' + (r.fake ? BADGE.fake : BADGE.user) + ' <span class="stars" aria-label="評価' + r.stars + '">' + '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars) + '</span> <b>' + esc(r.company) + '</b> ' + (r.stake === 'related' ? '<b>利害あり</b>' : '利害なし') + ' <span class="rvt">' + esc(r.text) + '</span></summary>' + esc(r.date) + '・利害関係は申告<br>' + esc(r.text) + (r.fake ? '' : ' <button type="button" class="pick delrev" data-rid="' + esc(r.id) + '">削除</button>') + '</details></li>';
+    h += '<h3>口コミ <span class="mini">新しい順・' + shown.length + '件・押すと全文</span></h3>';
+    h += '<ul class="list rev">' + shown.map(revLi).join('') + '</ul>';
+    h += '<details class="revs"><summary>絞り込み・投稿</summary>';
     h += '<label class="mini">会社名で絞り込む <input id="revFilter" value="' + esc(state.reviewFilter) + '" maxlength="30"></label>';
-    h += '<ul class="list rev">' + shown.slice(1).map(revLi).join('') + '</ul>';
     h += '<details><summary>口コミを投稿する（端末に保存。送信しません）</summary><form id="revForm" class="mini-form" autocomplete="off">' +
       '<label>会社名<input name="company" maxlength="40" required></label><label>工事年<input name="year" type="number" min="1990" max="2040" required></label>' +
       '<label>あなたの立場<select name="role"><option>管理組合の理事</option><option>区分所有者</option><option>管理会社の担当者</option><option>その他</option></select></label>' +
@@ -564,12 +592,13 @@
       '<label class="full">この会社との利害関係（必須）<select name="stake" required><option value="">選んでください</option><option value="none">ない（金銭・雇用・紹介などの関係なし）</option><option value="related">ある（関係者・紹介を受けた等）</option></select></label>' +
       '<label class="full">内容（事実と感想を分けて書く。個人名・部屋番号は書かない）<textarea name="text" rows="3" maxlength="400" required></textarea></label>' +
       '<div class="full"><button type="submit">投稿する（この端末に保存）</button></div></form></details></details>';
-    h += '<details><summary>見積を比べるチェック項目（' + L.CHECKLIST.length + '）と公的な確認先</summary><ul class="checklist">' + L.CHECKLIST.map((c) => '<li><label><input type="checkbox" data-id="' + c.id + '"' + (state.checks[c.id] ? ' checked' : '') + '><span>' + esc(c.text) + '<span class="basis">根拠: ' + esc(c.basis) + '</span></span></label></li>').join('') + '</ul>' +
+    h += '<details><summary>見積のチェック項目・公的な確認先</summary><ul class="checklist">' + L.CHECKLIST.map((c) => '<li><label><input type="checkbox" data-id="' + c.id + '"' + (state.checks[c.id] ? ' checked' : '') + '><span>' + esc(c.text) + '<span class="basis">根拠: ' + esc(c.basis) + '</span></span></label></li>').join('') + '</ul>' +
       '<ul class="links list">' + L.LINKS.map((l) => '<li><a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.name) + '</a><br><span class="mini">' + esc(l.note) + '</span></li>').join('') + '</ul>' +
       '<p class="mini">国交省調査では、発注方法は設計・監理方式が80.1%、責任施工方式が12.6%（' + esc(state.S.orderMethod.page) + '）。</p></details>';
-    const openDs = [...$('vendorOut').querySelectorAll('details')].map((d) => d.open);
+    const dkey = (d) => (d.querySelector('summary') || {}).textContent || '';
+    const openDs = new Set([...$('vendorOut').querySelectorAll('details')].filter((d) => d.open).map(dkey));
     $('vendorOut').innerHTML = h;
-    $('vendorOut').querySelectorAll('details').forEach((d, i) => { if (openDs[i]) d.open = true; });
+    $('vendorOut').querySelectorAll('details').forEach((d) => { if (openDs.has(dkey(d))) d.open = true; });
     $('vendorOut').querySelectorAll('.checklist input').forEach((i) => (i.onchange = () => { state.checks[i.dataset.id] = i.checked; store.set(KEY.checks, state.checks); }));
     const live = (sel, fn) => $('vendorOut').querySelectorAll(sel).forEach((el) => (el.oninput = () => {
       fn(el); store.set(KEY.quotes, state.quotes);
@@ -598,7 +627,8 @@
   function renderSrc() {
     const B = state.B, S = state.S, fr = L.fillRates(B.stats);
     const fk = Object.fromEntries(fr.map((x) => [x.key, x]));
-    let h = '<h2>出典・加工・責任</h2><ul class="list">' +
+    let h = '<ul class="list srcsum"><li>' + BADGE.real + ' 建物の高さ・外形（PLATEAU）、修繕費の分布（国交省調査）</li><li>' + BADGE.est + ' 階数・延床・戸数・外壁面積・目安の範囲（上の実データからの計算）</li><li>' + BADGE.fake + ' 見本の会社・見積・口コミ・事例・点群</li></ul>';
+    h += '<h2>出典・加工・責任</h2><ul class="list">' +
       '<li>' + BADGE.real + ' <b>建物</b>: ' + esc(B.meta.source) + '。' + esc(B.meta.license) + '。高さ・屋根外形から外周・面積を計算。</li>' +
       '<li>' + BADGE.real + ' <b>修繕費の分布</b>: ' + esc(S.publisher) + '「' + esc(S.title) + '」（<a href="' + esc(S.reportUrl) + '" target="_blank" rel="noopener noreferrer">報告書</a>、<a href="' + esc(S.summaryUrl) + '" target="_blank" rel="noopener noreferrer">概要</a>）を転記。<b>' + esc(S.license) + '</b>。</li>' +
       '<li><b>地図</b>: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 地理院タイル（淡色地図）</a>。<b>責任</b>: ' + esc(L.RESPONSIBILITY) + '。</li></ul>';
@@ -637,6 +667,8 @@
     $('toSources').onclick = (e) => { e.preventDefault(); setTab('src', true); $('t-src').focus(); };
     $('pickExample').onclick = pickExample;
     setTimeout(() => { $('mapHint').hidden = true; }, 8000);
+    $('side').addEventListener('focusin', (e) => { if (narrow() && e.target.matches('input[type=number]')) document.body.classList.add('typing'); });
+    $('side').addEventListener('focusout', () => document.body.classList.remove('typing'));
     window.addEventListener('scroll', sumBarVis, { passive: true }); window.addEventListener('resize', sumBarVis);
     $('selLine').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('selLine').click(); } };
     for (const t of TABS) {
