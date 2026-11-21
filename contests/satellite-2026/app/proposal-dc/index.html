@@ -10,28 +10,30 @@
 </head>
 <body>
 <header>
-  <h1>データセンター候補地の一次スクリーニング <small>福岡県 直方市・鞍手町・北九州市西部。衛星で地盤・熱・土地の状態を見て、災害と電力の確認項目を並べる</small></h1>
-  <p class="banner" id="banner" role="note"><b>立地の良し悪しの判定・点数・順位は作りません。</b>確認項目を一覧にするだけです（立地の基準値は公的資料で見つかっていません）。位置の誤差が大きいデータを含み、現地・自治体・電力会社の確認の代わりにはなりません。</p>
+  <h1>データセンター候補地の一次スクリーニング <small>浸水しにくい場所を選べば、災害時もデータと通信の拠点を残せる。衛星で地盤・熱・土地を見る（福岡県 直方市・鞍手町・北九州市西部）</small></h1>
+  <details class="banner" id="banner"><summary><b>点数・順位・良し悪しの判定はしません。</b>現地等の確認の代わりになりません</summary>確認項目を一覧にするだけで、現地・自治体・電力会社の確認の代わりになりません（立地の基準値は公的資料で見つかっていません）。位置の誤差が大きいデータを含みます（下の「限界」）。</details>
 </header>
 <main>
   <div class="mappane">
     <div id="map" role="application" aria-label="福岡県直方市・鞍手町・北九州市西部の地図。造成地・遊休地の候補を番号つきで表示。地図をクリックするとその地点の確認項目が出る"></div>
     <details class="layers" id="layers" open>
       <summary>地図に重ねるもの</summary>
-      <fieldset><legend>衛星</legend>
-        <label><input type="checkbox" data-layer="land"> 土地の状態（Sentinel-2）</label>
-        <label><input type="checkbox" data-layer="chg" checked> 植生→裸地等の変化（2020→2026）</label>
-        <label><input type="checkbox" data-layer="lst"> 夏の地表面温度（Landsat 9）</label>
-        <label><input type="checkbox" data-layer="sub"> 地盤の変動（干渉SAR）</label>
+      <fieldset><legend>衛星で見ること（1つ選ぶ）</legend>
+        <label><input type="radio" name="sat" data-layer="lst" checked> 夏の地表面温度<span class="what">地面の熱さ</span></label>
+        <label><input type="radio" name="sat" data-layer="sub"> 地盤の変動<span class="what">地面の上下</span></label>
+        <label><input type="radio" name="sat" data-layer="land"> 土地の状態<span class="what">いま何があるか</span></label>
+        <label><input type="radio" name="sat" data-layer="chg"> 植生→裸地等の変化<span class="what">2020→2026</span></label>
+        <label><input type="radio" name="sat" data-layer="none"> 重ねない</label>
       </fieldset>
-      <fieldset><legend>重ねる（国土数値情報・OSM）</legend>
-        <label><input type="checkbox" data-layer="flood"> 洪水の浸水想定</label>
-        <label><input type="checkbox" data-layer="slide"> 土砂災害警戒区域</label>
-        <label><input type="checkbox" data-layer="tsunami"> 津波の浸水想定</label>
-        <label><input type="checkbox" data-layer="surge"> 高潮の浸水想定</label>
-        <label><input type="checkbox" data-layer="power" checked> 変電所・送電線（OSM）</label>
+      <fieldset><legend>災害・電力（国土数値情報・OSM）</legend>
+        <label><input type="checkbox" data-layer="flood"> 洪水</label>
+        <label><input type="checkbox" data-layer="slide"> 土砂災害</label>
+        <label><input type="checkbox" data-layer="tsunami"> 津波</label>
+        <label><input type="checkbox" data-layer="surge"> 高潮</label>
+        <label><input type="checkbox" data-layer="power"> 変電所・送電線</label>
       </fieldset>
     </details>
+    <button type="button" id="btn-home" class="home">全体に戻す</button>
     <div id="legend" class="legend" aria-live="polite"></div>
     <p class="credit" id="credit"></p>
   </div>
@@ -41,35 +43,39 @@
         <label for="pick">候補地</label>
         <select id="pick" aria-label="候補地を選ぶ"></select>
       </div>
-      <h2 id="target-title">確認項目の一覧</h2>
+      <div class="ttl"><h2 id="target-title">確認項目の一覧</h2><button type="button" id="btn-pin" class="pin">＋比べる</button></div>
       <p id="target-sub" class="sub"></p>
+      <p id="impact" class="impact"></p>
       <ol id="rows" class="rows"></ol>
     </section>
+    <section id="cmp" class="cmp-box" aria-live="polite"></section>
+    <div class="foot">
     <details class="more" id="why">
-      <summary>防災・都市課題の観点（検討の入口）</summary>
+      <summary>防災・都市課題の観点</summary>
       <ul>
-        <li><b>浸水・土砂・津波・高潮のどれにも重ならない地点に置く</b>と、周辺で浸水が起きても、データと通信の拠点を残せる可能性がある（自治体の防災情報の置き場所の候補になりうる）。重なる場合は、かさ上げ・止水などの対策費を見込む。</li>
-        <li><b>造成地・遊休地を優先する</b>と、森林や農地を新しく拓く量を減らせる可能性がある。「土地の状態」の変化の欄で、いつ植生が裸地等に変わったかを見る。</li>
-        <li><b>排熱の活用</b>は、近くに熱を使う施設（温水・暖房・施設園芸など）があるかの確認から。この画面には熱需要のデータはない。地表面温度は冷却の効率ではない。</li>
-        <li><b>地盤</b>は、干渉SARで広い範囲の変動の傾向を見たうえで、気になる地点だけ地上の調査（地中レーダ・ボーリング）で確かめる二段階にする。</li>
+        <li><b>浸水・土砂・津波・高潮に重ならない地点</b>なら、周辺が浸水してもデータと通信の拠点を残せる可能性がある（自治体の防災情報の置き場所の候補）。重なるなら、かさ上げ・止水の費用を見込む。</li>
+        <li><b>造成地・遊休地を使う</b>と、森林や農地を新しく拓く量を減らせる可能性がある。</li>
+        <li><b>排熱の活用</b>は近くに熱を使う施設があるかの確認から（この画面に熱需要のデータはない）。</li>
+        <li><b>地盤</b>は衛星で広く傾向を見て、気になる地点だけ地上で調べる二段階にする。</li>
       </ul>
     </details>
     <details class="more" id="limits">
-      <summary>限界（必ず読む）</summary>
+      <summary>限界</summary>
       <ul>
-        <li><b>国土数値情報の災害区域</b>は縮尺 1/25,000〜1/50,000 程度の概略で、位置の誤差は数百 m 規模。公共測量・各種証明・重要事項説明には使えない。作られていない河川・指定されていない区域は「入っていない」と出る。</li>
-        <li><b>干渉SAR</b>は約 90 m の格子、数百 m より狭い変動は読めない。水蒸気・地表の状態・標高モデルの誤差を含む。植生・水面は値が取れない。筑豊炭田の採掘跡など沈下の原因は、このデータだけでは断定できない。</li>
-        <li><b>地表面温度</b>は 1 場面（2026-08-22）。100 m 解像度の熱赤外を 30 m で配信したもの。年間の傾向でも気温でもない。</li>
-        <li><b>土地の状態</b>は Sentinel-2（10 m）から機械的に分類した目安。閾値は仮置きで、現地での較正はしていない。</li>
+        <li><b>災害区域</b>（国土数値情報）は縮尺 1/25,000〜1/50,000 程度の概略で、位置の誤差は数百 m 規模。重要事項説明・証明には使えない。未作成の川・未指定の区域は「外」と出る。</li>
+        <li><b>地盤の変動</b>（干渉SAR）は約 90 m 格子で、数百 m より狭い変動は読めない。植生・水面は値なし。沈下の原因は断定しない。</li>
+        <li><b>地表面温度</b>は 2026-08-22 の 1 場面（約 100 m の熱赤外）。気温でも年間の傾向でもない。</li>
+        <li><b>土地の状態</b>は Sentinel-2（10 m）の機械的な分類（閾値は仮置き・現地で較正していない）。</li>
         <li><b>電力</b>は OSM の登録分だけ。空き容量・接続可否・工期は分からない。</li>
-        <li>通信・水・地震・活断層・液状化は、利用条件か基準が確認できていないため扱わない。</li>
+        <li>通信・水・地震・活断層・液状化は扱わない（利用条件か基準が確認できていない）。</li>
       </ul>
     </details>
-    <p class="btnrow"><button type="button" id="btn-data">使っているデータと場面（ID・日付・利用条件）</button></p>
+    <button type="button" id="btn-data" class="more-btn">使っているデータ（ID・日付・利用条件）</button>
+    </div>
   </aside>
 </main>
 <dialog id="datadlg" aria-labelledby="datadlg-t">
-  <h2 id="datadlg-t">使っているデータと場面</h2>
+  <h2 id="datadlg-t">使っているデータ</h2>
   <div id="datadlg-body"></div>
   <form method="dialog"><button>閉じる</button></form>
 </dialog>

@@ -44,17 +44,24 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   else ok(label + ': スマホは縦に積む（地図の下に一覧がある）', await ev(`document.querySelector('.side').getBoundingClientRect().top >= document.querySelector('#map').getBoundingClientRect().bottom - 2`));
   ok(label + ': 横スクロールなし', await ev(`document.documentElement.scrollWidth <= window.innerWidth`));
   ok(label + ': 確認項目が8つあり、どれにも出典リンクがある', await ev(`(()=>{const r=document.querySelectorAll('#rows .row');return r.length===8&&[...r].every(x=>x.querySelector('.src a'))})()`));
-  ok(label + ': 項目に 浸水・土砂・津波・高潮・沈下・地表面温度・変電所・土地の状態', await ev(`(()=>{const t=document.querySelector('#rows').textContent;return ['洪水','土砂','津波','高潮','干渉SAR','地表面温度','変電所','土地の状態'].every(k=>t.includes(k))})()`));
-  ok(label + ': 「最適地」「適地」の語が画面にない・点数や順位の表がない', await ev(`(()=>{const t=document.body.innerText;return !/適地/.test(t)&&!/\\d+\\s*位/.test(t)&&!/スコア|総合点/.test(t)&&!document.querySelector('table:not(dialog table)')})()`));
+  ok(label + ': 項目に 浸水・土砂・津波・高潮・沈下・地表面温度・変電所・土地の状態', await ev(`(()=>{const t=document.querySelector('#rows').textContent;return ['洪水','土砂','津波','高潮','地盤の変動','地表面温度','変電所','土地の状態'].every(k=>t.includes(k))})()`));
+  ok(label + ': 「最適地」「適地」の語が画面にない・点数や順位の表がない', await ev(`(()=>{const t=document.body.innerText;return !/適地/.test(t)&&!/\\d+\\s*位/.test(t)&&!/スコア|総合点/.test(t)&&!document.querySelector('table:not(dialog table):not(table.cmp)')&&!/順位|点数/.test(document.querySelector('#cmp').textContent.replace('順位は付けない',''))})()`));
   ok(label + ': 「一次スクリーニング」「確認項目」の語がある', await ev(`/一次スクリーニング/.test(document.body.innerText)&&/確認項目/.test(document.body.innerText)`));
   ok(label + ': 限界（位置誤差）が読める（国土数値情報・干渉SAR）', await ev(`(()=>{const d=document.querySelector('#limits');d.open=true;const t=d.textContent;const r=/誤差は数百 m/.test(t)&&/3\\.75 mm\\/年|数百 m より狭い/.test(t);return r})()`));
   ok(label + ': 防災・都市課題の観点がある（浸水しない場所・排熱）', await ev(`(()=>{const d=document.querySelector('#why');d.open=true;const t=d.textContent;return /防災/.test(t)&&/排熱/.test(t)})()`));
   ok(label + ': 衛星の出典表記（Copernicus・USGS・国土地理院/JAXA）が画面にある', await ev(`(()=>{const t=document.querySelector('#credit').textContent;return /Copernicus Sentinel/.test(t)&&/U\\.S\\. Geological Survey/.test(t)&&/原初データ所有：JAXA/.test(t)&&/ODbL/.test(t)&&/CC BY 4\\.0/.test(t)})()`));
+  ok(label + ': 出典・注意は既定で畳まれ、ⓘで開く', await ev(`(()=>{const b=document.querySelector('#rows .row button.info');const d=document.getElementById(b.getAttribute('aria-controls'));const was=d.hidden;b.click();const r=was&&!d.hidden;b.click();return r})()`));
+  ok(label + ': 防災への一言が結果の上に常に出る', await ev(`/→/.test(document.querySelector('#impact').textContent)`));
+  ok(label + ': 比べる表が最初から 2 件並び、確認すべき点か差の行がある', await ev(`(()=>{const t=document.querySelector('#cmp table.cmp');return !!t&&t.querySelectorAll('thead th').length===3&&t.querySelectorAll('tbody tr').length===8})()`));
+  ok(label + ': 候補地の名前の意味（造＝造成地・遊＝遊休地）と該当数の凡例がある', await ev(`/造成地の候補/.test(document.querySelector('#legend').textContent)&&/遊休地の候補/.test(document.querySelector('#legend').textContent)&&!!document.querySelector('.cand-mk .hzd')`));
+  if (!mobile) ok(label + ': 確認項目 8 つがパネル内でスクロールなしに見える', await ev(`(()=>{const s=document.querySelector('.side').getBoundingClientRect();const r=[...document.querySelectorAll('#rows .row')];return r[r.length-1].getBoundingClientRect().bottom<=s.bottom})()`));
   await shot(label + '_1_first.png');
   // 候補地を選ぶ
   const first = await ev(`document.querySelector('#target-title').textContent`);
   const opts = await ev(`[...document.querySelectorAll('#pick option')].filter(o=>!o.disabled).map(o=>o.value)`);
   await ev(`(()=>{const s=document.querySelector('#pick');s.value=${JSON.stringify(opts[Math.min(opts.length - 1, 30)])};s.dispatchEvent(new Event('change'))})()`); await sleep(900);
+  await ev(`document.querySelector('#btn-pin').click()`);
+  ok(label + ': ＋比べるで 3 件目が並ぶ', await ev(`document.querySelectorAll('#cmp thead th').length===4`));
   ok(label + ': 候補地を選ぶと見出しと確認項目が変わる', (await ev(`document.querySelector('#target-title').textContent`)) !== first && (await ev(`document.querySelectorAll('#rows .row').length`)) === 8);
   ok(label + ': 選んだ候補地の輪郭が地図にある', await ev(`DCApp.state.map.getSource('sel')._data.geometry?.type==='Polygon'`));
   // 地図をクリックして地点を指す
@@ -64,16 +71,18 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   ok(label + ': 地図をクリックすると「地図で指した地点」の確認項目が出る', await ev(`document.querySelector('#target-title').textContent==='地図で指した地点'&&document.querySelectorAll('#rows .row').length===8&&!!document.querySelector('.pt-mk')`));
   ok(label + ': 指した地点の周囲の範囲が書いてある', await ev(`/75 m/.test(document.querySelector('#target-sub').textContent)`));
   await shot(label + '_2_point.png');
-  // 層の切り替え
-  for (const k of ['land', 'lst', 'sub', 'flood', 'slide', 'tsunami', 'surge']) {
+  // 層の切り替え（衛星は 1 つだけ。災害・電力は重ねられる）
+  for (const k of ['flood', 'slide', 'tsunami', 'surge', 'power']) {
     await ev(`(()=>{const l=document.querySelector('#layers');l.open=true;const c=document.querySelector('#layers input[data-layer="${k}"]');c.checked=true;c.dispatchEvent(new Event('change'))})()`);
   }
+  for (const k of ['land', 'sub']) await ev(`(()=>{const c=document.querySelector('#layers input[data-layer="${k}"]');c.checked=true;c.dispatchEvent(new Event('change'))})()`);
   await sleep(900);
-  ok(label + ': 衛星・防災の層をすべて重ねられ、凡例が出る', await ev(`(()=>{const m=DCApp.state.map;return ['land','lst','sub','flood','slide','tsunami','surge'].every(k=>m.getLayoutProperty('img-'+k,'visibility')==='visible')&&document.querySelectorAll('#legend .lg').length>=8})()`));
+  ok(label + ': 衛星の層は 1 つだけ（地盤を選ぶと温度・土地は消える）、災害の層は重ねられ、凡例が出る', await ev(`(()=>{const m=DCApp.state.map;const v=(k)=>m.getLayoutProperty('img-'+k,'visibility');return v('sub')==='visible'&&v('lst')==='none'&&v('land')==='none'&&['flood','slide','tsunami','surge'].every(k=>v(k)==='visible')&&document.querySelectorAll('#legend .lg').length>=7})()`));
   await ev(`document.querySelector('#layers').open=${mobile ? 'false' : 'true'}`);
   await shot(label + '_3_layers.png');
-  for (const k of ['land', 'lst', 'sub', 'flood', 'slide', 'tsunami', 'surge']) await ev(`(()=>{const c=document.querySelector('#layers input[data-layer="${k}"]');c.checked=false;c.dispatchEvent(new Event('change'))})()`);
-  ok(label + ': 層を切ると隠れる', await ev(`DCApp.state.map.getLayoutProperty('img-lst','visibility')==='none'`));
+  await ev(`(()=>{const c=document.querySelector('#layers input[data-layer="none"]');c.checked=true;c.dispatchEvent(new Event('change'))})()`);
+  ok(label + ': 「重ねない」で衛星の層が隠れる', await ev(`['lst','sub','land','chg'].every(k=>DCApp.state.map.getLayoutProperty('img-'+k,'visibility')==='none')`));
+  await ev(`document.querySelector('#btn-home').click()`);
   // データと場面
   await ev(`document.querySelector('#btn-data').click()`); await sleep(400);
   ok(label + ': 「使っているデータと場面」に場面のID・日付・利用条件が出る', await ev(`(()=>{const t=document.querySelector('#datadlg').textContent;return document.querySelector('#datadlg').open&&/S2B_52SFC_20260823_0_L2A/.test(t)&&/LC09_L2SP_113036_20260822/.test(t)&&/2020-08-24/.test(t)&&/ODbL/.test(t)&&/CC BY 4\\.0/.test(t)&&/USGS/.test(t)&&/Copernicus/.test(t)&&/P03/.test(t)})()`));
