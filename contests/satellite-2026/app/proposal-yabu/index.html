@@ -11,13 +11,13 @@
 <body>
 <header>
   <h1>クマ対策：藪払いの優先地図 <small>人里に近い藪・林縁を衛星で絞り、刈り払いの順番を決める（コンセプトデモ）</small></h1>
-  <div class="banner" id="banner" role="note"><b>架空のデータは使っていません</b>（公開データ・京都府与謝野町周辺）。目撃は2009〜2018年度で<b>最新ではありません</b>。<b>点数の重みは仮置き</b>で、刈り払いの効果は示しません。
-    <details class="more"><summary>詳しく</summary>衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃＝京都府の公開データ、建物・学校＝OpenStreetMap（未登録の建物があります）。紫の塗り（出やすい範囲）は林縁・川が論文の数値、集落・市街地の係数が仮置きの判定です。目撃は通報のため人の多い所に偏ります。⑵の記録はデモ中の入力で、実際の確認ではありません。</details></div>
+  <div class="banner" id="banner" role="note"><b>架空のデータは使っていません</b>／目撃は2009〜2018年度（<b>最新ではありません</b>）／重みは<b>仮置き</b>
+    <details class="more"><summary>詳しく</summary>公開データ（京都府与謝野町周辺）。刈り払いの効果は示しません。衛星＝Sentinel-2（2026年5月17日・2月21日）、目撃＝京都府の公開データ、建物・学校＝OpenStreetMap（未登録の建物があります）。紫の塗り（出やすい範囲）は林縁・川が論文の数値、集落・市街地の係数が仮置きの判定です。目撃は通報のため人の多い所に偏ります。記録欄の入力はデモで、実際の確認ではありません。</details></div>
   <nav id="tabs" role="tablist" aria-label="画面の切り替え">
     <button role="tab" data-view="rank" aria-selected="true">⑴ 地図・順位</button>
-    <button role="tab" data-view="record" aria-selected="false">⑵ 記録</button>
-    <button role="tab" data-view="plan" aria-selected="false">⑶ 計画</button>
-    <button type="button" id="btn-plan-quick" class="quick" title="刈り払い計画（点数の上位）をCSVで保存">計画CSVを保存</button>
+    <button role="tab" data-view="record" aria-selected="false">⑵ 記録・計画</button>
+    <button type="button" id="btn-rec-csv" class="quick" title="現地確認の記録をCSVで保存">記録CSV</button>
+    <button type="button" id="btn-plan-csv" class="quick q2" title="刈り払い計画（点数の上位）をCSVで保存">計画CSV<span class="long">（上位<span id="cap-lbl">10</span>区画）</span></button>
   </nav>
 </header>
 <main>
@@ -31,7 +31,7 @@
           <details class="layers" id="layers"><summary>重ねる層</summary>
             <label><input type="checkbox" id="l-hab" checked> クマが出やすい範囲（紫）</label>
             <label><input type="checkbox" id="l-cells" checked> 候補区画（橙＝上位）</label>
-            <label><input type="checkbox" id="l-ndvi"> 衛星の緑の濃さ（5月NDVI・候補区画）</label>
+            <label><input type="checkbox" id="l-ndvi"> 衛星で見た緑の濃さ（候補区画）</label>
             <label><input type="checkbox" id="l-sights"> クマ目撃（紫の点・2009〜2018年度）</label>
             <label><input type="checkbox" id="l-houses"> 建物（黒い点・OSM）</label>
             <label><input type="checkbox" id="l-schools" checked> 学校・園（青丸・OSM）</label>
@@ -44,6 +44,7 @@
         <div id="detail" aria-live="polite"></div>
       </div>
     </div>
+    <div class="below">
     <details id="allrank" class="box"><summary id="allrank-sum">すべての順位を表で見る（絞り込み・並び替え）</summary>
       <div class="filters">
         <label><input type="checkbox" id="f-unvisited"> 現地未確認のみ</label>
@@ -54,9 +55,10 @@
       <p id="count" class="note"></p>
       <div class="tablewrap"><table id="ranktable"><thead></thead><tbody></tbody></table></div>
     </details>
+    <details id="more" class="box"><summary>くわしい説明（凡例・判定の確かさ・重み など）</summary>
     <div class="more-row">
-      <details id="validation" class="box"><summary id="validation-sum">この判定は当たっているか（目撃データでの検証）</summary><div id="validation-body"></div></details>
-      <details id="hab-legend" class="box hab" aria-label="クマが出やすい範囲の凡例"><summary>凡例の詳しい説明</summary>
+      <details id="validation" class="box"><summary id="validation-sum">この判定の確かさ（目撃データでの答え合わせ）</summary><div id="validation-body"></div></details>
+      <details id="hab-legend" class="box hab" aria-label="クマが出やすい範囲の凡例"><summary>凡例</summary>
         <ul class="hl">
           <li><span class="sw sw-high" aria-hidden="true"></span><b>高</b>（塗り）：林の縁（林縁）から20m以内で人家から500m圏内、または川に接する林縁。<small>林縁20m以内は、そうでない所より約3.7倍選ばれやすい（選択オッズ 3.74。川沿いの林縁は 21.45。Takahata ほか 2014）</small></li>
           <li><span class="sw sw-mid" aria-hidden="true"></span><b>中</b>（斜線）：林縁から100m以内で人家から500m圏内、または林縁20m以内で人家から遠い所。<small>選択オッズ 1.81</small></li>
@@ -64,7 +66,7 @@
         </ul>
         <p class="note">橙の番号＝藪払い順位の上位20、薄い枠＝それ以外の候補。紫の判定は林縁・川が論文の数値、集落・市街地の係数（0.5）が仮置きで、出没の予測ではありません。目撃データは通報で人の多い所に偏ります。</p>
       </details>
-      <details id="hab-method" class="box"><summary>出没しやすさの式と出典</summary><div id="hab-method-body"></div></details>
+      <details id="hab-method" class="box"><summary>紫の判定の式と出典</summary><div id="hab-method-body"></div></details>
       <details class="box can"><summary>衛星で言えること／言えないこと</summary>
         <div class="cols">
           <div><b>言える</b><ul><li>集落のまわりで、田畑・建物に接する植生の帯を100m四方の区画として絞る</li><li>夏に茂り冬に落葉する植生かを、2時期の差で見分ける目安にする</li><li>絞った区画に目撃・建物・学校との近さを重ね、現地確認の順番を決める</li></ul></div>
@@ -81,34 +83,34 @@
         <button id="btn-w-reset" type="button">初期値に戻す</button>
       </details>
     </div>
+    </details>
+    </div>
   </section>
   <section id="v-record" class="view" hidden>
     <p class="demo-badge">デモ：入力は実際の確認ではありません（このブラウザにだけ保存・外部送信なし・個人名は入れない）</p>
-    <form id="rec-form">
+    <form id="rec-form" novalidate>
       <label>区画ID（必須） <input type="text" id="r-cell" list="cell-list" placeholder="例 Y123" required pattern="Y[0-9]{3}"><small id="r-sel" class="note"></small></label>
       <datalist id="cell-list"></datalist>
       <label>確認日 <input type="date" id="r-date" required></label>
       <label>確認者（必須） <input type="text" id="r-who" maxlength="40" required placeholder="例: 鳥獣対策係"></label>
-      <label>結果 <select id="r-result" required></select></label>
+      <label>結果（必須） <select id="r-result" required></select></label>
       <label class="wide">メモ <input type="text" id="r-memo" maxlength="200" placeholder="例: ササが背丈まで茂る"></label>
       <button type="submit">記録する</button>
     </form>
-    <p class="note">「藪ではない（農地・建物など）」にした区画は⑶の計画から外れます。</p>
-    <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p><p><button id="btn-rec-to-plan" type="button">⑶ 計画を見る</button></p></div>
-    <div class="filters"><button id="btn-rec-csv" type="button">記録をCSVで書き出す</button><button id="btn-reset" type="button">記録を全消去</button></div>
+    <div id="rec-msg" class="recmsg" role="status" hidden><p id="rec-msg-text"></p></div>
     <p class="csvmsg saved" role="status" hidden></p>
-    <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区画</th><th>確認者</th><th>結果</th><th>メモ</th><th></th></tr></thead><tbody></tbody></table></div>
-  </section>
-  <section id="v-plan" class="view" hidden>
-    <p class="demo-badge">デモ：現地確認の欄は⑵で入れた内容です（実際の確認ではありません）</p>
-    <div class="filters">
-      <label>対象の区画数 <input type="number" id="cap" min="1" max="100" value="10"></label>
-      <button id="btn-plan-csv" type="button">刈り払い計画をCSVで書き出す</button>
+    <div class="rp">
+      <div>
+        <h2>刈り払い計画 <small>上位 <input type="number" id="cap" min="1" max="100" value="10" aria-label="計画に入れる区画数"> 区画</small></h2>
+        <p id="plan-note" class="note"></p>
+        <div class="tablewrap"><table id="plan-table"><thead><tr><th>順位</th><th>区画</th><th>点数</th><th>現地確認</th><th>最寄り建物</th><th>500m内の目撃</th></tr></thead><tbody></tbody></table></div>
+        <p class="note">CSVには地理院地図へのリンクと実施主体・時期の記入欄があります。刈り払いの可否・費用・土地の権利の確認は自治体と地権者が行います。</p>
+      </div>
+      <div>
+        <h2>現地確認の記録 <button id="btn-reset" type="button" class="link">全消去</button></h2>
+        <div class="tablewrap"><table id="rec-table"><thead><tr><th>確認日</th><th>区画</th><th>確認者</th><th>結果</th><th>メモ</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
     </div>
-    <p class="csvmsg saved" role="status" hidden></p>
-    <p id="plan-note" class="note"></p>
-    <div class="tablewrap"><table id="plan-table"><thead><tr><th>順位</th><th>区画</th><th>点数</th><th>現地確認</th><th>最寄り建物</th><th>500m以内の目撃</th></tr></thead><tbody></tbody></table></div>
-    <p class="note">CSVには地理院地図へのリンクと、実施主体・時期の記入欄（空欄）があります。刈り払いの可否・費用・土地の権利の確認は自治体と地権者が行います。</p>
   </section>
 </main>
 <footer id="footer"></footer>

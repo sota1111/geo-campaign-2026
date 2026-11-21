@@ -44,7 +44,7 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   ok(label + ': 地図が画面の6〜7割（デスクトップは幅、スマホは高さ）', await ev(`(()=>{const r=document.querySelector('#map').getBoundingClientRect();return ${mobile} ? (r.height/innerHeight>=0.55 && r.height/innerHeight<=0.72 && r.width/innerWidth>0.9) : (r.width/innerWidth>=0.58 && r.width/innerWidth<=0.70 && r.height/innerHeight>=0.55)})()`));
   ok(label + ': 出没しやすい範囲（高・中）の層が地図にある', await ev(`(async()=>{for(let i=0;i<30&&!(YabuApp.state.mapReady&&YabuApp.state.map.getLayer('hab-high'));i++)await new Promise(r=>setTimeout(r,200));const m=YabuApp.state.map;return !!m.getLayer('hab-high')&&!!m.getLayer('hab-mid')&&m.getLayer('hab-high').visibility!=='none'})()`));
   ok(label + ': 凡例に高・中・低と根拠（Takahata）がある', await ev(`(()=>{const t=document.querySelector('#hab-legend').textContent;return t.includes('高')&&t.includes('中')&&t.includes('低')&&t.includes('3.74')&&t.includes('Takahata')&&t.includes('偏ります')})()`));
-  ok(label + ': 「この判定は当たっているか」は初期は閉じていて、開くと表が5つ以上・AUCと基準の比較が出る', await ev(`(()=>{const d=document.querySelector('#validation');const closed=!d.open;d.open=true;const n=d.querySelectorAll('table').length;const t=d.textContent;const r=closed&&n>=5&&/AUC/.test(t)&&t.includes('人家からの距離だけ（基準）')&&t.includes('2010年度を除く')&&t.includes('人の多い所');d.open=false;return r})()`));
+  ok(label + ': 「この判定の確かさ」は初期は閉じていて、開くと表が5つ以上・AUCと基準の比較が出る', await ev(`(()=>{const d=document.querySelector('#validation');const closed=!d.open;d.open=true;const n=d.querySelectorAll('table').length;const t=d.textContent;const r=closed&&n>=5&&/AUC/.test(t)&&t.includes('人家からの距離だけ（基準）')&&t.includes('2010年度を除く')&&t.includes('人の多い所');d.open=false;return r})()`));
   ok(label + ': 順位表に出没しやすさの列がある', await ev(`document.querySelector('#ranktable thead').textContent.includes('クマの出没しやすさ')`));
   ok(label + ': 順位表は初期20行（「表示」で増やせる）', (await ev(`document.querySelectorAll('#ranktable tbody tr[data-id]').length`)) === 20);
   ok(label + ': 最初の画面に優先上位5（区画・点数・理由の一言）が見える', await ev(`(()=>{const b=[...document.querySelectorAll('#top5 [data-top]')];if(b.length!==5)return false;const r=b[4].getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&/目撃\\d+件|建物\\d+m|林縁\\d+%/.test(b[0].textContent)})()`));
@@ -101,7 +101,7 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   const rcsv = await ev(`window.__csv[0]`);
   if (process.env.DEBUG_CSV) console.log(JSON.stringify(rcsv));
   ok(label + ': 記録CSV: 式が無効化され引用される', rcsv.includes('"\'=cmd,""引用"""') && rcsv.startsWith('確認日'));
-  await ev(`document.querySelector('[data-view=plan]').click()`); await sleep(300);
+  await ev(`document.querySelector('[data-view=record]').click()`); await sleep(300);
   ok(label + ': 計画に10区画が出る', (await ev(`document.querySelectorAll('#plan-table tbody tr').length`)) === 10);
   ok(label + ': 計画の表に「藪ではない」の区画が入らない', !(await ev(`[...document.querySelectorAll('#plan-table tbody tr td:nth-child(2)')].map(t=>t.textContent).includes('${cid}')`)));
   ok(label + ': 計画の注記に除外件数1が出る', (await ev(`document.querySelector('#plan-note').textContent`)).includes('1 区画は除いて'));

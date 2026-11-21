@@ -17,7 +17,7 @@
     school: '最寄りの学校・園までの近さ',
   };
   // 根拠の棒グラフ用の短い名前
-  const SHORT = { edge: '林縁度', veg: '5月の緑の濃さ', drop: '冬との緑の差', sight: '目撃（500m内）', house: '建物までの近さ', houses_n: '周りの建物数', school: '学校・園の近さ' };
+  const SHORT = { edge: '森の縁の割合', veg: '5月の緑の濃さ', drop: '冬との緑の差', sight: '目撃（500m内）', house: '建物までの近さ', houses_n: '周りの建物数', school: '学校・園の近さ' };
   const SRC = { edge: 'sat', veg: 'sat', drop: 'sat', sight: 'hist', house: 'osm', houses_n: 'osm', school: 'osm' };
   const SRC_LABEL = { sat: '衛星', hist: '目撃履歴', osm: '建物・学校' };
   // 各要素を 0〜1 にする基準（仮置き）
@@ -104,7 +104,7 @@
 
   // 理由の一言（点数の大きい観点を2つ、実測値で）。例「目撃52件・建物10m」
   function shortReason(c, weights, satOnly) {
-    const word = { edge: '林縁' + Math.round(c.edge * 100) + '%', veg: '5月NDVI ' + c.ndvi_g.toFixed(2), drop: '冬との差 ' + (c.ndvi_g - c.ndvi_w).toFixed(2), sight: '目撃' + c.n_sight500 + '件', house: '建物' + c.d_house + 'm', houses_n: '建物' + c.n_house300 + '棟', school: c.d_school == null ? '' : '学校・園' + c.d_school + 'm' };
+    const word = { edge: '林縁' + Math.round(c.edge * 100) + '%', veg: '緑の濃さ ' + c.ndvi_g.toFixed(2), drop: '冬との差 ' + (c.ndvi_g - c.ndvi_w).toFixed(2), sight: '目撃' + c.n_sight500 + '件（〜2018年度）', house: '建物' + c.d_house + 'm', houses_n: '建物' + c.n_house300 + '棟', school: c.d_school == null ? '' : '学校・園' + c.d_school + 'm' };
     return parts(c, weights).filter((x) => x.pts > 0 && (!satOnly || x.src === 'sat') && word[x.key]).sort((a, b) => b.pts - a.pts).slice(0, 2).map((x) => word[x.key]).join('・');
   }
 

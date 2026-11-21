@@ -155,6 +155,6 @@ test('出没しやすさ: データの整合（候補区画すべてに付与・
 });
 test('画面ファイル: 検証の折りたたみ・目撃の偏りの注記・出典（Takahata）が入っている', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
-  assert.ok(html.includes('この判定は当たっているか') && html.includes('人の多い所に偏ります'));
+  assert.ok(html.includes('この判定の確かさ') && html.includes('人の多い所に偏ります'));
   assert.ok(app.includes('Takahata ほか 2014') && app.includes('人家からの距離だけ'));
 });
