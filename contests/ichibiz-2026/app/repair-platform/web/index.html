@@ -11,33 +11,26 @@
 <header id="top">
   <div class="titleline">
     <h1>大規模修繕プラットフォーム <span class="demo">デモ</span></h1>
-    <p class="lead">マンションの大規模修繕費を、公的な調査の分布の中で見ます。地図で建物を選ぶと、目安の範囲と、見積の位置が出ます。</p>
+    <p class="lead">地図で建物を選ぶと、国交省調査から修繕費の目安の範囲と、見積の位置が出ます。</p>
   </div>
-  <p class="legendbar" aria-label="表示の区別">
-    <span class="b real">実データ</span><span class="lg">公的データそのもの</span>
-    <span class="b est">推定</span><span class="lg">計算した参考値</span>
-    <span class="b user">利用者入力</span><span class="lg">あなたが入れた値</span>
-    <span class="b fake">架空・合成</span><span class="lg">デモ用の作り物</span>
-  </p>
-  <p class="warn"><span id="disclaimer"></span>。<a href="#" id="toSources">出典・限界</a></p>
+  <p class="warn"><span id="disclaimer"></span> <a href="#" id="toSources">出典・限界</a></p>
   <p id="loaderr" class="err" hidden></p>
 </header>
 
 <main id="work">
   <section id="mapcol" class="mapcol" aria-label="地図">
     <div class="maptools">
-      <label>町名 <select id="selTown"><option value="">墨田区全体</option></select></label>
-      <label>規模（推定階数） <select id="selMin">
+      <button type="button" id="pickExample" class="ghost">例の建物を選ぶ</button>
+      <label>地区 <select id="selTown"><option value="">墨田区全体</option></select></label>
+      <label>規模 <select id="selMin">
         <option value="0">すべて</option><option value="5">5階以上</option><option value="8">8階以上</option><option value="12">12階以上</option>
       </select></label>
-      <label>階高の仮定 <input id="storeyH" type="number" min="2" max="5" step="0.1" value="3.0" aria-describedby="storeyNote"> m</label>
-      <span id="storeyNote" class="mini">PLATEAU に階数が入っていないので、高さ÷階高で仮置き</span>
+      <label title="PLATEAU に階数が無いので、高さ÷階高で仮置き">階高の仮定 <input id="storeyH" type="number" min="2" max="5" step="0.1" value="3.0"> m</label>
     </div>
     <div id="mapbox" class="mapbox">
-      <div id="map" role="application" aria-label="墨田区の地図。共同住宅らしい規模の建物を色で表示。建物を押すと選べます。矢印キーで移動、＋−で拡大縮小。建物は右（スマートフォンでは下）の「似た建物」の一覧からも選べます" tabindex="0">
+      <div id="map" role="application" aria-label="墨田区の地図。共同住宅らしい規模の建物を色で表示。建物を押すと選べます。矢印キーで移動、＋−で拡大縮小。「例の建物を選ぶ」でも選べます" tabindex="0">
         <div id="tiles"></div>
         <canvas id="over"></canvas>
-        <div class="mapnote" id="mapNote"></div>
         <div class="maplegend" aria-hidden="true"><b>推定階数</b>
           <span><i style="background:#f2c14e"></i>〜5</span><span><i style="background:#f08a24"></i>6〜9</span><span><i style="background:#d1495b"></i>10〜14</span><span><i style="background:#7a2e8e"></i>15〜</span>
         </div>
@@ -45,40 +38,43 @@
         <div class="attr" id="mapAttr"></div>
       </div>
     </div>
-    <p id="selLine" class="selline" aria-live="polite"></p>
+    <p class="mapnote" id="mapNote"></p>
   </section>
 
   <aside id="side" class="side" aria-label="修繕費の目安・似た建物・点群・発注先">
     <div class="tabs" role="tablist" aria-label="機能">
-      <button type="button" role="tab" id="t-est" aria-controls="p-est" aria-selected="true">目安・見積の位置</button>
-      <button type="button" role="tab" id="t-sim" aria-controls="p-sim" aria-selected="false" tabindex="-1">似た建物・事例</button>
-      <button type="button" role="tab" id="t-slam" aria-controls="p-slam" aria-selected="false" tabindex="-1">点群（SLAM）</button>
-      <button type="button" role="tab" id="t-vendor" aria-controls="p-vendor" aria-selected="false" tabindex="-1">発注先</button>
-      <button type="button" role="tab" id="t-src" aria-controls="p-src" aria-selected="false" tabindex="-1">出典・限界</button>
+      <button type="button" role="tab" id="t-est" aria-controls="p-est" aria-selected="true">目安・見積</button>
+      <button type="button" role="tab" id="t-sim" aria-controls="p-sim" aria-selected="false" tabindex="-1">似た建物</button>
+      <button type="button" role="tab" id="t-slam" aria-controls="p-slam" aria-selected="false" tabindex="-1">点群</button>
+      <button type="button" role="tab" id="t-vendor" aria-controls="p-vendor" aria-selected="false" tabindex="-1">発注先比較</button>
+      <button type="button" role="tab" id="t-src" aria-controls="p-src" aria-selected="false" tabindex="-1">出典</button>
     </div>
 
     <section id="p-est" class="tabpanel" role="tabpanel" aria-labelledby="t-est">
       <div id="selCard" class="card"></div>
-      <form id="form" class="inputs" autocomplete="off" onsubmit="return false">
-        <h2>条件 <span class="b user">利用者入力</span></h2>
-        <div class="fields">
-          <label>戸数 <input id="inUnits" type="number" min="1" inputmode="numeric"><span class="u">戸</span></label>
-          <label>延床面積 <input id="inTfa" type="number" min="1" inputmode="numeric"><span class="u">㎡</span></label>
-          <label>築年数 <input id="inAge" type="number" min="0" max="100" inputmode="numeric"><span class="u">年</span></label>
-          <label>階数 <input id="inFloors" type="number" min="1" max="60" inputmode="numeric"><span class="u">階</span></label>
-        </div>
-        <fieldset class="counts"><legend>工事回数</legend>
-          <label><input type="radio" name="count" value="1" checked>1回目</label>
-          <label><input type="radio" name="count" value="2">2回目</label>
-          <label><input type="radio" name="count" value="3">3回目以上</label>
-        </fieldset>
-        <div class="fields">
-          <label class="wide">見積総額 <input id="inQuote" type="number" min="0" inputmode="numeric" placeholder="入れると位置が出ます"><span class="u">万円</span></label>
-          <label>税 <select id="inTax"><option value="ex">税抜</option><option value="in">税込（10%を除く）</option></select></label>
-        </div>
-        <p class="mini">建物を選ぶと階数・延床を推定値で入れます（変えられます）。戸数は PLATEAU に属性がないので、入れてください。見積は、入力した端末の中だけで計算し、送信しません。</p>
-      </form>
       <div id="estOut" aria-live="polite"></div>
+      <form id="form" class="inputs" autocomplete="off" onsubmit="return false">
+        <div class="fields">
+          <label>戸数 <input id="inUnits" type="number" min="1" inputmode="numeric"><span class="u">戸</span><span id="unitsTag" class="tag" hidden>推定</span></label>
+          <label class="wide">見積 <input id="inQuote" type="number" min="0" inputmode="numeric" placeholder="万円"><span class="u">万円</span></label>
+          <label><select id="inTax" aria-label="見積の税"><option value="ex">税抜</option><option value="in">税込</option></select></label>
+        </div>
+        <details id="moreCond"><summary>条件を変える（延床・築年・階数・工事回数）</summary>
+          <div class="fields">
+            <label>延床 <input id="inTfa" type="number" min="1" inputmode="numeric"><span class="u">㎡</span><span id="tfaTag" class="tag" hidden>推定</span></label>
+            <label>築年数 <input id="inAge" type="number" min="0" max="100" inputmode="numeric"><span class="u">年</span></label>
+            <label>階数 <input id="inFloors" type="number" min="1" max="60" inputmode="numeric"><span class="u">階</span></label>
+          </div>
+          <fieldset class="counts"><legend>工事回数</legend>
+            <label><input type="radio" name="count" value="1" checked>1回目</label>
+            <label><input type="radio" name="count" value="2">2回目</label>
+            <label><input type="radio" name="count" value="3">3回目以上</label>
+          </fieldset>
+          <p class="mini">「推定」の欄は建物から自動で入れた値です。入力した値が優先されます。見積は端末内だけで計算し、送信しません。</p>
+        </details>
+      </form>
+      <div id="simMini"></div>
+      <div id="estMore"></div>
     </section>
 
     <section id="p-sim" class="tabpanel" role="tabpanel" aria-labelledby="t-sim" hidden>
@@ -99,6 +95,7 @@
     </section>
   </aside>
 </main>
+<p id="selLine" class="selline" aria-live="polite"></p>
 
 <script src="lib.js"></script>
 <script src="app.js"></script>

@@ -7,7 +7,11 @@
   const TAX_RATE = 0.1; // 標準税率（国交省調査の金額は消費税を含まないので、税込の見積はここで割る）
   const DEFAULT_STOREY_H = 3.0; // 階高の仮定（m）。画面で変えられる。PLATEAU に階数が入っていないための仮置き
 
-  const DISCLAIMER = '国土交通省の調査の分布から計算した「目安」と「分布での位置」です。適正な金額であることを保証しません。工事費は、規模・形状・劣化の程度・仕様・施工条件で大きく変わります';
+  const DISCLAIMER = '国交省調査の分布から計算した目安と位置です。適正な金額であることを保証しません（工事費は規模・劣化・仕様で大きく変わります）';
+  const UNIT_SQM = 70; // 戸数の仮置き: 延床 ÷ 1戸あたり70㎡（仮定。根拠のある値ではない。画面で戸数を直せる）
+  const SCALE_MAX = { floors: 40, tfa: 50000 }; // これを超える建物は、この画面の目安の対象外とする（設計上の線引き）
+  const SCALE_SMALL_TFA = 800; // これ未満は、共同住宅でない可能性を警告する（設計上の線引き）
+  const PER_UNIT_SQM = { min: 30, max: 150 }; // 1戸あたり延床がこの外なら、戸数と延床の食い違いとみなす（設計上の線引き）
   const LICENSE_NOTE = '国交省調査（令和3年度）の二次利用条件は要確認です。出典と加工（転記・計算）の旨を表示しています';
   const RESPONSIBILITY = '数値は作成者が公開資料から転記・計算したもので、国土交通省・各自治体が内容を保証したものではありません';
 
@@ -62,19 +66,47 @@
       { key: 'usage', label: '用途', n: stats.usage, pct: pct(stats.usage) },
     ];
   }
+  /** 建物の規模の検査。対象外（超高層・大規模）なら blocked、小さすぎるなら small */
+  function scaleCheck(b) {
+    if (b.floors > SCALE_MAX.floors || b.tfa > SCALE_MAX.tfa) return { blocked: true, small: false, text: 'マンションの規模ではない可能性が高い建物です（推定' + b.floors + '階・延床約' + nf0.format(Math.round(b.tfa)) + '㎡）。目安は出しません' };
+    if (b.tfa < SCALE_SMALL_TFA) return { blocked: false, small: true, text: '延床が' + SCALE_SMALL_TFA + '㎡未満の推定です。共同住宅でない可能性があります' };
+    return { blocked: false, small: false, text: '' };
+  }
+  const unitsFromTfa = (tfa) => Math.max(1, Math.round(tfa / UNIT_SQM));
+  /** 戸数と延床の整合（1戸あたり延床）。外れたら bad */
+  function consistency(units, tfa) {
+    if (!(units > 0) || !(tfa > 0)) return null;
+    const per = tfa / units;
+    return { per, bad: per < PER_UNIT_SQM.min || per > PER_UNIT_SQM.max };
+  }
   /** 似た建物。階数（推定）の差が±2以内で、延床（推定）の比が近い順。築年は PLATEAU に入っていないので使えない。 */
   function similar(list, target, n, storeyH) {
     const out = [];
+    const seen = new Set();
     for (const b of list) {
       if (b.id === target.id) continue;
       const e = b.floors != null ? b : enrich(b, storeyH);
       const df = e.floors - target.floors;
       if (Math.abs(df) > 2) continue;
+      if (e.floors > SCALE_MAX.floors || e.tfa > SCALE_MAX.tfa) continue;
       const ratio = e.tfa / target.tfa;
-      out.push({ b: e, df, ratio, dist: Math.abs(Math.log(ratio)) });
+      // 延床の比を主に、高さ・外周の比と距離で差を付ける（同点を減らす）
+      let dist = Math.abs(Math.log(ratio));
+      if (target.h > 0 && e.h > 0) dist += 0.5 * Math.abs(Math.log(e.h / target.h));
+      if (target.per > 0 && e.per > 0) dist += 0.3 * Math.abs(Math.log(e.per / target.per));
+      let km = null;
+      if (isFinite(target.lat) && isFinite(e.lat)) { km = Math.hypot((e.lon - target.lon) * 90.3, (e.lat - target.lat) * 111); dist += 0.01 * km; }
+      out.push({ b: e, df, ratio, dist, km });
     }
     out.sort((a, b) => a.dist - b.dist || a.b.id.localeCompare(b.b.id));
-    return out.slice(0, n);
+    const res = [];
+    for (const x of out) {
+      const k = (x.b.town || '') + '|' + x.b.floors + '|' + Math.round(x.b.tfa / 50); // 同じ町・同じ規模の重複はまとめる
+      if (seen.has(k)) continue;
+      seen.add(k); res.push(x);
+      if (res.length >= n) break;
+    }
+    return res;
   }
   function similarByInput(list, floors, tfa, n, storeyH) {
     return similar(list, { id: '', floors, tfa }, n, storeyH);
@@ -98,7 +130,7 @@
     else if (v > s.median) { band = 'median-q3'; text = '中央値と上位25%値の間（上位25〜50%）'; }
     else if (v >= s.q1) { band = 'q1-median'; text = '下位25%値と中央値の間（上位50〜75%）'; }
     else { band = 'below-q1'; text = '下位25%に入る（下位25%値を下回る）'; }
-    const rel = Math.abs(diffPct) < 0.05 ? '中央値と同じ' : '中央値より' + fmt(Math.abs(diffPct), 1) + '%' + (diffPct > 0 ? '高い' : '低い');
+    const rel = Math.abs(diffPct) < 0.05 ? '中央値と同じ' : diffPct > 1000 ? '中央値の10倍を超えます（桁を確認）' : '中央値より' + fmt(Math.abs(diffPct), 1) + '%' + (diffPct > 0 ? '高い' : '低い');
     return { value: v, median: s.median, q1: s.q1, q3: s.q3, diffPct, band, text, rel };
   }
   /** 築年から工事回数の見当。回数別の平均修繕周期（概要 p.1）を足し上げた築年（1回目15.6、2回目29.6、3回目42.5…）に最も近いものを選ぶ */
@@ -113,8 +145,10 @@
   /** inputs: { units, tfa, age, count('1'|'2'|'3'), quote(万円), quoteTaxIn(bool) } */
   function estimate(inputs, survey) {
     const set = survey.byCount[inputs.count] || survey.byCount['1'];
-    const res = { label: set.label, set, ranges: [], positions: [], quoteEx: null, hint: countHint(inputs.age, survey.cycle.years) };
-    const bases = [['perUnit', inputs.units, '戸'], ['perSqm', inputs.tfa, '㎡']];
+    const conflict = consistency(inputs.units, inputs.tfa);
+    const res = { label: set.label, set, ranges: [], positions: [], quoteEx: null, hint: countHint(inputs.age, survey.cycle.years), conflict: conflict && conflict.bad ? conflict : null };
+    const useSqm = !res.conflict; // 食い違うときは延床あたりを出さない（戸あたりを主にする）
+    const bases = [['perUnit', inputs.units, '戸'], ['perSqm', useSqm ? inputs.tfa : 0, '㎡']];
     for (const [key, mult, unit] of bases) {
       if (mult > 0) {
         const s = set[key];
@@ -125,10 +159,26 @@
       const q = exTax(inputs.quote, inputs.quoteTaxIn);
       res.quoteEx = q;
       if (inputs.units > 0) res.positions.push(Object.assign({ key: 'perUnit', label: '戸あたり（万円/戸）', stat: set.perUnit }, position(q / inputs.units, set.perUnit)));
-      if (inputs.tfa > 0) res.positions.push(Object.assign({ key: 'perSqm', label: '床面積あたり（万円/㎡）', stat: set.perSqm }, position(q / inputs.tfa, set.perSqm)));
+      if (useSqm && inputs.tfa > 0) res.positions.push(Object.assign({ key: 'perSqm', label: '床面積あたり（万円/㎡）', stat: set.perSqm }, position(q / inputs.tfa, set.perSqm)));
       res.positions.push(Object.assign({ key: 'total', label: '総額（万円。規模の違いを考えない参考）', stat: set.total, scaleFree: true }, position(q, set.total)));
     }
+    res.primary = res.ranges[0] || null; // 戸あたりがあれば戸あたり、無ければ延床あたり
+    res.primaryPos = res.primary ? res.positions.find((p) => p.key === res.primary.key) || null : null;
     return res;
+  }
+  /** 複数社の見積を、同じ基準（estimate の主指標）で位置づける。rows: [{name, amount(万円), taxIn}] */
+  function compareQuotes(rows, inputs, survey) {
+    return rows.filter((r) => r.amount > 0).map((r) => {
+      const e = estimate(Object.assign({}, inputs, { quote: r.amount, quoteTaxIn: !!r.taxIn }), survey);
+      return { name: r.name, amount: r.amount, ex: e.quoteEx, pos: e.primaryPos, primary: e.primary };
+    });
+  }
+  /** 口コミを会社ごとに数える（件数と、利害関係ありの件数だけ。平均点・順位は出さない） */
+  function reviewCounts(reviews, name) {
+    const q = (name || '').trim();
+    if (!q) return { n: 0, related: 0 };
+    const hit = reviews.filter((r) => r.company.includes(q) || q.includes(r.company));
+    return { n: hit.length, related: hit.filter((r) => r.stake === 'related').length };
   }
 
   // ---- 口コミの並び（操作できない設計。投稿日の新しい順だけ。評価・会社・申告で並べ替えない） ----
@@ -299,7 +349,7 @@
     return head + rows.join('\n') + '\n';
   }
 
-  const api = { TAX_RATE, DEFAULT_STOREY_H, DISCLAIMER, LICENSE_NOTE, RESPONSIBILITY, LINKS, CHECKLIST, fmt, fmtMan, esc, floorsFromHeight, floorAreaEst, wallArea, enrich, validateBuildings, fillRates, similar, similarByInput, pointInRing, exTax, position, countHint, estimate, sortReviews, parsePLY, parseLAS, parseXYZ, parseCloud, convexHull, ringPerimeter, ringArea, analyzeCloud, synthCloud, toPLY };
+  const api = { TAX_RATE, DEFAULT_STOREY_H, UNIT_SQM, SCALE_MAX, SCALE_SMALL_TFA, PER_UNIT_SQM, scaleCheck, unitsFromTfa, consistency, compareQuotes, reviewCounts, DISCLAIMER, LICENSE_NOTE, RESPONSIBILITY, LINKS, CHECKLIST, fmt, fmtMan, esc, floorsFromHeight, floorAreaEst, wallArea, enrich, validateBuildings, fillRates, similar, similarByInput, pointInRing, exTax, position, countHint, estimate, sortReviews, parsePLY, parseLAS, parseXYZ, parseCloud, convexHull, ringPerimeter, ringArea, analyzeCloud, synthCloud, toPLY };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

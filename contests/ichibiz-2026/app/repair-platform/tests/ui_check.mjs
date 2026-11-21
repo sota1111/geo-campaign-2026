@@ -64,7 +64,6 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   if (desktop) { check(!m0.vscroll, name + ': 縦スクロールがある（docH ' + m0.docH + ' > ' + m0.vh + '）'); check(m0.mapW / m0.vw >= 0.6 && m0.mapW / m0.vw <= 0.75 && m0.mapH / m0.vh >= 0.75, name + ': 地図が画面の6〜7割（幅）・高さ7.5割以上でない ' + m0.mapW + 'x' + m0.mapH); }
   else check(m0.mapTop < m0.sideTop, name + ': 地図が操作パネルより上でない');
   check((await ev("document.getElementById('mapNote').innerText")).includes('用途の属性は入っていない'), name + ': 地図の注記がない');
-  check((await text('#selLine')).includes('建築年0%'), name + ': 付与率の表示がない');
   await shot(`${name}-1-load.png`);
 
   // 建物を実クリックで選ぶ: 推定10階前後の建物に寄せてから、その中心を押す
@@ -78,8 +77,22 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   check(selId && selId === tgtId, name + ': 実クリックで建物が選べない sel=' + selId + ' tgt=' + tgtId);
   const card = await text('#selCard');
   report[name + '-card'] = card.slice(0, 200).replace(/\n/g, ' / ');
-  check(card.includes('外壁面積の概算') && card.includes('推定階数') && card.includes('PLATEAU に値なし'), name + ': 選んだ建物のカードが足りない');
-  check(!!(await ev("document.getElementById('inFloors').value")) && !!(await ev("document.getElementById('inTfa').value")), name + ': 階数・延床が入らない');
+  check(card.includes('外壁面積の概算') && card.includes('推定階数') && card.includes('推定延床'), name + ': 選んだ建物のカードが足りない');
+  check(!!(await ev("document.getElementById('inFloors').value")) && !!(await ev("document.getElementById('inTfa').value")) && !!(await ev("document.getElementById('inUnits').value")), name + ': 階数・延床・戸数（推定）が入らない');
+  // 目標1: 建物を押しただけで目安の範囲が出る
+  const est0 = await text('#estOut');
+  report[name + '-est0'] = est0.slice(0, 200).replace(/\n/g, ' / ');
+  check(/修繕費の目安 [\d,]+万円〜[\d,]+万円/.test(est0), name + ': 建物を押しただけで目安の範囲が出ない');
+  // 例の建物ボタン
+  await ev("document.getElementById('pickExample').click()");
+  await sleep(300);
+  check(!!(await ev('window.__rp.state.sel && window.__rp.state.sel.id')) && /修繕費の目安/.test(await text('#estOut')), name + ': 例の建物を選ぶで目安が出ない');
+  // 超高層・大規模は目安を出さない
+  await ev(`(() => { const S = window.__rp.state; const b = S.list.slice().sort((a, c) => c.h - a.h)[0]; window.__rp.selectBuilding(b, false); })()`);
+  await sleep(300);
+  check((await text('#estOut')).includes('目安は出しません') && !(await text('#estOut')).includes('修繕費の目安'), name + ': 超高層で目安を止めない');
+  await ev(`(() => { const S = window.__rp.state; window.__rp.selectBuilding(S.tgt, false); })()`);
+  await sleep(300);
 
   // 条件と見積: 戸数60、見積は戸あたりが上位25%値を超える額
   const tfa = Number(await ev("document.getElementById('inTfa').value"));
@@ -87,9 +100,14 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await sleep(300);
   const est = await text('#estOut');
   report[name + '-est'] = est.slice(0, 600).replace(/\n/g, ' / ');
-  check(est.includes('下位25%値') && est.includes('目安の範囲'), name + ': 目安の範囲が出ない');
+  check(est.includes('下位25%') && est.includes('修繕費の目安'), name + ': 目安の範囲が出ない');
+  check(!(est.includes('戸数と延床が合っていません') && /延床あたりでは/.test(est)), name + ': 食い違いなのに延床あたりを出している');
+  check((await ev("document.querySelectorAll('#estOut .rangebar .you').length")) === 1, name + ': 範囲バーに見積の印がない');
+  check((await ev("document.querySelectorAll('#simMini li').length")) >= 3, name + ': 目安タブに似た建物の上位3棟がない');
   check(/中央値より[\d.]+%高い/.test(est) && est.includes('上位25%に入る'), name + ': 見積の位置の文言が出ない（9500万円/60戸=158万円/戸）');
-  check(est.includes('適正な金額であることを保証しません'), name + ': 免責がない');
+  check((await ev("document.body.innerText")).includes('適正な金額であることを保証しません'), name + ': 免責がない');
+  if (desktop) check(await ev("(() => { const p = document.getElementById('p-est'); return p.scrollHeight <= p.clientHeight + 2; })()"), name + ': 目安タブにパネル内スクロールがある');
+  else check(!!(await text('#selLine')).match(/目安 [\d,]+〜/), name + ': スマホの要約バーに目安が出ない');
   check(!(await ev("document.body.innerText")).includes('査定'), name + ': 「査定」がある');
   await shot(`${name}-2-estimate.png`);
   if (!desktop) { await ev("document.getElementById('side').scrollIntoView()"); await sleep(200); await shot(`${name}-2-estimate-panel.png`); }
@@ -100,6 +118,7 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const sim = await text('#simOut');
   const nsim = await ev("document.querySelectorAll('#simOut .list li').length");
   check(nsim >= 3 && sim.includes('築年は PLATEAU に入っていない'), name + ': 似た建物が出ない/築年の限界の表示なし ' + nsim);
+  await ev("document.querySelector('#caseOut details.cases').open = true");
   const cases = await text('#caseOut');
   check((cases.match(/架空/g) || []).length >= 4 && cases.includes('公開されている個別の修繕事例はありません'), name + ': 事例の架空表示がない');
   check((await ev("document.querySelectorAll('#caseOut .list li.fakeitem').length")) === 3, name + ': 架空事例3件の印がない');
@@ -133,10 +152,17 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const order = await ev("[...document.querySelectorAll('#vendorOut .list li.fakeitem')].map((l) => (l.innerText.match(/\\d{4}-\\d{2}-\\d{2}/) || [''])[0]).join(',')");
   report[name + '-reviewOrder'] = order;
   check(order === order.split(',').sort().reverse().join(','), name + ': 口コミが新しい順でない');
+  // 複数社の見積を入れて、同じ帯に並べる
+  await ev(`(() => { const set = (sel, v) => { const e = document.querySelector(sel); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }; set('.qname[data-i="0"]', '架空会社A'); set('.qamt[data-i="0"]', 8000); set('.qamt[data-i="1"]', 9500); set('.qamt[data-i="2"]', 7000); })()`);
+  await sleep(300);
+  const nmark = await ev("document.querySelectorAll('#vendorOut .rangebar .you').length");
+  const qt = await text('#vendorOut table.qt');
+  report[name + '-quotes'] = qt.replace(/\n/g, ' / ').slice(0, 300);
+  check(nmark === 3 && /上位25%|中央値と|下位25%/.test(qt), name + ': 複数社の見積が帯に並ばない ' + nmark);
   await shot(`${name}-5-vendor.png`);
 
   // 口コミを1件投稿（端末内のみ）→ 先頭に出る・並びは日付順
-  await ev(`(() => { const d = document.querySelector('#vendorOut details'); d.open = true; const f = document.getElementById('revForm'); f.company.value = '試験会社'; f.year.value = 2025; f.stake.value = 'none'; f.text.value = '試験の投稿'; f.requestSubmit(); })()`);
+  await ev(`(() => { const f = document.getElementById('revForm'); document.querySelectorAll('#vendorOut details').forEach((d) => (d.open = true)); f.company.value = '試験会社'; f.year.value = 2025; f.stake.value = 'none'; f.text.value = '試験の投稿'; f.requestSubmit(); })()`);
   await sleep(400);
   check((await ev("document.querySelectorAll('#vendorOut ul.list:not(.links) li').length")) === 5, name + ': 投稿が増えない');
   await ev("localStorage.clear()");
@@ -144,8 +170,10 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   // 出典・限界
   await ev("document.getElementById('t-src').click()");
   await sleep(300);
+  check((await text('#srcOut')).includes('PLATEAU Site Policy') && (await text('#srcOut')).includes('用途は0%'), name + ': 出典・付与率の見出しがない');
+  await ev("document.querySelectorAll('#srcOut details').forEach((d) => (d.open = true))");
   const src = await text('#srcOut');
-  check(src.includes('46,386') && src.includes('0%') && src.includes('要確認') && src.includes('PLATEAU Site Policy'), name + ': 出典・付与率の表示が足りない');
+  check(src.includes('46,386') && src.includes('建築年0%') && src.includes('要確認') && src.includes('PLATEAU Site Policy'), name + ': 出典・付与率の表示が足りない');
   await shot(`${name}-6-sources.png`);
   const mEnd = JSON.parse(await ev(metrics));
   check(!mEnd.hscroll, name + ': 最後に横スクロール');
