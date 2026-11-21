@@ -21,6 +21,8 @@ import { CONTEST_INFO } from '@/apps/contests-info'
 import { appUrl, portalUrl } from '@/lib/data'
 import { asOf } from '@/pages/Progress'
 import { PlanDivisions, PlanLine } from '@/components/shared/PlanCount'
+import { Remaining } from '@/components/shared/Remaining'
+import { nextDeadline } from '@/apps/contests-info'
 import { loadTargets, planView } from '@/lib/fit'
 
 const NO_DESC = '要項に説明の記載なし。'
@@ -108,6 +110,7 @@ export default function ContestPage({ contestId }: { contestId: string }) {
   const [evalOpen, setEvalOpen] = useState(false)
   const color = contestColor(meta.id)
   const plan = planView(meta.id, loadTargets())
+  const nd = nextDeadline(info)
   // 今の案の直後に対になる新しい案を置く組。組ごとに囲んで見せる
   const groups = apps.filter((a) => !isNewPlan(a)).map((cur) => ({ cur, items: [cur, ...apps.filter((x) => isNewPlan(x) && x.pairWith === cur.id)] }))
   const grouped = new Set(groups.flatMap((g) => g.items.map((x) => x.id)))
@@ -122,6 +125,10 @@ export default function ContestPage({ contestId }: { contestId: string }) {
       </a>
       <header className="space-y-2">
         <h1 className={`rounded-lg px-3 py-2 text-xl font-bold leading-tight ${color.band}`}><span aria-hidden>{color.mark} </span>{meta.name}</h1>
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 text-sm" data-testid="contest-headline">
+          <span>次の締切 <span className="font-bold">{nd.text}</span> <Remaining at={nd.at} />{info.deadlines.length > 1 && <span>（{nd.label}）</span>}</span>
+          <span>賞金 <span className="font-bold">{info.prize.summary}</span></span>
+        </p>
       </header>
 
       <Section id="contest-overview" title="概要・目的">

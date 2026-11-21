@@ -28,6 +28,10 @@ describe('トップの大きなカード（画面いっぱい）', () => {
     expect(cardPlan(lvAsksGone - 1).critClamp).toBe('line-clamp-3')
     expect(cardPlan(0).sumClamp).toBe('line-clamp-3')
     expect(cardPlan(-1).sumClamp).toBe('')
+    // 提出予定の合計は概要・審査基準の行数を減らし切った後（最後）に消える
+    expect(cardPlan(CARD_MAX_LV).critClamp).toBe('line-clamp-1')
+    expect(cardPlan(lvAsksGone).hidePlan).toBe(false)
+    expect(cardPlan(CARD_MAX_LV).hidePlan).toBe(true)
   })
   it('コンペカードに、締切・判断待ち・次にやること・概要・審査基準・主なルール・提出可能数・2つの操作が出る', () => {
     render(<Portal />)
