@@ -67,6 +67,39 @@ function useFitLevel(deps: string, max: number) {
   return { ref, lv }
 }
 
+/**
+ * コンペカードの表示の優先順位（残す順）: 見出し帯（名前・次の締切・提出可否）→ 概要 → 審査基準 → 総司令官の判断待ち → 次にやること → 主なルール → 提出可能数 → このコンペに出すアプリの件数。
+ * 入りきらないときは下位から削る（行数 → 「ほか n 件」 → 非表示）。概要と審査基準は最後まで残し、削るのは最終手段（概要 3→2→1 行、審査基準 全項目→2→1 行）。
+ * lv: -1 = 全項目・全文（幅 1024px 未満で縦に積むとき）、0 = 全項目（各2行まで）、1 以上 = 下位から削る。
+ */
+export const CARD_MAX_LV = 19
+export function cardPlan(lv: number) {
+  const c2 = 'line-clamp-2'
+  const all = lv < 0
+  return {
+    c2,
+    // 下位から: 件数の行(1) → 提出可能数(2〜4) → 主なルール(5〜7) → 次にやること(8〜10) → 判断待ち(11〜14) → 審査基準・概要の行数(15〜19)
+    hideTargets: lv >= 1,
+    nLimits: all ? 99 : lv >= 2 ? 1 : 2,
+    limitsClamp: lv >= 3 ? 'line-clamp-1' : c2,
+    hideLimits: lv >= 4,
+    nRules: all ? 99 : lv >= 5 ? 1 : 2,
+    rulesClamp: lv >= 6 ? 'line-clamp-1' : c2,
+    hideRules: lv >= 7,
+    nNext: all ? 99 : lv >= 8 ? 1 : 2,
+    hideNext: lv >= 10,
+    nextClamp: lv >= 9 ? 'line-clamp-1' : c2,
+    nAsks: all ? 99 : lv >= 12 ? 1 : lv >= 11 ? 2 : 3,
+    hideAsks: lv >= 14,
+    cl: lv >= 13 ? 'line-clamp-1' : c2,
+    // 概要は最大3行（最後の手段でだけ2行）、審査基準は全項目（最後の手段でだけ1行ずつ省略）
+    sumClamp: all ? '' : lv >= 16 ? 'line-clamp-2' : 'line-clamp-3',
+    hideSummary: false,
+    critClamp: all ? '' : lv >= 19 ? 'line-clamp-1' : lv >= 15 ? 'line-clamp-2' : 'line-clamp-3',
+    hideCrit: false,
+  }
+}
+
 const SHORT_WORD: Record<string, string> = { '◎': 'このコンペ向け', '○': '出せる', '△': '条件付き', '×': '出せない', '？': '要確認' }
 
 /** 押した先がボタン・リンク・折りたたみのときは、カード本体の「選択」を起こさない */
@@ -90,24 +123,10 @@ export function ContestTopCard({
   const nexts = st.next.filter((n) => !n.decision)
   const next = nexts[0] ?? st.next[0]
   const fit = useFit()
-  const { ref: regRef, lv: lv0 } = useFitLevel(`${info.id}|${fit}|${selected}|${appsForContest(targets, info.id).length}`, 15)
-  // 削る順: 概要 → 審査基準 → 主なルール → 提出可能数 → （最後に）判断待ち・次にやること。各項目は 2行 → 1行 → 非表示
-  const lv = fit ? lv0 - 2 : -1 // -2: 全項目・全文（行数の制限なし）、-1: 全項目・各2行まで、0〜: 絞り込み
-  const c2 = lv <= -2 ? '' : 'line-clamp-2'
-  const hideSummary = lv >= 2
-  const sumClamp = lv >= 1 ? 'line-clamp-1' : c2
-  const hideCrit = lv >= 4
-  const critClamp = lv >= 3 ? 'line-clamp-1' : c2
-  const hideRules = lv >= 7
-  const nRules = lv < 0 ? 99 : lv >= 6 ? 1 : 2
-  const rulesClamp = lv >= 5 ? 'line-clamp-1' : c2
-  const hideLimits = lv >= 10
-  const nLimits = lv < 0 ? 99 : lv >= 9 ? 1 : 2
-  const limitsClamp = lv >= 8 ? 'line-clamp-1' : c2
-  const nAsks = lv < 0 ? 99 : lv >= 12 ? 1 : lv >= 11 ? 2 : 3
-  const nNext = lv < 0 ? 99 : lv >= 11 ? 1 : 2
-  const divClamp = lv >= 13 ? 'line-clamp-1' : ''
-  const cl = lv >= 12 ? 'line-clamp-1' : c2
+  const { ref: regRef, lv: lv0 } = useFitLevel(`${info.id}|${fit}|${selected}|${appsForContest(targets, info.id).length}`, CARD_MAX_LV + 1)
+  const pl = cardPlan(fit ? lv0 - 1 : -1)
+  const { hideSummary, sumClamp, hideCrit, critClamp, hideRules, nRules, rulesClamp, hideLimits, nLimits, limitsClamp, hideTargets, nAsks, nNext, cl, hideNext, nextClamp, hideAsks } = pl
+  const hideDiv = hideTargets
   const more = otherNextCount(info.id)
   const cols = columnsOf(info.id)
   const chosen = appsForContest(targets, info.id)
@@ -139,16 +158,6 @@ export function ContestTopCard({
           </span>
           {info.deadlines.length > 1 && <span>（{nd.label}）</span>}
         </p>
-        {info.id === 'ichibiz-2026' && (
-          <p className={`text-xs text-slate-800 ${divClamp}`} data-testid="ichibiz-divisions" aria-label="3つの部門" title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')}>
-            {cols.map((c, i) => (
-              <span key={c.id}>
-                {i > 0 && '／'}
-                <span className="font-bold">{c.division}</span> {c.deadline.replace('2026-', '').replace('-', '/')}・{appsForColumn(targets, c.id).length}件
-              </span>
-            ))}
-          </p>
-        )}
         <p className="flex flex-wrap items-center gap-x-2">
           <span className="font-bold" data-testid="row-status" title={st.gap}>
             <span aria-hidden>▲ </span>
@@ -156,6 +165,11 @@ export function ContestTopCard({
             <span className="font-normal">（提出不可）</span>
           </span>
         </p>
+        {!hideSummary && <p className={`shrink-0 ${sumClamp}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>}
+        {!hideCrit && <p className={`shrink-0 ${critClamp}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
+          <span className="font-bold">審査基準 </span>{info.criteria.map((c) => c.name).join('・')}
+        </p>}
+        {!hideAsks && (
         <Sec
           testid="row-asks"
           title={asks.join(' ／ ')}
@@ -164,6 +178,8 @@ export function ContestTopCard({
           items={asks.slice(0, nAsks).map((t) => ({ key: t, node: t, text: t }))}
           clamp={cl}
         />
+        )}
+        {!hideNext && (
         <Sec
           testid="card-next"
           label={<span className="font-bold">次にやること</span>}
@@ -173,16 +189,9 @@ export function ContestTopCard({
             text: n.text,
             node: <>{n === next ? <span data-testid="row-next">{n.text}</span> : n.text}<span className="text-slate-700">（{n.owner}）</span></>,
           }))}
-          clamp={cl}
+          clamp={nextClamp}
         />
-        <p className="shrink-0 truncate" data-testid={`targets-${info.id}`} aria-live="polite" title={chosen.map(appName).join('、')}>
-          <span className="font-bold">このコンペに出すアプリ {chosen.length}件</span>
-          <span className="text-slate-800">{chosen.length ? `：${chosen.map(appName).join('、')}` : '（未選択）'}</span>
-        </p>
-        {!hideSummary && <p className={`shrink-0 ${sumClamp}`} data-testid="card-summary" title={info.summary}><span className="font-bold">概要 </span>{info.summary}</p>}
-        {!hideCrit && <p className={`shrink-0 ${critClamp}`} data-testid="card-criteria" title={info.criteria.map((c) => c.name).join('・')}>
-          <span className="font-bold">審査基準 </span>{info.criteria.map((c) => c.name).join('・')}
-        </p>}
+        )}
         {!hideRules && <Sec
           testid="card-rules"
           label={<span className="font-bold">主なルール</span>}
@@ -197,6 +206,22 @@ export function ContestTopCard({
           items={info.limits.slice(0, nLimits).map((r) => ({ key: r.text, text: r.text, node: <>{r.unconfirmed && '（未確認）'}{r.text}</> }))}
           clamp={limitsClamp}
         />}
+        {info.id === 'ichibiz-2026' && !hideDiv && (
+          <p className="text-xs text-slate-800" data-testid="ichibiz-divisions" aria-label="3つの部門" title={cols.map((c) => `${c.division} ${c.deadline.replace('2026-', '').replace('-', '/')}`).join('／')}>
+            {cols.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && '／'}
+                <span className="font-bold">{c.division}</span> {c.deadline.replace('2026-', '').replace('-', '/')}・{appsForColumn(targets, c.id).length}件
+              </span>
+            ))}
+          </p>
+        )}
+        {!hideTargets && (
+        <p className="shrink-0 truncate" data-testid={`targets-${info.id}`} aria-live="polite" title={chosen.map(appName).join('、')}>
+          <span className="font-bold">このコンペに出すアプリ {chosen.length}件</span>
+          <span className="text-slate-800">{chosen.length ? `：${chosen.map(appName).join('、')}` : '（未選択）'}</span>
+        </p>
+        )}
       </div>
         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 pt-1">
           <button
