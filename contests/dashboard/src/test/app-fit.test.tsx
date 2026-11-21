@@ -10,12 +10,12 @@ import {
 } from '@/lib/fit'
 
 // 正本 JSON に未反映の新案（app-fit.ts に先に足した。反映後はここから外す）。a4・timeline は 2026-11-21 に参謀長が正本へ反映済み
-const NEW_UNREFLECTED: string[] = []
+const NEW_UNREFLECTED: string[] = ['sat-dc']
 const json = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../../../reports/intel/app-contest-fit-20261121.json'), 'utf-8'))
 
 describe('適合表（情報部の正本）の取り込み', () => {
-  it('21アプリ×6列=126セルで、registry の APPS と一致する', () => {
-    expect(FIT_CELLS).toHaveLength(126)
+  it('22アプリ×6列=132セルで、registry の APPS と一致する', () => {
+    expect(FIT_CELLS).toHaveLength(132)
     expect(new Set(FIT_CELLS.map((c) => c.app))).toEqual(new Set(APPS.map((a) => a.id)))
     expect(FIT_COLUMNS).toHaveLength(6)
   })
@@ -42,9 +42,9 @@ describe('適合表（情報部の正本）の取り込み', () => {
 describe('並び順', () => {
   it('未選択は全列の score 合計の高い順、同点は registry の並び', () => {
     const all = sortApps(APPS, null).map((a) => a.id)
-    // 判定が大半「？」の新しい案（biz-realestate-a4・timeline・biz-repair）は、選んだ候補の次（ここでは先頭）に置く（M7）
-    expect(all.slice(0, 3)).toEqual(['biz-realestate-a4', 'biz-realestate-timeline', 'biz-repair'])
-    const ids = all.slice(3)
+    // 判定が大半「？」の新しい案（biz-realestate-a4・timeline・biz-repair・sat-dc）は、選んだ候補の次（ここでは先頭）に置く（M7）
+    expect(all.slice(0, 4)).toEqual(['biz-realestate-a4', 'biz-realestate-timeline', 'biz-repair', 'sat-dc'])
+    const ids = all.slice(4)
     const tot = ids.map(totalScore)
     for (let i = 1; i < tot.length; i++) expect(tot[i - 1]).toBeGreaterThanOrEqual(tot[i])
     const idx = (id: string) => APPS.findIndex((a) => a.id === id)
@@ -134,7 +134,7 @@ describe('トップ画面の操作', () => {
   it('コンペ4枚とアプリ19枚。コンペを選ぶと並び替わり、関連の行が強調される', () => {
     render(<Portal />)
     expect(document.querySelectorAll('[data-contest-card]')).toHaveLength(4)
-    expect(order()).toHaveLength(21)
+    expect(order()).toHaveLength(22)
     const before = order()
     fireEvent.click(screen.getByTestId('pick-satellite-2026'))
     expect(order()).not.toEqual(before)
@@ -224,9 +224,9 @@ describe('トップ画面の操作', () => {
   })
   it('絞り込み・位置表示・Tab の止まり方・◎の言葉', () => {
     render(<Portal />)
-    expect(screen.getByTestId('row-position').textContent).toContain('21件中')
+    expect(screen.getByTestId('row-position').textContent).toContain('22件中')
     fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '盛土' } })
-    expect(order().length).toBeLessThan(21)
+    expect(order().length).toBeLessThan(22)
     expect(order()).toContain('sat-b')
     fireEvent.change(screen.getByTestId('top-app-filter'), { target: { value: '' } })
     for (const id of ['odpt', 'sat-b']) {

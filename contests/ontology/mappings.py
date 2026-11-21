@@ -20,6 +20,7 @@ APP_DIRS = {
     "sat-alpha": "contests/satellite-2026/app/proposal-alpha",
     "sat-yabu": "contests/satellite-2026/app/proposal-yabu",
     "sat-sugi": "contests/satellite-2026/app/proposal-sugi",
+    "sat-dc": "contests/satellite-2026/app/proposal-dc",
     "biz-business": "contests/ichibiz-2026/app/business",
     "biz-business-nb": "contests/ichibiz-2026/app/business-nb",
     "biz-idea": "contests/ichibiz-2026/app/idea",
@@ -39,6 +40,8 @@ APP_HOME_FALLBACK = {
     "odpt-kodure": ("odpt-2026", None),
     "sat-yabu": ("satellite-2026", None),
     "sat-sugi": ("satellite-2026", None),
+    # データセンター候補地の一次スクリーニング（2026-11-22 追加。応募テーマは未決）
+    "sat-dc": ("satellite-2026", None),
     # アイデア部門のみ（reports/command/decision-20261114-solar-guard.md 結論5）
     "biz-solar-guard": ("ichibiz-2026", "idea"),
     # 不動産部門の新案 A4「同じ土地、四つの値段」（dashboard の registry.ts にはまだ無い。reports/audit/ichibiz-2026-realestate-a4-20261121.md の対象）
@@ -94,6 +97,7 @@ NO_DRAFT_SOURCES = {
     "odpt-kansui": "reports/command/merge-20261121.md",
     "biz-solar-guard": "reports/audit/ichibiz-2026-solar-guard-20261113.md",
     "biz-repair": "contests/ichibiz-2026/app/repair-platform/README.md",
+    "sat-dc": "contests/satellite-2026/app/proposal-dc/README.md",
 }
 # 未記入の穴の記法（満たしたら消える指示文の括弧）
 PLACEHOLDER_RE = r"【(?:本人加筆|総司令官記入|提出時に記入|本人記入)"
