@@ -126,10 +126,10 @@
   function position(v, s) {
     const diffPct = ((v - s.median) / s.median) * 100;
     let band, text;
-    if (v > s.q3) { band = 'above-q3'; text = '上位25%に入る（上位25%値を上回る）'; }
-    else if (v > s.median) { band = 'median-q3'; text = '中央値と上位25%値の間（上位25〜50%）'; }
-    else if (v >= s.q1) { band = 'q1-median'; text = '下位25%値と中央値の間（上位50〜75%）'; }
-    else { band = 'below-q1'; text = '下位25%に入る（下位25%値を下回る）'; }
+    if (v > s.q3) { band = 'above-q3'; text = '高め（上位25%に入る）'; }
+    else if (v > s.median) { band = 'median-q3'; text = 'やや高め（中央値〜上位25%値）'; }
+    else if (v >= s.q1) { band = 'q1-median'; text = 'やや安め（下位25%値〜中央値）'; }
+    else { band = 'below-q1'; text = '安め（下位25%に入る）'; }
     const rel = Math.abs(diffPct) < 0.05 ? '中央値と同じ' : diffPct > 1000 ? '中央値の10倍を超えます（桁を確認）' : '中央値より' + fmt(Math.abs(diffPct), 1) + '%' + (diffPct > 0 ? '高い' : '低い');
     return { value: v, median: s.median, q1: s.q1, q3: s.q3, diffPct, band, text, rel };
   }
@@ -342,6 +342,23 @@
     }
     return { points: Float32Array.from(pts), count: pts.length / 3, total: pts.length / 3, format: '合成（18m×12m×高さ9mの箱の外壁。実在しない）' };
   }
+  /** 選んだ建物の外形（経緯度の輪）を、低層部の高さ lowH(m) まで測ったとみなす合成の点群（操作の練習用。実測ではない） */
+  function synthCloudFor(ring, lowH) {
+    if (!ring || ring.length < 3) return synthCloud();
+    const lon0 = ring[0][0], lat0 = ring[0][1], kx = 111320 * Math.cos((lat0 * Math.PI) / 180), ky = 110540;
+    const xy = ring.map((p) => [(p[0] - lon0) * kx, (p[1] - lat0) * ky]);
+    const H = Math.max(1, lowH), step = 0.25, pts = [];
+    for (let i = 0; i < xy.length; i++) {
+      const a = xy[i], b = xy[(i + 1) % xy.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 1e-6) continue;
+      for (let t = 0; t < len; t += step) {
+        const x = a[0] + ((b[0] - a[0]) * t) / len, y = a[1] + ((b[1] - a[1]) * t) / len;
+        for (let z = 0; z <= H + 1e-9; z += step) pts.push(x, y, z);
+      }
+      if (pts.length > 2400000) break;
+    }
+    return { points: Float32Array.from(pts), count: pts.length / 3, total: pts.length / 3, format: '合成（選んだ建物の外形を高さ' + H + 'mまで測ったとみなす。実測ではない）' };
+  }
   function toPLY(cloud) {
     const head = 'ply\nformat ascii 1.0\ncomment 合成データ（実在の建物ではありません）\nelement vertex ' + cloud.count + '\nproperty float x\nproperty float y\nproperty float z\nend_header\n';
     const rows = [];
@@ -349,7 +366,7 @@
     return head + rows.join('\n') + '\n';
   }
 
-  const api = { TAX_RATE, DEFAULT_STOREY_H, UNIT_SQM, SCALE_MAX, SCALE_SMALL_TFA, PER_UNIT_SQM, scaleCheck, unitsFromTfa, consistency, compareQuotes, reviewCounts, DISCLAIMER, LICENSE_NOTE, RESPONSIBILITY, LINKS, CHECKLIST, fmt, fmtMan, esc, floorsFromHeight, floorAreaEst, wallArea, enrich, validateBuildings, fillRates, similar, similarByInput, pointInRing, exTax, position, countHint, estimate, sortReviews, parsePLY, parseLAS, parseXYZ, parseCloud, convexHull, ringPerimeter, ringArea, analyzeCloud, synthCloud, toPLY };
+  const api = { TAX_RATE, DEFAULT_STOREY_H, UNIT_SQM, SCALE_MAX, SCALE_SMALL_TFA, PER_UNIT_SQM, scaleCheck, unitsFromTfa, consistency, compareQuotes, reviewCounts, DISCLAIMER, LICENSE_NOTE, RESPONSIBILITY, LINKS, CHECKLIST, fmt, fmtMan, esc, floorsFromHeight, floorAreaEst, wallArea, enrich, validateBuildings, fillRates, similar, similarByInput, pointInRing, exTax, position, countHint, estimate, sortReviews, parsePLY, parseLAS, parseXYZ, parseCloud, convexHull, ringPerimeter, ringArea, analyzeCloud, synthCloud, synthCloudFor, toPLY };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lib = api;
 })(typeof window !== 'undefined' ? window : globalThis);

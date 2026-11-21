@@ -298,3 +298,19 @@ test('似た建物: 対象外の規模を除き、同じ町・同じ規模の重
   const out = L.similar(list, list[0], 10, 3);
   assert.deepEqual(out.map((x) => x.b.id), ['x1']);
 });
+
+test('点群の見本: 選んだ建物の外形を低層部の高さまで測ったとみなすと、外周×高さに近い（凸形）', () => {
+  const lat = 35.71, lon = 139.81, kx = 111320 * Math.cos((lat * Math.PI) / 180), ky = 110540;
+  const ring = [[0, 0], [30, 0], [30, 15], [0, 15], [0, 0]].map(([x, y]) => [lon + x / kx, lat + y / ky]);
+  const a = L.analyzeCloud(L.synthCloudFor(ring, 9), 'z');
+  assert.ok(Math.abs(a.perimeter - 90) < 1.5, 'perimeter ' + a.perimeter);
+  assert.ok(Math.abs(a.wall - 90 * 9) / (90 * 9) < 0.05, 'wall ' + a.wall);
+});
+
+test('見積の位置の文言は平易（高め・やや高め・やや安め・安め）', () => {
+  const s = { q1: 90, median: 110, q3: 134 };
+  assert.match(L.position(140, s).text, /^高め/);
+  assert.match(L.position(120, s).text, /^やや高め/);
+  assert.match(L.position(100, s).text, /^やや安め/);
+  assert.match(L.position(80, s).text, /^安め/);
+});

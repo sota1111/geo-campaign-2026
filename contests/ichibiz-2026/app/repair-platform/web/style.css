@@ -45,7 +45,7 @@ input[type=number] { width:7.5em; }
 .fields label.wide input { width:6.5em; }
 #inUnits { width:5em; }
 .list.compact li { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-@media (max-width: 899px) { .list.compact li { white-space:normal; } #inUnits { width:4em; } .fields label.wide input { width:5.5em; } .fields { gap:6px 8px; } }
+@media (max-width: 899px) { .list.compact li { white-space:normal; } #inUnits { width:3.6em; } .fields label.wide input { width:5em; } .fields { gap:6px 8px; } }
 .counts { border:0; padding:0; margin:4px 0; display:flex; gap:12px; flex-wrap:wrap; align-items:center; font-size:.84rem; }
 .counts legend { float:left; padding:0 8px 0 0; font-size:.82rem; }
 .counts label { display:flex; align-items:center; gap:3px; }
@@ -76,7 +76,15 @@ input[type=number] { width:7.5em; }
 table.qt input { width:100%; min-width:4em; padding:2px 4px; font-size:.82rem; }
 table.qt td, table.qt th { text-align:left; }
 table.qt th:nth-child(2) { width:32%; } table.qt th:nth-child(3) { width:24%; }
-.limit details { display:inline; } .limit summary { display:inline; }
+.vh { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.maphint { position:absolute; left:50%; top:10px; transform:translateX(-50%); background:rgba(29,39,51,.92); color:#fff; border-radius:8px; padding:6px 8px 6px 12px; font-size:.85rem; display:flex; gap:10px; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,.25); white-space:nowrap; }
+.maphint[hidden] { display:none; }
+.maphint button { background:#ffd166; color:#1d2733; border-color:#ffd166; font-weight:bold; }
+tr.demorow input { color:#8a4106; background:#fffaf2; }
+.steps { margin:4px 0; padding-left:1.4em; }
+.plancap { margin:6px 0 2px; }
+.muted { color:#8b96a1; }
+details.alt { margin:2px 0 4px; } details.alt summary { font-size:.76rem; font-weight:normal; color:var(--accent); }
 
 table { border-collapse:collapse; width:100%; font-size:.78rem; margin:3px 0; }
 th, td { border:1px solid var(--line); padding:2px 5px; text-align:right; }
@@ -99,6 +107,8 @@ thead th { background:#eef2f5; }
 .list { list-style:none; padding:0; margin:3px 0; }
 .list li { border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:4px 0; font-size:.82rem; background:#fff; }
 .list li.fakeitem { border-style:dashed; border-color:var(--fake); background:#fffaf2; }
+button.pick { background:#fff; color:var(--accent); padding:1px 8px; min-height:30px; font-size:.78rem; }
+.err button.pick { margin:3px 0; }
 .list li button.pick { background:#fff; color:var(--accent); padding:1px 8px; min-height:26px; font-size:.78rem; }
 .banner { border:2px dashed var(--fake); background:#fff6e8; border-radius:6px; padding:4px 8px; font-size:.8rem; margin:6px 0; }
 .limit { border:1px solid #a4262c; background:#fdf1f1; border-radius:6px; padding:3px 8px; font-size:.8rem; margin:6px 0; }
@@ -130,12 +140,15 @@ canvas#plan { width:100%; max-width:380px; height:140px; border:1px solid var(--
   header { padding:4px 8px 0; }
   .lead { display:none; }
   body { padding-bottom:44px; }
-  .mapbox { height:38vh; min-height:260px; flex:none; }
+  .mapbox { height:300px; flex:none; }
+  .maphint { font-size:.76rem; gap:6px; white-space:normal; width:92%; }
   .maptools { gap:3px 8px; }
   .warn { font-size:.7rem; }
-  .selline { display:block; position:fixed; left:0; right:0; bottom:0; z-index:20; background:#1d2733; color:#fff; font-size:.8rem; padding:8px 10px; margin:0; box-shadow:0 -2px 6px rgba(0,0,0,.25); }
-  .selline a { color:#ffd166; font-weight:bold; }
-  .side { overflow:visible; }
+  .selline { display:block; position:fixed; left:0; right:0; bottom:0; z-index:20; background:#1d2733; color:#fff; font-size:.92rem; padding:10px 12px; margin:0; box-shadow:0 -2px 6px rgba(0,0,0,.25); cursor:pointer; }
+  .selline .go { color:#ffd166; font-weight:bold; white-space:nowrap; float:right; }
+  body { padding-bottom:52px; }
+  .warn { padding:1px 8px; line-height:1.35; }
+  .side { overflow:visible; min-height:calc(100vh - 60px); }
   .tabpanel { overflow:visible; }
   .maplegend { font-size:.68rem; gap:4px; padding:2px 5px; }
   .tabs [role=tab] { font-size:.78rem; padding:6px 6px; }

@@ -75,6 +75,7 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const selId = await ev('window.__rp.state.sel && window.__rp.state.sel.id');
   const tgtId = await ev('window.__rp.state.tgt.id');
   check(selId && selId === tgtId, name + ': 実クリックで建物が選べない sel=' + selId + ' tgt=' + tgtId);
+  if (!desktop) { await sleep(600); const st = await ev("Math.round(document.getElementById('side').getBoundingClientRect().top) + 0"); report[name + '-sideTopAfterPick'] = st; check(st < 120, name + ': 建物を選んでも操作パネルへ移らない top=' + st); }
   const card = await text('#selCard');
   report[name + '-card'] = card.slice(0, 200).replace(/\n/g, ' / ');
   check(card.includes('外壁面積の概算') && card.includes('推定階数') && card.includes('推定延床'), name + ': 選んだ建物のカードが足りない');
@@ -99,11 +100,13 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await ev(`(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }; set('inUnits', 60); set('inAge', 15); set('inQuote', 9500); })()`);
   await sleep(300);
   const est = await text('#estOut');
+  if (desktop) report[name + '-estTabScroll'] = await ev("(() => { const p = document.getElementById('p-est'); return [p.scrollHeight, p.clientHeight]; })()");
   report[name + '-est'] = est.slice(0, 600).replace(/\n/g, ' / ');
   check(est.includes('下位25%') && est.includes('修繕費の目安'), name + ': 目安の範囲が出ない');
   check(!(est.includes('戸数と延床が合っていません') && /延床あたりでは/.test(est)), name + ': 食い違いなのに延床あたりを出している');
   check((await ev("document.querySelectorAll('#estOut .rangebar .you').length")) === 1, name + ': 範囲バーに見積の印がない');
-  check((await ev("document.querySelectorAll('#simMini li').length")) >= 3, name + ': 目安タブに似た建物の上位3棟がない');
+  check((await ev("document.querySelectorAll('#simMini li').length")) === 2 && !!(await ev("document.getElementById('toSim')")), name + ': 目安タブに似た建物の上位2棟と一覧への案内がない');
+  check(!est.includes('延床あたりでは'), name + ': 判定が2つ並んでいる（延床あたりは折りたたみに）');
   check(/中央値より[\d.]+%高い/.test(est) && est.includes('上位25%に入る'), name + ': 見積の位置の文言が出ない（9500万円/60戸=158万円/戸）');
   check((await ev("document.body.innerText")).includes('適正な金額であることを保証しません'), name + ': 免責がない');
   if (desktop) check(await ev("(() => { const p = document.getElementById('p-est'); return p.scrollHeight <= p.clientHeight + 2; })()"), name + ': 目安タブにパネル内スクロールがある');
@@ -133,9 +136,10 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   await sleep(600);
   const slam = await text('#slamOut');
   report[name + '-slam'] = slam.slice(slam.indexOf('合成データ'), slam.indexOf('合成データ') + 260).replace(/\n/g, ' / ');
-  const wall = await ev('window.__rp.state.cloudInfo.wall');
-  check(Math.abs(wall - 540) / 540 < 0.05, name + ': 見本の外壁面積が540㎡に近くない ' + wall);
-  check(slam.includes('合成データ（実在の建物ではありません）'), name + ': 合成の表示がない');
+  const ratio = await ev('window.__rp.state.cloudInfo.wallLen / window.__rp.state.sel.per');
+  report[name + '-slamRatio'] = ratio;
+  check(ratio > 0.8 && ratio < 1.1, name + ': 見本の外周が選んだ建物の外周と合わない ' + ratio);
+  check(slam.includes('操作の練習用') && slam.includes('建物全体') && slam.includes('測れた範囲') && slam.includes('見本のため出しません'), name + ': 見本の表示（練習用・測れた範囲／建物全体・単価なし）がない');
   await shot(`${name}-4-slam.png`);
   await ev("document.getElementById('cloudApply').click()");
   await sleep(400);
@@ -148,7 +152,8 @@ for (const [name, w, h] of [['1513', 1513, 784], ['390', 390, 844]]) {
   const nrev = await ev("document.querySelectorAll('#vendorOut .list li.fakeitem').length");
   const vendor = await text('#vendorOut');
   check(nlinks === 4 && nrev === 4, name + ': 公的リンク4件・架空の口コミ4件でない ' + nlinks + '/' + nrev);
-  check(vendor.includes('並びを操作できない設計') && vendor.includes('すべて架空のデモ'), name + ': 口コミの規則・架空の表示がない');
+  check(vendor.includes('新しい順') && vendor.includes('実データなし') && vendor.includes('架空です'), name + ': 口コミの規則・架空の表示がない');
+  check((await ev("document.querySelectorAll('#vendorOut .rangebar .you').length")) === 3 && /\d件/.test(await text('#vendorOut table.qt')), name + ': 見本の3社が最初から帯に並ばない／口コミ数が出ない');
   const order = await ev("[...document.querySelectorAll('#vendorOut .list li.fakeitem')].map((l) => (l.innerText.match(/\\d{4}-\\d{2}-\\d{2}/) || [''])[0]).join(',')");
   report[name + '-reviewOrder'] = order;
   check(order === order.split(',').sort().reverse().join(','), name + ': 口コミが新しい順でない');
