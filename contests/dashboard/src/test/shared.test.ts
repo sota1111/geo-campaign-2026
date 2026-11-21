@@ -57,9 +57,9 @@ describe('mapStyle / registry', () => {
     }
     expect(GSI_BASEMAPS.photo.url).toContain('seamlessphoto')
   })
-  it('今の案7件と新しい案14件が登録され id が一意', () => {
+  it('今の案7件と新しい案15件が登録され id が一意', () => {
     expect(CURRENT_APPS).toHaveLength(7)
-    expect(APPS.filter(isNewPlan)).toHaveLength(14)
+    expect(APPS.filter(isNewPlan)).toHaveLength(15)
     expect(new Set(APPS.map((a) => a.id)).size).toBe(APPS.length)
     expect(getApp('sat-a')?.dataKind).toBe('real')
     expect(appsByContest('ichibiz-2026').filter((a) => !isNewPlan(a))).toHaveLength(3)
@@ -85,7 +85,7 @@ describe('mapStyle / registry', () => {
     for (const a of pending) expect(copy, a.id).toContain(`'${a.id}': { pending: '${a.pendingPr}'`)
   })
   it('今の案から新しい案を引ける（見比べるリンク用）。ODPT 定時性カルテの状態が取得済みデータを説明する', () => {
-    expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha', 'sat-yabu', 'sat-sugi'])
+    expect(newPlansOf('sat-b').map((a) => a.id)).toEqual(['sat-alpha', 'sat-yabu', 'sat-sugi', 'sat-dc'])
     expect(newPlansOf('sat-a')).toEqual([])
     expect(newPlansOf('udc-moritsuchi')).toEqual([])
     expect(newPlansOf('biz-idea').map((a) => a.id)).toEqual(['udc-aed', 'biz-solar-guard', 'biz-repair'])

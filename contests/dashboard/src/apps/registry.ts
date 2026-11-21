@@ -506,6 +506,34 @@ export const APPS: AppMeta[] = [
       { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
     ],
   },
+  {
+    id: 'sat-dc',
+    plan: 'new',
+    pairWith: 'sat-b',
+    pairNote:
+      '応募テーマはまだ選んでいません（総司令官が選びます）。共通テーマ2には B・α も並ぶため、同時提出はできません。README に当てはめの選択肢を書きました。',
+    embed: 'sat-dc',
+    audience: 'データセンター事業者・自治体の立地担当・金融／保険向け',
+    name: 'データセンター候補地の一次スクリーニング',
+    contest: 'satellite-2026',
+    division: '新案（データセンター候補地）',
+    deadline: '2026/11/30 12:00',
+    deadlineAt: '2026-11-30T12:00:00+09:00',
+    purpose:
+      '国の GX 戦略地域（データセンター集積型）に認定された福岡県の直方・鞍手・北九州市西部で、衛星（干渉SAR の地盤変動・Landsat の地表面温度・Sentinel-2 の土地の状態と変化）から見つけた造成地・遊休地の候補、または地図で指した地点について、浸水・土砂・津波・高潮の該当、沈下の階級、夏の地表面温度、最寄りの変電所までの距離、土地の状態を、出典つきの確認項目として並べる（コンセプトデモ）。点数・順位・適否の判定は作らない。',
+    dataKind: 'real',
+    dataNote:
+      '福岡県（直方市・鞍手町・北九州市西部）。衛星（国土地理院の干渉SAR・Landsat 9・Sentinel-2）・国土数値情報（A31b・A33・A40・A49）・OpenStreetMap の変電所と送電線は、公開データを実際に取得して加工したもの。立地の基準値は公的資料で確認できておらず、判定はしない。国土数値情報は位置の誤差が大きい',
+    originalPath: 'contests/satellite-2026/app/proposal-dc/',
+    sources: [
+      { name: '地盤の変動', provider: '国土地理院 衛星SAR地盤変動測量成果（解析：国土地理院 原初データ所有：JAXA）', license: '国土地理院コンテンツ（出典表示。測量法上の承認の要否は要確認）', note: '準上下方向の変位速度。2014-08〜2025-11 の観測、2026-03-31 公開分。約 90 m、1 階級 3.75 mm/年。' },
+      { name: '夏の地表面温度', provider: 'Landsat 9 Collection 2 Level-2（USGS。LC09_L2SP_113036_20260822_02_T1）', license: 'USGS: 利用制限なし', note: '2026-08-22 の 1 場面。気温でも冷却の効率でもない。' },
+      { name: '土地の状態・近年の変化', provider: 'Copernicus Sentinel-2 L2A（S2B_52SFC_20260823_0_L2A と S2B_52SFC_20200824_0_L2A。AWS Open Data）', license: 'Copernicus データの利用条件（無償・自由）。Contains modified Copernicus Sentinel data [2026][2020]' },
+      { name: '洪水・土砂・津波・高潮', provider: '国土数値情報 A31b・A33・A40・A49（国土交通省）', license: 'CC BY 4.0（一部制限）', note: '縮尺 1/25,000〜1/50,000 程度の概略。公共測量・重要事項説明には使えない。' },
+      { name: '変電所・送電線・建物', provider: '© OpenStreetMap contributors', license: 'ODbL', note: '登録のない設備がある。空き容量・接続可否は分からない。' },
+      { name: '背景地図', provider: '国土地理院 地理院タイル', license: '国土地理院コンテンツ利用規約' },
+    ],
+  },
 ]
 
 export const CARDS_ONLY: CardOnly[] = [
