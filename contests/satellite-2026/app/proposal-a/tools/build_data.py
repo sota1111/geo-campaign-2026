@@ -253,7 +253,7 @@ def main():
     stats['cell_with_roads_class_counts'] = {str(k): v for k, v in sorted(collections.Counter(c['k'] for c in out_cells).items())}
 
     result = {
-        'note': '実データ（衛星: 国土地理院の干渉SAR成果／道路: OpenStreetMap／下水道台帳: 豊中市）を加工したもの。ただし地中レーダの結果 sim_cavity（と、それに伴う「調査済み」の区分）だけは乱数による架空のシミュレーション。',
+        'note': '実データ（衛星: 国土地理院の干渉SAR成果／道路: OpenStreetMap／下水道台帳: 豊中市）を加工したもの。ただし地中レーダの結果 sim_cavity（と、それに伴う「調査済み」の区分）だけは乱数による架空のシミュレーション。道路形状は © OpenStreetMap contributors の派生データベースで、Open Database License (ODbL) で提供（https://www.openstreetmap.org/copyright）。下水道台帳は豊中市（CC BY 4.0、https://creativecommons.org/licenses/by/4.0/deed.ja）。衛星は 解析：国土地理院 原初データ所有：JAXA。',
         'generator': 'tools/build_data.py（seed %d）' % SEED,
         'area': {'name': '豊中市北東部（千里地区周辺）', 'bbox': list(BBOX)},
         'satellite': {'name': 'ALOS-2/4（Lバンド）干渉SAR、国土地理院解析（準上下方向の変位速度）', 'resolution_m': 90,
