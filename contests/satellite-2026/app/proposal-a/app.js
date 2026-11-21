@@ -61,11 +61,11 @@ function renderS1() {
   const cc = STATE.data.stats.cell_with_roads_class_counts, k7 = cc['7'] || 0, k8 = cc['8'] || 0;
   $('#s1').innerHTML = `
     <h2>第1段階：衛星と台帳で区間に点数を付ける</h2>
+    ${STATE.round > 1 && STATE.srcSample && !STATE.demo ? '<div class="demo-on" data-testid="round2-fake"><b>見本 CSV（架空の値）による第' + STATE.round + '回です。</b>実際の調査結果ではありません。</div>' : ''}
+    ${STATE.msg ? `<p class="note"><b>${STATE.msg}</b></p>` : ''}
     <p><b>衛星の変位と台帳を重ねて点数化します。この地区は変位がほぼ平坦なため、台帳の古さが主に順位を決めます。</b></p>
     <p class="note">区画（約90m）の色と斜線は衛星の階級（国土地理院の干渉SAR）、道路の色は点数。衛星は空洞を直接見つけず、調べる順番を決める入口です。道路をクリック（タップ）すると内訳が上に出ます。</p>
     <p class="note">この地区の2階級（-3.75〜0 mm/年が ${k7} 区画、0〜+3.75 mm/年が ${k8} 区画）の差は階級幅（3.75 mm/年）以内で、沈下の兆候とは言えません。衛星の点数は最大でも ${satNorm(STATE.data.cells.reduce((m, x) => Math.min(m, x.disp), 0)).toFixed(2)}。重みを上げて試すと、順位は2階級のどちらかで二分され、同点が増えます。</p>
-    ${STATE.round > 1 && STATE.srcSample && !STATE.demo ? '<div class="demo-on" data-testid="round2-fake"><b>見本 CSV（架空の値）による第' + STATE.round + '回です。</b>実際の調査結果ではありません。</div>' : ''}
-    ${STATE.msg ? `<p class="note"><b>${STATE.msg}</b></p>` : ''}
     <div class="lbl"><label for="w">衛星指標の重み</label><span id="w-out">${pct(STATE.w)}%</span></div>
     <input id="w" type="range" min="0" max="100" step="10" value="${pct(STATE.w)}" aria-describedby="w-note">
     <p id="w-note" class="note">0% = 台帳（竣工年）だけ ／ 100% = 衛星の階級だけ（階級が同じ区間は同点）。第3段階で調査結果（CSV）を入れると、較正で更新されます。この地区では台帳中心（衛星10%）から始めます。</p>
@@ -152,19 +152,19 @@ const FORMAT_HTML = `<p class="note">GMS3 の出力の書式は<b>未確認</b>�
 function renderS3() {
   const sel = STATE.selected, km = totalKm(STATE.segs, sel), demo = STATE.demo;
   const c = calibNow(), n = STATE.results.size;
+  const pastN = demo && STATE.pastSet ? [...STATE.results.keys()].filter((id) => STATE.pastSet.has(id)).length : 0, nScan = demo ? n - pastN : 0;
   let h = `<h2>第3段階：調査結果を入れて、重みを較正する</h2>
     <p><b>一次審査を通った後、地中レーダ探査車（GMS3）のデータで較正します。</b><span class="long">この画面はその結果を受け取る枠です。GMS3 のデータは現時点で手元になく、このアプリは使っていません。同梱している実データに空洞の結果はありません。</span></p>`;
   if (demo) {
     h += `<div class="demo-on" data-testid="demo-on"><b>説明用デモ中（結果は架空）</b>。デモをオフにするまで、CSV は入れられません。</div>
       <p><b>過去の調査</b>（設定: 幹線すべてと生活道路の約6%を調査済みとした架空の結果）が最初から入っています。今回の走査は、第2段階で選んだ <b>${sel.size}</b> 区間（${fmt1(km)} km）が対象です。</p>
-      ${sel.size ? '' : '<p class="note" data-testid="scan-hint">区間を選んでいないので、走査できません。<button class="linkbtn" id="go2" type="button">第2段階で区間を選ぶ</button></p>'}`;
+      ${sel.size ? '' : nScan > 0 ? '<p class="note" data-testid="scan-done">今回の走査 ' + nScan + ' 区間を入れました。続けて「較正を反映して第' + (STATE.round + 1) + '回へ」を押します。</p>' : '<p class="note" data-testid="scan-hint">区間を選んでいないので、走査できません。<button class="linkbtn" id="go2" type="button">第2段階で区間を選ぶ</button></p>'}`;
   } else {
     h += `<div class="filebox"><label for="csv-file"><b>調査結果の CSV を選ぶ</b><span class="long">（累計で入ります。入れ直しで同じ区間は上書き）</span></label>
       <input id="csv-file" type="file" accept=".csv,.tsv,.txt,text/csv"></div>
       <div id="load-msg" aria-live="polite">${loadMsg()}</div>`;
   }
   h += demo ? `<details id="fmt-box"><summary>CSV の書式と見本（デモ中は入れられません）</summary>${FORMAT_HTML}</details>` : FORMAT_HTML;
-  const pastN = demo && STATE.pastSet ? [...STATE.results.keys()].filter((id) => STATE.pastSet.has(id)).length : 0;
   h += `<p data-testid="res-total">調査結果が入った区間: <b>${n}</b>${demo ? `（架空。過去の調査 ${pastN} 区間＋今回の走査 ${n - pastN} 区間）` : ''}${n ? `　<button class="btn" id="clear-res" type="button">結果を消す</button>` : ''}</p>`;
   if (n === 0) {
     h += `<p class="note">まだ結果がないので、較正はしません（重みは ${pct(STATE.w)}% のまま）。結果が入ると、重み（0〜100%）ごとの当たりやすさ（AUC）を比べます。</p>`;
@@ -200,7 +200,10 @@ function renderS3() {
   if (demo) $('#demo-box').open = true;
 }
 
-function clearResults() { STATE.results = new Map(); STATE.loadInfo = null; STATE.srcSample = false; STATE.srcUser = false; markSurveyed(); }
+function clearResults() { STATE.results = new Map(); STATE.loadInfo = null; STATE.srcSample = false; STATE.srcUser = false;
+  // 結果を消したら、その結果で決めた重み・回も初めに戻す（結果が無いのに較正済みの表示が残らないように）
+  if (STATE.round > 1) { STATE.w = 0.1; STATE.round = 1; STATE.msg = ''; STATE.appliedW = null; recompute(); }
+  markSurveyed(); }
 /** 架空の値を含むか（説明用デモ、または同梱の見本 CSV を入れた時）。 */
 const isFake = () => STATE.demo || STATE.srcSample;
 /** 同梱の見本 CSV か。note 列の「架空の見本」で判定する。 */
@@ -270,7 +273,7 @@ function applyCalib() {
   recompute(); markSurveyed();
   const moved = candidates().slice(0, 20).filter((s) => !before.has(s.id)).length;
   const fk = STATE.demo ? '（架空の結果による）' : STATE.srcSample ? '（見本 CSV＝架空の値による）' : '';
-  STATE.msg = c.w !== null ? (c.w === oldW ? `${fk}較正の結果、重みは ${pct(STATE.w)}% のままです（台帳のみ ${c.ledgerOnly.toFixed(2)}／採用 ${aucAt(surveyedSet(), STATE.cellSat, c.w).toFixed(2)}）。調査した区間を除いて順位を作り直しました（上位20区間のうち第1回の上位20に無かった区間: ${moved}）。` : `${fk}較正済み: 衛星指標の重みを ${pct(oldW)}% から ${pct(STATE.w)}% に更新しました。調査した区間を除いて順位を作り直しました（上位20区間のうち第1回の上位20に無かった区間: ${moved}）。`) : '較正に使える結果が不足していたため、重みは変えていません。';
+  STATE.msg = c.w !== null ? (c.w === oldW ? `${fk}較正の結果、重みは ${pct(STATE.w)}% のままです（台帳のみ ${c.ledgerOnly.toFixed(2)}／採用 ${aucAt(surveyedSet(), STATE.cellSat, c.w).toFixed(2)}）。調査した区間を除いて順位を作り直しました（上位20区間のうち第${STATE.round}回の上位20に無かった区間: ${moved}）。` : `${fk}較正済み: 衛星指標の重みを ${pct(oldW)}% から ${pct(STATE.w)}% に更新しました。調査した区間を除いて順位を作り直しました（上位20区間のうち第${STATE.round}回の上位20に無かった区間: ${moved}）。`) : '較正に使える結果が不足していたため、重みは変えていません。';
   STATE.round += 1;
   setStep(1);
 }

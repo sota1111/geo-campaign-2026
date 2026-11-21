@@ -194,7 +194,11 @@ export default function App() {
     // 手順1は、区間を1つ選んで点数の内訳を見たら済
     setViewedTop(true)
   }
-  const dataNote = demo ? '説明用デモ（結果は架空）' : '実データ（豊中市北東部。衛星・道路・台帳）'
+  // 書き出し CSV の出どころ表記。見本 CSV（架空の値）で較正した順位を「実データ」と書かない
+  const dataNote = demo ? '説明用デモ（結果は架空）'
+    : srcSample ? '見本 CSV（架空の値）で較正。地中レーダの結果は実際の調査結果ではありません'
+      : srcUser ? '利用者の調査結果による（衛星・道路・台帳は豊中市北東部の実データ。調査結果が実データかは利用者の責任）'
+        : '実データ（豊中市北東部。衛星・道路・台帳）'
   const exportTargets = () => {
     const rk = new Map(candidates.map((s, i) => [s.id, i + 1]))
     const mid = (s: Segment, k: 0 | 1) => ((s.coords[0][k] + s.coords[1][k]) / 2).toFixed(6)
@@ -237,6 +241,14 @@ export default function App() {
     setRoundAdded(0)
     setSrcSample(false)
     setSrcUser(false)
+    // 結果を消したら、その結果で決めた重み・順位・回も初めに戻す（結果が無いのに較正済みの表示が残らないように）
+    if (round > 1) {
+      setW(W0)
+      setRound(1)
+      setPrev(null)
+      setMsg('')
+      setFocus(null)
+    }
   }
   /** 説明用デモの切替。入れた結果・較正・回は初めからにする（実の結果と架空を混ぜない） */
   const onDemo = async (on: boolean) => {
@@ -462,6 +474,7 @@ export default function App() {
                 demo={demo}
                 applied={round > 1 && roundAdded === 0 ? prev : null}
                 onApply={applyCalib}
+                onGoRound2={() => setStep('round2')}
                 onGoScan={() => setStep('scan')}
                 onDemoOn={() => onDemo(true)}
               />

@@ -351,7 +351,10 @@ export function ScanPanel({
           <p>
             <b>過去の調査</b>（設定: 幹線すべてと生活道路の約6%を調査済みとした架空の結果）が最初から入っています。今回の走査は、手順2で選んだ <b data-testid="s3-count">{selected.size}</b> 区間（{fmt1(km)} km）が対象です。
           </p>
-          {selected.size === 0 && (
+          {selected.size === 0 && resultsCount - (pastCount ?? 0) > 0 && (
+            <p className="text-xs" data-testid="scan-done">今回の走査 {resultsCount - (pastCount ?? 0)} 区間を入れました。続けて、手順4で「較正を反映して次の回へ進む」を押します。</p>
+          )}
+          {selected.size === 0 && resultsCount - (pastCount ?? 0) <= 0 && (
             <p className="text-xs" data-testid="scan-hint">区間を選んでいないので、走査できません。<Button size="sm" variant="link" className="h-auto p-0 underline" onClick={onGoPick}>手順2で区間を選ぶ</Button></p>
           )}
           <Button variant={selected.size ? 'default' : 'outline'} size="sm" onClick={onDemoScan} disabled={selected.size === 0} data-testid="demo-scan"><Radar />走査結果を入れる（架空）</Button>
@@ -437,7 +440,7 @@ export function ScanPanel({
 
 /* ---------- 5 較正を反映して第2回へ ---------- */
 export function ApplyPanel({
-  round, calib, surveyed, cellSat, resultsCount, demo, sample, applied, onApply, onGoScan, onDemoOn,
+  round, calib, surveyed, cellSat, resultsCount, demo, sample, applied, onApply, onGoRound2, onGoScan, onDemoOn,
 }: {
   sample?: boolean
   round: number
@@ -448,6 +451,7 @@ export function ApplyPanel({
   demo: boolean
   applied: PrevInfo | null
   onApply: () => void
+  onGoRound2?: () => void
   onGoScan: () => void
   onDemoOn: () => void
 }) {
@@ -511,7 +515,10 @@ export function ApplyPanel({
           </p>
         </>
       )}
-      <Button size="sm" onClick={onApply} disabled={calib.w === null} data-testid="apply">較正を反映して第{round + 1}回へ進む</Button>
+      <div className="flex flex-wrap gap-2">
+        {applied && onGoRound2 && <Button size="sm" onClick={onGoRound2} data-testid="goto-round2">第{round}回の順位を見る（手順5へ）</Button>}
+        <Button size="sm" variant={applied && onGoRound2 ? 'outline' : 'default'} onClick={onApply} disabled={calib.w === null} data-testid="apply">較正を反映して第{round + 1}回へ進む</Button>
+      </div>
     </div>
   )
 }

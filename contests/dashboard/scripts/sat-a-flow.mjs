@@ -90,6 +90,28 @@ for (const [lab, w, h, mobile] of [['d', 1513, 784, false], ['m', 390, 844, true
     need(dis === false, f + ': 見本だけでは較正に進めない')
     await shot('6-apply-' + f.slice(14, 20))
   }
+  // 書き出した CSV の中身（data_note）。見本 CSV＝架空 / 利用者の CSV＝利用者の調査結果による。結果を消したら初めに戻る
+  await c.ev(`(()=>{const o=URL.createObjectURL.bind(URL); URL.createObjectURL=(b)=>{window.__b=b; return o(b)}})()`)
+  const exportText = async () => { await click('export-round2'); await sleep(300); return await c.ev(`window.__b.text()`) }
+  const loadCsv = async (name, body) => {
+    await goStep('scan')
+    const b = JSON.stringify(body)
+    await c.ev(`(()=>{const dt=new DataTransfer();dt.items.add(new File([${b}],${JSON.stringify(name)},{type:'text/csv'}));const i=document.querySelector('[data-testid=csv-file]');i.files=dt.files;i.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+    await sleep(700)
+  }
+  await goStep('apply'); await click('apply'); await sleep(400)
+  await shot('8-applied'); await goStep('apply'); await shot('9-applied-step4'); need(await exists('goto-round2'), 'R4: 反映後に第2回へ向かう主ボタンが無い')
+  await goStep('round2')
+  let csvTxt = await exportText(); log('csv sample', csvTxt.split('\n').slice(0, 2).join(' / '))
+  need(/data_note/.test(csvTxt) && csvTxt.includes('見本 CSV（架空の値）で較正') && !csvTxt.includes('実データ（豊中市'), 'R1: 見本で較正した書き出しの data_note が架空でない')
+  await goStep('scan'); await click('clear-res')
+  await goStep('round2'); need(await exists('round2-empty'), 'R2: 結果を消したのに第2回の順位が残る')
+  const segCsv = fs.readFileSync(path.join(csvDir, 'format_sample_by_segment.csv'), 'utf8').replace(/架空の見本（実際の調査結果ではありません）/g, '自治体調査')
+  await loadCsv('user.csv', segCsv)
+  await goStep('apply'); await click('apply'); await sleep(400)
+  await goStep('round2'); csvTxt = await exportText(); log('csv user', csvTxt.split('\n').slice(0, 2).join(' / '))
+  need(csvTxt.includes('利用者の調査結果による') && !csvTxt.includes('架空'), 'R1: 利用者の CSV で較正した書き出しの data_note が不正')
+  await goStep('scan'); await click('clear-res')
   // 検証タブ
   if (mobile) { await c.ev(`document.querySelector('[data-testid=steps-topbar] > button').click()`); await sleep(400) }
   await c.ev(`[...document.querySelectorAll('summary,button')].find(e=>e.textContent.includes('参考（任意）'))?.click()`); await sleep(400)
