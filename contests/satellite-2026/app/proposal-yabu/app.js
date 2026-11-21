@@ -10,7 +10,7 @@
 
   function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 保存できない環境でも画面は使える */ } }
-  const state = { results: L.sanitizeResults(load(KEY_R, [])), weights: L.normalizeWeights(load(KEY_W, null)), sel: null, sheet: false, who: String(load(KEY_WHO, '') || ''), satOnly: false, markers: [], map: null, mapReady: false };
+  const state = { group: false, results: L.sanitizeResults(load(KEY_R, [])), weights: L.normalizeWeights(load(KEY_W, null)), sel: null, sheet: false, who: String(load(KEY_WHO, '') || ''), satOnly: false, markers: [], map: null, mapReady: false };
 
   function recompute() { state.ranked = L.rank(D.cells, state.weights, state.results, state.satOnly); state.byId = {}; state.ranked.forEach((c) => (state.byId[c.id] = c)); }
   function download(name, text) {
@@ -20,7 +20,7 @@
     toast('「' + name + '」を保存しました（' + (text.trim().split('\r\n').length - 1) + '件。ダウンロード先・Excel で開けます）');
   }
   let toastT = 0;
-  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 4000); }
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2500); }
   const PLACE = window.YABU_PLACE || {};
   const MUNI = { '26465': '与謝野町', '26463': '伊根町', '26205': '宮津市', '26212': '京丹後市', '26201': '福知山市' };
   const placeOf = (id) => { const p = PLACE[id]; return p ? (MUNI[p[0]] || '') + (p[1] ? ' ' + p[1] : '') : ''; };
@@ -139,20 +139,27 @@
   function renderSatline() {
     const W = state.weights, sat = L.SAT_KEYS.reduce((a, k) => a + W[k], 0), all = L.KEYS.reduce((a, k) => a + W[k], 0);
     const pct = Math.round((D.cells.length / D.meta.n_cells_all) * 100);
-    const v = HB && HB.val['all|near500'] && HB.val['all|near500'].auc;
-    const ev = v && v.R != null && v.base != null ? '<button type="button" class="evid" id="sat-evid" title="押すと答え合わせの表。紫の推定（仮の係数を掛けた S）は ' + (v.S != null ? v.S.toFixed(2) : '―') + '。AUC 0.5＝当てずっぽう、1＝完全に一致。出没の予測精度ではありません"><span class="long">過去の目撃の当たりやすさ（人里500m内。0.5＝当てずっぽう、1＝完全）：衛星の林縁・川 </span><span class="short">目撃の当たり 衛星</span><b>' + v.R.toFixed(2) + '</b>／人家距離だけ ' + v.base.toFixed(2) + '<span class="long">（差は小さく、補助の目安）</span><span class="short">（0.5＝偶然）</span></button>' : '';
+    // 上位5の点数のうち衛星の点が占める割合（実データから計算）
+    const t5 = state.ranked.slice(0, 5), tot5 = t5.reduce((a, c) => a + c.totalScore, 0), sat5 = t5.reduce((a, c) => a + c.satScore, 0);
+    const share = tot5 > 0 ? Math.round((sat5 / tot5) * 100) : null;
     $('#satline').innerHTML = '<span class="step" title="現地確認の対象を絞る役割。配点は衛星 ' + sat + '／' + all + '（仮置き）">衛星<span class="long">（Sentinel-2）</span>で <b>' + D.meta.n_cells_all.toLocaleString() + '区画 → ' + D.cells.length + '区画</b><span class="long">（約' + pct + '%）</span>に絞る</span>' +
-      '<label class="toggle"><input type="checkbox" id="f-sat"' + (state.satOnly ? ' checked' : '') + '> 衛星<span class="long">の点数</span>だけで並べる</label>' + ev;
+      (share != null && !state.satOnly ? '<span class="share">上位5の点数の<b>約' + share + '%</b>が衛星<span class="long">（林縁・緑の濃さ・冬との差）</span></span>' : '') +
+      '<label class="toggle"><input type="checkbox" id="f-sat"' + (state.satOnly ? ' checked' : '') + '> 衛星<span class="long">の点数</span>だけで並べる</label>';
     $('#f-sat').addEventListener('change', (e) => { state.satOnly = e.target.checked; refresh(); });
-    if ($('#sat-evid')) $('#sat-evid').onclick = () => { $('#more').open = true; $('#validation').open = true; $('#validation').scrollIntoView({ block: 'start' }); };
   }
   function renderTop5() {
-    const top = state.ranked.slice(0, 5);
-    $('#top5').innerHTML = '<h2>藪払いの優先上位5 <small>' + (state.satOnly ? '衛星だけの点数' : '重ねた点数') + '・目撃は2009〜18年度・押すと根拠</small></h2><ol>' + top.map((c) => {
+    // 「同じ地区は1件に」：地区ごとの最上位だけを並べ、上位20に入る同じ地区の区画数を添える
+    let top = state.ranked.slice(0, 5); const more = {};
+    if (state.group) {
+      const seen = {}; top = [];
+      state.ranked.forEach((c) => { const p = placeOf(c.id) || c.id; if (seen[p]) { if (c.rank <= 20) more[seen[p]] = (more[seen[p]] || 0) + 1; return; } if (top.length < 5) { seen[p] = c.id; top.push(c); } else seen[p] = seen[p] || '-'; });
+    }
+    $('#top5').innerHTML = '<h2>藪払いの優先上位5 <small>押すと根拠</small><label class="grp"><input type="checkbox" id="f-group"' + (state.group ? ' checked' : '') + '> 同じ地区は1件に</label></h2><ol>' + top.map((c) => {
       const lt = c.latest ? ' <span class="tag ' + resClass(c.latest.result) + '">' + esc(c.latest.result) + '</span>' : '';
-      return '<li><button type="button" data-top="' + c.id + '"' + (c.id === state.sel ? ' aria-pressed="true"' : '') + '><b class="rk">' + c.rank + '</b><span class="tid">' + c.id + ' <small>' + placeHtml(c.id) + '</small></span><span class="tsc">' + c.score + '点</span><span class="trs">' + esc(L.shortReason(c, state.weights, state.satOnly)) + '' + lt + '</span></button></li>';
+      return '<li><button type="button" data-top="' + c.id + '"' + (c.id === state.sel ? ' aria-pressed="true"' : '') + '><b class="rk">' + c.rank + '</b><span class="tid">' + c.id + ' <small>' + placeHtml(c.id) + '</small></span><span class="tsc">' + c.score + '点</span><span class="trs">' + esc(L.shortReason(c, state.weights, state.satOnly)) + (state.satOnly ? '' : ' <span class="tsat">衛星だけなら' + c.satRank + '位</span>') + (more[c.id] ? ' <b class="tmore">同地区ほか' + more[c.id] + '区画</b>' : '') + lt + '</span></button></li>';
     }).join('') + '</ol>';
     document.querySelectorAll('#top5 [data-top]').forEach((b) => (b.onclick = () => select(b.dataset.top, true)));
+    $('#f-group').onchange = (e) => { state.group = e.target.checked; renderTop5(); };
   }
   const isMobile = () => window.innerWidth <= 800;
   function addRecord(r) {
@@ -185,23 +192,24 @@
     const nav = state.ranked.slice(0, 5).map((x) => '<button type="button" class="jn" data-jump="' + x.id + '"' + (x.id === c.id ? ' aria-pressed="true"' : '') + ' aria-label="' + x.rank + '位 ' + x.id + '">' + x.rank + '</button>').join('');
     el.innerHTML = '<div class="dhead"><h2>' + c.id + ' <small>' + esc(placeOf(c.id)) + '</small> ' + c.rank + '位・' + c.score + '点</h2><span class="jnav" aria-label="上位5へ移る">' + nav + '</span><button type="button" id="btn-sheet-close" class="close" aria-label="根拠を閉じて地図に戻る">✕</button></div>' +
       '<p class="saved"><b>理由：</b>' + esc(L.shortReason(c, state.weights, state.satOnly)) + (HB ? ' <span class="hb hb' + h.tier + '" title="論文の数値による推定。過去の目撃件数とは別（点数には入れていない）">推定出やすさ' + TN[h.tier] + '</span>' : '') + '</p>' +
-      '<p class="satnote"><span class="chip src-sat">衛星</span>衛星の点 <b>' + Math.round(c.satScore) + '/' + L.SAT_KEYS.reduce((a, k) => a + state.weights[k], 0) + '</b>：衛星だけなら <b>' + c.satRank + '位</b> → 目撃・建物を重ねて <b>' + c.fullRank + '位</b></p>' +
-      '<form id="q-form" class="qform" novalidate><b>現地確認を記録</b>' + mark + '<span class="qrow"><select id="q-result" aria-label="現地で見た結果"><option value="">結果を選ぶ</option>' + L.RESULTS.map((r) => '<option>' + esc(r) + '</option>').join('') + '</select><input id="q-who" maxlength="40" placeholder="確認者・係名（必須）" aria-label="確認者・係名（必須。個人名は入れない）" value="' + esc(state.who) + '"><button type="submit">記録</button></span><button type="button" id="btn-to-rec" class="link">メモ・日付は⑵へ →</button>' +
+      '<p class="satnote"><span class="chip src-sat">衛星</span>衛星の点 <b>' + Math.round(c.satScore) + '/' + L.SAT_KEYS.reduce((a, k) => a + state.weights[k], 0) + '</b>：衛星だけなら <b>' + c.satRank + '位</b> → 重ねて <b>' + c.fullRank + '位</b><span class="long">（緑の濃さ 5月 ' + c.ndvi_g.toFixed(2) + '・2月 ' + c.ndvi_w.toFixed(2) + '）</span></p>' +
+      '<form id="q-form" class="qform" novalidate><b>現地確認を記録</b>' + mark + '<span class="qrow"><select id="q-result" aria-label="現地で見た結果"><option value="">結果を選ぶ</option>' + L.RESULTS.map((r) => '<option>' + esc(r) + '</option>').join('') + '</select><input id="q-who" maxlength="40" placeholder="確認者・係名（必須）" aria-label="確認者・係名（必須。個人名は入れない）" value="' + esc(state.who) + '"><button type="submit">記録</button></span><details class="qmore"><summary>日付・メモ</summary><input type="date" id="q-date" aria-label="確認日" value="' + today() + '"><input id="q-memo" maxlength="200" placeholder="メモ（例: ササが背丈まで）" aria-label="メモ"></details>' +
       '<small id="q-msg" role="status"></small></form>' +
-      '<details class="bars"' + (isMobile() ? '' : ' open') + '><summary>点数の内訳（押すと実測値）</summary><div class="why">' + rs.map((r, i) => '<details' + (state.satOnly && r.src !== 'sat' ? ' class="unused"' : '') + '><summary title="' + esc(r.label) + '"><span class="src src-' + r.src + '">' + SRC_S[r.src] + '</span><span class="wl">' + esc(L.SHORT[L.KEYS[i]]) + '</span><span class="barbox"><span class="bar" style="width:' + Math.round(r.max ? (r.pts / r.max) * 100 : 0) + '%"></span></span><span class="wp">' + r.pts + '/' + r.max + '</span></summary><small>' + esc(r.text) + (state.satOnly && r.src !== 'sat' ? '（いまは点数に入れていない）' : '') + '</small></details>').join('') + '</div></details>' +
-      '<p class="note">藪かどうかは現地で確認（配点は仮置き・記録はデモ入力）。</p>';
-    $('#btn-to-rec').onclick = () => { $('#r-cell').value = c.id; show('record'); ($('#r-who').value ? $('#r-result') : $('#r-who')).focus(); };
+      '<details class="bars"' + (isMobile() ? '' : ' open') + '><summary>点数の内訳 7項目' + (isMobile() ? '（押すと開く）' : '（項目を押すと実測値）') + '</summary><div class="why">' + rs.map((r, i) => '<details' + (state.satOnly && r.src !== 'sat' ? ' class="unused"' : '') + '><summary title="' + esc(r.label) + '"><span class="src src-' + r.src + '">' + SRC_S[r.src] + '</span><span class="wl">' + esc(L.SHORT[L.KEYS[i]]) + '</span><span class="barbox"><span class="bar" style="width:' + Math.round(r.max ? (r.pts / r.max) * 100 : 0) + '%"></span></span><span class="wp">' + r.pts + '/' + r.max + '</span></summary><small>' + esc(r.text) + (state.satOnly && r.src !== 'sat' ? '（いまは点数に入れていない）' : '') + '</small></details>').join('') + '</div></details>' +
+      '<p class="note">藪かどうかは現地で確認（記録はデモ入力）。</p>';
+    el.querySelector('.bars').ontoggle = (e) => el.classList.toggle('tall', e.target.open);
+    el.classList.remove('tall');
     $('#btn-sheet-close').onclick = () => { state.sheet = false; renderDetail(); };
     el.querySelectorAll('[data-jump]').forEach((b) => (b.onclick = () => select(b.dataset.jump, true)));
     $('#q-form').onsubmit = (e) => {
       e.preventDefault();
-      const res = addRecord({ cellId: c.id, date: today(), who: $('#q-who').value.trim(), result: $('#q-result').value, memo: '' });
+      const res = addRecord({ cellId: c.id, date: $('#q-date').value || today(), who: $('#q-who').value.trim(), result: $('#q-result').value, memo: $('#q-memo').value.trim() });
       markInvalid({ result: '#q-result', who: '#q-who' }, res.focus);
       if (!res.ok && res.focus === 'who') res.msg = '「確認者」に係名を入れてください（必須・個人名は入れない。次回から自動で入ります）。';
       if (!res.ok) { $('#q-msg').textContent = res.msg; $('#q-msg').classList.add('err'); return; }
-      refresh(); renderPlan(); renderRecords(); $('#q-msg').innerHTML = esc(res.msg) + ' <b>計画・CSVに反映済み</b> <button type="button" class="link" id="q-go">⑵で見る →</button>';
+      refresh(); renderPlan(); renderRecords(); $('#q-msg').innerHTML = esc(res.msg) + ' <button type="button" class="link" id="q-go">⑵で見る</button>';
       $('#q-go').onclick = () => show('record');
-      toast('記録しました（全' + state.results.length + '件・計画に反映済み）');
+      if (!isMobile()) toast('記録しました（全' + state.results.length + '件・計画に反映済み）');   // スマホはシート内の文で知らせる（通知がシートに重ならないように）
     };
   }
 
@@ -284,8 +292,8 @@
       map.addSource('schools', { type: 'geojson', data: pts(D.schools) });
       if (HB) {
         map.addSource('hab', { type: 'geojson', data: habFC() });
-        map.addLayer({ id: 'hab-mid', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 1], paint: { 'fill-color': '#b48fcc', 'fill-opacity': 0.42, 'fill-antialias': false } });
-        map.addLayer({ id: 'hab-high', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 2], paint: { 'fill-color': '#6a1b9a', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0.62, 15, 0.36], 'fill-antialias': false } });
+        map.addLayer({ id: 'hab-mid', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 1], paint: { 'fill-color': '#b48fcc', 'fill-opacity': 0.22, 'fill-antialias': false } });
+        map.addLayer({ id: 'hab-high', type: 'fill', source: 'hab', filter: ['==', ['get', 'tier'], 2], paint: { 'fill-color': '#6a1b9a', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0.55, 15, 0.32], 'fill-antialias': false } });
       }
       map.addLayer({ id: 'cells-ndvi', type: 'fill', source: 'cells', layout: { visibility: 'none' }, paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'ndvi'], 0.5, '#e5f5e0', 0.7, '#74c476', 0.85, '#00441b'], 'fill-opacity': 0.85 } });
       map.addLayer({ id: 'cells', type: 'fill', source: 'cells', paint: { 'fill-color': ['match', ['get', 'tier'], 0, '#d95f02', 1, '#fdb863', '#7fa6cf'], 'fill-opacity': ['match', ['get', 'tier'], 0, 0.55, 0.08] } });
@@ -325,7 +333,7 @@
   function renderRecords() {
     const n = state.results.length;
     const rows = state.results.map((r, i) => [r, i]).reverse();
-    $('#rec-table tbody').innerHTML = rows.map(([r, i]) => '<tr><td>' + esc(r.date) + '</td><td>' + esc(r.cellId) + '</td><td>' + esc(r.who) + '</td><td><span class="tag ' + resClass(r.result) + '">' + esc(r.result) + '</span></td><td>' + esc(r.memo) + '</td><td><button type="button" data-del="' + i + '" aria-label="' + esc(r.cellId) + ' の記録を消す">消す</button></td></tr>').join('') || '<tr><td colspan="6">まだ記録がありません</td></tr>';
+    $('#rec-table tbody').innerHTML = rows.map(([r, i]) => '<tr><td data-k="日">' + esc(r.date) + '</td><td data-k="区画">' + esc(r.cellId) + '</td><td data-k="者">' + esc(r.who) + '</td><td data-k="結果"><span class="tag ' + resClass(r.result) + '">' + esc(r.result) + '</span></td><td data-k="メモ">' + esc(r.memo) + '</td><td data-k="消"><button type="button" data-del="' + i + '" aria-label="' + esc(r.cellId) + ' の記録を消す">消す</button></td></tr>').join('') || '<tr><td colspan="6">まだ記録がありません</td></tr>';
     document.querySelectorAll('#rec-table [data-del]').forEach((b) => (b.onclick = () => {
       const i = +b.dataset.del; if (state.results.length !== n || !state.results[i]) return;
       const r = state.results.splice(i, 1)[0]; save(KEY_R, state.results); refresh(); renderRecords();
@@ -340,10 +348,13 @@
     const excluded = full.filter((c) => c.latest && c.latest.result === L.EXCLUDE_RESULT).length;
     $('#cap-lbl').textContent = n;
     $('#plan-note').textContent = '点数の上位 ' + rows.length + ' 区画（現地で「藪ではない」の ' + excluded + ' 区画は除いています）' + (state.satOnly ? '。常に重ねた点数で並べます' : '');
+    $('#planprev-body').innerHTML = '<ol>' + rows.map((r) => '<li><b>' + esc(r[1]) + '</b> ' + esc(placeOf(r[1])) + ' <span>' + r[5] + '点・' + esc(r[12]) + '</span></li>').join('') + '</ol>';
+    $('#planprev-sum').textContent = '計画CSVの中身（上位' + rows.length + '区画）';
+    $('#plan-more').hidden = rows.length <= 5; $('#plan-more').textContent = $('#plan-table').classList.contains('all') ? '5件に戻す' : '残り' + (rows.length - 5) + '件も見る';
     $('#plan-table tbody').innerHTML = rows.map((r) => '<tr><td data-k="順位">' + r[0] + '</td><td data-k="区画">' + esc(r[1]) + '</td><td data-k="点数">' + r[5] + '</td><td data-k="現地確認">' + esc(r[12]) + '</td><td data-k="建物">' + r[9] + ' m</td><td data-k="目撃">' + r[8] + '件</td></tr>').join('');
   }
 
-  function refresh() { recompute(); refreshMap(); renderTable(); renderDetail(); $('#rec-n').textContent = String(state.results.length); }
+  function refresh() { recompute(); refreshMap(); renderTable(); renderDetail(); renderPlan(); $('#rec-n').textContent = String(state.results.length); }
   function planCsv() {
     const n = Math.max(1, Math.min(100, Math.floor(+$('#cap').value) || 10));
     download('yabu_plan_' + today() + '.csv', L.toCsv(L.PLAN_HEADER, L.planRows(planRanked(), n)));
@@ -388,8 +399,9 @@
     $('#btn-reset').onclick = () => { if (!confirm('現地確認の記録をすべて消します。よろしいですか？')) return; state.results = []; save(KEY_R, state.results); refresh(); renderRecords(); renderPlan(); $('#rec-msg').hidden = true; };
     $('#btn-rec-csv').onclick = () => download('yabu_records_' + today() + '.csv', L.toCsv(L.RECORD_HEADER, L.recordRows(state.results)));
     $('#cap').oninput = renderPlan;
-    $('#btn-plan-csv').onclick = planCsv; $('#btn-plan-csv2').onclick = planCsv;
-    $('#btn-rec-csv2').onclick = () => $('#btn-rec-csv').click();
+    $('#plan-more').onclick = () => { $('#plan-table').classList.toggle('all'); renderPlan(); };
+    $('#btn-plan-csv').onclick = planCsv;
+    $('#leg-val').onclick = () => { $('#more').open = true; $('#validation').open = true; $('#validation').scrollIntoView({ block: 'start' }); };
     $('#rec-n').textContent = String(state.results.length);
     $('#r-who').value = state.who; renderPlan();
   }

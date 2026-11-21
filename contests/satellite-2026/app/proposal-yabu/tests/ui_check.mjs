@@ -52,6 +52,8 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   ok(label + ': 地図に凡例（高・中・優先上位20・学校）が重ねてある', await ev(`(()=>{const t=document.querySelector('.minileg').textContent;return t.includes('高')&&t.includes('優先上位20')&&t.includes('学校')})()`));
   ok(label + ': 衛星のNDVI層がある', await ev(`(async()=>{document.getElementById('l-ndvi').click();await new Promise(r=>setTimeout(r,300));const v=YabuApp.state.map.getLayoutProperty('cells-ndvi','visibility')==='visible';document.getElementById('l-ndvi').click();return v})()`));
   ok(label + ': 上位20の番号札が地図にある', (await ev(`document.querySelectorAll('#map .mk').length`)) === 20);
+  ok(label + ': 最初の画面に衛星の点の割合（上位5）が出る', await ev(`/上位5の点数の約\\d+%が衛星/.test(document.querySelector('#satline').textContent)`));
+  ok(label + ': 「同じ地区は1件に」で上位5の地区が重複しない', await ev(`(()=>{const g=document.querySelector('#f-group');g.click();const t=[...document.querySelectorAll('#top5 .tid small')].map(e=>e.textContent);const ok=t.length===5&&new Set(t).size===5;document.querySelector('#f-group').click();return ok})()`));
   ok(label + ': 横スクロールなし', await ev(`document.documentElement.scrollWidth <= window.innerWidth`));
   await shot(label + '_1_rank.png');
   // 行を選ぶ → 根拠
@@ -65,8 +67,9 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   await ev(`window.scrollTo(0,0); document.querySelectorAll('#top5 [data-top]')[1].click()`); await sleep(300);
   ok(label + ': 上位5の2番目を押すと、その区画の根拠が画面内に出る', await ev(`(()=>{const id=YabuApp.state.ranked[1].id;const d=document.querySelector('#detail');const r=d.getBoundingClientRect();return d.querySelector('h2').textContent.startsWith(id)&&r.top<innerHeight-100&&d.textContent.includes('衛星だけなら')})()`));
   // 根拠パネルの中で記録できる（タブを切り替えない）
+  ok(label + ': 根拠パネルで日付・メモも入れられる', await ev(`(()=>{const d=document.querySelector('#detail .qmore');d.open=true;document.querySelector('#q-memo').value='ササ';return !!document.querySelector('#q-date').value})()`));
   await ev(`document.querySelector('#q-result').value='すでに管理されている'; document.querySelector('#q-who').value='鳥獣係'; document.querySelector('#q-form').requestSubmit()`); await sleep(300);
-  ok(label + ': 根拠パネルの中で現地確認を記録できる', (await ev(`JSON.parse(localStorage.getItem('yabu-results-v1')||'[]').length`)) === 1 && (await ev(`document.querySelector('#q-msg').textContent.includes('記録しました')`)) && (await ev(`!document.querySelector('#v-rank').hidden`)));
+  ok(label + ': 根拠パネルの中で現地確認を記録できる', (await ev(`JSON.parse(localStorage.getItem('yabu-results-v1')||'[]').length`)) === 1 && (await ev(`JSON.parse(localStorage.getItem('yabu-results-v1'))[0].memo==='ササ'`)) && (await ev(`document.querySelector('#q-msg').textContent.includes('記録しました')`)) && (await ev(`!document.querySelector('#v-rank').hidden`)));
   await ev(`localStorage.setItem('yabu-results-v1','[]'); YabuApp.state.results.length=0`);
   await shot(label + '_2_detail.png');
   // 衛星のみ
@@ -85,7 +88,7 @@ for (const [label, w, h, mobile] of [['desktop', 1513, 784, false], ['mobile', 3
   await shot(label + '_3_layers.png');
   await ev(`['l-sights','l-houses'].forEach(i=>document.getElementById(i).click())`);
   // 記録
-  await ev(`document.querySelector('#ranktable tbody tr[data-id]').click(); document.querySelector('#btn-to-rec').click()`); await sleep(300);
+  await ev(`document.querySelector('#ranktable tbody tr[data-id]').click(); document.querySelector('[data-view=record]').click()`); await sleep(300);
   const cid = await ev(`document.querySelector('#r-cell').value`);
   ok(label + ': 「記録する」で区画IDが入る', /^Y\d{3}$/.test(cid));
   await ev(`document.querySelector('#r-who').value='テスト'; document.querySelector('#r-memo').value='=cmd,"引用"'; document.querySelector('#r-result').value='藪ではない（農地・建物など）'; document.querySelector('#rec-form').requestSubmit()`); await sleep(300);

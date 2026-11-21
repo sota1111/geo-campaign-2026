@@ -26,7 +26,7 @@ main{padding:8px 16px}
 .satline .evid{border:0;background:none;padding:0;font-size:12.5px;color:#0b4f8a;text-decoration:underline dotted;text-align:left}
 .ndvichip{position:absolute;left:8px;bottom:8px;z-index:3;border:1px solid #2d6a2d;background:#fff;color:#1f4d1f;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700}
 .ndvichip[aria-pressed=true]{background:#e5f5e0}
-.toast{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:80;margin:0;background:#1f4e79;color:#fff;padding:6px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.3);font-size:13px;max-width:92vw}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:80;margin:0;background:#1f4e79;color:#fff;padding:6px 14px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.3);font-size:13px;max-width:92vw}
 .mini{font-size:12px;padding:1px 8px;border:1px solid var(--hot);color:#7a3500;background:#fff;border-radius:4px;font-weight:700}
 .cap{font-size:12px;font-weight:400;color:#44505e}
 .jnav{display:flex;gap:3px;margin-left:auto}
@@ -44,7 +44,7 @@ main{padding:8px 16px}
 .minileg span{white-space:nowrap}
 .sw{display:inline-block;width:18px;height:12px;vertical-align:middle;margin-right:4px;border:1px solid #4b2a63}
 .sw-high{background:rgba(106,27,154,.72)}
-.sw-mid{background:rgba(180,143,204,.55);border-color:#8f6aa8}
+.sw-mid{background:rgba(180,143,204,.3);border-color:#8f6aa8}
 .sw-low{background:#fff;border-style:dashed}
 .sw-top{background:#d95f02;border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 0 0 1px #c24a00}
 .sw-sch{background:#1f78b4;border:2px solid #fff;border-radius:50%;width:12px;height:12px;box-shadow:0 0 0 1px #1f78b4}
@@ -191,7 +191,7 @@ footer{padding:6px 16px;font-size:11.5px;color:#44505e;border-top:1px solid var(
   #ranktable td[data-k="出やすさ"]::before,#ranktable td[data-k="現地確認"]::before{content:attr(data-k) "：";color:#44505e;font-size:12px}
 }
 @media(max-width:800px){
-  .satline .long,.banner .long,nav .long,.minileg .long{display:none}
+  .satline .long,.banner .long,nav .long,.minileg .long,#detail .long{display:none}
   .short{display:inline}
   header{padding-right:10px}
   nav .quick{padding:3px 6px;font-size:12px}
@@ -224,6 +224,38 @@ footer{padding:6px 16px;font-size:11.5px;color:#44505e;border-top:1px solid var(
   #detail.sheet .note{margin:2px 0}
 }
 .why .src{text-align:center;margin:0}
+.satline .share{font-size:13px;color:#1f4e79}
+.grp{float:right;font-size:12px;font-weight:400;color:#44505e;cursor:pointer}
+.tmore{font-size:11px;color:#8a2f00}
+#top5 .tsat{font-size:11.5px}
+.minileg .link{font-size:12px}
+.qmore{flex-basis:100%;font-size:12.5px}
+.qmore summary{cursor:pointer;color:#0b4f8a}
+.qmore input{margin:2px 6px 0 0}
+#planprev{margin:6px 0 0;font-size:12.5px}
+#planprev ol{margin:2px 0;padding-left:22px;columns:2;column-gap:14px}
+#planprev li span{color:#44505e}
+.planmore{display:none}
+@media(max-width:800px){
+  #planprev{display:none}
+  .planmore{display:inline-block;margin:2px 0}
+  #plan-table:not(.all) tbody tr:nth-child(n+6){display:none}
+  #rec-table thead{display:none}
+  #rec-table,#rec-table tbody{display:block}
+  #rec-table tr{display:flex;flex-wrap:wrap;gap:0 8px;border-bottom:1px solid var(--line);padding:3px 2px;position:relative}
+  #rec-table td{border:0;padding:0;white-space:normal}
+  #rec-table td[data-k="メモ"]{flex-basis:100%;font-size:12.5px}
+  #rec-table td[data-k="メモ"]:empty{display:none}
+  #rec-table td[data-k="者"]{font-size:12px;color:#44505e}
+  #rec-table td[data-k="消"]{margin-left:auto}
+  #rec-table td[data-k="消"] button{padding:0 8px;font-size:12px}
+  .satline .share{font-size:12px}
+  .grp{font-size:11px}
+  #detail.sheet{max-height:30vh}
+  #detail.sheet .dhead small{display:none}
+  #detail.sheet.tall{max-height:58vh}
+  #detail.sheet .bars>summary{font-size:12.5px}
+}
 @media(min-width:1300px){
   #top5 button{grid-template-columns:22px auto minmax(0,1fr) auto;grid-template-areas:"rk id rs sc";align-items:center;gap:0 8px;padding:4px 2px}
   #top5 .rk{font-size:16px}
