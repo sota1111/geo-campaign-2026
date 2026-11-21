@@ -1,5 +1,5 @@
 // 18アプリ×6列（UDC・衛星・イチBiz 3部門・ODPT）の適合表。正本は reports/intel/app-contest-fit-20261121.json（情報部）。
-// 2026-11-21: 総司令官の追加情報（UDC は登録完了・提出時にテーマ変更可）を UDC 列と注意 C2 に反映済み。正本の JSON・md への反映は工兵の書き込み範囲外のため未了（差分は src/test/app-fit.test.ts に明記）。
+// 2026-11-21: 総司令官の追加情報（UDC は登録完了・提出時にテーマ変更可）を UDC 列と注意 C2 に反映済み。正本の JSON・md にも参謀長が反映した。
 // 文言は正本のまま。ここで判定（mark・score）を変えない（src/test/app-fit.test.ts が正本との一致を検査する）。
 export const FIT_AS_OF = "2026-11-21"
 export const FIT_SOURCE = 'reports/intel/app-contest-fit-20261121.json'

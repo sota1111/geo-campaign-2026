@@ -134,3 +134,13 @@ JSON の cautions（C1〜C13）と同じ。
 - 各アプリの README: contests/odpt-2026/app・app-teiji・app-kankou・app-kansui・app-kodure、contests/satellite-2026/app/proposal-alpha・proposal-yabu・proposal-sugi、contests/ichibiz-2026/app/business・solar-guard
 - contests/dashboard/src/apps/registry.ts、scripts/copy-data.mjs
 - 公式（各 intel 経由。取得日は各報告に記載）: https://urbandata-challenge.jp/udc2026_entry ／ https://space-data-challenge.nedo.go.jp/infrastructure/ ／ https://g-idea.go.jp/2026/application/ ／ https://challenge2026.odpt.org/ja/outline.html
+
+## 2026-11-21 追記: 総司令官の情報による UDC 列の更新（参謀長が反映）
+
+出典: 総司令官 2026-11-21 の指示「UDC は、提出時にテーマ変更可能。登録完了に更新。」
+
+- 概要登録は**登録完了**（reports/ops/udc-2026-registration-20261109.md が正。11/12 の「登録した記録がない」は誤り）。本文の「記録の食い違い」は、総司令官の確認で解消した。
+- 概要登録していないアプリの UDC 列は、上の表で × としていたもののうち 13 件を **△（score 1）** に変更した: odpt-teiji・odpt-kankou・odpt-kansui・odpt-kodure・sat-alpha・sat-yabu・sat-sugi・biz-business・biz-business-nb・biz-idea・biz-realestate・biz-realestate-rn1・biz-solar-guard。理由は「概要登録済みの作品枠（作品①・②）で、提出時にテーマを変えて出す場合に限る。登録した作品そのものを別のアプリに差し替えてよいかは要項で未確認」。
+- × のまま: udc-aed（11/13 の「UDC には登録しない」決定）、sat-a・sat-b（出さない方針・設計）。要項上の禁止ではない。
+- 注意 C2 に「UDC の枠は登録済みの2件（同時に出せるのは最大2件の想定。未確認）」を加えた。
+- 上の表の本文は更新前のまま残している。最新の判定は app-contest-fit-20261121.json（と contests/dashboard/src/data/app-fit.ts）が正。
