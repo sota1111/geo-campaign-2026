@@ -5,6 +5,7 @@
   const L = window.Lib;
   const $ = (id) => document.getElementById(id);
   const GSI = 'https://cyberjapandata.gsi.go.jp/xyz/pale/';
+  const GSI_PHOTO = 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/'; // 国土地理院 シームレス空中写真（出典表示が必要）
   const DATA = 'data/';
   const KEY = { cases: 'rp1-cases', reviews: 'rp1-reviews', checks: 'rp1-checks', quotes: 'rp2-quotes' };
   const COLORS = ['#f2c14e', '#f08a24', '#d1495b', '#7a2e8e'];
@@ -18,7 +19,7 @@
 
   const state = {
     B: null, S: null, DEMO: null, list: [], vis: [], storeyH: L.DEFAULT_STOREY_H, minFloors: 8, town: '', sel: null, simIds: new Set(),
-    tab: 'est', cloud: null, cloudInfo: null, cloudSynthetic: false, cloudName: '', cloudUp: 'z', cloudApplied: false, cloudErr: '',
+    osm: new Map(), photos: new Map(), aptList: [], tab: 'est', cloud: null, cloudInfo: null, cloudSynthetic: false, cloudName: '', cloudUp: 'z', cloudApplied: false, cloudErr: '',
     cases: [], reviews: [], checks: {}, reviewFilter: '', simSort: 'near', wallUse: 'map', wallQty: 0, wallUnit: 0, view: { lon: 139.81, lat: 35.71, z: 13 }, fitZ: 13,
   };
   const store = {
@@ -186,8 +187,10 @@
       e.bb = [Math.min(...ws.map((p) => p.x)), Math.min(...ws.map((p) => p.y)), Math.max(...ws.map((p) => p.x)), Math.max(...ws.map((p) => p.y))];
       e.cw = world(e.lon, e.lat);
       e.blocked = L.scaleCheck(e).blocked;
+      e.apt = state.osm.get(e.id) || null; // OSM で共同住宅（building=apartments 等）とされ、PLATEAU の建物と位置が重なったもの
       return e;
     });
+    state.aptList = state.list.filter((b) => b.apt);
     refilter();
   }
   function reenrich() {
@@ -268,10 +271,10 @@
     const b = state.sel, el = $('selCard');
     if (!b) { el.innerHTML = '<ol class="steps"><li><b>地図の建物を押す</b>（または「例の建物を選ぶ」）</li><li>戸数と手元の見積を入れる</li><li>似た建物・点群・発注先で比べる</li></ol>'; return; }
     const sc = state.scale || L.scaleCheck(b);
-    const name = b.name && !sc.blocked ? ' ' + esc(b.name) + '<span class="mini">（PLATEAU の名称）</span>' : '';
+    const name = b.name && !sc.blocked ? ' ' + esc(b.name) + '<span class="mini">（PLATEAU の名称）</span>' : b.apt && b.apt.name ? ' ' + esc(b.apt.name) + '<span class="mini">（OpenStreetMap の名称）</span>' : '';
     const cw = state.cloudInfo && cloudWhole(state.cloudInfo);
     const cloud = state.cloudApplied && cw ? '<br>点群からの概算（建物全体に補正） <b>' + L.fmt(cw, 0) + '㎡</b>' + (state.cloudSynthetic ? ' ' + BADGE.fake + '合成の点群' : '') : '';
-    el.innerHTML = '<b>' + esc(state.B.meta.ward) + esc(b.town) + '</b>' + name + ' ' + BADGE.est + ' <span class="mini">共同住宅か不明</span><br>' +
+    el.innerHTML = '<b>' + esc(state.B.meta.ward) + esc(b.town) + '</b>' + name + ' ' + BADGE.est + ' <span class="mini">' + (b.apt ? 'OpenStreetMap で共同住宅とされた建物' : '共同住宅か不明') + '</span><br>' +
       '高さ' + n1(b.h) + 'm・推定階数 約' + b.floors + '階・推定延床 約' + L.fmt(b.tfa, 0) + '㎡・外壁面積の概算 約' + L.fmt(b.wall, 0) + '㎡' + cloud +
       (sc.text && !sc.blocked ? '<p class="warnline">' + esc(sc.text) + '</p>' : '') +
       '<details class="mini"><summary>推定の根拠</summary>高さは PLATEAU の計測高さ。階数は高さ÷階高' + state.storeyH + 'm、延床は屋根面積' + L.fmt(b.area, 0) + '㎡×階数、戸数は延床÷' + L.UNIT_SQM + '㎡の仮定、外壁面積は外周' + L.fmt(b.per, 0) + 'm×高さ（開口部などは考えない。誤差は未検証）。建築年・用途は PLATEAU に値なし。建物ID ' + esc(b.id) + '</details>';
@@ -344,9 +347,35 @@
     const set = state.S.byCount[inputs().count] || state.S.byCount['1'], u = L.unitsFromTfa(Math.round(b.tfa / 10) * 10);
     return { low: set.perUnit.q1 * u, high: set.perUnit.q3 * u };
   }
-  function simRow(x) {
-    const g = simRange(x.b), i = state.simRank.get(x.b.id);
-    return '<tr title="' + esc(x.b.town) + '"><td><button type="button" class="pick" data-id="' + esc(x.b.id) + '" aria-label="' + i + 'を選ぶ">' + i + '</button></td><td>' + x.b.floors + '</td><td>' + L.fmt(x.b.tfa, 0) + '</td><td>' + L.fmt(x.b.wall, 0) + '</td><td>' + (x.km != null ? n1(x.km) : '—') + '</td><td class="calc">' + L.fmt(g.low, 0) + '〜' + L.fmt(g.high, 0) + '</td></tr>';
+  /** 建物の上空写真（国土地理院シームレス空中写真 z18 の 2x2 タイルから、建物を中心に 132x99px を切り出す）。建物の外形を線で重ねる */
+  const PW = 132, PH = 99, PZ = 18;
+  const NAMED_BONUS = 0.15; // 規模の比（対数）0.15 ≒ 約16% の差までは、名前の分かる建物を先にする
+  function aerialHtml(b, alt) {
+    const k = 256 * 2 ** PZ, c = world(b.lon, b.lat);
+    const left = c.x * k - PW / 2, top = c.y * k - PH / 2;
+    const tx = Math.floor(left / 256), ty = Math.floor(top / 256);
+    let h = '<div class="aer" role="img" aria-label="' + esc(alt) + '">';
+    for (let dx = 0; dx < 2; dx++) for (let dy = 0; dy < 2; dy++) {
+      h += '<img loading="lazy" alt="" width="256" height="256" src="' + GSI_PHOTO + PZ + '/' + (tx + dx) + '/' + (ty + dy) + '.jpg" style="left:' + Math.round((tx + dx) * 256 - left) + 'px;top:' + Math.round((ty + dy) * 256 - top) + 'px">';
+    }
+    const pts = b.ring.map((p) => { const w = world(p[0], p[1]); return (w.x * k - left).toFixed(1) + ',' + (w.y * k - top).toFixed(1); }).join(' ');
+    return h + '<svg viewBox="0 0 ' + PW + ' ' + PH + '" aria-hidden="true"><polygon points="' + pts + '"/></svg></div>';
+  }
+  const nameOf = (b) => (b.apt && b.apt.name ? esc(b.apt.name) : '<span class="noname">名称不明</span>');
+  /** 外観の写真（Wikimedia Commons。作者・ライセンスを必ず表示）。見つかった建物だけ */
+  function exteriorHtml(b) {
+    const p = state.photos.get(b.id);
+    if (!p) return '';
+    return '<figure class="ext"><img loading="lazy" src="' + esc(p.thumb) + '" alt="' + esc((b.apt && b.apt.name) || '') + 'の外観写真"><figcaption>外観写真（Wikimedia Commons）作者 ' + esc(p.artist) + '・<a href="' + esc(p.licenseUrl) + '" target="_blank" rel="noopener noreferrer">' + esc(p.license) + '</a>・<a href="' + esc(p.page) + '" target="_blank" rel="noopener noreferrer">原典</a></figcaption></figure>';
+  }
+  /** 似た建物のカード。実在の建物なので、修繕費・修繕実績・口コミの数値は一切出さない（公開データなし） */
+  function simCard(x) {
+    const b = x.b, i = state.simRank.get(b.id);
+    const alt = '上空写真: ' + (b.apt && b.apt.name ? b.apt.name : '名称不明') + '（' + b.town + '）';
+    return '<li class="aptcard"><button type="button" class="pick" data-id="' + esc(b.id) + '" aria-label="地図の' + i + '番の建物を選ぶ">' + i + '</button>' +
+      aerialHtml(b, alt) + '<div class="apb"><b class="apn">' + nameOf(b) + '</b> <span class="mini">' + esc(b.town) + '</span><br>' +
+      '推定' + b.floors + '階・延床約' + L.fmt(b.tfa, 0) + '㎡・高さ' + n1(b.h) + 'm' + (x.km != null ? '・' + n1(x.km) + 'km' : '') + '<br>' +
+      '<span class="mini">写真: 上空（国土地理院）' + (state.photos.has(b.id) ? '＋外観' : '') + '　修繕実績: <b>未登録（公開データなし）</b></span></div>' + exteriorHtml(b) + '</li>';
   }
   function bindPicks(el) { el.querySelectorAll('.pick[data-id]').forEach((b) => (b.onclick = () => { const bd = state.list.find((x) => x.id === b.dataset.id); if (bd) selectBuilding(bd, true); })); }
   /** 見積の読み上げ（桁の取り違え防止）: 25000万円＝2億5,000万円・1戸あたり */
@@ -405,24 +434,27 @@
   }
   function refreshSim() {
     const t = simTarget();
-    state.simList = t ? L.similar(state.list, t, 8, state.storeyH) : [];
+    state.simList = t ? L.similar(state.aptList, t, 6, state.storeyH, (b) => (b.apt && b.apt.name ? NAMED_BONUS : 0)) : [];
     state.simIds = new Set(state.simList.map((x) => x.b.id));
     state.simRank = new Map(state.simList.map((x, i) => [x.b.id, i + 1]));
   }
   function renderSim() {
-    const t = simTarget();
-    let h = '<h2>規模が似た建物（推定階数±2階） ' + BADGE.est + '</h2>';
-    h += '<p class="concl hi"><b>修繕実績・築年は未収録</b>（公開された個別事例がない）。規模だけで比べる表です。実額は下の事例で比べます。</p>';
-    if (!t) h += '<p class="mini">建物を選ぶと、規模の近い建物を地図に番号で示します。</p>';
-    else if (!state.simList.length) h += '<p>条件に合う建物がありません。</p>';
+    const t = simTarget(), om = state.osmMeta;
+    let h = '<h2>規模が似た実在のマンション（推定階数±2階） ' + BADGE.real + BADGE.est + '</h2>';
+    h += '<p class="concl hi"><b>実在の建物に、修繕費・修繕実績・口コミは結び付けていません</b>（公開データなし）。番号は地図の緑の番号と同じです。</p>';
+    if (!t) h += '<p class="mini">建物を選ぶと、規模の近いマンションを地図に番号で示し、上空写真つきで並べます。</p>';
+    else if (!state.simList.length) h += '<p>条件に合うマンションがありません（OpenStreetMap で共同住宅とされた ' + state.aptList.length + ' 棟の中から探しています）。</p>';
     else {
-      const key = { near: null, floors: (x) => -x.b.floors, km: (x) => (x.km == null ? 1e9 : x.km), wall: (x) => -x.b.wall }[state.simSort];
+      const key = { near: null, km: (x) => (x.km == null ? 1e9 : x.km) }[state.simSort];
       const rows = key ? state.simList.slice().sort((a, b) => key(a) - key(b)) : state.simList;
       const sb = (k, label) => '<button type="button" class="pick' + (state.simSort === k ? ' on' : '') + '" data-sort="' + k + '" aria-pressed="' + (state.simSort === k) + '">' + label + '</button>';
-      h += '<p class="mini">並べ替え ' + sb('near', '規模が近い') + sb('floors', '階数') + sb('km', '距離') + sb('wall', '外壁') + '</p>';
-      h += '<table class="simt"><thead><tr><th>地図</th><th>階</th><th>延床㎡</th><th>外壁㎡</th><th>km</th><th class="calc">試算（万円）<br>実績ではない</th></tr></thead><tbody>' + rows.map(simRow).join('') + '</tbody></table>';
-      h += '<p class="mini">試算は推定戸数×戸あたりの中位50%（目安タブと同じ計算）。</p>';
+      h += '<p class="mini">並べ替え ' + sb('near', '規模が近い') + sb('km', '距離') + '</p>';
+      h += '<ul class="aptgrid">' + rows.map(simCard).join('') + '</ul>';
     }
+    h += '<details class="mini"><summary>出典・選び方</summary><ul class="list">' +
+      '<li>「マンション」= OpenStreetMap で建物の種別が共同住宅（apartments・residential・dormitory）とされ、PLATEAU の建物の内側に位置が入ったもの' + (om ? '（墨田区 ' + L.fmt(om.osmWays, 0) + ' 件のうち、地図に出る規模の ' + L.fmt(om.matched, 0) + ' 棟。名前があるのは ' + L.fmt(om.named, 0) + ' 棟）' : '') + '。名前は OpenStreetMap にあるものだけ。無いものは「名称不明」（町丁目で区別）。住戸・居住者の情報は扱いません。</li>' +
+      '<li>上空写真: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 シームレス空中写真</a>（建物の外形線は PLATEAU）。外観写真は Wikimedia Commons で商用利用できるライセンスのものが見つかった建物だけ。</li>' +
+      '<li>名称・種別: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>（ODbL）。階数・延床は PLATEAU の高さ・屋根面積からの推定。</li></ul></details>';
     $('simOut').innerHTML = h;
     bindPicks($('simOut'));
     $('simOut').querySelectorAll('[data-sort]').forEach((b) => (b.onclick = () => { state.simSort = b.dataset.sort; renderSim(); }));
@@ -444,7 +476,7 @@
         (c.fake ? '' : ' <button type="button" class="pick delcase" data-cid="' + esc(c.id) + '">削除</button>') + '</td><td>' + esc(String(c.units)) + '</td><td>' + L.fmt(c.tfa, 0) + '</td><td>' + L.fmt(c.total, 0) + '</td><td>' + bandTiny[pu.band] + '</td></tr>';
     };
     const mine = list.filter((c) => !c.fake), demo = list.filter((c) => c.fake);
-    let h = '<h3>実額で比べる（修繕事例） <span class="mini">見本は架空・足した事例は端末内のみ</span></h3>';
+    let h = '<h3>架空のデモ事例（実在の建物ではありません） <span class="mini">見本は架空・足した事例は端末内のみ</span></h3>';
     h += '<table class="cst"><thead><tr><th>事例</th><th>戸</th><th>延床㎡</th><th>総額（万円）</th><th>戸あたり</th></tr></thead><tbody>' + mine.concat(demo).map(caseLi).join('') + '</tbody></table>';
     h += '<form id="caseForm" class="mini-form case3" autocomplete="off">' +
       '<label>戸数<input name="units" type="number" min="1" required></label><label>延床㎡<input name="tfa" type="number" min="1" required></label>' +
@@ -662,8 +694,10 @@
     h += '<details><summary>出典の詳細（リンク・ライセンス・加工）</summary><ul class="list">' +
       '<li><b>建物</b>: ' + esc(B.meta.source) + '。' + esc(B.meta.license) + '。高さ・屋根外形から外周・面積を計算。</li>' +
       '<li><b>修繕費の分布</b>: ' + esc(S.publisher) + '「' + esc(S.title) + '」（<a href="' + esc(S.reportUrl) + '" target="_blank" rel="noopener noreferrer">報告書</a>、<a href="' + esc(S.summaryUrl) + '" target="_blank" rel="noopener noreferrer">概要</a>）を転記。<b>' + esc(S.license) + '</b>。</li>' +
-      '<li><b>地図</b>: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 地理院タイル（淡色地図）</a>。</li></ul></details>';
-    h += '<details><summary>限界・プライバシー・表示の区別</summary><ul class="list"><li>' + esc(L.DISCLAIMER) + '。' + esc(L.LICENSE_NOTE) + '。' + esc(S.transcribed) + '</li><li>調査は200社・818件の工事事例で、全国を代表するとは限りません。金額は税抜・共通仮設費を含みません。</li><li>個別の修繕事例・口コミの実データは未収録で、見本は架空です。</li><li>階数・延床・戸数は推定（階高' + state.storeyH + 'm、1戸' + L.UNIT_SQM + '㎡の仮定）。推定' + L.SCALE_MAX.floors + '階超・延床' + L.fmt(L.SCALE_MAX.tfa, 0) + '㎡超は目安を出しません。外壁面積の誤差は未検証です。</li>' +
+      '<li><b>地図</b>: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院 地理院タイル（淡色地図）</a>。</li>' +
+      '<li><b>共同住宅・名称</b>: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>（ODbL。Overpass API の GET で取得し、PLATEAU の建物と位置で突き合わせて同梱）。</li>' +
+      '<li><b>上空写真</b>: 国土地理院 シームレス空中写真（地理院タイルを表示時に取得）。<b>外観写真</b>: Wikimedia Commons（作者・ライセンスを各写真の下に表示' + (state.photoMeta ? '。' + state.photos.size + '棟' : '') + '）。</li></ul></details>';
+    h += '<details><summary>限界・プライバシー・表示の区別</summary><ul class="list"><li>' + esc(L.DISCLAIMER) + '。' + esc(L.LICENSE_NOTE) + '。' + esc(S.transcribed) + '</li><li>調査は200社・818件の工事事例で、全国を代表するとは限りません。金額は税抜・共通仮設費を含みません。</li><li>個別の修繕事例・口コミの実データは未収録で、見本は架空です。実在のマンションには修繕費・実績・口コミを結び付けていません。</li><li>階数・延床・戸数は推定（階高' + state.storeyH + 'm、1戸' + L.UNIT_SQM + '㎡の仮定）。推定' + L.SCALE_MAX.floors + '階超・延床' + L.fmt(L.SCALE_MAX.tfa, 0) + '㎡超は目安を出しません。外壁面積の誤差は未検証です。</li>' +
       '<li>入力・点群は端末内だけで扱い、送信しません。事例・口コミ・見積の比較・チェックだけ localStorage に保存します。通信は地図画像と同梱データの GET だけです。</li></ul>' +
       '<p class="mini">' + BADGE.real + ' 公的データ ' + BADGE.est + ' 計算した参考値 ' + BADGE.user + ' あなたの入力 ' + BADGE.fake + ' デモ用の作り物</p></details>';
     h += '<details><summary>PLATEAU の属性の付与率（建築年・階数・延床・用途は0%）</summary><p class="mini">PLATEAU（' + esc(B.meta.ward) + '・全 ' + L.fmt(B.stats.total, 0) + ' 棟・' + B.meta.meshCount + ' メッシュ）の付与率: 高さ' + L.fmt(fk.height.pct, 0) + '%・<b>建築年' + L.fmt(fk.year.pct, 0) + '%・階数' + L.fmt(fk.floors.pct, 0) + '%・延床' + L.fmt(fk.tfa.pct, 0) + '%・用途' + L.fmt(fk.usage.pct, 0) + '%</b>（23区の ' + esc(String(B.meta.sample.meshes)) + ' メッシュ・' + L.fmt(B.meta.sample.buildings, 0) + ' 棟でも同じ）。</p>';
@@ -731,7 +765,7 @@
     $('selTown').onchange = (e) => { state.town = e.target.value; refilter(); fitTo(boundsOfList(state.vis.length ? state.vis : state.list), state.town ? 30 : 16); renderAll(); schedule(); };
     const towns = {}; for (const b of state.list) { const t = baseTown(b.town); towns[t] = (towns[t] || 0) + 1; }
     $('selTown').innerHTML = '<option value="">' + esc(state.B.meta.ward) + '全体</option>' + Object.keys(towns).sort((a, b) => a.localeCompare(b, 'ja')).map((t) => '<option value="' + esc(t) + '">' + esc(t) + '（' + towns[t] + '）</option>').join('');
-    $('mapAttr').innerHTML = '地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院</a>｜建物: PLATEAU（国土交通省）';
+    $('mapAttr').innerHTML = '地図: <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">国土地理院</a>｜建物: PLATEAU（国土交通省）｜共同住宅: © OpenStreetMap contributors｜空中写真: 国土地理院';
     $('mapAttr').style.pointerEvents = 'auto';
   }
 
@@ -739,6 +773,9 @@
     try {
       const get = async (f) => { const r = await fetch(DATA + f); if (!r.ok) throw new Error(f + ' を読めません（' + r.status + '）'); return r.json(); };
       const [B, S, DEMO] = await Promise.all([get('buildings.json'), get('mlit-survey.json'), get('demo.json')]);
+      // 突き合わせ結果と外観写真は、読めなくても本体は動く（似た建物が出ないだけ）
+      try { const O = await get('osm.json'); state.osmMeta = O.meta; for (const it of O.items) state.osm.set(it.id, it); } catch { /* 無し */ }
+      try { const P = await get('photos.json'); state.photoMeta = P.meta; for (const it of P.items) state.photos.set(it.id, it); } catch { /* 無し */ }
       if (!L.validateBuildings(B)) throw new Error('建物データの形式が不正です');
       state.B = B; state.S = S; state.DEMO = DEMO;
     } catch (e) { const el = $('loaderr'); el.hidden = false; el.textContent = 'データを読めませんでした: ' + e.message; return; }
