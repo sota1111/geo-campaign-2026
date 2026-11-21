@@ -11,7 +11,7 @@
 <body>
 <header>
   <h1>データセンター候補地の一次スクリーニング <small>浸水しにくい場所を選べば、災害時もデータと通信の拠点を残せる。衛星で地盤・熱・土地を見る（福岡県 直方市・鞍手町・北九州市西部）</small></h1>
-  <details class="banner" id="banner"><summary><b>点数・順位・良し悪しの判定はしません。</b>現地等の確認の代わりになりません</summary>確認項目を一覧にするだけで、現地・自治体・電力会社の確認の代わりになりません（立地の基準値は公的資料で見つかっていません）。位置の誤差が大きいデータを含みます（下の「限界」）。</details>
+  <details class="banner" id="banner"><summary><b>点数・順位・良し悪しの判定はしません</b><span class="bn-more">。現地等の確認の代わりになりません</span></summary>確認項目を一覧にするだけで、現地・自治体・電力会社の確認の代わりになりません（立地の基準値は公的資料で見つかっていません）。位置の誤差が大きいデータを含みます（下の「限界」）。</details>
 </header>
 <main>
   <div class="mappane">
@@ -24,6 +24,7 @@
         <label title="2020年は植生、2026年は裸地等（Sentinel-2）"><input type="radio" name="sat" data-layer="chg"><span>変化</span></label>
         <label title="衛星の層を重ねない"><input type="radio" name="sat" data-layer="none"><span>なし</span></label>
       </fieldset>
+      <p class="satnote" id="satnote" aria-live="polite"></p>
       <details class="hzlayers" id="hzlayers"><summary>災害・電力を重ねる</summary>
         <fieldset><legend>国土数値情報・OSM</legend>
           <label><input type="checkbox" data-layer="flood"> 洪水</label>
@@ -35,7 +36,7 @@
       </details>
     </div>
     <button type="button" id="btn-home" class="home">全体に戻す</button>
-    <details class="legendbox" id="legendbox" open><summary>凡例<span class="lgsum">（造＝造成地・遊＝遊休地）</span></summary><div id="legend" class="legend" aria-live="polite"></div></details>
+    <details class="legendbox" id="legendbox" open><summary>凡例<span class="lgsum">　造＝造成地・遊＝遊休地・右肩の数＝災害の種類数</span></summary><div id="legend" class="legend" aria-live="polite"></div></details>
     <p class="loading" id="loading" role="status">地図を読み込んでいます…（「候補地」の一覧は先に使えます）</p>
     <p class="tilewarn" id="tilewarn" hidden>背景地図を読めません（候補地・層・確認項目は使えます）</p>
     <p class="credit" id="credit"></p>
@@ -47,10 +48,9 @@
         <label for="pick">候補地</label>
         <select id="pick" aria-label="候補地を選ぶ"></select>
       </div>
-      <div class="ttl"><h2 id="target-title">確認項目の一覧</h2><button type="button" id="btn-pin" class="pin">＋比べる</button></div>
+      <div class="ttl"><h2 id="target-title">確認項目の一覧</h2><button type="button" id="btn-pin" class="pin">表に入れる</button></div>
       <p id="target-sub" class="sub"></p>
       <p id="impact" class="impact"></p>
-      <p class="satline" title="押すと地図がその層に切り替わる"><span class="sat">衛星</span>で見る▸<button type="button" data-sat="sub">地盤＝地面が年に何mm上下したか</button><button type="button" data-sat="lst">温度＝夏の日中の地面の熱さ</button><button type="button" data-sat="land">土地＝いま何があるか</button><button type="button" data-sat="chg">変化＝2020年から植生→裸地等</button></p>
       <ol id="rows" class="rows"></ol>
     </section>
     <section id="cmp" class="cmp-box" aria-live="polite"></section>
@@ -58,7 +58,7 @@
       <ul>
         <li>災害に重ならない所 → 災害時もデータ・通信の拠点を残せる可能性</li>
         <li>造成地・遊休地 → 森林・農地を拓く量を減らせる可能性</li>
-        <li>排熱の活用 → 近くの熱需要の確認から（データなし）</li>
+        <li class="unv">排熱の活用 → 近くの熱需要を自治体に聞く <span class="tag">今回は未検証</span></li>
       </ul>
     </div>
     <div class="foot">

@@ -19,7 +19,8 @@
     const x = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
     return stops[i].map((v, k) => Math.round(v + (stops[i + 1][k] - v) * f));
   };
-  const LST_STOPS = [[49, 54, 149], [69, 117, 180], [171, 217, 233], [255, 255, 191], [253, 174, 97], [215, 48, 39], [165, 0, 38]];
+  // 温度は紫（涼しい）→黄（熱い）。災害の「重なる」の赤と混ざらない色にする
+  const LST_STOPS = [[68, 1, 84], [65, 68, 135], [42, 120, 142], [34, 168, 132], [122, 209, 81], [253, 231, 37]];
   // 範囲全体の 10〜90% に色を割り当て、中央値を中間色にする（市街地が一色にならないように）
   const LST_P10 = DATA.stats.lst_p10, LST_P50 = DATA.stats.lst_p50, LST_P90 = DATA.stats.lst_p90;
   const lstT = (v) => (v <= LST_P50 ? 0.5 * (v - LST_P10) / (LST_P50 - LST_P10) : 0.5 + 0.5 * (v - LST_P50) / (LST_P90 - LST_P50));
@@ -36,7 +37,7 @@
     if (key === 'tsunami') return [[225, 200, 245], [190, 150, 230], [150, 100, 210], [110, 50, 180], [70, 20, 130], [40, 10, 90]][Math.min(5, v - 1)].concat(175);
     if (key === 'surge') return [[190, 240, 230], [130, 220, 205], [70, 190, 175], [30, 150, 140], [15, 110, 105], [5, 70, 70], [0, 40, 45], [0, 20, 25]][Math.min(7, v - 1)].concat(175);
     if (key === 'slide') return PAL.slide[v & 3] || null;
-    if (key === 'lst') return ramp(lstT(L.lstFromCode(v)), LST_STOPS).concat(150); // 印・災害の層が読めるよう薄め
+    if (key === 'lst') return ramp(lstT(L.lstFromCode(v)), LST_STOPS).concat(125); // 印・災害の層が読めるよう薄め
     if (key === 'sub') return v === 8 || v === 9 ? [150, 210, 120, 45] : ramp((v - 1) / 15, INSAR_STOPS).concat(225); // 目立つ動きのない階級は薄く
     return PAL[key][v] || null;
   }
@@ -60,8 +61,8 @@
   const LEGENDS = {
     land: () => `<div class="lg"><b>土地の状態</b>（Sentinel-2 ${L.SCENES.s2_now.date}）<br>${sw(PAL.land[1])}植生 ${sw(PAL.land[2])}裸地等 ${sw(PAL.land[3])}建物（OSM） ${sw(PAL.land[4])}水 ${sw(PAL.land[5])}草地等</div>`,
     chg: () => `<div class="lg"><b>変化</b>${sw(PAL.chg[1])}2020 は植生、2026 は裸地等（造成・伐採・開墾など）</div>`,
-    lst: () => `<div class="lg"><b>地表面温度</b>（${L.SCENES.landsat.date}）熱い＝赤。<b>災害の危険度ではない</b><br>${LST_P10}℃ ${grad(LST_STOPS)} ${LST_P90}℃（中間色＝中央値 ${LST_P50}℃）</div>`,
-    sub: () => `<div class="lg"><b>地盤の変動</b>（干渉SAR）沈下 ${grad(INSAR_STOPS)} 隆起（±30 mm/年）<br>目立つ動き（濃い色）の割合 <b>地図全体：${SUB_MOVE.all ? `${SUB_MOVE.all}%` : '該当なし'}</b>${subMoveTarget()}<br>薄い緑・ほぼ無色＝±3.75 mm/年内（目立つ動きなし） ${sw([110, 110, 110, 120])}値なし</div>`,
+    lst: () => `<div class="lg"><b>地表面温度</b>（${L.SCENES.landsat.date}）<br>${LST_P10}℃ ${grad(LST_STOPS)} ${LST_P90}℃ 黄ほど熱い</div>`,
+    sub: () => `<div class="lg"><b>地盤の変動</b>（干渉SAR）沈下 ${grad(INSAR_STOPS)} 隆起（±30 mm/年）<br>目立つ動き（濃い色）の割合 <b>地図全体：${SUB_MOVE.all ? `${SUB_MOVE.all}%` : '該当なし'}</b>${subMoveTarget()}<br>ほぼ無色＝年3.75mm超の動きなし ${sw([110, 110, 110, 120])}値なし</div>`,
     flood: () => `<div class="lg"><b>洪水</b>${BLUES.map((c) => sw(c.concat(200))).join('')}浸水深 浅→深</div>`,
     slide: () => `<div class="lg"><b>土砂</b>${sw(PAL.slide[1])}警戒 ${sw(PAL.slide[2])}特別警戒</div>`,
     tsunami: () => `<div class="lg"><b>津波</b>${[[225, 200, 245], [150, 100, 210], [70, 20, 130]].map((c) => sw(c.concat(200))).join('')}浅→深</div>`,
@@ -97,8 +98,16 @@
   function setSat(key) {
     SAT_KEYS.forEach((k) => setLayer(k, k === key));
     const r = document.querySelector(`#layers input[data-layer="${key}"]`); if (r) r.checked = true;
+    $('#satnote').innerHTML = SAT_NOTE[key] ? SAT_NOTE[key]() : '';
   }
-  const MK_LEGEND = '<div class="lg"><span class="mkd dev">造</span>造成地の候補 <span class="mkd idle">遊</span>遊休地の候補<br>右肩＝災害の該当数 <i class="hzd h0">0</i>なし <i class="hzd h1">1</i>1種 <i class="hzd h2">2</i>複数</div>';
+  // 衛星の層が何を見ているかの一言（地図の上に常に出す）
+  const SAT_NOTE = {
+    lst: () => '温度＝夏の地面の熱さ（黄ほど熱い）。<b>災害の危険度ではない</b>',
+    sub: () => `地盤＝年に何mm上下したか。目立つ動きは全体の${SUB_MOVE.all || 0}%＝<b>ほぼ無色が普通</b>`,
+    land: () => '土地＝いま何があるか（植生・裸地等・建物・水）',
+    chg: () => '変化＝赤は 2020年に植生、2026年に裸地等（造成・伐採など）',
+  };
+  const MK_LEGEND = '<div class="lg"><span class="mkd dev">造</span>造成地の候補 <span class="mkd idle">遊</span>遊休地の候補<br>右肩＝重なる災害の種類数 <i class="hzd h0">0</i>なし <i class="hzd h1">1</i>1種 <i class="hzd h2">2</i>複数</div>';
   const SAT_KEYS = ['land', 'chg', 'lst', 'sub'];
 
   // ---- 候補地と確認項目 ----
@@ -118,11 +127,11 @@
     const b = $('#jump'); if (!b) return;
     const t = state.target;
     if (!isMobile() || !t || !state.rows) { b.hidden = true; return; }
-    const last = document.querySelector('#rows .row[data-key="surge"]');
+    const first = document.querySelector('#impact');
     const hit = hazHits(state.rows).map((r) => r.label);
-    b.textContent = `${nameOf(t)}：${hit.length ? hit.join('・') + 'に重なる' : '災害に重ならない'}　▼確認項目`;
+    b.textContent = `${nameOf(t)}：${hit.length ? hit.join('・') + 'に重なる' : '災害に重ならない'}　▼タップで確認項目`;
     b.className = 'jump ' + (hit.length ? 'hit' : 'none');
-    b.hidden = !last || last.getBoundingClientRect().bottom <= window.innerHeight; // 災害の 4 行が見えていれば出さない
+    b.hidden = !first || first.getBoundingClientRect().top < window.innerHeight - 70; // 結果の先頭が画面に入ったら出さない（行に重ねない）
   }
   function select(target, byUser) {
     state.userPicked = state.userPicked || !!byUser;
@@ -164,7 +173,7 @@
     state.rows = rows;
     $('#target-title').innerHTML = t.id ? `${esc(t.id)} の確認項目 <small>${kindLabel(t)}・約 ${t.ha} ha の範囲で集計</small>` : '地図で指した地点';
     $('#target-sub').textContent = t.id
-      ? (state.userPicked ? '' : `例として ${t.id} と ${state.pins.filter((p) => p !== t).map(nameOf).join('・')} を表示中。地図の印を押すと切り替わる`)
+      ? (state.userPicked ? '' : `例として ${t.id}・${state.pins.filter((p) => p !== t).map(nameOf).join('・')} を表示中。地図の印で切替`)
       : `指した点の周囲 約 ${L.CLICK_RADIUS_M} m で集計（候補地の全体ではない）`;
     const hit = hazHits(rows).length;
     const im = $('#impact'); im.textContent = impactText(rows); im.className = 'impact ' + (hit ? 'hit' : 'none');
@@ -175,8 +184,8 @@
     }));
     $('#rows').querySelectorAll('button.sat').forEach((b) => b.addEventListener('click', () => setSat(b.dataset.sat)));
     const pinned = state.pins.some((p) => p === t);
-    const pb = $('#btn-pin'); pb.textContent = pinned ? `比べるから外す（${state.pins.length}/${MAX_PINS}）` : `比べる表に固定（${state.pins.length}/${MAX_PINS}）`; pb.setAttribute('aria-pressed', String(pinned));
-    pb.title = pinned ? '比べる表から外す' : '選択中（仮）の列を、別の所を選んでも残るように固定する';
+    const pb = $('#btn-pin'); pb.textContent = pinned ? '表から外す' : '表に入れる'; pb.setAttribute('aria-pressed', String(pinned));
+    pb.title = pinned ? '比べる表から外す' : `別の所を選んでも表に残す（最大 ${MAX_PINS} 件）`;
     renderCompare();
     updateJump();
   }
@@ -195,10 +204,10 @@
     // 列＝残した候補地。選択中が残していなければ、一時の列として右端に足す（最大 3 列）
     const tmp = cur && !state.pins.includes(cur);
     const P = tmp ? state.pins.slice(-(MAX_PINS - 1)).concat([cur]) : state.pins.slice();
-    if (!P.length) { box.innerHTML = '<p class="cmp-empty">「＋比べるに残す」で候補地を 2〜3 件並べると、差がある項目が分かる</p>'; return; }
+    if (!P.length) { box.innerHTML = '<p class="cmp-empty">「表に入れる」で候補地を 2〜3 件並べると、差がある項目が分かる</p>'; return; }
     const R = P.map((t) => L.buildChecks(DATA, LAYERS, t));
     const keys = R[0].map((r) => r.key);
-    const diff = {}, points = [];
+    const diff = {}, points = [], same = {};
     keys.forEach((k, ri) => {
       const cells = R.map((rows) => rows[ri]);
       if (HAZ.includes(k)) {
@@ -207,34 +216,36 @@
         if (diff[k]) points.push(`${cells[0].label}：${hit.map(nameOf).join('・')} が該当`);
       } else if (k === 'insar') {
         diff[k] = new Set(cells.map((c) => c.short)).size > 1;
-        const base = new Set(cells.map((c) => c.short.replace('・周囲混在', '')));
-        if (diff[k] && base.size === 1) points.push(`地盤：${P.filter((_, c) => /周囲混在/.test(cells[c].short)).map(nameOf).join('・')} は周囲で値が混在`);
-        else if (diff[k]) points.push(`地盤：${P.map((t, c) => `${nameOf(t)} ${cells[c].short}`).join('・')}`);
+        if (P.length > 1 && !diff[k]) same[k] = true; // 全て同じ値なら 1 つのセルにまとめる
+        if (diff[k]) points.push(`地盤：${P.map((t, c) => `${nameOf(t)} ${cells[c].short}`).join('・')}`);
       } else if (k === 'lst') {
         // 差が範囲の 10〜90% の幅の 1/4 以上なら目立たせる（優劣ではなく、確かめる点として）
         const v = cells.map((c) => c.num);
         if (P.length > 1 && v.every((x) => x != null)) {
           const d = Math.max(...v) - Math.min(...v);
           diff[k] = d >= (LST_P90 - LST_P10) / 4;
-          if (diff[k]) points.push(`地表面温度：差 ${d.toFixed(1)}℃（8/22の1場面。優劣ではない。水・風の条件は別に確かめる）`);
+          if (diff[k]) points.push(`地表面温度：差 ${d.toFixed(1)}℃ → 冷却の可否は別に確かめる`);
         }
       }
     });
     const allHit = keys.filter((k, ri) => HAZ.includes(k) && R.every((rows) => rows[ri].status === 'hit')).map((k) => R[0].find((r) => r.key === k).label);
     if (allHit.length) points.push(`${allHit.join('・')}：並べた全てが該当`);
+    const noDiff = keys.filter((k, ri) => HAZ.includes(k) && !diff[k] && !allHit.includes(R[0][ri].label)).map((k) => R[0].find((r) => r.key === k).label);
+    if (P.length > 1 && noDiff.length) points.push(`差なし：${noDiff.join('・')}${same.insar ? '・地盤' : ''}`);
     if (P.length > 1 && !points.length) points.push('災害の該当に差はない。温度・電力設備・土地の状態を値で比べる');
     const head = P.map((t, i) => {
       const isCur = t === cur, temp = isCur && tmp;
-      return `<th scope="col" class="${isCur ? 'cur' : ''}"><button type="button" class="go" data-i="${i}">${esc(nameOf(t))}</button>${temp ? '' : `<button type="button" class="rm" data-i="${i}" aria-label="${esc(nameOf(t))}を外す">×</button>`}${isCur ? ` <small>選択中${temp ? '（仮）' : ''}</small>` : ''}</th>`;
+      return `<th scope="col" class="${isCur ? 'cur' : ''}"><button type="button" class="go" data-i="${i}">${esc(nameOf(t))}</button>${temp ? '' : `<button type="button" class="rm" data-i="${i}" aria-label="${esc(nameOf(t))}を外す">×</button>`}${isCur ? ` <small>${temp ? '選択中・未固定' : '選択中'}</small>` : ''}</th>`;
     }).join('');
     // 既定は、差がある行・どれかが災害に重なる行・地盤・温度だけ（上の一覧と重ねない）。「全項目」で 8 行
     const shown = keys.map((k, ri) => state.cmpAll || diff[k] || k === 'insar' || k === 'lst' || (HAZ.includes(k) && R.some((rows) => rows[ri].status === 'hit')));
-    const RH = { lst: '地表面温度<small>8/22の1場面・優劣でない</small>', insar: '地盤の変動<small>⚠＝現地確認が要る</small>' };
-    const body = keys.map((k, ri) => (shown[ri] ? `<tr class="${diff[k] ? 'diff' : ''}"><th scope="row">${RH[k] || esc(R[0][ri].label)}</th>${R.map((rows) => `<td class="${rows[ri].status}">${esc(rows[ri].short)}</td>`).join('')}</tr>` : '')).join('');
+    const RH = { lst: '地表面温度<small class="em">8/22の1場面・優劣でない</small>', insar: '地盤の変動<small class="em">小さな動きは判別不可</small>' };
+    const cellsOf = (k, ri) => (same[k] ? `<td colspan="${P.length}" class="${R[0][ri].status}">どれも${esc(R[0][ri].short)}（差なし）</td>` : R.map((rows) => `<td class="${rows[ri].status}">${esc(rows[ri].short)}</td>`).join(''));
+    const body = keys.map((k, ri) => (shown[ri] ? `<tr class="${diff[k] ? 'diff' : ''}"><th scope="row">${RH[k] || esc(R[0][ri].label)}</th>${cellsOf(k, ri)}</tr>` : '')).join('');
     const nHide = shown.filter((x) => !x).length;
     const tog = state.cmpAll ? '<button type="button" class="cmp-all">差のある行だけ</button>' : (nHide ? `<button type="button" class="cmp-all">全項目（ほか ${nHide} 行）</button>` : '');
     box.innerHTML = `<h3>比べる <small>差がある行を強調（順位は付けない）</small>${tog}</h3><table class="cmp"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table>`
-      + (points.length ? `<p class="cmp-pts"><b>確認すべき点</b>　${points.map(esc).join('／')}</p>` : '<p class="cmp-empty">もう 1 件選ぶと並ぶ</p>');
+      + (points.length ? `<div class="cmp-pts"><b>確認すべき点</b><ul>${points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '<p class="cmp-empty">もう 1 件選ぶと並ぶ</p>');
     const ta = box.querySelector('button.cmp-all'); if (ta) ta.addEventListener('click', () => { state.cmpAll = !state.cmpAll; renderCompare(); });
     box.querySelectorAll('button.go').forEach((b) => b.addEventListener('click', () => { const t = P[+b.dataset.i]; t.id ? pickCandidate(t.id) : select(t); }));
     box.querySelectorAll('button.rm').forEach((b) => b.addEventListener('click', () => { const k = state.pins.indexOf(P[+b.dataset.i]); if (k >= 0) state.pins.splice(k, 1); render(state.target); }));
@@ -251,8 +262,17 @@
     const c = cands.find((x) => x.id === id);
     if (!c) return;
     select(targetOfCandidate(c), byUser);
-    // 寄せすぎない（周りの候補も見える縮尺まで）
-    if (state.map) state.map.fitBounds(bounds(c.ring), { padding: 120, maxZoom: 12.5, duration: 400 });
+    showCompared();
+  }
+  /** 比べる表に並ぶ候補地が全部地図に入るようにする。拡大はしない（全体の見渡しを残す） */
+  function showCompared() {
+    const m = state.map; if (!m || !state.mapReady) return;
+    const T = state.pins.concat(state.target && !state.pins.includes(state.target) ? [state.target] : []);
+    const pts = T.flatMap((t) => (t.ring ? t.ring : [[t.lon, t.lat]]));
+    if (!pts.length) return;
+    const vb = m.getBounds();
+    if (pts.every((p) => vb.contains(p))) return;
+    m.fitBounds(bounds(pts), { padding: isMobile() ? 40 : 80, maxZoom: m.getZoom(), duration: 400 });
   }
   const bounds = (ring) => {
     const xs = ring.map((p) => p[0]), ys = ring.map((p) => p[1]);
@@ -262,7 +282,7 @@
   function buildPicker() {
     const sel = $('#pick');
     // 災害の該当なしを先に。造＝造成地（2020 植生→2026 裸地等）・遊＝遊休地（両年とも裸地等）
-    const opt = (c) => { const h = state.hz[c.id] || []; return `<option value="${c.id}">${c.id} ${c.ha} ha${h.length ? '・' + h.join('・') : ''}</option>`; };
+    const opt = (c) => { const h = state.hz[c.id] || []; return `<option value="${c.id}">${c.id}（${c.kind === 'dev' ? '造成地' : '遊休地'}）${c.ha} ha${h.length ? '・' + h.join('・') : ''}</option>`; };
     const none = cands.filter((c) => !(state.hz[c.id] || []).length), hit = cands.filter((c) => (state.hz[c.id] || []).length);
     sel.innerHTML = `<optgroup label="災害の該当なし（${none.length} 件）">${none.map(opt).join('')}</optgroup>`
       + `<optgroup label="洪水・土砂・津波・高潮に該当（${hit.length} 件）">${hit.map(opt).join('')}</optgroup>`
@@ -343,7 +363,7 @@
     cands.forEach((c) => { state.hz[c.id] = hazHits(L.buildChecks(DATA, LAYERS, targetOfCandidate(c))).map((r) => r.label); });
     buildPicker();
     buildDataDialog();
-    $('#credit').innerHTML = `${esc(L.SCENES.insar.credit)}／Contains modified Copernicus Sentinel data [2020, 2026]／${esc(L.SCENES.landsat.credit)}／国土数値情報（CC BY 4.0）加工／© OpenStreetMap contributors（ODbL）／地理院タイル <button type="button" class="credit-more">詳細</button>`;
+    $('#credit').innerHTML = `<button type="button" class="credit-more">出典・詳細</button> ${esc(L.SCENES.insar.credit)}／Contains modified Copernicus Sentinel data [2020, 2026]／${esc(L.SCENES.landsat.credit)}／国土数値情報（CC BY 4.0）加工／© OpenStreetMap contributors（ODbL）／地理院タイル`;
     $('#credit .credit-more').addEventListener('click', () => $('#datadlg').showModal());
     document.querySelectorAll('#layers input[data-layer]').forEach((cb) => {
       if (cb.dataset.layer !== 'none') state.layerOn[cb.dataset.layer] = cb.checked;
@@ -352,9 +372,8 @@
         else setLayer(cb.dataset.layer, cb.checked);
       });
     });
-    setLayer('lst', true);
+    setSat('lst');
     $('#btn-pin').addEventListener('click', togglePin);
-    document.querySelectorAll('.satline button[data-sat]').forEach((b) => b.addEventListener('click', () => setSat(b.dataset.sat)));
     $('#jump').addEventListener('click', () => { const top = $('#checks .ttl').getBoundingClientRect().top + window.scrollY - 4; window.scrollTo({ top, behavior: 'smooth' }); });
     window.addEventListener('scroll', updateJump, { passive: true });
     window.addEventListener('resize', updateJump);
